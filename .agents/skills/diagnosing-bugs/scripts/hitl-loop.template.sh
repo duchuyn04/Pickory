@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 # Human-in-the-loop reproduction loop.
-# Copy this file to a throwaway location, edit the steps below, and run it.
-# Before Bounded approval, do not place the copy in permanent product source,
-# tests, or configuration. Capture observations only; never capture secrets.
+# Copy this file, edit the steps below, and run it.
+# The agent runs the script; the user follows prompts in their terminal.
 #
-# Usage: bash hitl-loop.template.sh
+# Usage:
+#   bash hitl-loop.template.sh
+#
+# Two helpers:
+#   step "<instruction>"          → show instruction, wait for Enter
+#   capture VAR "<question>"      → show question, read response into VAR
+#
+# At the end, captured values are printed as KEY=VALUE for the agent to parse.
+#
+# `capture` prints its value back to the terminal, where the agent reads it,
+# so capture observations, and leave signing in to the user as a `step`.
 
 set -euo pipefail
 
@@ -22,12 +31,14 @@ capture() {
 
 # --- edit below ---------------------------------------------------------
 
-step "Perform the smallest action that triggers the reported symptom."
-capture REPRODUCED "Did the exact reported symptom occur? (y/n)"
-capture OBSERVATION "Describe the observable result without credentials or sensitive data:"
+step "Open the app at http://localhost:3000 and sign in."
+
+capture ERRORED "Click the 'Export' button. Did it throw an error? (y/n)"
+
+capture ERROR_MSG "Paste the error message (or 'none'):"
 
 # --- edit above ---------------------------------------------------------
 
 printf '\n--- Captured ---\n'
-printf 'REPRODUCED=%s\n' "$REPRODUCED"
-printf 'OBSERVATION=%s\n' "$OBSERVATION"
+printf 'ERRORED=%s\n' "$ERRORED"
+printf 'ERROR_MSG=%s\n' "$ERROR_MSG"
