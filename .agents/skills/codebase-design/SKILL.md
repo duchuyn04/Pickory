@@ -1,69 +1,114 @@
 ---
 name: codebase-design
-description: Apply deep-module vocabulary when a change affects a module, interface, seam, adapter, dependency direction, or testability; return a Design Delta for the parent workflow.
-hide: true
-license: MIT
-metadata:
-  adapted-from: .agents/skills/codebase-design/SKILL.md
-  upstream-sha256: caea3cb8a8281ff829fd1a2b985044e77601b62f301adf43f689ccfc74c15f6f
+description: Shared vocabulary for designing deep modules. Use when the user wants to design or improve a module's interface, find deepening opportunities, decide where a seam goes, make code more testable or AI-navigable, or when another skill needs the deep-module vocabulary.
 ---
 
-# Codebase design
+# Codebase Design
 
-Design deep modules: substantial behavior behind a small interface, placed at a clean seam and tested through that interface. This skill supplies a design lens, not a new approval gate.
+Design **deep modules**: a lot of behaviour behind a small interface, placed at a clean seam, testable through that interface. Use this language and these principles wherever code is being designed or restructured. The aim is leverage for callers, locality for maintainers, and testability for everyone.
 
-Adapted from `.agents/skills/codebase-design/SKILL.md` at pinned SHA-256 `caea3cb8a8281ff829fd1a2b985044e77601b62f301adf43f689ccfc74c15f6f`; distributed under the folder-local MIT license.
+## Glossary
 
-## Trigger and skip
+Use these terms exactly: don't substitute "component," "service," "API," or "boundary." Consistent language is the whole point.
 
-Use when the proposed change affects a module, its interface or invariants, seam placement, adapters, dependency direction, or test surface. Skip for a local implementation change that leaves those properties unchanged. `not-needed` is a valid result.
+**Module**: anything with an interface and an implementation. Deliberately scale-agnostic: a function, class, package, or tier-spanning slice. _Avoid_: unit, component, service.
 
-The parent retains authority: G3 for a Feature, or the Bounded approval for an existing flow. This specialist cannot approve either.
+**Interface**: everything a caller must know to use the module correctly: the type signature, but also invariants, ordering constraints, error modes, required configuration, and performance characteristics. _Avoid_: API, signature (too narrow, they refer only to the type-level surface).
 
-## Vocabulary
+**Implementation**: what's inside a module, its body of code. Distinct from **Adapter**: a thing can be a small adapter with a large implementation (a Postgres repo) or a large adapter with a small implementation (an in-memory fake). Reach for "adapter" when the seam is the topic; "implementation" otherwise.
 
-- **Module:** anything with an interface and implementation; scale-agnostic.
-- **Interface:** everything a caller must know: types, invariants, ordering, errors, configuration, and performance characteristics.
-- **Implementation:** behavior hidden inside a module.
-- **Seam:** a place where behavior can change without editing the caller; the location of an interface.
-- **Adapter:** a concrete participant that satisfies an interface at a seam.
-- **Depth:** leverage at the interface: substantial behavior for little caller knowledge.
-- **Leverage:** capability callers gain per unit of interface learned.
-- **Locality:** change, bugs, knowledge, and verification concentrated behind the interface.
+**Depth**: leverage at the interface. The amount of behaviour a caller (or test) can exercise per unit of interface they have to learn. A module is **deep** when a large amount of behaviour sits behind a small interface, **shallow** when the interface is nearly as complex as the implementation.
 
-Use these terms consistently; do not substitute vague “service”, “component”, or “boundary” when the precise term matters.
+**Seam** _(Michael Feathers)_: a place where you can alter behaviour without editing in that place; the *location* at which a module's interface lives. Where to put the seam is its own design decision, distinct from what goes behind it. _Avoid_: boundary (overloaded with DDD's bounded context).
 
-## Evaluation
+**Adapter**: a concrete thing that satisfies an interface at a seam. Describes *role* (what slot it fills), not substance (what's inside).
 
-1. Identify callers and the facts they must know today.
-2. State the smallest honest interface and its invariants/error modes.
-3. Place the seam where behavior or dependency genuinely varies.
-4. Keep dependencies and complexity behind that interface.
-5. Use the same interface as the observable test surface.
-6. Apply the deletion test: deleting a useful module should redistribute real complexity to callers, not make it vanish.
+**Leverage**: what callers get from depth. More capability per unit of interface they learn. One implementation pays back across N call sites and M tests.
 
-A single implementation without real variation does not justify a seam or adapter. Do not add indirection solely for hypothetical reuse or testing. Internal seams may support the implementation without becoming public interface.
+**Locality**: what maintainers get from depth. Change, bugs, knowledge, and verification concentrate in one place rather than spreading across callers. Fix once, fixed everywhere.
 
-For dependency categories and replace-don't-layer tests, read [DEEPENING.md](DEEPENING.md). For materially different interface alternatives, read [DESIGN-IT-TWICE.md](DESIGN-IT-TWICE.md).
+## Deep vs shallow
 
-## Unavailable evidence
+**Deep module** = small interface + lots of implementation:
 
-If required callers, dependencies, or contracts cannot be inspected, do not emit a completed Design Delta or an approval-ready conclusion. Return a separate handoff with `status: unknown | blocked`, the unavailable evidence/tool, attempts made, affected fields, and the person or access that can resolve it. The parent remains blocked for the dependent design work.
-
-## Design Delta (C-SI-04)
-
-Return every field:
-
-```text
-status: not-needed | drafted | approved-input | needs-revalidation
-module: responsibility and excluded responsibility
-interface: caller-visible operations, invariants, ordering, errors, configuration, and performance facts
-seam: placement and why behavior varies there
-adapters: existing/required concrete participants, or none with reason
-invariants: properties the module must preserve
-caller_impact: callers and migration/cutover effects
-test_surface: observable behavior exercised through the interface
-rejected_abstractions: options rejected as shallow, hypothetical, or scope creep
+```
+┌─────────────────────┐
+│   Small Interface   │  ← Few methods, simple params
+├─────────────────────┤
+│                     │
+│  Deep Implementation│  ← Complex logic hidden
+│                     │
+└─────────────────────┘
 ```
 
-`approved-input` means the parent gate has approved the containing design; this skill never self-approves. Contract changes after approval return `needs-revalidation`.
+**Shallow module** = large interface + little implementation (avoid):
+
+```
+┌─────────────────────────────────┐
+│       Large Interface           │  ← Many methods, complex params
+├─────────────────────────────────┤
+│  Thin Implementation            │  ← Just passes through
+└─────────────────────────────────┘
+```
+
+When designing an interface, ask:
+
+- Can I reduce the number of methods?
+- Can I simplify the parameters?
+- Can I hide more complexity inside?
+
+## Principles
+
+- **Depth is a property of the interface, not the implementation.** A deep module can be internally composed of small, mockable, swappable parts; they just aren't part of the interface. A module can have **internal seams** (private to its implementation, used by its own tests) as well as the **external seam** at its interface.
+- **The deletion test.** Imagine deleting the module. If complexity vanishes, it was a pass-through. If complexity reappears across N callers, it was earning its keep.
+- **The interface is the test surface.** Callers and tests cross the same seam. If you want to test *past* the interface, the module is probably the wrong shape.
+- **One adapter means a hypothetical seam. Two adapters means a real one.** Don't introduce a seam unless something actually varies across it.
+
+## Designing for testability
+
+Good interfaces make testing natural:
+
+1. **Accept dependencies, don't create them.**
+
+   ```typescript
+   // Testable
+   function processOrder(order, paymentGateway) {}
+
+   // Hard to test
+   function processOrder(order) {
+     const gateway = new StripeGateway();
+   }
+   ```
+
+2. **Return results, don't produce side effects.**
+
+   ```typescript
+   // Testable
+   function calculateDiscount(cart): Discount {}
+
+   // Hard to test
+   function applyDiscount(cart): void {
+     cart.total -= discount;
+   }
+   ```
+
+3. **Small surface area.** Fewer methods = fewer tests needed. Fewer params = simpler test setup.
+
+## Relationships
+
+- A **Module** has exactly one **Interface** (the surface it presents to callers and tests).
+- **Depth** is a property of a **Module**, measured against its **Interface**.
+- A **Seam** is where a **Module**'s **Interface** lives.
+- An **Adapter** sits at a **Seam** and satisfies the **Interface**.
+- **Depth** produces **Leverage** for callers and **Locality** for maintainers.
+
+## Rejected framings
+
+- **Depth as ratio of implementation-lines to interface-lines** (Ousterhout): rewards padding the implementation. We use depth-as-leverage instead.
+- **"Interface" as the TypeScript `interface` keyword or a class's public methods**: too narrow: interface here includes every fact a caller must know.
+- **"Boundary"**: overloaded with DDD's bounded context. Say **seam** or **interface**.
+
+## Going deeper
+
+- **Deepening a cluster given its dependencies**, see [DEEPENING.md](DEEPENING.md): dependency categories, seam discipline, and replace-don't-layer testing.
+- **Exploring alternative interfaces**, see [DESIGN-IT-TWICE.md](DESIGN-IT-TWICE.md): spin up parallel sub-agents to design the interface several radically different ways, then compare on depth, locality, and seam placement.
