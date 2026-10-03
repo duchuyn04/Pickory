@@ -63,7 +63,7 @@ identity, ai-gateway  (song song)
 - Mọi lời gọi AI đi qua `ai-gateway`. Đổi provider chỉ sửa một module.
 - Phần mua bán (`identity`, `catalog`, `commerce`) không phụ thuộc AI. API AI lỗi thì khách vẫn mua hàng bình thường.
 - Chatbot theo kiểu RAG: chỉ nêu sản phẩm, giá, chính sách, trạng thái đơn lấy từ kết quả truy xuất của lượt đó, có trích dẫn, không tự bịa.
-- Module id cố định, không đổi tên. Spec của mỗi module lưu tại `SPEC-<module-id>.md`.
+- Module id cố định, không đổi tên. Bản đồ này, `SPEC.md` và spec của mỗi module (`SPEC-<module-id>.md`) đều nằm trong thư mục `spec/`.
 
 ## Trạng thái spec
 
