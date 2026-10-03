@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import globals from 'globals';
 import prettier from 'eslint-config-prettier';
 import tseslint from 'typescript-eslint';
+import { boundaryConfigs } from './eslint.boundaries.js';
 
 export default tseslint.config(
   {
@@ -29,5 +30,7 @@ export default tseslint.config(
     files: ['apps/web/**/*.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser } },
   },
+  // Quy tắc ranh giới module (đặt trước prettier, sau các cấu hình chung).
+  ...boundaryConfigs,
   prettier,
 );

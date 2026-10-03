@@ -49,14 +49,14 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 ### T05: ESLint chặn import sai ranh giới module
 **Mô tả:** Quy tắc `no-restricted-imports`: ngoài `ai-gateway/providers/` cấm `ai`, `@ai-sdk/*`, `openai`; ngoài `knowledge-base/ingest/` cấm `@langchain/*`; module chỉ import `modules/<id>/index.ts` của module khác.
 **Tiêu chí nghiệm thu:**
-- [ ] Có fixture import sai cho từng quy tắc và test (script) khẳng định ESLint báo lỗi đúng
-- [ ] Code hợp lệ không bị báo
+- [x] Có fixture import sai cho từng quy tắc và test (script) khẳng định ESLint báo lỗi đúng
+- [x] Code hợp lệ không bị báo
 **Kiểm tra:** `pnpm lint` sạch; chạy test fixture thấy từng import sai bị chặn
 **Phụ thuộc:** T01 · **File:** `eslint.config.js`, `tools/lint-fixtures/*`, `tools/lint-rules.test.ts` · **Quy mô:** S
 
 ### Checkpoint 0: Nền tảng
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch
-- [ ] `pnpm dev` chạy cả web và api, DB test chạy được
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch
+- [x] `pnpm dev` chạy cả web và api, DB test chạy được
 - [ ] Review với người dùng, chốt Open Questions 1 và 2 trong `plan.md` trước khi sang Phase 1
 
 ---

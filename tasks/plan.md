@@ -77,10 +77,10 @@ Chi tiết từng task ở `tasks/todo.md`. Hai track A và B chạy song song �
 - [x] T02: API skeleton (errors, logger, config, health)
 - [x] T03: PostgreSQL, Prisma và test DB
 - [x] T04: Web skeleton
-- [ ] T05: ESLint chặn import sai ranh giới module
+- [x] T05: ESLint chặn import sai ranh giới module
 
 ### Checkpoint 0: Nền tảng
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch; `pnpm dev` chạy cả web và api
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch; `pnpm dev` chạy cả web và api
 
 ### Phase 1: Lõi hai module (song song)
 - Track A: [ ] ID-01 · [ ] ID-02 · [ ] ID-03 · [ ] ID-04 · [ ] UI-05
@@ -193,14 +193,14 @@ Sprint 1 nhẹ nhất (23 điểm) vì phải dựng nền tảng và chờ API 
 
 ## Open Questions (cần trả lời trước hoặc trong lúc build)
 
-1. **Duyệt dependency ngoài tech stack** (thuộc mục "Ask first"):
+1. **[ĐÃ DUYỆT toàn bộ]** **Duyệt dependency ngoài tech stack** (thuộc mục "Ask first"):
    - Băm mật khẩu Argon2id: `@node-rs/argon2` (đề xuất, không cần build native) hoặc `argon2`.
    - Đọc cookie: `cookie-parser`.
    - Logger: `pino` + `pino-http`.
    - Mock HTTP cho test adapter AI và Google OAuth: `msw`.
    - Google OAuth: `arctic` (PKCE + state) và `jose` (kiểm tra id_token), hoặc tự viết bằng `fetch` + `jose`.
    - Chạy TypeScript cho dev và CLI `admin:create`: `tsx`.
-2. **Danh mục quyền do `identity` giữ** (Decision 1) thay vì mỗi module một `permissions.ts`. Đồng ý lệch spec như vậy không? Nếu đồng ý thì cập nhật `SPEC-identity.md` trong ID-01.
+2. **[ĐÃ ĐỒNG Ý]** **Danh mục quyền do `identity` giữ** (Decision 1) thay vì mỗi module một `permissions.ts`. Đồng ý lệch spec như vậy không? Nếu đồng ý thì cập nhật `SPEC-identity.md` trong ID-01.
 3. **API key DeepSeek và OpenAI** cho AI-00 và các live test. Không có key thì AI-00 bị chặn; AI-01 đến AI-03 vẫn làm được.
 4. **Quy ước `actorKey`** `user:<id>`/`anon:<id>` (Decision 10), hay thêm trường `actorKind` vào `CallContext` (đổi interface public)?
 5. **Xác nhận lại khi xóa tài khoản Google** (không có mật khẩu): đề xuất yêu cầu đăng nhập Google trong vòng 5 phút gần nhất, ghi `authenticatedAt` trên phiên.
