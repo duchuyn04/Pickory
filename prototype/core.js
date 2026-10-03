@@ -326,7 +326,7 @@
       .join('');
     const bars = values
       .map((v, i) => {
-        const color = opts.highlight && opts.highlight(i) ? '#b42318' : '#111114';
+        const color = opts.highlight && opts.highlight(i) ? '#b42318' : '#ec6436';
         return `<rect x="${padL + i * bw + bw * 0.18}" y="${y(v)}" width="${bw * 0.64}" height="${h - padB - y(v)}" rx="2" fill="${color}"><title>${esc(labels[i])}: ${opts.fmt ? opts.fmt(v) : v}</title></rect>`;
       })
       .join('');

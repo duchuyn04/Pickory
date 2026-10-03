@@ -64,6 +64,9 @@
     dot: '<circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>',
     wand: '<path d="m4 20 11-11M14 4v2M18 6l-1.5 1.5M20 10h-2M12.5 7.5l4 4"/>',
     menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
+    eye: '<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/>',
+    eyeOff:
+      '<path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.2M6.6 6.6C3.8 8.4 2 12 2 12s3.5 7 10 7c1.8 0 3.4-.5 4.8-1.3M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
   };
   window.PK_ICON = function (name, size = 18, extra = '') {
     const filled = name === 'star' && extra.includes('fill');
