@@ -1,0 +1,12 @@
+node_modules
+dist
+build
+coverage
+pnpm-lock.yaml
+.agents
+.claude
+skills-lock.json
+spec
+docs
+tasks
+**/prisma/migrations
