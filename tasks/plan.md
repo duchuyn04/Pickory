@@ -49,7 +49,7 @@ T01 workspace + tooling
 1. **Danh mục quyền do `identity` giữ trong MVP** (`modules/identity/permissions.ts`, nhóm theo module, kiểu `Permission` là union literal để `requirePermission('orders:update-status')` được kiểm tra lúc compile). Spec nói mỗi module có `permissions.ts` riêng và `identity` gom lại, nhưng nếu `identity` import file của module khác thì phụ thuộc bị ngược chiều (mọi module import `identity`). Cách làm: `identity` giữ toàn bộ danh mục ban đầu; module khác (ví dụ `ai-gateway`) re-export phần của mình từ catalog này (`aiPermissions`). Đây là điểm lệch spec, cần duyệt (Open Question 2).
 2. **`admin` có mọi quyền một cách ngầm định**: actor có role `admin` nhận toàn bộ danh mục trong code, không dựa vào dòng `role_permissions`. Quyền thêm sau này admin có ngay, không cần seed lại.
 3. **Lát cắt dọc ở mức backend, UI đi ngay sau.** Mỗi task backend đi trọn một đường schema → repository → service → route → integration test, kiểm tra được bằng Supertest. Task UI tương ứng đặt ngay sau, không dồn UI xuống cuối. Lý do: gộp cả API lẫn UI vào một task sẽ vượt 5 file.
-4. **Migration tuần tự giữa hai track.** Task nào tạo migration thì trước khi merge phải rebase lên `main` rồi chạy lại `pnpm db:migrate`. Không sửa migration đã merge. Nếu bản Prisma khóa lúc khởi tạo hỗ trợ schema nhiều file (GA từ Prisma 6.7), mỗi module có file riêng: `prisma/schema/identity.prisma`, `prisma/schema/ai-gateway.prisma`. T03 kiểm tra điều này.
+4. **Migration tuần tự giữa hai track.** Task nào tạo migration thì trước khi merge phải rebase lên `main` rồi chạy lại `pnpm db:migrate`. Không sửa migration đã merge. Nếu bản Prisma khóa lúc khởi tạo hỗ trợ schema nhiều file (GA từ Prisma 6.7), mỗi module có file riêng: `prisma/schema/identity.prisma`, `prisma/schema/ai-gateway.prisma`. T03 đã xác nhận: Prisma 7.10.0 hỗ trợ `prisma/schema/` nhiều file (`prisma.config.ts` trỏ `schema: 'prisma/schema'`), nên mỗi module một file `.prisma`.
 5. **Gửi email qua port `EmailSender`.** Test dùng bản in-memory. Dev dùng bản "file outbox" ghi email ra `apps/api/.dev-outbox/` (thư mục bị gitignore), để Playwright đọc được link mời và link đặt lại mật khẩu. Provider thật làm sau khi chốt dịch vụ email (Open Question của `SPEC.md`).
 6. **Bộ đếm trong bộ nhớ** cho chống dò mật khẩu (`identity`) và hạn mức chat theo người (`ai-gateway`), vì MVP chạy 1 instance. Spec `ai-gateway` đã ghi rõ ràng buộc này.
 7. **Event bus trong process**: `apps/api/src/shared/events.ts` là emitter có kiểu. `identity` phát `UserLinkedEvent` và `UserDeletedEvent`. Handler lỗi chỉ ghi log, không làm hỏng luồng chính.
@@ -75,7 +75,7 @@ Chi tiết từng task ở `tasks/todo.md`. Hai track A và B chạy song song �
 ### Phase 0: Nền tảng chung
 - [x] T01: Khởi tạo pnpm workspace và tooling
 - [x] T02: API skeleton (errors, logger, config, health)
-- [ ] T03: PostgreSQL, Prisma và test DB
+- [x] T03: PostgreSQL, Prisma và test DB
 - [ ] T04: Web skeleton
 - [ ] T05: ESLint chặn import sai ranh giới module
 

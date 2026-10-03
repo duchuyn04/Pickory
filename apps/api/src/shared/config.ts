@@ -5,6 +5,8 @@ const configSchema = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3000),
   WEB_ORIGIN: z.string().url().default('http://localhost:5173'),
+  // Bắt buộc, không có mặc định: thiếu thì app không khởi động.
+  DATABASE_URL: z.string().url(),
 });
 
 export type Config = z.infer<typeof configSchema>;

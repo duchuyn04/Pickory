@@ -13,7 +13,10 @@
     "format": "prettier --write .",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "db:migrate": "pnpm --filter @pickory/api db:migrate",
+    "db:seed": "pnpm --filter @pickory/api db:seed",
+    "postinstall": "pnpm --filter @pickory/api db:generate"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
