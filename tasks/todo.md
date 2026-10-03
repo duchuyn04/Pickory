@@ -21,10 +21,10 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 ### T02: API skeleton (errors, logger, config, health)
 **Mô tả:** Express app, `AppError`, middleware lỗi (`{ error: { code, message } }`, ZodError thành 400, message tiếng Việt), logger chung, đọc config bằng Zod, event bus có kiểu `shared/events.ts`, `GET /api/health`.
 **Tiêu chí nghiệm thu:**
-- [ ] `AppError` đúng mẫu trong `SPEC.md`; ZodError trả 400; lỗi lạ trả 500 không lộ stack
-- [ ] Config thiếu biến bắt buộc thì app không khởi động và báo rõ biến nào
-- [ ] Logger không in được giá trị của key có tên `password`, `token`, `apiKey`
-- [ ] Event bus: handler ném lỗi thì được log, không ném ra nơi phát
+- [x] `AppError` đúng mẫu trong `SPEC.md`; ZodError trả 400; lỗi lạ trả 500 không lộ stack
+- [x] Config thiếu biến bắt buộc thì app không khởi động và báo rõ biến nào
+- [x] Logger không in được giá trị của key có tên `password`, `token`, `apiKey`
+- [x] Event bus: handler ném lỗi thì được log, không ném ra nơi phát
 **Kiểm tra:** Supertest cho `/api/health` và đường lỗi; unit test event bus và logger redact
 **Phụ thuộc:** T01 · **File:** `apps/api/src/{app,server}.ts`, `shared/{errors,logger,config,events}.ts` · **Quy mô:** M
 
