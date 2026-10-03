@@ -24,5 +24,10 @@ export default tseslint.config(
       'no-console': 'error',
     },
   },
+  {
+    // Code web chạy trong trình duyệt nên dùng globals của browser thay vì node.
+    files: ['apps/web/**/*.{ts,tsx}'],
+    languageOptions: { globals: { ...globals.browser } },
+  },
   prettier,
 );

@@ -41,8 +41,8 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 ### T04: Web skeleton
 **Mô tả:** React + Vite, React Router, TanStack Query, client gọi API, proxy dev tới port 3000, trang placeholder.
 **Tiêu chí nghiệm thu:**
-- [ ] `pnpm dev` chạy web 5173 và api 3000 cùng lúc, web gọi được `/api/health`
-- [ ] `pnpm build` build được cả web
+- [x] `pnpm dev` chạy web 5173 và api 3000 cùng lúc, web gọi được `/api/health`
+- [x] `pnpm build` build được cả web
 **Kiểm tra:** mở trình duyệt xem trang hiển thị trạng thái health
 **Phụ thuộc:** T01, T02 · **File:** `apps/web/{vite.config.ts,index.html}`, `src/{main,app}.tsx`, `src/shared/api.ts` · **Quy mô:** S
 
