@@ -31,10 +31,10 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 ### T03: PostgreSQL, Prisma và test DB
 **Mô tả:** Docker Compose cho PostgreSQL + pgvector, Prisma, `pnpm db:migrate`, `pnpm db:seed` (khung rỗng), DB test riêng, hạ tầng test integration.
 **Tiêu chí nghiệm thu:**
-- [ ] `docker compose up -d db` rồi `pnpm db:migrate` chạy được; extension `vector` được bật trong migration đầu
-- [ ] Xác nhận bản Prisma khóa hỗ trợ schema nhiều file; nếu có thì `prisma/schema/` tách theo module, nếu không thì ghi quy tắc rebase vào `plan.md`
-- [ ] Test integration dùng DB riêng, migrate trước bộ test, dọn bảng giữa các test
-- [ ] Có 1 test integration mẫu chạy qua DB thật
+- [x] `docker compose up -d db` rồi `pnpm db:migrate` chạy được; extension `vector` được bật trong migration đầu
+- [x] Xác nhận bản Prisma khóa hỗ trợ schema nhiều file; nếu có thì `prisma/schema/` tách theo module, nếu không thì ghi quy tắc rebase vào `plan.md`
+- [x] Test integration dùng DB riêng, migrate trước bộ test, dọn bảng giữa các test
+- [x] Có 1 test integration mẫu chạy qua DB thật
 **Kiểm tra:** `pnpm test` có test integration pass; DB dev và DB test tách biệt
 **Phụ thuộc:** T02 · **File:** `docker-compose.yml`, `apps/api/prisma/schema/base.prisma`, `apps/api/src/shared/db.ts`, `apps/api/test/setup.ts` · **Quy mô:** M
 
