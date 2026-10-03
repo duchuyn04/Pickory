@@ -5,23 +5,30 @@
  */
 :root {
   /* Màu */
-  --ink: #111114;
-  --ink-2: #3a3a42;
-  --muted: #6b6b74;
-  --subtle: #9c9ca5;
-  --line: #e6e6ea;
-  --line-2: #f0f0f2;
+  --ink: #1f1a17;
+  --ink-2: #4a413b;
+  --muted: #7a6e65;
+  --subtle: #a99d92;
+  --line: #ece4d8;
+  --line-2: #f5efe6;
   --bg: #ffffff;
-  --bg-2: #f6f6f7;
-  --bg-3: #ececef;
+  --bg-2: #fcf8e7;
+  --bg-3: #f3ead6;
   --danger: #b42318;
   --danger-bg: #fdf1ef;
   --success: #127a43;
   --success-bg: #ecf6f0;
   --warn: #93530a;
   --warn-bg: #fdf5e7;
-  --info: #1d5bb8;
+  --info: #1d6fe0;
   --info-bg: #eef3fc;
+  /* Màu thương hiệu: cam ấm (Klook #EC6436), cát và kem cho nền nhấn */
+  --brand: #ec6436;
+  --brand-hover: #d4521f;
+  --brand-soft: #fdece4;
+  --sand: #f6dda8;
+  --sand-soft: #fbeed3;
+  --star: #f5a524;
   /* Bo góc */
   --r-sm: 6px;
   --r-md: 10px;
@@ -103,7 +110,7 @@ code {
   border-radius: 4px;
 }
 :focus-visible {
-  outline: 2px solid var(--ink);
+  outline: 2px solid var(--brand);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -193,8 +200,8 @@ hr.sep {
   height: 44px;
   padding: 0 var(--s5);
   border-radius: var(--r-pill);
-  border: 1px solid var(--ink);
-  background: var(--ink);
+  border: 1px solid var(--brand);
+  background: var(--brand);
   color: #fff;
   cursor: pointer;
   white-space: nowrap;
@@ -204,7 +211,8 @@ hr.sep {
     opacity 0.15s;
 }
 .btn:hover {
-  background: #2a2a30;
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
   text-decoration: none;
 }
 .btn.secondary {
@@ -213,7 +221,7 @@ hr.sep {
   border-color: var(--line);
 }
 .btn.secondary:hover {
-  border-color: var(--ink);
+  border-color: var(--brand);
   background: var(--bg);
 }
 .btn.ghost {
@@ -298,7 +306,7 @@ input:focus,
 select:focus,
 textarea:focus {
   outline: none;
-  border-color: var(--ink);
+  border-color: var(--brand);
 }
 input:disabled,
 select:disabled,
@@ -314,14 +322,14 @@ input[type='checkbox'],
 input[type='radio'] {
   width: 16px;
   height: 16px;
-  accent-color: var(--ink);
+  accent-color: var(--brand);
   padding: 0;
   margin: 0;
   flex: none;
 }
 input[type='range'] {
   padding: 0;
-  accent-color: var(--ink);
+  accent-color: var(--brand);
   border: 0;
 }
 label.field {
@@ -417,13 +425,13 @@ label.field > span {
   text-decoration: none;
 }
 .chip:hover {
-  border-color: var(--ink);
+  border-color: var(--brand);
   text-decoration: none;
 }
 .chip.on {
-  background: var(--ink);
+  background: var(--brand);
   color: #fff;
-  border-color: var(--ink);
+  border-color: var(--brand);
 }
 .chip .src {
   font-size: var(--t-xs);
@@ -611,7 +619,7 @@ table.tbl {
 .logo i {
   width: 7px;
   height: 7px;
-  background: var(--ink);
+  background: var(--brand);
   border-radius: 50%;
   display: inline-block;
   margin-left: 1px;
@@ -639,7 +647,7 @@ table.tbl {
 }
 .search-box input:focus {
   background: var(--bg);
-  border-color: var(--ink);
+  border-color: var(--brand);
 }
 .typeahead {
   position: absolute;
@@ -699,7 +707,7 @@ table.tbl {
 }
 .hdr-link .count {
   order: 2;
-  background: var(--ink);
+  background: var(--brand);
   color: #fff;
   border-radius: var(--r-pill);
   font-size: 10px;
@@ -729,7 +737,7 @@ table.tbl {
 .nav-cats a:hover {
   color: var(--ink);
   text-decoration: none;
-  border-bottom-color: var(--ink);
+  border-bottom-color: var(--brand);
 }
 main.shop {
   max-width: var(--container);
@@ -818,7 +826,7 @@ main.shop {
   cursor: pointer;
 }
 .hero-nav .bar.on {
-  background: var(--ink);
+  background: var(--brand);
 }
 .perks {
   display: grid;
@@ -1105,7 +1113,7 @@ main.shop {
   padding: 0;
 }
 .gallery .thumbs button.on {
-  border-color: var(--ink);
+  border-color: var(--brand);
 }
 .buybox {
   position: sticky;
@@ -1143,12 +1151,12 @@ main.shop {
   gap: 8px;
 }
 .opt:hover {
-  border-color: var(--ink);
+  border-color: var(--brand);
   text-decoration: none;
 }
 .opt.on {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand);
 }
 .opt.off {
   color: var(--subtle);
@@ -1224,7 +1232,7 @@ main.shop {
 .bar > i {
   display: block;
   height: 100%;
-  background: var(--ink);
+  background: var(--brand);
   border-radius: 3px;
 }
 .review {
@@ -1249,7 +1257,7 @@ main.shop {
   background: var(--bg-2);
 }
 .aspect.hi {
-  background: var(--ink);
+  background: var(--brand);
   color: #fff;
 }
 
@@ -1286,7 +1294,7 @@ main.shop {
   display: none;
 }
 .timeline li.done::before {
-  background: var(--ink);
+  background: var(--brand);
 }
 .progress {
   display: grid;
@@ -1303,7 +1311,7 @@ main.shop {
 .progress div.on {
   color: var(--ink);
   font-weight: 600;
-  border-top-color: var(--ink);
+  border-top-color: var(--brand);
 }
 .steps {
   display: flex;
@@ -1334,7 +1342,7 @@ main.shop {
   font-weight: 600;
 }
 .steps span.on i {
-  background: var(--ink);
+  background: var(--brand);
   color: #fff;
 }
 .qr {
@@ -1407,8 +1415,8 @@ main.shop {
   cursor: pointer;
 }
 .radio-card:has(input:checked) {
-  border-color: var(--ink);
-  box-shadow: inset 0 0 0 1px var(--ink);
+  border-color: var(--brand);
+  box-shadow: inset 0 0 0 1px var(--brand);
 }
 .radio-card.off {
   opacity: 0.5;
@@ -1477,7 +1485,7 @@ main.shop {
   font-size: var(--t-sm);
 }
 .toc a:hover {
-  border-left-color: var(--ink);
+  border-left-color: var(--brand);
   text-decoration: none;
 }
 
@@ -1589,7 +1597,7 @@ main.shop {
   transition: left 0.15s;
 }
 .switch input:checked {
-  background: var(--ink);
+  background: var(--brand);
 }
 .switch input:checked::after {
   left: 18px;
@@ -1624,7 +1632,7 @@ main.shop {
   padding: 0 20px 0 16px;
   border-radius: var(--r-pill);
   border: 0;
-  background: var(--ink);
+  background: var(--brand);
   color: #fff;
   font: inherit;
   font-weight: 600;
@@ -1661,7 +1669,7 @@ main.shop {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--ink);
+  background: var(--brand);
   color: #fff;
   display: flex;
   align-items: center;
@@ -1710,7 +1718,7 @@ main.shop {
 }
 .msg.user {
   align-self: flex-end;
-  background: var(--ink);
+  background: var(--brand);
   color: #fff;
   border-radius: 16px 16px 4px 16px;
   padding: 9px 14px;
@@ -1829,7 +1837,7 @@ main.shop {
   padding: 4px 4px 4px 14px;
 }
 .composer:focus-within {
-  border-color: var(--ink);
+  border-color: var(--brand);
 }
 .composer input {
   border: 0;
@@ -1844,7 +1852,7 @@ main.shop {
   height: 36px;
   border-radius: 50%;
   border: 0;
-  background: var(--ink);
+  background: var(--brand);
   color: #fff;
   display: flex;
   align-items: center;
@@ -2014,7 +2022,7 @@ main.shop {
   padding: 1px 7px;
 }
 .admin nav a.on .cnt {
-  background: var(--ink);
+  background: var(--brand);
   color: #fff;
 }
 .me-box {
@@ -2093,7 +2101,7 @@ main.shop {
 }
 .tabs a.on {
   color: var(--ink);
-  border-bottom-color: var(--ink);
+  border-bottom-color: var(--brand);
 }
 .tabs a .n {
   font-size: var(--t-xs);
@@ -2149,7 +2157,7 @@ main.shop {
   padding: var(--s4) var(--s5);
 }
 .todo:hover {
-  border-color: var(--ink);
+  border-color: var(--brand);
   text-decoration: none;
 }
 .todo .top {
@@ -2224,7 +2232,7 @@ main.shop {
 }
 .qitem.on {
   background: var(--bg-2);
-  box-shadow: inset 3px 0 0 var(--ink);
+  box-shadow: inset 3px 0 0 var(--brand);
 }
 .qitem .body {
   flex: 1;
@@ -2365,7 +2373,7 @@ main.shop {
   text-decoration-color: var(--line);
 }
 .flowmap li a:hover {
-  text-decoration-color: var(--ink);
+  text-decoration-color: var(--brand);
 }
 
 /* Bảng điều khiển prototype (nút nổi góc trái dưới) */
@@ -2439,6 +2447,338 @@ body.consent-on .devpill {
   bottom: 140px;
 }
 
+/* ================= Màu thương hiệu (cam ấm, nền cát và kem) ================= */
+.announce {
+  background: var(--brand);
+  color: #fff;
+}
+.hero {
+  background: var(--sand-soft);
+}
+.hero .eyebrow {
+  color: var(--brand);
+}
+.perk .ic-wrap {
+  background: var(--brand-soft);
+  color: var(--brand);
+}
+/* Ô danh mục xoay vòng các nền pastel lấy cảm hứng từ thẻ ưu đãi của Klook */
+.cat-tile .pic {
+  width: 112px;
+  height: 96px;
+  border-radius: var(--r-lg);
+  background: var(--bg-2);
+}
+.cat-tile:nth-child(5n + 2) .pic {
+  background: var(--sand-soft);
+}
+.cat-tile:nth-child(5n + 3) .pic {
+  background: var(--brand-soft);
+}
+.cat-tile:nth-child(5n + 4) .pic {
+  background: var(--info-bg);
+}
+.cat-tile:nth-child(5n + 5) .pic {
+  background: var(--success-bg);
+}
+.cat-tile:hover {
+  background: transparent;
+}
+.cat-tile:hover b {
+  color: var(--brand);
+}
+.pcard .tag.sale {
+  background: var(--brand);
+  color: #fff;
+}
+.pcard:hover .name {
+  color: var(--brand);
+}
+.price-big,
+.pcard .price {
+  color: var(--ink);
+}
+.stars,
+.rating .ic {
+  color: var(--star);
+}
+.stars .off {
+  color: var(--bg-3);
+}
+.ai-label .ic,
+.pcard .reason .ic {
+  color: var(--brand);
+}
+.link {
+  color: var(--brand);
+}
+.badge.dark {
+  background: var(--ink);
+}
+/* Khuyến mãi dùng cam thương hiệu, đỏ chỉ dành cho lỗi */
+.badge.promo {
+  background: var(--brand-soft);
+  color: var(--brand);
+  font-weight: 600;
+}
+.admin nav a.on {
+  box-shadow:
+    inset 3px 0 0 var(--brand),
+    0 0 0 1px var(--line);
+}
+.admin nav a.on .ic {
+  color: var(--brand);
+}
+.perm-yes {
+  color: var(--brand);
+}
+.kpi .v {
+  color: var(--ink);
+}
+
+/* ================= Màn hình xác thực (bố cục chia đôi) ================= */
+.center {
+  text-align: center;
+}
+.auth-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  min-height: 100vh;
+}
+.auth-main {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--s6);
+  padding: var(--s6) var(--s7);
+}
+.auth-box {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+}
+.auth-box h1 {
+  font-size: 30px;
+  letter-spacing: -0.025em;
+  margin-bottom: var(--s2);
+}
+.auth-box .lead {
+  color: var(--muted);
+  font-size: var(--t-lg);
+  margin-bottom: var(--s5);
+}
+.auth-box form .btn.block {
+  height: 48px;
+  font-size: var(--t-lg);
+}
+.seg {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--bg-2);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  margin-bottom: var(--s6);
+}
+.seg a {
+  padding: 8px 18px;
+  border-radius: var(--r-pill);
+  font-weight: 600;
+  font-size: var(--t-md);
+  color: var(--muted);
+  text-align: center;
+}
+.seg a:hover {
+  text-decoration: none;
+  color: var(--ink);
+}
+.seg a.on {
+  background: var(--bg);
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(31, 26, 23, 0.12);
+}
+.pw-wrap {
+  position: relative;
+  display: block;
+}
+.pw-wrap input {
+  padding-right: 44px;
+}
+.pw-eye {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  border: 0;
+  background: none;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pw-eye:hover {
+  color: var(--ink);
+  background: var(--bg-2);
+}
+.field-error {
+  display: block;
+  color: var(--danger);
+  font-size: var(--t-sm);
+  margin-top: 6px;
+}
+.field-error:empty {
+  display: none;
+}
+input[aria-invalid='true'] {
+  border-color: var(--danger);
+  background: var(--danger-bg);
+}
+.pw-meter {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr) auto;
+  gap: 4px;
+  align-items: center;
+  margin-top: 8px;
+}
+.pw-meter i {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--bg-3);
+}
+.pw-meter span {
+  font-size: var(--t-xs);
+  color: var(--muted);
+  margin-left: 8px;
+  min-width: 96px;
+  text-align: right;
+}
+.pw-meter[data-score='1'] i:nth-child(-n + 1),
+.pw-meter[data-score='2'] i:nth-child(-n + 2) {
+  background: #e0a106;
+}
+.pw-meter[data-score='3'] i:nth-child(-n + 3),
+.pw-meter[data-score='4'] i:nth-child(-n + 4) {
+  background: var(--success);
+}
+.auth-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--brand-soft);
+  color: var(--brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--s5);
+}
+.auth-icon.ok {
+  background: var(--success-bg);
+  color: var(--success);
+}
+.auth-aside {
+  background: var(--sand-soft);
+  margin: 12px;
+  border-radius: 24px;
+  padding: var(--s7);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--s7);
+  overflow: hidden;
+  position: relative;
+}
+.auth-aside.staff {
+  background: var(--ink);
+  color: #fff;
+}
+.auth-aside.staff .auth-pitch li span,
+.auth-aside.staff .auth-pitch li b {
+  color: #fff;
+}
+.auth-aside.staff .auth-pitch li .ic {
+  color: var(--brand);
+  background: rgba(255, 255, 255, 0.08);
+}
+.auth-collage {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  grid-template-rows: auto auto;
+  gap: var(--s4);
+  max-width: 520px;
+}
+.auth-tile {
+  background: var(--bg);
+  border-radius: var(--r-lg);
+  padding: var(--s4);
+  box-shadow: 0 12px 32px rgba(120, 72, 20, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.auth-tile .pic {
+  background: var(--bg-2);
+  border-radius: var(--r-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: var(--s2);
+}
+.auth-tile b {
+  font-size: var(--t-sm);
+}
+.auth-tile span {
+  font-size: var(--t-sm);
+  color: var(--brand);
+  font-weight: 600;
+}
+.auth-tile.t0 {
+  grid-row: span 2;
+}
+/* Ô lớn: ảnh giãn hết chiều cao để không trống phần dưới */
+.auth-tile.t0 .pic {
+  flex: 1;
+}
+.auth-pitch {
+  max-width: 480px;
+}
+.auth-pitch h2 {
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  margin-bottom: var(--s5);
+}
+.auth-pitch ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--s4);
+}
+.auth-pitch li {
+  display: flex;
+  gap: var(--s3);
+  align-items: flex-start;
+}
+.auth-pitch li .ic {
+  color: var(--brand);
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 8px;
+  width: 36px;
+  height: 36px;
+  flex: none;
+}
+.auth-pitch li span {
+  color: var(--ink-2);
+  font-size: var(--t-md);
+}
+.auth-pitch li b {
+  display: block;
+  color: var(--ink);
+}
+
 @media (max-width: 1100px) {
   .rail {
     grid-auto-columns: calc((100% - 2 * var(--s4)) / 3);
@@ -2451,6 +2791,7 @@ body.consent-on .devpill {
   }
 }
 @media (max-width: 900px) {
+  .auth-shell,
   .layout-filter,
   .pdp,
   .hero,
@@ -2500,5 +2841,11 @@ body.consent-on .devpill {
   .filters,
   .buybox {
     position: static;
+  }
+  .auth-aside {
+    display: none;
+  }
+  .auth-main {
+    padding: var(--s5);
   }
 }

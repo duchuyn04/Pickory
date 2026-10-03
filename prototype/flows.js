@@ -22,11 +22,15 @@
           'Đăng ký, đăng nhập, quên mật khẩu',
           'Khách vãng lai',
           [
-            ['Đăng ký', '#/register'],
-            ['Email xác thực', '#/verify'],
-            ['Đăng nhập (sai 5 lần bị khóa)', '#/login'],
+            ['Đăng ký (lỗi ngay dưới ô, thước độ mạnh mật khẩu)', '#/register'],
+            ['Đã gửi email xác thực', '#/verify-sent?email=ban@gmail.com'],
+            ['Xác thực email thành công', '#/verify'],
+            ['Đăng nhập (sai 5 lần bị khóa 15 phút)', '#/login'],
+            ['Đăng nhập bằng Google', '#/login'],
             ['Quên mật khẩu', '#/forgot'],
+            ['Đã gửi link đặt lại', '#/forgot-sent?email=ban@gmail.com'],
             ['Đặt lại mật khẩu', '#/reset'],
+            ['Đăng nhập back-office (nhân viên)', '#/admin/login'],
           ],
         ],
         [

@@ -123,7 +123,7 @@
 
   PK.layouts.admin = function (html, path) {
     const S = PK.S;
-    if (!PK.isStaff()) return staffLogin();
+    if (!PK.isStaff()) return PK.staffLoginView();
     const u = PK.me();
     const items = MENU.filter((m) => m.sec || menuVisible(m));
     // Bỏ tiêu đề nhóm không còn mục nào
@@ -147,28 +147,7 @@
       </aside>
       <main class="content" id="main">${html}</main></div>`;
   };
-  function staffLogin() {
-    return `<div class="login-wrap"><div class="login-card">
-      <a class="logo" href="#/" style="margin-bottom:24px">pickory<i></i></a>
-      <h1 style="font-size:24px">Đăng nhập back-office</h1><p class="muted">Dành cho nhân viên Pickory.</p>
-      <form data-form="staffLogin" class="stack" style="margin-top:20px"><label class="field"><span>Email công việc</span><input name="email" type="email" value="nam.admin@pickory.vn" autocomplete="username"></label>
-      <label class="field"><span>Mật khẩu</span><input name="password" type="password" autocomplete="current-password"></label><button class="btn block">Đăng nhập</button></form>
-      <p class="xs muted" style="margin-top:16px">Phiên làm việc kéo dài 12 giờ. Quên mật khẩu? Liên hệ quản trị viên.</p>
-      <div class="proto-note" style="display:block"><b>Đăng nhập nhanh</b> (mật khẩu 12345678):
-        <div class="row tight" style="margin-top:8px"><button class="btn sm" data-act="quickStaff" data-role="admin">Admin</button><button class="btn sm secondary" data-act="quickStaff" data-role="sales">Sales</button><button class="btn sm secondary" data-act="quickStaff" data-role="support">CSKH</button></div></div>
-    </div></div>`;
-  }
   route('/admin/login', () => '', 'admin');
-  form('staffLogin', (data) => {
-    const role = {
-      'nam.admin@pickory.vn': 'admin',
-      'duc.sales@pickory.vn': 'sales',
-      'lan.cskh@pickory.vn': 'support',
-    }[data.email];
-    if (!role || data.password !== '12345678') return toast('Email hoặc mật khẩu không đúng');
-    PK.S.role = role;
-    PK.go('/admin');
-  });
   act('quickStaff', (d) => {
     PK.S.role = d.role;
     PK.go('/admin');

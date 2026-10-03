@@ -707,7 +707,7 @@
           <div class="muted small" style="margin-bottom:6px">${p.brand}</div>
           <h1>${esc(p.name)}</h1>
           <div class="row tight small" style="margin-bottom:20px">${stars(avg)} <b>${avg}</b> <a class="muted" href="#/p/${p.slug}?a=reviews"><u>${p.reviewCount} đánh giá</u></a></div>
-          <div class="row tight" style="align-items:baseline"><span class="price-big">${money(price)}</span>${compareAt ? `<span class="strike">${money(compareAt)}</span><span class="badge sale">Giảm ${Math.round((1 - price / compareAt) * 100)}%</span>` : ''}</div>
+          <div class="row tight" style="align-items:baseline"><span class="price-big">${money(price)}</span>${compareAt ? `<span class="strike">${money(compareAt)}</span><span class="badge promo">Giảm ${Math.round((1 - price / compareAt) * 100)}%</span>` : ''}</div>
           ${picker}
           <div style="margin:20px 0 16px">${stockHtml}</div>
           ${
@@ -1248,100 +1248,6 @@
     if (o.payment === 'paid') o.payment = 'refund_pending';
     toast('Đã hủy đơn');
     PK.render();
-  });
-
-  // ================= identity: đăng nhập, đăng ký, quên mật khẩu =================
-  let failCount = 0;
-  const googleBtn = (label) =>
-    `<button type="button" class="btn secondary block" data-act="googleLogin"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.2-4.7 3.2-8Z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6.1-4.5H2.2v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.9 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.2a11 11 0 0 0 0 9.8l3.7-2.8Z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3 .6 4.1 1.6l3.1-3.1A11 11 0 0 0 2.2 7.1l3.7 2.8C6.8 7.3 9.2 5.4 12 5.4Z"/></svg> ${label}</button>`;
-  route(
-    '/login',
-    () => `<div class="auth"><h1>Đăng nhập</h1><p class="lead">Theo dõi đơn hàng và nhận gợi ý phù hợp với bạn.</p>
-      ${googleBtn('Tiếp tục với Google')}<div class="or">hoặc</div>
-      <form data-form="login" class="stack"><label class="field"><span>Email</span><input name="email" type="email" value="minhanh@example.vn" autocomplete="email"></label>
-      <label class="field"><span class="row between">Mật khẩu <a href="#/forgot" class="small" style="font-weight:500"><u>Quên mật khẩu?</u></a></span><input name="password" type="password" autocomplete="current-password"></label>
-      <button class="btn block">Đăng nhập</button></form>
-      <p class="small muted" style="text-align:center;margin-top:20px">Chưa có tài khoản? <a href="#/register"><b>Tạo tài khoản</b></a></p>
-      ${note('Mật khẩu đúng: 12345678. Sai 5 lần trong 15 phút thì lần 6 bị khóa 15 phút (429). Thông báo lỗi không tiết lộ email có tồn tại hay không.')}</div>`,
-  );
-  form('login', (data) => {
-    if (failCount >= 5)
-      return toast('Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.');
-    if (data.password !== '12345678') {
-      failCount += 1;
-      return toast('Email hoặc mật khẩu không đúng');
-    }
-    failCount = 0;
-    loginCustomer();
-  });
-  function loginCustomer() {
-    const S = PK.S;
-    S.role = 'customer';
-    S.draft = null;
-    toast('Chào mừng Minh Anh quay lại');
-    PK.go('/');
-  }
-  act('googleLogin', () => {
-    modal(`<h2>Chọn tài khoản Google</h2><p class="muted">để tiếp tục tới Pickory</p>
-      <button class="radio-card" style="width:100%;background:none;font:inherit;text-align:left" data-act="googlePick"><span class="avatar light">MA</span><span><b>Nguyễn Minh Anh</b><br><span class="small muted">minhanh@example.vn</span></span></button>
-      ${note('Email Google đã xác thực và trùng tài khoản thì tự liên kết. Chưa xác thực thì không liên kết. Email thuộc nhân viên bị từ chối.')}`);
-  });
-  act('googlePick', () => {
-    closeModal();
-    loginCustomer();
-  });
-  route(
-    '/register',
-    () => `<div class="auth"><h1>Tạo tài khoản</h1><p class="lead">Mua nhanh hơn, theo dõi đơn và lưu sổ địa chỉ.</p>
-      ${googleBtn('Đăng ký với Google')}<div class="or">hoặc</div>
-      <form data-form="register" class="stack"><label class="field"><span>Họ và tên</span><input name="name" autocomplete="name"></label>
-      <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email"></label>
-      <label class="field"><span>Mật khẩu</span><input name="password" type="password" autocomplete="new-password" aria-describedby="pw-hint"><span id="pw-hint" class="xs muted" style="display:block;margin-top:6px">Tối thiểu 8 ký tự</span></label>
-      <button class="btn block">Tạo tài khoản</button></form>
-      <p class="small muted" style="text-align:center;margin-top:20px">Đã có tài khoản? <a href="#/login"><b>Đăng nhập</b></a></p>
-      ${note('Thử email đuôi @pickory.vn để thấy lỗi "email thuộc tài khoản nhân viên". Đăng ký xong được đăng nhập luôn và nhận email xác thực (hạn 24 giờ).')}</div>`,
-  );
-  form('register', (data) => {
-    if (!/.+@.+\..+/.test(data.email)) return toast('Email không hợp lệ');
-    if (String(data.password).length < 8) return toast('Mật khẩu cần tối thiểu 8 ký tự');
-    if (/@pickory\.vn$/.test(data.email))
-      return toast('Email này không dùng được để đăng ký tài khoản khách');
-    PK.S.role = 'customer';
-    modal(`<div style="width:48px;height:48px;border-radius:50%;background:var(--success-bg);color:var(--success);display:flex;align-items:center;justify-content:center;margin-bottom:16px">${icon('check', 24)}</div><h2>Tài khoản đã được tạo</h2><p>Chúng tôi đã gửi email xác thực tới <b>${esc(data.email)}</b>. Link có hiệu lực trong 24 giờ.</p>
-      ${note('Xem trước email: <a href="#/verify" data-act="closeModal">pickory.vn/verify-email?t=…</a>')}
-      <div class="row" style="justify-content:flex-end"><button class="btn" data-act="closeModal">Tiếp tục mua sắm</button></div>`);
-    PK.render();
-  });
-  route(
-    '/verify',
-    () =>
-      `<div class="auth" style="text-align:center"><div style="width:56px;height:56px;border-radius:50%;background:var(--success-bg);color:var(--success);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">${icon('check', 28)}</div><h1>Email đã được xác thực</h1><p class="lead">Cảm ơn bạn. Tài khoản của bạn đã sẵn sàng.</p><a class="btn" href="#/">Về trang chủ</a></div>`,
-  );
-  route(
-    '/forgot',
-    () => `<div class="auth"><h1>Quên mật khẩu</h1><p class="lead">Nhập email của bạn, chúng tôi sẽ gửi link đặt lại mật khẩu.</p>
-      <form data-form="forgot" class="stack"><label class="field"><span>Email</span><input name="email" type="email" autocomplete="email"></label><button class="btn block">Gửi link đặt lại</button></form>
-      <p class="small" style="text-align:center;margin-top:20px"><a href="#/login">${icon('chevronLeft', 14)} Quay lại đăng nhập</a></p>
-      ${note('Luôn trả cùng một thông báo và độ trễ dù email có tồn tại hay không.')}</div>`,
-  );
-  form('forgot', (data) => {
-    modal(`<h2>Kiểm tra hộp thư</h2><p>Nếu <b>${esc(data.email)}</b> có tài khoản, chúng tôi đã gửi link đặt lại mật khẩu. Link có hiệu lực 30 phút và chỉ dùng được một lần.</p>
-      ${note('Xem trước email: <a href="#/reset" data-act="closeModal">pickory.vn/reset-password?t=…</a>')}<div class="row" style="justify-content:flex-end"><button class="btn" data-act="closeModal">Đã hiểu</button></div>`);
-  });
-  route(
-    '/reset',
-    (
-      _,
-      q,
-    ) => `<div class="auth"><h1>${q.invite ? 'Kích hoạt tài khoản nhân viên' : 'Đặt mật khẩu mới'}</h1><p class="lead">${q.invite ? 'Đặt mật khẩu để đăng nhập back-office Pickory.' : 'Mật khẩu mới sẽ đăng xuất mọi thiết bị đang đăng nhập.'}</p>
-      <form data-form="reset" class="stack"><label class="field"><span>Mật khẩu mới</span><input name="password" type="password" autocomplete="new-password"><span class="xs muted" style="display:block;margin-top:6px">Tối thiểu 8 ký tự</span></label><button class="btn block">Lưu mật khẩu</button></form>
-      ${note(q.invite ? 'Trang dùng chung cho lời mời nhân viên (link hạn 72 giờ, dùng 1 lần).' : 'Đặt lại xong, mọi phiên cũ bị xóa.')}</div>`,
-  );
-  form('reset', (data) => {
-    if (String(data.password).length < 8) return toast('Mật khẩu cần tối thiểu 8 ký tự');
-    toast('Đã lưu mật khẩu mới');
-    const { query } = PK.parseHash();
-    PK.go(query.invite ? '/admin/login' : '/login');
   });
 
   // ================= identity + activity-tracking: tài khoản khách =================
