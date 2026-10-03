@@ -76,7 +76,7 @@ Chi tiết từng task ở `tasks/todo.md`. Hai track A và B chạy song song �
 - [x] T01: Khởi tạo pnpm workspace và tooling
 - [x] T02: API skeleton (errors, logger, config, health)
 - [x] T03: PostgreSQL, Prisma và test DB
-- [ ] T04: Web skeleton
+- [x] T04: Web skeleton
 - [ ] T05: ESLint chặn import sai ranh giới module
 
 ### Checkpoint 0: Nền tảng

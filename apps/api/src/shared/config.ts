@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import './load-env'; // nạp .env trước khi bất kỳ ai gọi loadConfig()
 
 // Mọi biến môi trường API cần, kèm giá trị mặc định cho dev. Module sau thêm biến vào đây.
 const configSchema = z.object({
