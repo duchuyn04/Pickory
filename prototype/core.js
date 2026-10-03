@@ -1,11 +1,12 @@
-/* Lõi prototype: state, router, helper, component dùng chung, thanh điều khiển. */
+/* Lõi prototype: state, router, helper, component dùng chung, bảng điều khiển prototype. */
 /* eslint-disable */
 (function () {
   const D = window.PK_DATA;
-  const KEY = 'pickory-proto-v1';
+  const icon = window.PK_ICON;
+  const KEY = 'pickory-proto-v2';
   const clone = (x) => JSON.parse(JSON.stringify(x));
 
-  // ---------- State dùng chung cho toàn prototype (lưu localStorage để luồng nối nhau) ----------
+  // ---------- State dùng chung (lưu localStorage để các luồng nối nhau giữa các màn hình) ----------
   function seed() {
     return {
       role: 'guest', // guest | customer | admin | sales | support
@@ -28,17 +29,10 @@
       aiDown: false,
       outOfHours: false,
       budgetPct: 65,
+      showNotes: false,
+      devOpen: false,
       aiSettings: { budget: 30, userLimit: 50, guestLimit: 15 },
-      chat: {
-        open: false,
-        status: 'bot',
-        messages: [],
-        used: 0,
-        noInfo: 0,
-        convId: null,
-        csat: null,
-        noticeShown: false,
-      },
+      chat: { open: false, status: 'bot', messages: [], used: 0, noInfo: 0, noticeShown: false },
       presence: 'available',
       experiment: { control: 10, algo: 45, llm: 45 },
       complements: [
@@ -69,7 +63,6 @@
         service: 'Chuẩn',
       },
       heroIdx: 0,
-      pendingPay: null,
       lastPath: '',
     };
   }
@@ -94,7 +87,6 @@
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
     );
   const money = (n) => Number(n).toLocaleString('vi-VN') + ' đ';
-  const stars = (r) => '★★★★★'.slice(0, Math.round(r)) + '☆☆☆☆☆'.slice(0, 5 - Math.round(r));
   const norm = (s) =>
     String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd');
   const prod = (id) => S.products.find((p) => p.id === id);
@@ -116,6 +108,11 @@
     let c = 'PK';
     for (let i = 0; i < 8; i++) c += chars[Math.floor(Math.random() * chars.length)];
     return c;
+  }
+  // Sao đánh giá bằng icon (đầy theo điểm làm tròn)
+  function stars(r, size = 13) {
+    const n = Math.round(Number(r));
+    return `<span class="stars" aria-label="${r} trên 5 sao">${[1, 2, 3, 4, 5].map((i) => `<span class="${i <= n ? '' : 'off'}">${icon('star', size, 'fill')}</span>`).join('')}</span>`;
   }
 
   const ORDER_STATUS = {
@@ -151,8 +148,8 @@
         cancelled: 'gray',
         pending_payment: 'warn',
         pending_confirmation: 'warn',
-        shipping: '',
-        confirmed: '',
+        shipping: 'info',
+        confirmed: 'info',
         returned: 'gray',
       }[s] ?? '';
     return `<span class="badge ${cls}">${ORDER_STATUS[s] ?? s}</span>`;
@@ -178,49 +175,107 @@
   }
   const can = (perm) => permsOf(me()).has(perm);
   const personalized = () => !!(S.consent && S.consent.personalization);
+  const initials = (name) =>
+    name
+      .split(' ')
+      .slice(-2)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase();
 
-  // ---------- Ảnh sản phẩm giả lập bằng SVG ----------
+  // ---------- Ảnh sản phẩm: render thiết bị tông trung tính ----------
   function hue(str) {
     let h = 0;
     for (const ch of str) h = (h * 31 + ch.charCodeAt(0)) % 360;
     return h;
   }
-  function productImg(p, size = 120) {
+  const FINISH = {
+    graphite: { body: '#3a3d44', base: '#4b4e56', edge: '#2a2c31', line: 'none' },
+    silver: { body: '#d6d7dc', base: '#e4e5e9', edge: '#b9bbc2', line: 'none' },
+    white: { body: '#f4f4f6', base: '#fbfbfc', edge: '#d9d9de', line: '#d5d5da' },
+  };
+  function finishOf(p, color) {
+    if (color === 'Trắng') return p.cat.startsWith('laptop') ? 'silver' : 'white';
+    if (color === 'Đen') return 'graphite';
+    if (p.cat === 'sac' || /AirPods/.test(p.name)) return 'white';
+    if (p.brand === 'Apple' && p.cat.startsWith('laptop')) return 'silver';
+    if (p.cat === 'laptop-van-phong') return 'silver';
+    return 'graphite';
+  }
+  // Hình nền màn hình đổi tông theo từng sản phẩm (như ảnh chụp máy có wallpaper), thân máy giữ màu trung tính
+  function screenDefs(id, h) {
+    return `<defs><linearGradient id="${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="hsl(${h} 30% 16%)"/><stop offset=".55" stop-color="hsl(${(h + 25) % 360} 38% 30%)"/><stop offset="1" stop-color="hsl(${(h + 50) % 360} 45% 48%)"/></linearGradient>
+    <linearGradient id="pkGlare" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity=".09"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>`;
+  }
+  function productImg(p, size = 120, color) {
     const c = cat(p.cat);
-    const icon = c ? c.icon : 'laptop';
-    const h = hue(p.brand || 'x');
-    const a = `hsl(${h} 45% 30%)`;
-    const b = `hsl(${(h + 40) % 360} 60% 55%)`;
+    const kind = c ? c.icon : 'laptop';
+    const f = FINISH[finishOf(p, color)];
+    const st = f.line === 'none' ? '' : ` stroke="${f.line}" stroke-width="1"`;
+    const h = hue(p.slug);
+    const scrId = 'pkScr' + h;
+    const shadow = (cy, rx) =>
+      `<ellipse cx="100" cy="${cy}" rx="${rx}" ry="4" fill="#000" opacity=".07"/>`;
     const shapes = {
-      laptop: `<rect x="22" y="26" width="76" height="50" rx="5" fill="${a}"/><rect x="27" y="31" width="66" height="40" rx="2" fill="${b}"/><path d="M12 80h96l-8 10H20z" fill="${a}"/>`,
-      phone: `<rect x="40" y="12" width="40" height="88" rx="9" fill="${a}"/><rect x="44" y="20" width="32" height="70" rx="4" fill="${b}"/>`,
-      headphone: `<path d="M28 70V58a32 32 0 0 1 64 0v12" fill="none" stroke="${a}" stroke-width="8"/><rect x="20" y="62" width="20" height="30" rx="8" fill="${b}"/><rect x="80" y="62" width="20" height="30" rx="8" fill="${b}"/>`,
-      monitor: `<rect x="14" y="20" width="92" height="58" rx="5" fill="${a}"/><rect x="19" y="25" width="82" height="48" rx="2" fill="${b}"/><rect x="54" y="78" width="12" height="12" fill="${a}"/><rect x="40" y="90" width="40" height="5" rx="2" fill="${a}"/>`,
-      mouse: `<rect x="40" y="20" width="40" height="76" rx="20" fill="${a}"/><path d="M60 22v26" stroke="${b}" stroke-width="4"/><rect x="56" y="34" width="8" height="12" rx="4" fill="${b}"/>`,
-      bag: `<rect x="28" y="30" width="64" height="66" rx="14" fill="${a}"/><path d="M45 30a15 15 0 0 1 30 0" fill="none" stroke="${a}" stroke-width="6"/><rect x="38" y="58" width="44" height="26" rx="6" fill="${b}"/>`,
-      charger: `<rect x="36" y="30" width="48" height="56" rx="10" fill="${a}"/><path d="M50 30V16M70 30V16" stroke="${a}" stroke-width="6"/><path d="M62 42l-10 16h10l-4 14 12-18H60z" fill="${b}"/>`,
+      laptop: `${shadow(156, 82)}<rect x="32" y="40" width="136" height="90" rx="7" fill="${f.body}"${st}/><rect x="38" y="46" width="124" height="78" rx="2" fill="url(#pkScr)"/><path d="M38 46h70l-40 78H38z" fill="url(#pkGlare)"/><circle cx="100" cy="43" r="1" fill="${f.edge}"/>
+        <path d="M18 132h164l-6 12a6 6 0 0 1-5.4 3.4H29.4A6 6 0 0 1 24 144z" fill="${f.base}"${st}/><rect x="86" y="132" width="28" height="3" rx="1.5" fill="${f.edge}"/>`,
+      phone: `${shadow(160, 50)}<rect x="56" y="30" width="58" height="122" rx="13" fill="${f.body}"${st}/><rect x="62" y="36" width="26" height="26" rx="8" fill="${f.edge}"/><circle cx="70" cy="44" r="4.5" fill="#15161a"/><circle cx="80" cy="54" r="4.5" fill="#15161a"/>
+        <rect x="88" y="40" width="58" height="122" rx="13" fill="${f.edge}"/><rect x="91" y="43" width="52" height="116" rx="10" fill="url(#pkScr)"/><path d="M91 43h30l-30 70z" fill="url(#pkGlare)"/><rect x="108" y="48" width="18" height="5" rx="2.5" fill="#0c0d10"/>`,
+      headphone: `${shadow(160, 60)}<path d="M58 112c0-34 18-62 42-62s42 28 42 62" fill="none" stroke="${f.edge}" stroke-width="9" stroke-linecap="round"/><path d="M58 112c0-34 18-62 42-62s42 28 42 62" fill="none" stroke="${f.body}" stroke-width="5" stroke-linecap="round"/>
+        <rect x="42" y="96" width="34" height="58" rx="16" fill="${f.body}"${st}/><rect x="124" y="96" width="34" height="58" rx="16" fill="${f.body}"${st}/><rect x="66" y="102" width="12" height="46" rx="6" fill="${f.edge}"/><rect x="122" y="102" width="12" height="46" rx="6" fill="${f.edge}"/>`,
+      monitor: `${shadow(160, 50)}<rect x="22" y="34" width="156" height="96" rx="5" fill="${f.edge}"/><rect x="26" y="38" width="148" height="86" rx="2" fill="url(#pkScr)"/><path d="M26 38h80l-46 86H26z" fill="url(#pkGlare)"/>
+        <path d="M92 130h16l4 22H88z" fill="${f.body}"/><rect x="66" y="150" width="68" height="7" rx="3.5" fill="${f.base}"/>`,
+      mouse: `${shadow(152, 34)}<rect x="74" y="36" width="52" height="112" rx="26" fill="${f.body}"${st}/><path d="M100 38v42" stroke="${f.edge}" stroke-width="2"/><rect x="96" y="54" width="8" height="18" rx="4" fill="${f.edge}"/><path d="M76 84c8 4 40 4 48 0" stroke="${f.edge}" stroke-width="1.5" fill="none"/>`,
+      bag: `${shadow(160, 50)}<path d="M84 42a16 16 0 0 1 32 0" fill="none" stroke="${f.edge}" stroke-width="6"/><rect x="58" y="44" width="84" height="110" rx="24" fill="${f.body}"${st}/><rect x="72" y="98" width="56" height="42" rx="12" fill="${f.base}"/><rect x="84" y="108" width="32" height="3" rx="1.5" fill="${f.edge}"/>`,
+      charger: `${shadow(150, 34)}<rect x="88" y="34" width="6" height="20" rx="2" fill="#9a9ca3"/><rect x="106" y="34" width="6" height="20" rx="2" fill="#9a9ca3"/><rect x="70" y="52" width="60" height="90" rx="14" fill="${f.body}"${st}/>
+        <rect x="84" y="96" width="32" height="7" rx="3.5" fill="${f.edge}"/><rect x="84" y="110" width="32" height="7" rx="3.5" fill="${f.edge}"/><rect x="90" y="124" width="20" height="7" rx="3.5" fill="${f.edge}"/>`,
     };
-    return `<svg width="${size}" height="${size}" viewBox="0 0 120 120" role="img" aria-label="${esc(p.name)}">${shapes[icon] || shapes.laptop}</svg>`;
+    return `<svg width="${size}" height="${size}" viewBox="0 0 200 200" role="img" aria-label="${esc(p.name)}">${screenDefs(scrId, h)}${(shapes[kind] || shapes.laptop).replace(/url\(#pkScr\)/g, `url(#${scrId})`)}</svg>`;
+  }
+  // Dòng thông số ngắn trên thẻ sản phẩm
+  function specLine(p) {
+    const s = p.specs;
+    if (s.gpu)
+      return [
+        String(s.cpu).replace(/^(Intel Core |AMD |Apple )/, ''),
+        s.gpu,
+        s.ram_gb && s.ram_gb + 'GB',
+      ]
+        .filter(Boolean)
+        .join(' · ');
+    if (s.chip) return [s.chip, s.ram_gb + 'GB RAM', s.battery + ' mAh'].join(' · ');
+    if (s.connect)
+      return [
+        s.anc ? 'Chống ồn chủ động' : null,
+        s.connect,
+        s.battery_h ? s.battery_h + ' giờ pin' : null,
+      ]
+        .filter(Boolean)
+        .join(' · ');
+    return p.short;
   }
 
   // ---------- Component dùng chung ----------
   function productCard(p, opts = {}) {
     const out = p.stock <= 0 && p.status === 'active';
     const disc = p.status === 'discontinued';
-    let badge = '';
-    if (disc) badge = '<span class="badge gray">Ngừng kinh doanh</span>';
-    else if (out) badge = '<span class="badge gray">Hết hàng</span>';
+    let tag = '';
+    if (disc) tag = '<span class="tag out">Ngừng kinh doanh</span>';
+    else if (out) tag = '<span class="tag out">Tạm hết hàng</span>';
     else if (p.compareAt)
-      badge = `<span class="badge sale">-${Math.round((1 - p.price / p.compareAt) * 100)}%</span>`;
-    else if (p.reviewCount > 60) badge = '<span class="badge">Phổ biến</span>';
+      tag = `<span class="tag sale">Giảm ${money(p.compareAt - p.price).replace(' đ', 'đ')}</span>`;
+    else if (p.reviewCount > 60) tag = '<span class="tag">Bán chạy</span>';
     return `<a class="pcard" href="#/p/${p.slug}" data-act="trackClick" data-pid="${p.id}" data-source="${opts.source || 'category'}">
-      <div class="img">${badge}${productImg(p, 130)}</div>
+      <div class="img">${tag}${productImg(p, 180)}</div>
+      <div class="brand">${esc(p.brand)}</div>
       <div class="name">${esc(p.name)}</div>
-      <div class="row small"><span class="stars">${stars(p.rating)}</span><span class="muted">${p.rating} (${p.reviewCount})</span></div>
-      <div><span class="price">${money(p.price)}</span> ${p.compareAt ? `<span class="strike small">${money(p.compareAt)}</span>` : ''}</div>
-      ${opts.reason ? `<div class="reason">${esc(opts.reason)}</div>` : ''}
+      <div class="spec">${esc(specLine(p))}</div>
+      <div class="rating">${icon('star', 12, 'fill')} ${p.rating} <span class="muted">(${p.reviewCount})</span></div>
+      <div class="price-row"><span class="price">${money(p.price)}</span>${p.compareAt ? `<span class="strike small">${money(p.compareAt)}</span>` : ''}</div>
+      ${opts.reason ? `<div class="reason">${icon('sparkle', 13)}<span>${esc(opts.reason)}</span></div>` : ''}
     </a>`;
   }
+  // Ghi chú cho người xem prototype, ẩn mặc định (bật trong bảng điều khiển)
   function note(html) {
     return `<div class="proto-note"><b>Ghi chú prototype:</b> ${html}</div>`;
   }
@@ -229,9 +284,11 @@
     if (old) old.remove();
     const t = document.createElement('div');
     t.className = 'toast';
-    t.textContent = msg;
+    t.setAttribute('role', 'status');
+    t.innerHTML = `${icon('check', 16)}<span></span>`;
+    t.querySelector('span').textContent = msg;
     document.body.appendChild(t);
-    setTimeout(() => t.remove(), 2600);
+    setTimeout(() => t.remove(), 2800);
   }
   function modal(html, wide) {
     closeModal();
@@ -251,34 +308,36 @@
     if (m) m.remove();
   }
 
-  // Biểu đồ cột và đường bằng SVG (thay Recharts trong prototype)
+  // Biểu đồ cột bằng SVG (thay Recharts trong prototype), có lưới ngang mảnh
   function barChart(values, labels, opts = {}) {
-    const w = 640,
-      h = opts.h || 180,
-      pad = 28;
-    const max = Math.max(...values, 1);
-    const bw = (w - pad * 2) / values.length;
+    const w = 720,
+      h = opts.h || 220,
+      padL = 8,
+      padB = 24,
+      padT = 8;
+    const max = Math.max(...values, 1) * 1.1;
+    const bw = (w - padL * 2) / values.length;
+    const y = (v) => h - padB - ((h - padB - padT) * v) / max;
+    const grid = [0.25, 0.5, 0.75, 1]
+      .map(
+        (g) =>
+          `<line x1="${padL}" x2="${w - padL}" y1="${y(max * g)}" y2="${y(max * g)}" stroke="#f0f0f2"/>`,
+      )
+      .join('');
     const bars = values
       .map((v, i) => {
-        const bh = ((h - pad * 2) * v) / max;
-        const color =
-          opts.highlight && opts.highlight(i)
-            ? 'var(--color-sale-ink)'
-            : opts.color || 'var(--color-ink)';
-        return `<rect x="${pad + i * bw + 2}" y="${h - pad - bh}" width="${Math.max(bw - 4, 2)}" height="${bh}" rx="2" fill="${color}"><title>${esc(labels[i])}: ${opts.fmt ? opts.fmt(v) : v}</title></rect>`;
+        const color = opts.highlight && opts.highlight(i) ? '#b42318' : '#111114';
+        return `<rect x="${padL + i * bw + bw * 0.18}" y="${y(v)}" width="${bw * 0.64}" height="${h - padB - y(v)}" rx="2" fill="${color}"><title>${esc(labels[i])}: ${opts.fmt ? opts.fmt(v) : v}</title></rect>`;
       })
       .join('');
     const ticks = labels
       .map((l, i) =>
         i % Math.ceil(labels.length / 10) === 0
-          ? `<text x="${pad + i * bw + bw / 2}" y="${h - 8}" font-size="10" text-anchor="middle" fill="#6b6b76">${esc(l)}</text>`
+          ? `<text x="${padL + i * bw + bw / 2}" y="${h - 6}" font-size="11" text-anchor="middle" fill="#9c9ca5" font-family="inherit">${esc(l)}</text>`
           : '',
       )
       .join('');
-    const ref = opts.refLine
-      ? `<line x1="${pad}" x2="${w - pad}" y1="${h - pad - ((h - pad * 2) * opts.refLine) / max}" y2="${h - pad - ((h - pad * 2) * opts.refLine) / max}" stroke="var(--color-warning)" stroke-dasharray="4 4"/>`
-      : '';
-    return `<svg class="chart" viewBox="0 0 ${w} ${h}">${bars}${ref}<line x1="${pad}" x2="${w - pad}" y1="${h - pad}" y2="${h - pad}" stroke="#ececec"/>${ticks}</svg>`;
+    return `<svg class="chart" viewBox="0 0 ${w} ${h}" role="img" aria-label="${esc(opts.label || 'Biểu đồ')}">${grid}${bars}<line x1="${padL}" x2="${w - padL}" y1="${h - padB}" y2="${h - padB}" stroke="#e6e6ea"/>${ticks}</svg>`;
   }
 
   // ---------- Router ----------
@@ -305,18 +364,10 @@
   const FORM = {};
   const CHANGE = {};
   const INPUT = {};
-  function act(name, fn) {
-    ACT[name] = fn;
-  }
-  function form(name, fn) {
-    FORM[name] = fn;
-  }
-  function change(name, fn) {
-    CHANGE[name] = fn;
-  }
-  function input(name, fn) {
-    INPUT[name] = fn;
-  }
+  const act = (name, fn) => (ACT[name] = fn);
+  const form = (name, fn) => (FORM[name] = fn);
+  const change = (name, fn) => (CHANGE[name] = fn);
+  const input = (name, fn) => (INPUT[name] = fn);
   document.addEventListener('click', (e) => {
     const el = e.target.closest('[data-act]');
     if (!el || !ACT[el.dataset.act]) return;
@@ -342,54 +393,68 @@
     if (el && INPUT[el.dataset.input]) INPUT[el.dataset.input](el, e);
   });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+      closeModal();
+      if (S.devOpen) {
+        S.devOpen = false;
+        renderDev();
+      }
+    }
   });
 
-  // ---------- Thanh điều khiển prototype ----------
-  function devbar() {
-    const roleOpts = [
-      ['guest', 'Khách vãng lai'],
-      ['customer', 'Khách hàng: Minh Anh'],
-      ['admin', 'Admin: Hoàng Nam'],
-      ['sales', 'Sales: Đức'],
-      ['support', 'CSKH: Lan'],
-    ]
-      .map(([v, l]) => `<option value="${v}" ${S.role === v ? 'selected' : ''}>${l}</option>`)
-      .join('');
-    const budgetOpts = [65, 85, 105, 125]
-      .map((v) => `<option value="${v}" ${S.budgetPct === v ? 'selected' : ''}>${v}%</option>`)
-      .join('');
-    return `<div class="devbar">
-      <span class="tag">PROTOTYPE</span>
-      <a href="#/flows" style="color:#fff">Bản đồ luồng</a>
-      <a href="#/" style="color:#fff">Cửa hàng</a>
-      <a href="#/admin" style="color:#fff">Back-office</a>
-      <span class="spacer"></span>
-      <label>Xem như <select data-change="role" aria-label="Đổi vai trò">${roleOpts}</select></label>
-      <label><input type="checkbox" data-change="aiDown" ${S.aiDown ? 'checked' : ''}> AI lỗi</label>
-      <label><input type="checkbox" data-change="outOfHours" ${S.outOfHours ? 'checked' : ''}> Ngoài giờ CSKH</label>
-      <label>Ngân sách AI <select data-change="budget">${budgetOpts}</select></label>
-      <button data-act="resetAll">Đặt lại dữ liệu</button>
-    </div>`;
+  // ---------- Bảng điều khiển prototype (nút nổi góc trái dưới) ----------
+  const ROLE_LABEL = {
+    guest: 'Khách vãng lai',
+    customer: 'Khách hàng · Minh Anh',
+    admin: 'Admin · Hoàng Nam',
+    sales: 'Sales · Đức',
+    support: 'CSKH · Lan',
+  };
+  function renderDev() {
+    let root = document.getElementById('dev-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'dev-root';
+      document.body.appendChild(root);
+    }
+    const sw = (key, label) =>
+      `<label class="pref-row switch"><span>${label}</span><input type="checkbox" data-change="devToggle" data-key="${key}" ${S[key] ? 'checked' : ''}></label>`;
+    root.innerHTML = `<div class="devpill">
+      ${
+        S.devOpen
+          ? `<div class="devpanel" role="dialog" aria-label="Điều khiển prototype">
+        <h4>Xem như</h4><select data-change="role" aria-label="Vai trò">${Object.entries(ROLE_LABEL)
+          .map(([v, l]) => `<option value="${v}" ${S.role === v ? 'selected' : ''}>${l}</option>`)
+          .join('')}</select>
+        <h4>Giả lập tình huống</h4>${sw('aiDown', 'API AI đang lỗi')}${sw('outOfHours', 'Ngoài giờ CSKH')}
+        <label class="pref-row"><span>Ngân sách AI đã dùng</span><select data-change="budget" style="width:auto">${[65, 85, 105, 125].map((v) => `<option value="${v}" ${S.budgetPct === v ? 'selected' : ''}>${v}%</option>`).join('')}</select></label>
+        <h4>Hiển thị</h4>${sw('showNotes', 'Ghi chú cho người review')}
+        <h4>Đi tới</h4><div class="links"><a class="chip" href="#/flows">Bản đồ luồng</a><a class="chip" href="#/">Cửa hàng</a><a class="chip" href="#/admin">Back-office</a></div>
+        <hr class="sep"><button class="btn sm secondary block" data-act="resetAll">Đặt lại dữ liệu mẫu</button>
+      </div>`
+          : ''
+      }
+      <button data-act="devToggleOpen" aria-expanded="${S.devOpen}"><i>PROTOTYPE</i>${esc(ROLE_LABEL[S.role])}${icon(S.devOpen ? 'chevronDown' : 'settings', 15)}</button></div>`;
   }
+  act('devToggleOpen', () => {
+    S.devOpen = !S.devOpen;
+    renderDev();
+    save();
+  });
+  change('devToggle', (el) => {
+    S[el.dataset.key] = el.checked;
+    if (el.dataset.key === 'aiDown')
+      toast(
+        el.checked ? 'Giả lập: API AI lỗi, circuit breaker mở' : 'API AI hoạt động bình thường',
+      );
+    render();
+  });
   change('role', (el) => {
     S.role = el.value;
-    if (S.role === 'customer' && S.chat.convId === null) S.chat.used = 0;
-    toast('Đang xem như: ' + el.options[el.selectedIndex].text);
+    toast('Đang xem như: ' + ROLE_LABEL[S.role]);
     if (isStaff() && !location.hash.startsWith('#/admin')) go('/admin');
     else if (!isStaff() && location.hash.startsWith('#/admin')) go('/');
     else render();
-  });
-  change('aiDown', (el) => {
-    S.aiDown = el.checked;
-    toast(
-      S.aiDown ? 'Giả lập: API AI đang lỗi (circuit breaker mở)' : 'API AI hoạt động bình thường',
-    );
-    render();
-  });
-  change('outOfHours', (el) => {
-    S.outOfHours = el.checked;
-    render();
   });
   change('budget', (el) => {
     S.budgetPct = Number(el.value);
@@ -399,7 +464,6 @@
   act('resetAll', () => {
     if (!confirm('Xóa toàn bộ thay đổi và quay về dữ liệu mẫu ban đầu?')) return;
     S = seed();
-    window.PK.S = S;
     save();
     go('/flows');
     render();
@@ -421,30 +485,30 @@
     }
     let html;
     let layout = 'shop';
-    if (!hit) html = `<h1>Không tìm thấy trang</h1><p><a href="#/">Về trang chủ</a></p>`;
+    if (!hit)
+      html = `<div class="empty"><b>Không tìm thấy trang</b><a href="#/">Về trang chủ</a></div>`;
     else {
       layout = hit.r.layout;
       html = hit.r.fn(hit.params, query);
     }
-    const root = document.getElementById('app');
     const L = window.PK.layouts;
-    root.innerHTML = devbar() + (L[layout] ? L[layout](html, path) : html);
+    document.getElementById('app').innerHTML = L[layout] ? L[layout](html, path) : html;
+    document.body.classList.toggle('notes-on', !!S.showNotes);
     if (S.lastPath !== path) {
       window.scrollTo(0, 0);
       S.lastPath = path;
     }
     if (window.PK.afterRender) window.PK.afterRender(layout, path);
+    renderDev();
     save();
   }
   window.addEventListener('hashchange', render);
 
   window.PK = {
     D,
+    icon,
     get S() {
       return S;
-    },
-    set S(v) {
-      S = v;
     },
     save,
     render,
@@ -478,7 +542,9 @@
     permsOf,
     can,
     personalized,
+    initials,
     productImg,
+    specLine,
     productCard,
     note,
     toast,
