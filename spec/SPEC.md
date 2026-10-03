@@ -78,6 +78,7 @@ apps/
 packages/
   shared/                 → type và Zod schema dùng chung web/api
 e2e/                      → Playwright test
+spec/                     → CAPABILITY-MAP.md, SPEC.md (file này), SPEC-<module-id>.md
 docs/adr/                 → Architecture Decision Records
 ```
 

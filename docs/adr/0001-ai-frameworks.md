@@ -2,7 +2,7 @@
 
 - Trạng thái: Đã chấp nhận
 - Ngày: 2026-10-03
-- Liên quan: `SPEC-ai-gateway.md`, `SPEC-knowledge-base.md`, `SPEC-shopping-assistant.md`
+- Liên quan: `spec/SPEC-ai-gateway.md`, `spec/SPEC-knowledge-base.md`, `spec/SPEC-shopping-assistant.md`
 
 ## Bối cảnh
 
@@ -45,4 +45,4 @@ Người làm dự án muốn **giảm code tự viết** và **học framework 
 
 **Quy tắc đi kèm**
 - Không bật LangSmith tracing, không gửi trace hay prompt sang dịch vụ quan sát bên ngoài.
-- Thêm package AI mới ngoài danh sách trên vẫn thuộc mục "Ask first" trong `SPEC.md`.
+- Thêm package AI mới ngoài danh sách trên vẫn thuộc mục "Ask first" trong `spec/SPEC.md`.
