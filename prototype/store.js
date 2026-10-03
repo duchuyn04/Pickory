@@ -5,6 +5,7 @@
   const PK = window.PK;
   const D = PK.D;
   const {
+    icon,
     esc,
     money,
     stars,
@@ -34,6 +35,11 @@
       : 'general';
   const aiUsable = (tier) =>
     !PK.S.aiDown && (tier === 'high' ? PK.S.budgetPct < 120 : PK.S.budgetPct < 100);
+  const crumbs = (items) =>
+    `<nav class="breadcrumb" aria-label="Breadcrumb">${items.map(([l, h], i) => (i ? icon('chevronRight', 14) : '') + (h ? `<a href="${h}">${l}</a>` : `<span>${l}</span>`)).join('')}</nav>`;
+  const sectionHead = (title, sub, link) =>
+    `<div class="section-head"><div><h2>${title}</h2>${sub ? `<p>${sub}</p>` : ''}</div>${link ? `<a class="link" href="${link[1]}">${link[0]} ${icon('arrowRight', 16)}</a>` : ''}</div>`;
+  const dmy = (s) => s.slice(0, 10).split('-').reverse().join('/');
 
   // ================= Layout cửa hàng =================
   PK.layouts.shop = function (html) {
@@ -41,30 +47,45 @@
     const user = PK.me();
     const cats = D.categories.filter((c) => !c.parent);
     return `
+    <div class="announce"><div class="inner">
+      <span>${icon('truck', 14)} Miễn phí giao hàng cho đơn từ 500.000 đ</span>
+      <span>${icon('refresh', 14)} Đổi trả trong 7 ngày</span>
+      <span>${icon('shield', 14)} Hàng chính hãng, bảo hành tận nơi</span>
+    </div></div>
     <header class="shop-header">
       <div class="inner">
-        <a class="logo" href="#/">pick<span>ory</span></a>
+        <a class="logo" href="#/" aria-label="Pickory, trang chủ">pickory<i></i></a>
         <form class="search-box" data-form="search" role="search">
-          <input name="q" placeholder="Tìm laptop, điện thoại... thử gõ: laptop choi game duoi 25 trieu" autocomplete="off"
-            data-input="typeahead" aria-label="Tìm kiếm" role="combobox" aria-expanded="false" maxlength="200">
-          <div id="ta" class="typeahead hidden"></div>
+          ${icon('search', 18)}
+          <input name="q" placeholder="Bạn cần tìm gì? Ví dụ: laptop chơi game dưới 25 triệu" autocomplete="off"
+            data-input="typeahead" aria-label="Tìm kiếm sản phẩm" role="combobox" aria-expanded="false" aria-controls="ta" maxlength="200">
+          <div id="ta" class="typeahead hidden" role="listbox"></div>
         </form>
         <span class="spacer"></span>
-        <a class="icon-btn" href="#/help">Trợ giúp</a>
-        ${S.role === 'customer' ? `<a class="icon-btn" href="#/orders">Đơn hàng</a><a class="icon-btn" href="#/account">${esc(user.name.split(' ').pop())}</a>` : `<a class="icon-btn" href="#/login">Đăng nhập</a>`}
-        <a class="icon-btn" href="#/cart">Giỏ hàng <span class="count">${cartCount()}</span></a>
+        <div class="hdr-actions">
+          <a class="hdr-link" href="#/help">${icon('help', 20)}<span>Hỗ trợ</span></a>
+          ${S.role === 'customer' ? `<a class="hdr-link" href="#/orders">${icon('package', 20)}<span>Đơn hàng</span></a><a class="hdr-link" href="#/account">${icon('user', 20)}<span>${esc(user.name.split(' ').pop())}</span></a>` : `<a class="hdr-link" href="#/login">${icon('user', 20)}<span>Đăng nhập</span></a>`}
+          <a class="hdr-link" href="#/cart" aria-label="Giỏ hàng, ${cartCount()} sản phẩm">${icon('bag', 20)}<span>Giỏ hàng</span>${cartCount() ? `<b class="count">${cartCount()}</b>` : ''}</a>
+        </div>
       </div>
-      <nav class="nav-cats">${cats.map((c) => `<a href="#/c/${c.id}">${c.name}</a>`).join('')}<a href="#/help/chinh-sach-doi-tra">Đổi trả</a></nav>
+      <nav class="nav-cats" aria-label="Danh mục">${cats.map((c) => `<a href="#/c/${c.id}">${c.name}</a>`).join('')}<a href="#/c/laptop-gaming">Gaming</a><a href="#/help">Trung tâm hỗ trợ</a></nav>
     </header>
-    <main class="shop">${html}</main>
-    <footer class="footer"><div class="inner">
-      <div><b>pickory</b><br>Cửa hàng đồ công nghệ có trợ lý AI.<br>Hotline 1900 0000</div>
-      <div><b>Chính sách</b>${PK.S.kbDocs
-        .filter((d) => d.type === 'policy' && d.status === 'published')
-        .map((d) => `<a href="#/help/${d.slug}">${d.title}</a>`)
-        .join('')}</div>
-      <div><b>Hỗ trợ</b><a href="#/help">Trung tâm hỗ trợ</a><a href="#/orders">Tra cứu đơn hàng</a><a href="#" data-act="openConsent">Cài đặt quyền riêng tư</a></div>
-    </div></footer>`;
+    <main class="shop" id="main">${html}</main>
+    <footer class="footer">
+      <div class="inner">
+        <div><a class="logo" href="#/">pickory<i></i></a><p style="margin-top:12px;max-width:32ch">Laptop, điện thoại, tai nghe chính hãng. Tư vấn bởi trợ lý AI và đội ngũ CSKH.</p><p>Hotline <b>1900 0000</b> · 8:00 đến 21:00</p></div>
+        <div><h4>Mua sắm</h4>${cats.map((c) => `<a href="#/c/${c.id}">${c.name}</a>`).join('')}</div>
+        <div><h4>Chính sách</h4>${PK.S.kbDocs
+          .filter((d) => d.type === 'policy' && d.status === 'published')
+          .map(
+            (d) =>
+              `<a href="#/help/${d.slug}">${d.title.replace('Chính sách ', '').replace(/^./, (x) => x.toUpperCase())}</a>`,
+          )
+          .join('')}</div>
+        <div><h4>Hỗ trợ</h4><a href="#/help">Trung tâm hỗ trợ</a><a href="#/orders">Tra cứu đơn hàng</a><a href="#" data-act="openConsent">Cài đặt quyền riêng tư</a></div>
+      </div>
+      <div class="legal">© 2026 Pickory. Thanh toán qua VietQR (SePay) hoặc COD, giao hàng bởi GHN.</div>
+    </footer>`;
   };
   PK.layouts.bare = (html) => html;
 
@@ -76,7 +97,7 @@
       chatRoot.id = 'chat-root';
       document.body.appendChild(chatRoot);
     }
-    if (layout === 'shop') renderChat();
+    if (layout === 'shop' && path !== '/flows') renderChat();
     else chatRoot.innerHTML = '';
     let consentRoot = document.getElementById('consent-root');
     if (!consentRoot) {
@@ -84,8 +105,9 @@
       consentRoot.id = 'consent-root';
       document.body.appendChild(consentRoot);
     }
-    consentRoot.innerHTML =
-      layout === 'shop' && S.consent === null && path !== '/flows' ? consentBanner() : '';
+    const showConsent = layout === 'shop' && S.consent === null && path !== '/flows';
+    consentRoot.innerHTML = showConsent ? consentBanner() : '';
+    document.body.classList.toggle('consent-on', showConsent);
     // Cuộn tới mục trong tài liệu khi đi từ trích dẫn [n]
     const { query } = PK.parseHash();
     if (query.a) {
@@ -100,11 +122,10 @@
 
   // ================= identity: banner đồng ý =================
   function consentBanner() {
-    return `<div class="consent" role="dialog" aria-label="Đồng ý thu thập dữ liệu">
-      <b>Pickory dùng dữ liệu để gợi ý đúng gu bạn</b>
-      <p class="small muted" style="margin:6px 0 0">Nếu đồng ý, chúng tôi ghi nhận sản phẩm bạn xem và mua để cá nhân hóa gợi ý. Bạn đổi ý bất cứ lúc nào trong Tài khoản. <a href="#/help/quyen-rieng-tu">Chính sách</a></p>
-      <div class="two"><button class="btn" data-act="consent" data-v="all">Đồng ý</button><button class="btn" data-act="consent" data-v="necessary">Chỉ cần thiết</button></div>
-      <div style="text-align:center;margin-top:8px"><a href="#" class="small" data-act="openConsent">Tùy chỉnh</a></div>
+    return `<div class="consent" role="dialog" aria-labelledby="consent-title">
+      <div><b id="consent-title">Gợi ý đúng gu bạn hơn?</b>
+        <p>Nếu đồng ý, Pickory ghi nhận sản phẩm bạn xem và mua để cá nhân hóa gợi ý. Bạn đổi ý bất cứ lúc nào trong tài khoản. <a href="#/help/quyen-rieng-tu"><u>Chính sách quyền riêng tư</u></a> · <a href="#" data-act="openConsent"><u>Tùy chỉnh</u></a></p></div>
+      <div class="two"><button class="btn secondary" data-act="consent" data-v="necessary">Chỉ cần thiết</button><button class="btn secondary" data-act="consent" data-v="all">Đồng ý</button></div>
     </div>`;
   }
   act('consent', (d) => {
@@ -114,12 +135,12 @@
   });
   act('openConsent', () => {
     const c = PK.S.consent || { personalization: false, marketing: false };
-    modal(`<h2>Tùy chỉnh quyền riêng tư</h2>
-      <form data-form="consentCustom" class="stack">
-        <label class="switch"><input type="checkbox" checked disabled> <span><b>Cần thiết</b><br><span class="small muted">Giỏ hàng, đăng nhập, bảo mật. Luôn bật.</span></span></label>
-        <label class="switch"><input type="checkbox" name="personalization" ${c.personalization ? 'checked' : ''}> <span><b>Cá nhân hóa</b><br><span class="small muted">Ghi nhận sản phẩm bạn xem để gợi ý "Dành cho bạn".</span></span></label>
-        <label class="switch"><input type="checkbox" name="marketing" ${c.marketing ? 'checked' : ''}> <span><b>Tiếp thị</b><br><span class="small muted">Nhận ưu đãi phù hợp.</span></span></label>
-        <div class="row"><button class="btn">Lưu lựa chọn</button><button type="button" class="btn secondary" data-act="closeModal">Hủy</button></div>
+    modal(`<h2>Quyền riêng tư</h2><p class="muted">Chọn loại dữ liệu Pickory được dùng. Lựa chọn được lưu kèm phiên bản chính sách.</p>
+      <form data-form="consentCustom">
+        <label class="pref-row switch"><div><b>Cần thiết</b><p>Giỏ hàng, đăng nhập, bảo mật. Luôn bật.</p></div><input type="checkbox" checked disabled></label>
+        <label class="pref-row switch"><div><b>Cá nhân hóa</b><p>Ghi nhận sản phẩm bạn xem để gợi ý "Dành cho bạn".</p></div><input type="checkbox" name="personalization" ${c.personalization ? 'checked' : ''}></label>
+        <label class="pref-row switch"><div><b>Tiếp thị</b><p>Nhận ưu đãi phù hợp với bạn.</p></div><input type="checkbox" name="marketing" ${c.marketing ? 'checked' : ''}></label>
+        <div class="row" style="margin-top:20px;justify-content:flex-end"><button type="button" class="btn secondary" data-act="closeModal">Hủy</button><button class="btn">Lưu lựa chọn</button></div>
       </form>`);
     return false;
   });
@@ -131,7 +152,7 @@
     };
     if (!data.personalization) PK.S.recent = [];
     closeModal();
-    toast('Đã lưu lựa chọn (ghi 1 bản ghi consent mới)');
+    toast('Đã lưu lựa chọn của bạn');
     PK.render();
   });
 
@@ -160,20 +181,26 @@
         prods
           .map(
             (p) =>
-              `<a href="#/p/${p.slug}">${productImg(p, 32)}<span>${esc(p.name)}</span><span class="spacer"></span><b class="small">${money(p.price)}</b></a>`,
+              `<a href="#/p/${p.slug}" role="option"><span class="thumb">${productImg(p, 32)}</span><span>${esc(p.name)}</span><span class="spacer"></span><b class="small">${money(p.price)}</b></a>`,
           )
           .join('');
     if (cats.length)
       html +=
         `<div class="grp">Danh mục</div>` +
-        cats.map((c) => `<a href="#/c/${c.id}">${c.name}</a>`).join('');
+        cats
+          .map((c) => `<a href="#/c/${c.id}" role="option">${icon('list', 16)} ${c.name}</a>`)
+          .join('');
     if (brands.length)
       html +=
         `<div class="grp">Thương hiệu</div>` +
-        brands.map((b) => `<a href="#/search?q=${encodeURIComponent(b)}">${b}</a>`).join('');
+        brands
+          .map(
+            (b) =>
+              `<a href="#/search?q=${encodeURIComponent(b)}" role="option">${icon('tag', 16)} ${b}</a>`,
+          )
+          .join('');
     if (!html)
-      html = `<div class="small muted" style="padding:8px">Nhấn Enter để tìm "${esc(el.value)}"</div>`;
-    html += `<div class="small muted" style="padding:6px 8px 2px">Gợi ý tức thì không dùng AI, trễ 150 ms</div>`;
+      html = `<a href="#/search?q=${encodeURIComponent(el.value)}">${icon('search', 16)} Tìm "${esc(el.value)}"</a>`;
     box.innerHTML = html;
     box.classList.remove('hidden');
     el.setAttribute('aria-expanded', 'true');
@@ -205,14 +232,14 @@
     else if ((m = t.match(/duoi\s*(\d+[.,]?\d*)\s*(trieu|tr|cu|k)/)))
       chips.push({
         key: 'price',
-        label: `dưới ${m[1]} ${m[2] === 'k' ? 'nghìn' : 'triệu'}`,
+        label: `Dưới ${m[1]} ${m[2] === 'k' ? 'nghìn' : 'triệu'}`,
         max: unit(num(m[1]), m[2]),
         src: 'rule',
       });
     else if ((m = t.match(/tren\s*(\d+[.,]?\d*)\s*(trieu|tr|cu|k)/)))
       chips.push({
         key: 'price',
-        label: `trên ${m[1]} triệu`,
+        label: `Trên ${m[1]} triệu`,
         min: unit(num(m[1]), m[2]),
         src: 'rule',
       });
@@ -220,7 +247,7 @@
       const v = unit(num(m[1]), m[2]);
       chips.push({
         key: 'price',
-        label: `khoảng ${m[1]} triệu (±15%)`,
+        label: `Khoảng ${m[1]} triệu`,
         min: v * 0.85,
         max: v * 1.15,
         src: 'rule',
@@ -281,16 +308,17 @@
     if (chips.length) {
       results = applyChips(pool, chips);
       if (!results.length) {
-        const noAttr = chips.filter((c) => c.key === 'price' || c.key === 'cat');
-        results = applyChips(pool, noAttr);
-        relaxed = 'Đã nới tiêu chí phụ.';
+        results = applyChips(
+          pool,
+          chips.filter((c) => c.key === 'price' || c.key === 'cat'),
+        );
         if (!results.length) {
           results = applyChips(
             pool,
             chips.filter((c) => c.key === 'cat'),
           ).sort((a, b) => a.price - b.price);
           const price = chips.find((c) => c.key === 'price');
-          relaxed = `Không có ${chips.find((c) => c.key === 'cat')?.label.toLowerCase() || 'sản phẩm'} ${price ? price.label : ''}. Đây là các lựa chọn gần nhất.`;
+          relaxed = `Không có ${chips.find((c) => c.key === 'cat')?.label.toLowerCase() || 'sản phẩm'} ${price ? price.label.toLowerCase() : ''}. Đây là các lựa chọn gần nhất.`;
         }
       }
     } else {
@@ -319,52 +347,62 @@
     const chipHtml = chips
       .map(
         (c) =>
-          `<span class="chip">${esc(c.label)} <span class="src">${c.src === 'llm' ? 'AI hiểu' : 'quy tắc'}</span><a href="${href('/search', { q: query, drop: [...drop, c.key].join(',') })}" aria-label="Bỏ ${esc(c.label)}">×</a></span>`,
+          `<span class="chip">${esc(c.label)}${S.showNotes ? `<span class="src">${c.src === 'llm' ? 'AI' : 'quy tắc'}</span>` : ''}<a class="x" href="${href('/search', { q: query, drop: [...drop, c.key].join(',') })}" aria-label="Bỏ lọc ${esc(c.label)}">${icon('x', 14)}</a></span>`,
       )
-      .join(' ');
+      .join('');
     return `
-      <div class="breadcrumb"><a href="#/">Trang chủ</a> / Tìm kiếm</div>
-      <h1>Kết quả cho "${esc(query)}"</h1>
-      ${chips.length ? `<div class="row" style="margin-bottom:12px"><span class="small muted">Đã hiểu:</span> ${chipHtml}</div>` : ''}
-      ${drop.length ? `<p class="small"><a href="${href('/search', { q: query })}">Khôi phục bộ lọc đã bỏ</a></p>` : ''}
-      ${relaxed ? `<div class="alert warn" style="margin-bottom:16px">${esc(relaxed)}</div>` : ''}
-      ${!useLlm ? `<div class="alert" style="margin-bottom:16px">Tìm kiếm đang chạy chế độ dự phòng (full-text và quy tắc). Người dùng không thấy lỗi.</div>` : ''}
-      <p class="muted">${results.length} sản phẩm</p>
-      ${results.length ? `<div class="product-grid">${results.map((p) => productCard(p, { source: 'smart-search' })).join('')}</div>` : `<div class="card muted-bg"><b>Không tìm thấy sản phẩm phù hợp.</b><p class="muted small">Câu tìm được ghi vào danh sách "không có kết quả" cho admin xem.</p><a class="btn secondary" href="#/c/laptop">Xem tất cả laptop</a></div>`}
-      ${note('Thử các câu: <a href="#/search?q=laptop%20choi%20game%20duoi%2025%20trieu">laptop choi game duoi 25 trieu</a>, <a href="#/search?q=tai%20nghe%20chong%20on%20di%20may%20bay">tai nghe chong on di may bay</a>, <a href="#/search?q=laptop%20gaming%20duoi%2015%20trieu">laptop gaming dưới 15 triệu</a> (nới tiêu chí), <a href="#/search?q=rog%20g16">rog g16</a>, <a href="#/search?q=dt%20pin%20trau%20tam%2010tr">đt pin trâu tầm 10tr</a>. Bật "AI lỗi" để thấy chế độ dự phòng.')}`;
+      ${crumbs([['Trang chủ', '#/'], ['Tìm kiếm']])}
+      <div class="page-title"><div><h1>“${esc(query)}”</h1><p class="muted" style="margin:6px 0 0">${results.length} sản phẩm phù hợp</p></div></div>
+      ${chips.length || drop.length ? `<div class="row tight" style="margin-bottom:20px">${chipHtml}${drop.length ? `<a class="link small" href="${href('/search', { q: query })}">Khôi phục bộ lọc</a>` : ''}</div>` : ''}
+      ${relaxed ? `<div class="alert" style="margin-bottom:24px">${icon('info', 18)}<span>${esc(relaxed)}</span></div>` : ''}
+      ${!useLlm ? note('AI lỗi hoặc hết ngân sách: tìm kiếm chạy full-text và quy tắc, người dùng không thấy lỗi, các chip do AI hiểu (Chống ồn, Nhẹ) không xuất hiện.') : ''}
+      ${results.length ? `<div class="product-grid">${results.map((p) => productCard(p, { source: 'smart-search' })).join('')}</div>` : `<div class="empty"><b>Không tìm thấy sản phẩm phù hợp</b><p>Thử từ khóa ngắn hơn hoặc xem toàn bộ danh mục.</p><a class="btn secondary" href="#/c/laptop">Xem tất cả laptop</a></div>`}
+      ${note('Câu thử: <a href="#/search?q=laptop%20choi%20game%20duoi%2025%20trieu">laptop choi game duoi 25 trieu</a> · <a href="#/search?q=tai%20nghe%20chong%20on%20di%20may%20bay">tai nghe chong on di may bay</a> · <a href="#/search?q=laptop%20gaming%20duoi%2015%20trieu">laptop gaming dưới 15 triệu</a> (nới tiêu chí) · <a href="#/search?q=rog%20g16">rog g16</a> · <a href="#/search?q=dt%20pin%20trau%20tam%2010tr">đt pin trâu tầm 10tr</a>. Câu không có kết quả được ghi cho admin.')}`;
   });
 
-  // ================= Trang chủ: banner AI, "Dành cho bạn", đã xem gần đây =================
+  // ================= Trang chủ: banner, "Dành cho bạn", đã xem gần đây =================
   function heroSlides() {
     const S = PK.S;
     const slides = [
       {
-        title: 'Laptop gaming RTX 4060 giảm đến 4 triệu',
-        sub: 'Giao nhanh 2 giờ nội thành TP. Hồ Chí Minh',
+        eyebrow: 'Laptop gaming',
+        title: 'RTX 4060, giảm đến 4 triệu',
+        sub: 'ROG, Katana, Nitro chính hãng. Giao nhanh 2 giờ nội thành TP. Hồ Chí Minh.',
         link: '#/c/laptop-gaming',
+        cta: 'Mua laptop gaming',
+        pid: 'p1',
         ai: false,
       },
       {
-        title: 'Tai nghe chống ồn cho mọi chuyến đi',
-        sub: 'Sony, Apple, JBL chính hãng, bảo hành 12 tháng',
+        eyebrow: 'Tai nghe chống ồn',
+        title: 'Yên tĩnh trên mọi chuyến bay',
+        sub: 'Sony WH-1000XM5, AirPods Pro 2, JBL Tune 770NC. Bảo hành 12 tháng.',
         link: '#/search?q=tai%20nghe%20chong%20on',
+        cta: 'Xem tai nghe',
+        pid: 'p17',
         ai: false,
       },
     ];
-    const approved = S.aiContents.filter((c) => c.kind === 'banner' && c.status === 'active');
     if (PK.personalized()) {
-      approved
-        .filter((c) => c.persona === persona())
+      S.aiContents
+        .filter((c) => c.kind === 'banner' && c.status === 'active' && c.persona === persona())
         .forEach((c) =>
-          slides.unshift({ title: c.title, sub: c.subtitle, link: '#/c/laptop-gaming', ai: true }),
+          slides.unshift({
+            eyebrow: 'Dành riêng cho bạn',
+            title: c.title,
+            sub: c.subtitle,
+            link: '#/c/laptop-gaming',
+            cta: 'Khám phá',
+            pid: 'p2',
+            ai: true,
+          }),
         );
     }
     return slides;
   }
-  function recRail(placement, items, title, reasonFn, source) {
+  function rail(items, title, sub, reasonFn, source, link) {
     if (!items.length) return '';
-    return `<section class="section"><div class="section-head"><h2>${title}</h2></div>
-      <div class="rail">${items.map((p) => productCard(p, { source, reason: reasonFn ? reasonFn(p) : '' })).join('')}</div></section>`;
+    return `<section class="section">${sectionHead(title, sub, link)}<div class="rail">${items.map((p) => productCard(p, { source, reason: reasonFn ? reasonFn(p) : '' })).join('')}</div></section>`;
   }
   route('/', () => {
     const S = PK.S;
@@ -376,66 +414,89 @@
     let forYou;
     let variant;
     if (!hasProfile) {
-      variant = PK.personalized() ? 'control/không có hồ sơ' : 'none (chưa đồng ý)';
-      forYou = recRail(
-        'for-you',
-        [...active].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 8),
-        'Bán chạy',
+      variant = PK.personalized() ? 'control (chưa có hồ sơ)' : 'none (chưa đồng ý)';
+      forYou = rail(
+        [...active].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 10),
+        'Bán chạy tuần này',
+        'Được khách Pickory mua nhiều nhất 7 ngày qua',
         null,
         'recommendations.for-you',
+        ['Xem tất cả', '#/c/laptop'],
       );
     } else {
       const llm = aiUsable('low');
-      variant = llm ? 'algo_llm' : 'algo (ngân sách hết hoặc AI lỗi: lý do theo mẫu)';
+      variant = llm ? 'algo_llm' : 'algo (AI lỗi hoặc hết ngân sách: lý do theo mẫu)';
       const picks = active
         .filter((p) => p.cat === 'laptop-gaming' || p.tags.includes('gaming'))
         .filter((p) => !S.recent.slice(0, 1).includes(p.id))
-        .slice(0, 8);
+        .slice(0, 10);
       const llmReason = {
-        'laptop-gaming': 'Hợp gu RTX bạn hay xem, nhẹ hơn máy bạn vừa xem',
-        chuot: 'Đi cùng laptop gaming, switch bền cho FPS',
-        'tai-nghe': 'Mic khử ồn, hợp chơi game cùng đồng đội',
-        'man-hinh': 'Màn 180Hz phát huy hết card RTX',
+        'laptop-gaming': 'Cùng tầm RTX bạn hay xem, nhẹ hơn',
+        chuot: 'Hợp với laptop gaming bạn quan tâm',
+        'tai-nghe': 'Mic khử ồn cho chơi game đồng đội',
+        'man-hinh': 'Màn 180Hz phát huy card RTX',
+        balo: 'Vừa laptop 16 inch',
       };
-      forYou = recRail(
-        'for-you',
+      forYou = rail(
         picks,
         'Dành cho bạn',
+        'Dựa trên những gì bạn đã xem',
         (p) =>
           llm
-            ? llmReason[p.cat] || 'Vì bạn quan tâm đồ gaming'
-            : `Vì bạn quan tâm ${PK.cat(p.cat).name}`,
+            ? llmReason[p.cat] || 'Hợp sở thích gaming của bạn'
+            : `Vì bạn quan tâm ${PK.cat(p.cat).name.toLowerCase()}`,
         'recommendations.for-you',
       );
     }
     const recent = PK.personalized() ? S.recent.map(PK.prod).filter(Boolean).slice(0, 20) : [];
     const roots = D.categories.filter((c) => !c.parent);
+    const heroProd = PK.prod(s.pid);
     return `
-      <div class="hero">
+      <section class="hero" aria-roledescription="carousel">
         <div>
-          ${s.ai ? '<span class="badge ai" style="margin-bottom:12px">Gợi ý bởi AI</span>' : ''}
-          <h1>${esc(s.title)}</h1><p style="opacity:.8">${esc(s.sub)}</p>
-          <a class="btn" href="${s.link}">Xem ngay</a>
+          <div class="eyebrow">${s.ai ? icon('sparkle', 14) : ''}${esc(s.eyebrow)}</div>
+          <h1>${esc(s.title)}</h1><p>${esc(s.sub)}</p>
+          <a class="btn" href="${s.link}">${esc(s.cta)} ${icon('arrowRight', 16)}</a>
         </div>
-        <div style="display:flex;justify-content:center">${productImg(S.products[s.ai ? 0 : idx === 1 ? 16 : 0], 200)}</div>
+        <div class="visual">${productImg(heroProd, 320)}</div>
+        <div class="hero-nav">${slides.map((_, i) => `<button class="bar ${i === idx ? 'on' : ''}" data-act="hero" data-i="${i}" aria-label="Banner ${i + 1}"></button>`).join('')}</div>
+      </section>
+      <div class="perks">
+        <div class="perk"><span class="ic-wrap">${icon('truck', 20)}</span><span><b>Giao nhanh 2 giờ</b>Nội thành TP. Hồ Chí Minh</span></div>
+        <div class="perk"><span class="ic-wrap">${icon('shield', 20)}</span><span><b>Chính hãng 100%</b>Bảo hành tới 36 tháng</span></div>
+        <div class="perk"><span class="ic-wrap">${icon('refresh', 20)}</span><span><b>Đổi trả 7 ngày</b>Lỗi là đổi mới</span></div>
+        <div class="perk"><span class="ic-wrap">${icon('chat', 20)}</span><span><b>Tư vấn 8:00 đến 21:00</b>Trợ lý AI và CSKH</span></div>
       </div>
-      <div class="dots">${slides.map((_, i) => `<span class="${i === idx ? 'on' : ''}" data-act="hero" data-i="${i}" role="button" aria-label="Banner ${i + 1}"></span>`).join('')}</div>
-      <section class="section"><div class="grid cols-4">${roots.map((c) => `<a class="card muted-bg" href="#/c/${c.id}" style="text-decoration:none"><b>${c.name}</b><div class="muted small">${S.products.filter((p) => PK.inCat(p, c.id) && p.status === 'active').length} sản phẩm</div></a>`).join('')}</div></section>
+      <section class="section">${sectionHead('Mua theo danh mục')}
+        <div class="cat-strip">${roots
+          .map((c) => {
+            const sample = S.products.find((p) => PK.inCat(p, c.id) && p.status === 'active');
+            return `<a class="cat-tile" href="#/c/${c.id}"><span class="pic">${productImg(sample, 84)}</span><b>${c.name}</b><span>${S.products.filter((p) => PK.inCat(p, c.id) && p.status === 'active').length} sản phẩm</span></a>`;
+          })
+          .join('')}</div></section>
       ${forYou}
-      ${note(`Biến thể gợi ý: <b>${esc(variant)}</b>. Chưa đồng ý cá nhân hóa thì thấy "Bán chạy". Đồng ý rồi xem vài laptop gaming (hoặc chọn vai trò Khách hàng) để thấy "Dành cho bạn" có lý do AI. Banner AI chỉ hiện sau khi admin duyệt ở <a href="#/admin/ai-content">Nội dung AI</a>.`)}
-      ${recent.length ? recRail('recent', recent, 'Đã xem gần đây', null, 'category') : ''}`;
+      ${note(`Biến thể gợi ý: <b>${esc(variant)}</b>. Chưa đồng ý cá nhân hóa thì thấy "Bán chạy". Đồng ý rồi xem vài laptop gaming (hoặc vào vai Khách hàng) để thấy "Dành cho bạn" kèm lý do. Banner "Dành riêng cho bạn" chỉ hiện sau khi admin duyệt ở <a href="#/admin/ai-content">Nội dung AI</a>.`)}
+      ${recent.length ? rail(recent, 'Bạn đã xem gần đây', '', null, 'category') : ''}
+      ${rail(
+        active.filter((p) => ['tai-nghe', 'chuot', 'sac'].includes(p.cat)),
+        'Phụ kiện đáng mua',
+        'Tai nghe, chuột, sạc từ các thương hiệu hàng đầu',
+        null,
+        'category',
+        ['Xem phụ kiện', '#/c/phu-kien'],
+      )}`;
   });
   act('hero', (d) => {
     PK.S.heroIdx = Number(d.i);
     PK.render();
   });
-  act('trackClick', (d) => {
-    // activity-tracking: rec_click / product click có source (chỉ ghi khi đã đồng ý)
+  act('trackClick', () => {
+    // activity-tracking: ghi product click kèm source, chỉ khi đã đồng ý
   });
 
   // ================= catalog: trang danh mục có bộ lọc =================
   const PRICE_RANGES = [
-    ['', 'Tất cả'],
+    ['', 'Mọi mức giá'],
     ['0-10000000', 'Dưới 10 triệu'],
     ['10000000-20000000', '10 đến 20 triệu'],
     ['20000000-30000000', '20 đến 30 triệu'],
@@ -444,7 +505,8 @@
   route('/c/:id', (p, q) => {
     const S = PK.S;
     const c = PK.cat(p.id);
-    if (!c) return '<h1>Không tìm thấy danh mục</h1>';
+    if (!c)
+      return `<div class="empty"><b>Không tìm thấy danh mục</b><a href="#/">Về trang chủ</a></div>`;
     const base = S.products.filter((x) => PK.visible(x) && PK.inCat(x, c.id));
     const sel = {
       brand: (q.brand || '').split(',').filter(Boolean),
@@ -474,32 +536,36 @@
       (sel.brand.includes(b) ? sel.brand.filter((x) => x !== b) : [...sel.brand, b]).join(',');
     const parent = c.parent ? PK.cat(c.parent) : null;
     const children = D.categories.filter((x) => x.parent === c.id);
+    const activeFilters =
+      sel.brand.length + (sel.price ? 1 : 0) + (sel.ram ? 1 : 0) + (sel.stock ? 1 : 0);
     return `
-      <div class="breadcrumb"><a href="#/">Trang chủ</a> / ${parent ? `<a href="#/c/${parent.id}">${parent.name}</a> / ` : ''}${c.name}</div>
-      <div class="row between"><h1>${c.name}</h1>
-        <label class="row small">Sắp xếp <select style="width:auto" data-change="sort" data-base="${esc(link({ sort: '' }))}">
-          ${[
-            ['newest', 'Mới nhất'],
-            ['price_asc', 'Giá tăng dần'],
-            ['price_desc', 'Giá giảm dần'],
-          ]
-            .map(
-              ([v, l]) => `<option value="${v}" ${sel.sort === v ? 'selected' : ''}>${l}</option>`,
-            )
-            .join('')}
-        </select></label></div>
-      ${children.length ? `<div class="row" style="margin-bottom:16px">${children.map((x) => `<a class="chip" href="#/c/${x.id}">${x.name}</a>`).join('')}</div>` : ''}
+      ${crumbs([['Trang chủ', '#/'], ...(parent ? [[parent.name, '#/c/' + parent.id]] : []), [c.name]])}
+      <div class="page-title"><h1>${c.name}</h1></div>
+      ${children.length ? `<div class="row tight" style="margin-bottom:24px">${children.map((x) => `<a class="chip" href="#/c/${x.id}">${x.name}</a>`).join('')}</div>` : ''}
       <div class="layout-filter">
-        <aside>
-          <div class="filter-group"><h4>Thương hiệu</h4>${brands.map((b) => `<label><input type="checkbox" ${sel.brand.includes(b) ? 'checked' : ''} data-act="nav" data-href="${esc(link({ brand: toggleBrand(b) }))}"> ${b} <span class="muted small">${base.filter((x) => x.brand === b).length}</span></label>`).join('')}</div>
-          <div class="filter-group"><h4>Khoảng giá</h4>${PRICE_RANGES.map(([v, l]) => `<label><input type="radio" name="pr" ${sel.price === v ? 'checked' : ''} data-act="nav" data-href="${esc(link({ price: v }))}"> ${l}</label>`).join('')}</div>
-          ${rams.length ? `<div class="filter-group"><h4>RAM</h4>${rams.map((r) => `<label><input type="checkbox" ${sel.ram === String(r) ? 'checked' : ''} data-act="nav" data-href="${esc(link({ ram: sel.ram === String(r) ? '' : r }))}"> ${r}GB <span class="muted small">(${base.filter((x) => x.specs.ram_gb === r).length})</span></label>`).join('')}</div>` : ''}
-          <div class="filter-group"><label><input type="checkbox" ${sel.stock ? 'checked' : ''} data-act="nav" data-href="${esc(link({ stock: sel.stock ? '' : '1' }))}"> Chỉ hiện còn hàng</label></div>
+        <aside class="filters" aria-label="Bộ lọc">
+          <div class="filter-group"><h4>Thương hiệu</h4>${brands.map((b) => `<label><input type="checkbox" ${sel.brand.includes(b) ? 'checked' : ''} data-act="nav" data-href="${esc(link({ brand: toggleBrand(b) }))}"> ${b} <span class="muted">${base.filter((x) => x.brand === b).length}</span></label>`).join('')}</div>
+          <div class="filter-group"><h4>Mức giá</h4>${PRICE_RANGES.map(([v, l]) => `<label><input type="radio" name="pr" ${sel.price === v ? 'checked' : ''} data-act="nav" data-href="${esc(link({ price: v }))}"> ${l}</label>`).join('')}</div>
+          ${rams.length ? `<div class="filter-group"><h4>RAM</h4>${rams.map((r) => `<label><input type="checkbox" ${sel.ram === String(r) ? 'checked' : ''} data-act="nav" data-href="${esc(link({ ram: sel.ram === String(r) ? '' : r }))}"> ${r}GB <span class="muted">${base.filter((x) => x.specs.ram_gb === r).length}</span></label>`).join('')}</div>` : ''}
+          <div class="filter-group"><label class="switch" style="justify-content:space-between"><span>Chỉ hiện còn hàng</span><input type="checkbox" ${sel.stock ? 'checked' : ''} data-act="nav" data-href="${esc(link({ stock: sel.stock ? '' : '1' }))}"></label></div>
+          ${activeFilters ? `<a class="link small" style="margin-top:12px" href="#/c/${c.id}">Xóa ${activeFilters} bộ lọc</a>` : ''}
         </aside>
         <div>
-          <p class="muted">${list.length} sản phẩm</p>
-          ${list.length ? `<div class="product-grid">${list.map((x) => productCard(x)).join('')}</div>` : '<div class="card muted-bg">Không có sản phẩm khớp bộ lọc.</div>'}
-          ${note('Bộ lọc nằm trên URL (chia sẻ được), số đếm theo từng giá trị thuộc tính. Sản phẩm "Ngừng kinh doanh" vẫn xem được nhưng không mua được; sản phẩm ẩn và nháp không hiện.')}
+          <div class="toolbar"><span class="muted">${list.length} sản phẩm</span>
+            <label class="row tight small"><span class="muted">Sắp xếp</span><select data-change="sort" data-base="${esc(link({ sort: '' }))}">
+              ${[
+                ['newest', 'Mới nhất'],
+                ['price_asc', 'Giá thấp đến cao'],
+                ['price_desc', 'Giá cao đến thấp'],
+              ]
+                .map(
+                  ([v, l]) =>
+                    `<option value="${v}" ${sel.sort === v ? 'selected' : ''}>${l}</option>`,
+                )
+                .join('')}
+            </select></label></div>
+          ${list.length ? `<div class="product-grid">${list.map((x) => productCard(x)).join('')}</div>` : `<div class="empty"><b>Không có sản phẩm khớp bộ lọc</b><a class="link" href="#/c/${c.id}">Xóa bộ lọc</a></div>`}
+          ${note('Bộ lọc nằm trên URL (chia sẻ được), có số đếm theo từng giá trị. Sản phẩm "Ngừng kinh doanh" vẫn xem được nhưng không mua được; sản phẩm ẩn và nháp không hiện.')}
         </div>
       </div>`;
   });
@@ -516,11 +582,13 @@
     const S = PK.S;
     const p = PK.prodBySlug(params.slug);
     if (!p || p.status === 'hidden' || p.status === 'draft')
-      return `<h1>404</h1><p>Sản phẩm không tồn tại hoặc đã bị ẩn.</p><a href="#/">Về trang chủ</a>`;
+      return `<div class="empty"><b>Sản phẩm không tồn tại</b><p>Sản phẩm đã bị ẩn hoặc đường dẫn không đúng.</p><a class="btn secondary" href="#/">Về trang chủ</a></div>`;
     if (PK.personalized() && S.recent[0] !== p.id)
       S.recent = [p.id, ...S.recent.filter((x) => x !== p.id)].slice(0, 20);
     const c = PK.cat(p.cat);
+    const root = PK.cat(c.parent || c.id);
     const v = p.variants ? p.variants.find((x) => x.sku === q.v) || p.variants[0] : null;
+    const color = v ? v.opts['Màu'] : undefined;
     const price = v ? v.price : p.price;
     const compareAt = v ? v.compareAt : p.compareAt;
     const stock = v ? v.stock : p.stock;
@@ -532,7 +600,7 @@
       picker = axes
         .map((axis) => {
           const values = [...new Set(p.variants.map((x) => x.opts[axis]))];
-          return `<div class="small muted">${axis}</div><div class="opt-row">${values
+          return `<div class="opt-label">${axis}: <span>${v.opts[axis]}</span></div><div class="opt-row" role="radiogroup" aria-label="${axis}">${values
             .map((val) => {
               const target =
                 p.variants.find(
@@ -540,7 +608,11 @@
                     x.opts[axis] === val &&
                     axes.every((a) => a === axis || x.opts[a] === v.opts[a]),
                 ) || p.variants.find((x) => x.opts[axis] === val);
-              return `<a class="opt ${v.opts[axis] === val ? 'on' : ''}" href="#/p/${p.slug}?v=${target.sku}" style="text-decoration:none">${val}</a>`;
+              const sw =
+                axis === 'Màu'
+                  ? `<span class="swatch" style="background:${val === 'Trắng' ? '#eceef1' : '#2b2d33'}"></span>`
+                  : '';
+              return `<a class="opt ${v.opts[axis] === val ? 'on' : ''} ${target.stock ? '' : 'off'}" role="radio" aria-checked="${v.opts[axis] === val}" href="#/p/${p.slug}?v=${target.sku}">${sw}${val}</a>`;
             })
             .join('')}</div>`;
         })
@@ -559,10 +631,11 @@
           : p.specs[a.key] + (a.unit ? ' ' + a.unit : '');
       (groups[a.group] = groups[a.group] || []).push([a.label, val]);
     });
+    groups['Bảo hành'] = [['Thời gian', p.warranty + ' tháng chính hãng']];
     const specRows = Object.entries(groups)
       .map(
         ([g, rows]) =>
-          `<tr><td colspan="2"><b>${g}</b></td></tr>` +
+          `<tr class="grp"><td colspan="2">${g}</td></tr>` +
           rows.map(([l, val]) => `<tr><td>${l}</td><td>${esc(val)}</td></tr>`).join(''),
       )
       .join('');
@@ -570,24 +643,22 @@
     const hl = D.highlights[p.id];
     const ps = PK.personalized() && hl && hl[persona()] ? persona() : 'general';
     const hlBlock = hl
-      ? `<div class="ai-block"><div class="row between"><h3 style="margin:0">Điểm nổi bật cho nhu cầu của bạn</h3><span class="ai-label">Gợi ý bởi AI</span></div>
-          <ul>${hl[ps].map((h) => `<li>${esc(h.text)} <span class="small muted">(${h.basedOn.join(', ')})</span></li>`).join('')}</ul>
-          <div class="small muted">Phiên bản: ${ps === 'gaming' ? 'persona gaming' : 'chung (general)'}</div></div>`
+      ? `<div class="ai-block" style="margin-top:24px"><div class="row between" style="margin-bottom:12px"><h3 style="margin:0">Điểm nổi bật cho nhu cầu của bạn</h3><span class="ai-label">${icon('sparkle', 14)} Gợi ý bởi AI</span></div>
+          <ul style="margin:0;padding-left:18px" class="stack">${hl[ps].map((h) => `<li>${esc(h.text)}</li>`).join('')}</ul></div>
+          ${note(`Phiên bản <b>${ps}</b>, mỗi ý dựa trên thông số: ${hl[ps].map((h) => h.basedOn.join('+')).join(', ')}. Đồng ý cá nhân hóa (hoặc vai Khách hàng) thì thấy bản gaming.`)}`
       : '';
     const sum = D.reviewSummaries[p.id];
     const reviews = S.reviews.filter((r) => r.pid === p.id && r.status === 'visible');
     const sumBlock =
       sum && reviews.length >= 3
-        ? `<div class="ai-block"><div class="row between"><h3 style="margin:0">Khách hàng nói gì</h3><span class="ai-label">Tóm tắt bởi AI <a href="#" data-act="aiExplain" title="Giải thích">ⓘ</a></span></div>
-          <p>${esc(sum.overview)}</p>
-          <div class="grid cols-2"><div><b class="small">Ưu điểm</b><ul>${sum.pros.map((x) => `<li>${esc(x.text)} <span class="muted small">${x.count} lượt nhắc</span></li>`).join('')}</ul></div>
-          <div><b class="small">Nhược điểm</b><ul>${sum.cons.map((x) => `<li>${esc(x.text)} <span class="muted small">${x.count} lượt nhắc</span></li>`).join('')}</ul></div></div>
-          <div class="row">${sum.aspects.map((a) => `<span class="chip" style="${PK.personalized() && ['hiệu năng', 'tản nhiệt'].includes(a) ? 'font-weight:700;border-color:var(--color-ink)' : ''}">${a}</span>`).join('')}</div></div>`
+        ? `<div class="ai-block"><div class="row between" style="margin-bottom:12px"><h3 style="margin:0">Khách hàng nói gì</h3><button class="ai-label link" data-act="aiExplain">${icon('sparkle', 14)} Tóm tắt bởi AI ${icon('info', 14)}</button></div>
+          <p style="color:var(--ink-2)">${esc(sum.overview)}</p>
+          <div class="grid cols-2" style="margin:16px 0"><div><b class="small">Khen</b><ul class="small" style="padding-left:18px;margin:8px 0 0">${sum.pros.map((x) => `<li>${esc(x.text)} <span class="muted">· ${x.count} lượt</span></li>`).join('')}</ul></div>
+          <div><b class="small">Chưa hài lòng</b><ul class="small" style="padding-left:18px;margin:8px 0 0">${sum.cons.map((x) => `<li>${esc(x.text)} <span class="muted">· ${x.count} lượt</span></li>`).join('')}</ul></div></div>
+          <div class="row tight">${sum.aspects.map((a) => `<span class="aspect ${PK.personalized() && ['hiệu năng', 'tản nhiệt'].includes(a) ? 'hi' : ''}">${a}</span>`).join('')}</div></div>`
         : '';
     // commerce: review
-    const avg = reviews.length
-      ? (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
-      : p.rating;
+    const avg = p.rating; // điểm tổng hợp từ toàn bộ đánh giá, dùng chung với thẻ sản phẩm
     const dist = [5, 4, 3, 2, 1].map((n) => [n, reviews.filter((r) => r.rating === n).length]);
     const canReview =
       S.role === 'customer' &&
@@ -620,55 +691,68 @@
           !S.cart.some((l) => l.pid === x.id),
       )
       .slice(0, 6);
+    const stockHtml = disc
+      ? '<span class="stock out">Ngừng kinh doanh</span>'
+      : stock > 5
+        ? '<span class="stock">Còn hàng, giao ngay</span>'
+        : stock > 0
+          ? `<span class="stock low">Chỉ còn ${stock} sản phẩm</span>`
+          : '<span class="stock out">Tạm hết hàng</span>';
     return `
-      <div class="breadcrumb"><a href="#/">Trang chủ</a> / <a href="#/c/${c.parent || c.id}">${PK.cat(c.parent || c.id).name}</a> / <a href="#/c/${c.id}">${c.name}</a></div>
+      ${crumbs([['Trang chủ', '#/'], [root.name, '#/c/' + root.id], ...(c.parent ? [[c.name, '#/c/' + c.id]] : [])])}
       <div class="pdp">
-        <div class="gallery"><div class="main">${productImg(p, 320)}</div><div class="thumbs">${[1, 2, 3, 4].map(() => `<div>${productImg(p, 48)}</div>`).join('')}</div></div>
-        <div class="stack">
-          <div class="row">${disc ? '<span class="badge gray">Ngừng kinh doanh</span>' : ''}<span class="muted small">${p.brand}</span></div>
-          <h1>${esc(p.name)}${v ? ` <span class="muted" style="font-weight:400">${Object.values(v.opts).join(' ')}</span>` : ''}</h1>
-          <div class="row small"><span class="stars">${stars(avg)}</span> ${avg} · ${p.reviewCount} đánh giá · Bảo hành ${p.warranty} tháng</div>
-          <div><span class="price-big">${money(price)}</span> ${compareAt ? `<span class="strike">${money(compareAt)}</span> <span class="badge sale">-${Math.round((1 - price / compareAt) * 100)}%</span>` : ''}</div>
+        <div class="gallery"><div class="main">${productImg(p, 420, color)}</div>
+          <div class="thumbs">${[0, 1, 2, 3].map((i) => `<button class="${i === 0 ? 'on' : ''}" aria-label="Ảnh ${i + 1}">${productImg(p, 56, color)}</button>`).join('')}</div></div>
+        <div class="buybox">
+          <div class="muted small" style="margin-bottom:6px">${p.brand}</div>
+          <h1>${esc(p.name)}</h1>
+          <div class="row tight small" style="margin-bottom:20px">${stars(avg)} <b>${avg}</b> <a class="muted" href="#/p/${p.slug}?a=reviews"><u>${p.reviewCount} đánh giá</u></a></div>
+          <div class="row tight" style="align-items:baseline"><span class="price-big">${money(price)}</span>${compareAt ? `<span class="strike">${money(compareAt)}</span><span class="badge sale">Giảm ${Math.round((1 - price / compareAt) * 100)}%</span>` : ''}</div>
           ${picker}
-          <div class="small ${stock > 0 ? '' : 'muted'}">${disc ? 'Sản phẩm đã ngừng kinh doanh.' : stock > 5 ? 'Còn hàng' : stock > 0 ? `Chỉ còn ${stock} sản phẩm` : 'Hết hàng'}</div>
-          <div class="row">
-            ${disc ? '' : `<button class="btn" ${stock > 0 ? '' : 'disabled'} data-act="addToCart" data-pid="${p.id}" data-sku="${v ? v.sku : p.slug.toUpperCase()}" data-source="category">Thêm vào giỏ</button>`}
-            <button class="btn secondary" data-act="addCompare" data-pid="${p.id}">So sánh</button>
-            <button class="btn ghost" data-act="askAbout" data-pid="${p.id}">Hỏi trợ lý về máy này</button>
+          <div style="margin:20px 0 16px">${stockHtml}</div>
+          ${
+            disc
+              ? `<div class="alert">${icon('info', 18)}<span>Sản phẩm đã ngừng kinh doanh. Xem các mẫu tương tự bên dưới.</span></div>`
+              : `<div class="grid cols-2" style="gap:8px">
+            <button class="btn block" ${stock > 0 ? '' : 'disabled'} data-act="addToCart" data-pid="${p.id}" data-sku="${v ? v.sku : p.slug.toUpperCase()}" data-source="category">${icon('bag', 18)} Thêm vào giỏ</button>
+            <button class="btn secondary block" data-act="addCompare" data-pid="${p.id}">${icon('compare', 18)} So sánh</button></div>`
+          }
+          <button class="link small" style="margin-top:16px" data-act="askAbout" data-pid="${p.id}">${icon('chat', 16)} Hỏi trợ lý về sản phẩm này</button>
+          <div class="benefits">
+            <div>${icon('truck', 18)}<span><b>Giao hàng miễn phí</b> cho đơn từ 500.000 đ</span></div>
+            <div>${icon('shield', 18)}<span><b>Bảo hành ${p.warranty} tháng</b> chính hãng</span></div>
+            <div>${icon('refresh', 18)}<span><b>Đổi trả 7 ngày</b> nếu lỗi do nhà sản xuất</span></div>
           </div>
-          <p class="muted">${esc(p.short)}</p>
           ${hlBlock}
         </div>
       </div>
-      <div class="grid cols-2 section">
-        <div><h2>Thông số kỹ thuật</h2>${specRows ? `<table class="tbl spec-table">${specRows}</table>` : '<p class="muted">Đang cập nhật.</p>'}</div>
-        <div>${sumBlock || note('Sản phẩm có dưới 3 đánh giá hoặc chưa có tóm tắt: khối "Khách hàng nói gì" bị ẩn và hệ thống xếp hàng tạo nội dung.')}</div>
-      </div>
-      ${note(`Persona hiện tại: <b>${PK.personalized() ? persona() : 'không cá nhân hóa'}</b>. Khối "Điểm nổi bật" đổi nội dung theo persona (gaming và general). Thử bật/tắt đồng ý ở <a href="#" data-act="openConsent">Tùy chỉnh</a>. Ngân sách AI ≥ 100% thì không tạo nội dung mới nhưng nội dung cũ vẫn hiện.`)}
-      ${similar.length ? recRail('similar', similar, 'Sản phẩm tương tự', () => 'Cùng danh mục, giá ±30%', 'recommendations.similar') : ''}
-      ${together.length ? recRail('bought-together', together, 'Thường mua kèm', () => 'Hay được mua cùng ' + c.name.toLowerCase(), 'recommendations.bought-together') : ''}
-      <section class="section" id="reviews"><h2>Đánh giá</h2>
-        <div class="grid cols-3">
-          <div class="card"><div class="price-big">${avg}<span class="muted" style="font-size:16px">/5</span></div><div class="stars">${stars(avg)}</div>
-            ${dist.map(([n, cnt]) => `<div class="row small"><span>${n}★</span><div class="bar"><i style="width:${reviews.length ? (cnt / reviews.length) * 100 : 0}%"></i></div><span class="muted">${cnt}</span></div>`).join('')}</div>
-          <div style="grid-column: span 2" class="stack">
-            ${canReview ? `<form class="card" data-form="review" data-pid="${p.id}"><b>Viết đánh giá</b><div class="row" style="margin:8px 0">${[1, 2, 3, 4, 5].map((n) => `<label class="row small"><input type="radio" name="rating" value="${n}" ${n === 5 ? 'checked' : ''}> ${n}★</label>`).join('')}</div><textarea name="body" maxlength="2000" placeholder="Chia sẻ trải nghiệm (tối đa 2.000 ký tự, không kèm ảnh)"></textarea><button class="btn sm" style="margin-top:8px">Gửi đánh giá</button></form>` : `<p class="small muted">Chỉ khách đã mua và nhận hàng mới viết được đánh giá. ${S.role !== 'customer' ? 'Chọn vai trò Khách hàng (đã mua ROG G16) để thử.' : ''}</p>`}
-            ${reviews.map((r) => `<div class="card"><div class="row between"><b>${esc(r.user)}</b><span class="small muted">${r.date}</span></div><div class="stars">${stars(r.rating)}</div><p style="margin:6px 0 0">${esc(r.body)}</p><a href="#" class="small muted" data-act="reportReview" data-id="${r.id}">Báo cáo</a></div>`).join('') || '<p class="muted">Chưa có đánh giá.</p>'}
+      <section class="section grid cols-2" style="gap:48px;align-items:start">
+        <div><h2>Thông số kỹ thuật</h2><div class="table-wrap"><table class="tbl spec-table">${specRows}</table></div></div>
+        <div><h2>Đánh giá tổng quan</h2>${sumBlock || `<div class="empty"><b>Chưa đủ đánh giá</b>Tóm tắt xuất hiện khi có từ 3 đánh giá.</div>`}</div>
+      </section>
+      ${similar.length ? rail(similar, 'Sản phẩm tương tự', 'Cùng danh mục, mức giá gần', null, 'recommendations.similar') : ''}
+      ${together.length ? rail(together, 'Thường được mua kèm', '', null, 'recommendations.bought-together') : ''}
+      <section class="section" id="reviews"><h2>Đánh giá từ khách đã mua</h2>
+        <div class="grid" style="grid-template-columns:280px 1fr;gap:48px;align-items:start">
+          <div><div class="row tight" style="align-items:baseline"><span class="price-big">${avg}</span><span class="muted">/ 5</span></div>${stars(avg, 16)}<p class="muted small" style="margin-top:6px">${reviews.length} đánh giá đã kiểm duyệt</p>
+            ${dist.map(([n, cnt]) => `<div class="row tight small" style="flex-wrap:nowrap;margin-top:6px"><span style="width:12px">${n}</span>${icon('star', 12, 'fill')}<div class="bar"><i style="width:${reviews.length ? (cnt / reviews.length) * 100 : 0}%"></i></div><span class="muted" style="width:16px;text-align:right">${cnt}</span></div>`).join('')}</div>
+          <div>
+            ${canReview ? `<form class="card tight" data-form="review" data-pid="${p.id}" style="margin-bottom:8px"><b>Viết đánh giá của bạn</b><div class="row" style="margin:12px 0">${[1, 2, 3, 4, 5].map((n) => `<label class="check small"><input type="radio" name="rating" value="${n}" ${n === 5 ? 'checked' : ''}> ${n} sao</label>`).join('')}</div><textarea name="body" maxlength="2000" placeholder="Chia sẻ trải nghiệm của bạn (tối đa 2.000 ký tự)"></textarea><div class="row" style="justify-content:flex-end;margin-top:12px"><button class="btn sm">Gửi đánh giá</button></div></form>` : ''}
+            ${reviews.map((r) => `<div class="review"><div class="row between"><div class="row tight"><span class="avatar light" style="width:30px;height:30px;font-size:12px">${PK.initials(r.user)}</span><b>${esc(r.user)}</b><span class="badge ok">Đã mua hàng</span></div><span class="small muted">${dmy(r.date)}</span></div><div style="margin:8px 0 4px">${stars(r.rating)}</div><p style="margin:0 0 6px">${esc(r.body)}</p><button class="link small" style="font-weight:500;color:var(--muted)" data-act="reportReview" data-id="${r.id}">Báo cáo</button></div>`).join('') || '<div class="empty"><b>Chưa có đánh giá</b></div>'}
           </div>
         </div>
+        ${note('Chỉ khách đã nhận hàng mới viết được đánh giá. Vào vai Khách hàng (đã mua ROG G16) để thử.')}
       </section>`;
   });
   act('aiExplain', () => {
     modal(
-      `<h2>Tóm tắt bởi AI</h2><p>Nội dung được AI tổng hợp từ đánh giá thật của khách đã mua. Mỗi ý có số lượt nhắc tới. Hệ thống kiểm tra để AI không bịa con số hoặc dùng từ như "tốt nhất".</p><button class="btn" data-act="closeModal">Đã hiểu</button>`,
+      `<h2>Về tóm tắt bởi AI</h2><p>Nội dung được AI tổng hợp từ đánh giá thật của khách đã mua, kèm số lượt nhắc tới mỗi ý. Pickory kiểm tra để AI không đưa con số sai lệch hoặc dùng từ quảng cáo như "tốt nhất".</p><div class="row" style="justify-content:flex-end"><button class="btn" data-act="closeModal">Đã hiểu</button></div>`,
     );
-    return false;
   });
   act('reportReview', (d) => {
     const r = PK.S.reviews.find((x) => x.id === d.id);
     r.reports += 1;
-    toast('Đã gửi báo cáo, CSKH sẽ xem xét');
-    return false;
+    toast('Cảm ơn bạn, chúng tôi sẽ xem xét đánh giá này');
   });
   form('review', (data, f) => {
     if (!String(data.body || '').trim()) return toast('Hãy viết vài dòng nhận xét');
@@ -697,7 +781,7 @@
       if (S.cart.length >= 20) return toast('Giỏ hàng tối đa 20 dòng');
       S.cart.push({ pid: d.pid, sku: d.sku, qty: 1, source: d.source || 'category' });
     }
-    toast('Đã thêm vào giỏ' + (d.source === 'shopping-assistant' ? ' (nguồn: trợ lý AI)' : ''));
+    toast('Đã thêm vào giỏ hàng');
     PK.render();
   });
   act('qty', (d) => {
@@ -728,7 +812,7 @@
     const S = PK.S;
     const lines = cartLines();
     if (!lines.length)
-      return `<h1>Giỏ hàng</h1><div class="card muted-bg"><p>Giỏ hàng trống.</p><a class="btn" href="#/c/laptop">Mua sắm ngay</a></div>${note('Thêm sản phẩm từ trang sản phẩm hoặc từ thẻ sản phẩm trong chat trợ lý.')}`;
+      return `<h1>Giỏ hàng</h1><div class="empty">${icon('bag', 32)}<b style="margin-top:12px">Giỏ hàng đang trống</b><p>Khám phá laptop, điện thoại và phụ kiện chính hãng.</p><a class="btn" href="#/">Tiếp tục mua sắm</a></div>`;
     const sub = lines.reduce((s, x) => s + x.price * x.l.qty, 0);
     const blocked = lines.some((x) => x.problem);
     const cross = S.products
@@ -739,24 +823,29 @@
           x.stock > 0,
       )
       .slice(0, 6);
-    return `<h1>Giỏ hàng</h1>
-      <div class="grid" style="grid-template-columns:1fr 340px">
-        <div class="stack">${lines
+    const left = S.commerceSettings.freeShip - sub;
+    return `<h1>Giỏ hàng <span class="muted" style="font-weight:400">(${cartCount()})</span></h1>
+      <div class="grid" style="grid-template-columns:1fr 380px;gap:48px;align-items:start">
+        <div>${lines
           .map(
-            (x) => `<div class="card row" style="flex-wrap:nowrap">
-            <div style="width:80px;height:80px;background:var(--color-surface-muted);border-radius:10px;display:flex;align-items:center;justify-content:center;flex:none">${productImg(x.p, 60)}</div>
-            <div style="flex:1"><a href="#/p/${x.p.slug}"><b>${esc(x.p.name)}</b></a><div class="small muted">${x.v ? Object.values(x.v.opts).join(', ') : ''} · SKU ${x.l.sku}</div>
-              ${x.problem ? `<span class="badge sale">${x.problem}</span>` : ''}${x.l.source === 'shopping-assistant' ? ' <span class="badge ai">Từ trợ lý AI</span>' : ''}</div>
-            <div class="row"><button class="btn sm secondary" data-act="qty" data-sku="${x.l.sku}" data-delta="-1" aria-label="Giảm">−</button><b>${x.l.qty}</b><button class="btn sm secondary" data-act="qty" data-sku="${x.l.sku}" data-delta="1" aria-label="Tăng">+</button></div>
-            <b style="width:130px;text-align:right">${money(x.price * x.l.qty)}</b></div>`,
+            (
+              x,
+            ) => `<div class="cart-line"><a class="pic" href="#/p/${x.p.slug}">${productImg(x.p, 80, x.v?.opts['Màu'])}</a>
+            <div><a href="#/p/${x.p.slug}"><b>${esc(x.p.name)}</b></a><div class="small muted" style="margin:2px 0 10px">${x.v ? Object.values(x.v.opts).join(' · ') : esc(PK.specLine(x.p))}</div>
+              ${x.problem ? `<span class="badge sale" style="margin-bottom:10px">${x.problem}</span><br>` : ''}
+              <div class="qty"><button data-act="qty" data-sku="${x.l.sku}" data-delta="-1" aria-label="Giảm số lượng">${icon(x.l.qty === 1 ? 'x' : 'minus', 16)}</button><b>${x.l.qty}</b><button data-act="qty" data-sku="${x.l.sku}" data-delta="1" aria-label="Tăng số lượng">${icon('plus', 16)}</button></div></div>
+            <b class="num">${money(x.price * x.l.qty)}</b></div>`,
           )
           .join('')}</div>
-        <div class="card stack"><div class="row between"><span>Tạm tính</span><b>${money(sub)}</b></div>
-          <div class="small muted">${sub >= S.commerceSettings.freeShip ? 'Đơn được miễn phí vận chuyển' : `Mua thêm ${money(S.commerceSettings.freeShip - sub)} để được miễn phí vận chuyển`}</div>
-          ${blocked ? '<div class="alert err">Có sản phẩm không còn bán được. Hãy bỏ khỏi giỏ để tiếp tục.</div>' : ''}
-          <a class="btn block ${blocked ? 'disabled' : ''}" href="${blocked ? '#/cart' : '#/checkout'}">Thanh toán</a></div>
+        <div class="card stack" style="position:sticky;top:120px"><h3>Tóm tắt đơn hàng</h3>
+          <div class="summary-line"><span>Tạm tính</span><b class="num">${money(sub)}</b></div>
+          <div class="summary-line"><span>Phí vận chuyển</span><span class="muted">Tính ở bước sau</span></div>
+          ${left > 0 ? `<div class="small muted">Mua thêm <b>${money(left)}</b> để được miễn phí vận chuyển</div><div class="bar"><i style="width:${(sub / S.commerceSettings.freeShip) * 100}%"></i></div>` : `<div class="row tight small" style="color:var(--success)">${icon('check', 14)} Đơn được miễn phí vận chuyển</div>`}
+          ${blocked ? `<div class="alert err">${icon('alert', 18)}<span>Có sản phẩm không còn bán được. Hãy bỏ khỏi giỏ để tiếp tục.</span></div>` : ''}
+          <a class="btn block ${blocked ? 'disabled' : ''}" href="${blocked ? '#/cart' : '#/checkout'}">Tiến hành thanh toán</a>
+          <div class="row tight small muted" style="justify-content:center">${icon('lock', 14)} Thanh toán an toàn qua VietQR hoặc COD</div></div>
       </div>
-      ${recRail('cart', cross, 'Có thể bạn cần thêm', () => 'Phụ kiện hay mua cùng', 'recommendations.cart')}`;
+      ${rail(cross, 'Có thể bạn cần thêm', '', null, 'recommendations.cart')}`;
   });
 
   // ================= commerce + shipping: checkout 1 trang =================
@@ -778,11 +867,13 @@
     }
     return S.draft;
   }
+  const checkoutSteps = (n) =>
+    `<div class="steps">${['Giỏ hàng', 'Thông tin giao hàng', 'Thanh toán', 'Hoàn tất'].map((s, i) => `<span class="${i === n ? 'on' : ''}"><i>${i < n ? icon('check', 12) : i + 1}</i>${s}</span>`).join('')}</div>`;
   route('/checkout', () => {
     const S = PK.S;
     const lines = cartLines();
     if (!lines.length)
-      return `<h1>Thanh toán</h1><p>Giỏ hàng trống. <a href="#/">Tiếp tục mua sắm</a></p>`;
+      return `<div class="empty"><b>Giỏ hàng đang trống</b><a class="btn" href="#/">Tiếp tục mua sắm</a></div>`;
     const dr = draft();
     const sub = lines.reduce((s, x) => s + x.price * x.l.qty, 0);
     const prov = D.provinces.find((x) => x.code === dr.province);
@@ -797,45 +888,45 @@
           month: '2-digit',
         })
       : '';
-    return `<h1>Thanh toán</h1>
-      <form data-form="placeOrder" class="grid" style="grid-template-columns:1fr 360px;align-items:start">
-        <div class="stack">
-          <div class="card stack"><h3>Thông tin liên hệ</h3>
-            <div class="grid cols-2"><label class="field"><span>Họ tên *</span><input name="name" value="${esc(dr.name)}" data-input="draft"></label>
-            <label class="field"><span>Số điện thoại *</span><input name="phone" value="${esc(dr.phone)}" data-input="draft"></label></div>
-            <label class="field"><span>Email * (nhận xác nhận đơn${S.role === 'guest' ? ' và link tra cứu' : ''})</span><input name="email" type="email" value="${esc(dr.email)}" data-input="draft"></label>
-            ${S.role === 'guest' ? '<p class="small muted" style="margin:0">Bạn đang mua không cần tài khoản. <a href="#/login">Đăng nhập</a> để dùng sổ địa chỉ.</p>' : ''}
-          </div>
-          <div class="card stack"><h3>Địa chỉ giao hàng</h3>
-            ${S.role === 'customer' ? `<label class="field"><span>Sổ địa chỉ</span><select data-change="pickAddress"><option>Nhà riêng: 12 Nguyễn Huệ, Phường Bến Nghé, TP. Hồ Chí Minh (mặc định)</option><option>Công ty: 8 Lý Thường Kiệt, Phường Hoàn Kiếm, Hà Nội</option></select></label>` : ''}
+    return `${checkoutSteps(1)}<h1>Thanh toán</h1>
+      <form data-form="placeOrder" class="grid" style="grid-template-columns:1fr 400px;gap:48px;align-items:start;margin-top:24px">
+        <div>
+          <section><h3>Thông tin liên hệ</h3>
+            <div class="grid cols-2"><label class="field"><span>Họ và tên</span><input name="name" value="${esc(dr.name)}" data-input="draft" autocomplete="name"></label>
+            <label class="field"><span>Số điện thoại</span><input name="phone" value="${esc(dr.phone)}" data-input="draft" autocomplete="tel" inputmode="tel"></label></div>
+            <label class="field" style="margin-top:16px"><span>Email nhận xác nhận đơn</span><input name="email" type="email" value="${esc(dr.email)}" data-input="draft" autocomplete="email"></label>
+            ${S.role === 'guest' ? `<p class="small muted" style="margin-top:8px">Đã có tài khoản? <a href="#/login"><u>Đăng nhập</u></a> để dùng sổ địa chỉ.</p>` : ''}
+          </section>
+          <section style="margin-top:32px"><h3>Địa chỉ giao hàng</h3>
+            ${S.role === 'customer' ? `<label class="field" style="margin-bottom:16px"><span>Chọn từ sổ địa chỉ</span><select data-change="pickAddress"><option>Nhà riêng · 12 Nguyễn Huệ, Phường Bến Nghé, TP. Hồ Chí Minh</option><option>Công ty · 8 Lý Thường Kiệt, Phường Hoàn Kiếm, Hà Nội</option></select></label>` : ''}
             <div class="grid cols-2">
-              <label class="field"><span>Tỉnh/thành *</span><select name="province" data-change="province"><option value="">Chọn tỉnh/thành</option>${D.provinces.map((x) => `<option value="${x.code}" ${dr.province === x.code ? 'selected' : ''}>${x.name}</option>`).join('')}</select></label>
-              <label class="field"><span>Phường/xã *</span><select name="ward" data-change="ward" ${prov ? '' : 'disabled'}><option value="">Chọn phường/xã</option>${prov ? prov.wards.map((w) => `<option ${dr.ward === w ? 'selected' : ''}>${w}</option>`).join('') : ''}</select></label>
+              <label class="field"><span>Tỉnh/thành phố</span><select name="province" data-change="province"><option value="">Chọn tỉnh/thành</option>${D.provinces.map((x) => `<option value="${x.code}" ${dr.province === x.code ? 'selected' : ''}>${x.name}</option>`).join('')}</select></label>
+              <label class="field"><span>Phường/xã</span><select name="ward" data-change="ward" ${prov ? '' : 'disabled'}><option value="">Chọn phường/xã</option>${prov ? prov.wards.map((w) => `<option ${dr.ward === w ? 'selected' : ''}>${w}</option>`).join('') : ''}</select></label>
             </div>
-            <label class="field"><span>Số nhà, tên đường *</span><input name="street" value="${esc(dr.street)}" data-input="draft"></label>
-            <label class="field"><span>Ghi chú</span><input name="note" value="${esc(dr.note)}" data-input="draft" placeholder="Giao giờ hành chính..."></label>
-          </div>
-          <div class="card stack"><h3>Phương thức thanh toán</h3>
-            <label class="row"><input type="radio" name="method" value="sepay" ${dr.method === 'sepay' ? 'checked' : ''} data-change="method"> <b>Chuyển khoản (SePay, VietQR)</b> <span class="small muted">Xác nhận tự động trong vài giây</span></label>
-            <label class="row ${codOk ? '' : 'muted'}"><input type="radio" name="method" value="cod" ${dr.method === 'cod' ? 'checked' : ''} ${codOk ? '' : 'disabled'} data-change="method"> <b>Thanh toán khi nhận hàng (COD)</b> ${codOk ? '' : `<span class="small">Không áp dụng cho đơn trên ${money(S.commerceSettings.codMax)}</span>`}</label>
-          </div>
-          <div class="card stack"><label class="row"><input type="checkbox" name="vat" ${dr.vat ? 'checked' : ''} data-change="vat"> <b>Xuất hóa đơn VAT</b></label>
-            ${dr.vat ? `<div class="grid cols-2"><label class="field"><span>Tên công ty *</span><input name="company"></label><label class="field"><span>Mã số thuế * (10 hoặc 13 số)</span><input name="taxCode" placeholder="0312345678"></label><label class="field"><span>Địa chỉ công ty *</span><input name="companyAddress"></label><label class="field"><span>Email nhận hóa đơn *</span><input name="invoiceEmail" type="email"></label></div>` : ''}
-          </div>
-          ${note('Lỗi được thiết kế: chưa tính được phí ship ("Chưa tính được phí vận chuyển, thử lại"), tổng tiền đổi (409 "Giá đã thay đổi, xem lại"), hết hàng lúc đặt (409 kèm danh sách SKU). Đơn trên 20 triệu tự tắt COD.')}
+            <label class="field" style="margin-top:16px"><span>Số nhà, tên đường</span><input name="street" value="${esc(dr.street)}" data-input="draft" autocomplete="street-address"></label>
+            <label class="field" style="margin-top:16px"><span>Ghi chú cho người giao (không bắt buộc)</span><input name="note" value="${esc(dr.note)}" data-input="draft" placeholder="Ví dụ: giao giờ hành chính"></label>
+          </section>
+          <section style="margin-top:32px"><h3>Phương thức thanh toán</h3><div class="stack">
+            <label class="radio-card"><input type="radio" name="method" value="sepay" ${dr.method === 'sepay' ? 'checked' : ''} data-change="method"><span><b>Chuyển khoản qua VietQR</b><br><span class="small muted">Quét mã bằng app ngân hàng, xác nhận tự động trong vài giây</span></span><span class="spacer"></span>${icon('card', 20)}</label>
+            <label class="radio-card ${codOk ? '' : 'off'}"><input type="radio" name="method" value="cod" ${dr.method === 'cod' ? 'checked' : ''} ${codOk ? '' : 'disabled'} data-change="method"><span><b>Thanh toán khi nhận hàng (COD)</b><br><span class="small muted">${codOk ? 'Được xem hàng trước khi thanh toán' : `Không áp dụng cho đơn trên ${money(S.commerceSettings.codMax)}`}</span></span><span class="spacer"></span>${icon('package', 20)}</label>
+          </div></section>
+          <section style="margin-top:32px"><label class="switch"><input type="checkbox" name="vat" ${dr.vat ? 'checked' : ''} data-change="vat"><span><b>Xuất hóa đơn VAT</b></span></label>
+            ${dr.vat ? `<div class="grid cols-2" style="margin-top:16px"><label class="field"><span>Tên công ty</span><input name="company"></label><label class="field"><span>Mã số thuế</span><input name="taxCode" placeholder="10 hoặc 13 số" inputmode="numeric"></label><label class="field"><span>Địa chỉ công ty</span><input name="companyAddress"></label><label class="field"><span>Email nhận hóa đơn</span><input name="invoiceEmail" type="email"></label></div>` : ''}
+          </section>
+          ${note('Lỗi được thiết kế: chưa tính được phí ship, tổng tiền đổi (409 "Giá đã thay đổi, xem lại"), hết hàng lúc đặt (409 kèm SKU). Đơn trên 20 triệu tự tắt COD.')}
         </div>
-        <div class="card stack" style="position:sticky;top:140px">
-          <h3>Đơn hàng (${lines.length})</h3>
-          ${lines.map((x) => `<div class="row between small"><span>${x.l.qty} × ${esc(x.p.name)}</span><b>${money(x.price * x.l.qty)}</b></div>`).join('')}
-          <hr style="border:0;border-top:1px solid var(--color-border);width:100%">
-          <div class="row between"><span>Tạm tính</span><span>${money(sub)}</span></div>
-          <div class="row between"><span>Phí vận chuyển (GHN)</span><span>${fee == null ? '<span class="muted">Chọn địa chỉ</span>' : money(fee)}</span></div>
-          ${discount ? `<div class="row between"><span>Giảm phí vận chuyển</span><span>−${money(discount)}</span></div>` : ''}
-          <div class="row between"><b>Tổng</b><b class="price-big" style="font-size:22px">${money(total)}</b></div>
-          ${eta ? `<div class="small muted">Dự kiến giao: ${eta}</div>` : ''}
+        <aside class="card stack" style="position:sticky;top:120px">
+          <h3>Đơn hàng</h3>
+          ${lines.map((x) => `<div class="row" style="flex-wrap:nowrap"><span style="width:56px;height:56px;background:var(--bg-2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none;position:relative">${productImg(x.p, 46, x.v?.opts['Màu'])}<b class="badge dark" style="position:absolute;top:-6px;right:-6px;padding:3px 6px">${x.l.qty}</b></span><span class="small" style="flex:1">${esc(x.p.name)}${x.v ? `<br><span class="muted">${Object.values(x.v.opts).join(' · ')}</span>` : ''}</span><b class="small num">${money(x.price * x.l.qty)}</b></div>`).join('')}
+          <hr class="sep" style="margin:4px 0">
+          <div class="summary-line"><span>Tạm tính</span><span class="num">${money(sub)}</span></div>
+          <div class="summary-line"><span>Vận chuyển (GHN)</span><span class="num">${fee == null ? '<span class="muted">Chọn địa chỉ</span>' : money(fee)}</span></div>
+          ${discount ? `<div class="summary-line" style="color:var(--success)"><span>Miễn phí vận chuyển</span><span class="num">−${money(discount)}</span></div>` : ''}
+          <div class="summary-line total"><span>Tổng cộng</span><span class="num">${money(total)}</span></div>
+          ${eta ? `<div class="row tight small muted">${icon('truck', 16)} Dự kiến giao ${eta}</div>` : ''}
           <button class="btn block">Đặt hàng</button>
-          <div class="small muted">Nhấn đặt hàng là bạn đồng ý với <a href="#/help/chinh-sach-doi-tra">chính sách đổi trả</a>.</div>
-        </div>
+          <p class="xs muted" style="margin:0;text-align:center">Bằng việc đặt hàng, bạn đồng ý với <a href="#/help/chinh-sach-doi-tra"><u>chính sách đổi trả</u></a>.</p>
+        </aside>
       </form>`;
   });
   input('draft', (el) => {
@@ -882,7 +973,7 @@
     if (!dr.province || !dr.ward || !String(data.street).trim()) missing.push('địa chỉ đầy đủ');
     if (dr.vat && !/^\d{10}(-?\d{3})?$/.test(String(data.taxCode || '')))
       missing.push('mã số thuế 10 hoặc 13 số');
-    if (missing.length) return toast('Còn thiếu: ' + missing.join(', '));
+    if (missing.length) return toast('Vui lòng nhập ' + missing.join(', '));
     const lines = cartLines();
     const prov = D.provinces.find((x) => x.code === dr.province);
     const sub = lines.reduce((s, x) => s + x.price * x.l.qty, 0);
@@ -926,7 +1017,7 @@
         ],
       ],
     };
-    // Giữ hàng (order_reserve)
+    // Giữ hàng cho đơn (order_reserve)
     lines.forEach((x) => {
       if (x.v) x.v.stock -= x.l.qty;
       else x.p.stock -= x.l.qty;
@@ -949,45 +1040,57 @@
   function qrSvg(seedStr) {
     let h = 7;
     let cells = '';
+    const finder = (x, y) => {
+      for (const [ox, oy] of [
+        [0, 0],
+        [18, 0],
+        [0, 18],
+      ]) {
+        if (x >= ox && x < ox + 7 && y >= oy && y < oy + 7) {
+          const dx = x - ox;
+          const dy = y - oy;
+          return dx === 0 ||
+            dy === 0 ||
+            dx === 6 ||
+            dy === 6 ||
+            (dx >= 2 && dx <= 4 && dy >= 2 && dy <= 4)
+            ? 1
+            : 0;
+        }
+      }
+      return -1;
+    };
     for (let y = 0; y < 25; y++)
       for (let x = 0; x < 25; x++) {
-        h = (h * 31 + seedStr.charCodeAt((x + y) % seedStr.length)) % 9973;
-        const finder = (x < 7 && y < 7) || (x > 17 && y < 7) || (x < 7 && y > 17);
-        const on = finder
-          ? x % 6 === 0 ||
-            y % 6 === 0 ||
-            (x % 6 > 1 && x % 6 < 5 && y % 6 > 1 && y % 6 < 5) ||
-            (x > 17 && (x - 18) % 6 === 0) ||
-            (y > 17 && (y - 18) % 6 === 0)
-          : h % 2 === 0;
-        if (on) cells += `<rect x="${x * 7}" y="${y * 7}" width="7" height="7"/>`;
+        h = (h * 31 + seedStr.charCodeAt((x * 3 + y) % seedStr.length) + x * y) % 9973;
+        const f = finder(x, y);
+        if (f === 1 || (f === -1 && h % 2 === 0))
+          cells += `<rect x="${x * 8}" y="${y * 8}" width="8" height="8"/>`;
       }
-    return `<svg class="qr" viewBox="0 0 175 175" aria-label="Mã VietQR">${cells}</svg>`;
+    return `<svg class="qr" viewBox="0 0 200 200" role="img" aria-label="Mã VietQR thanh toán">${cells}</svg>`;
   }
   route('/pay/:code', (p) => {
     const S = PK.S;
     const o = PK.order(p.code);
-    if (!o) return '<h1>Không tìm thấy đơn</h1>';
+    if (!o) return '<div class="empty"><b>Không tìm thấy đơn</b></div>';
     if (o.payment === 'paid')
-      return `<div class="card" style="max-width:520px;margin:0 auto;text-align:center"><h1>Đã nhận thanh toán</h1><p>Đơn ${o.code} đã thanh toán.</p><a class="btn" href="#/order-success/${o.code}">Xem đơn hàng</a></div>`;
+      return `<div class="empty"><b>Đã nhận thanh toán</b><p>Đơn ${o.code} đã được thanh toán.</p><a class="btn" href="#/order-success/${o.code}">Xem đơn hàng</a></div>`;
     if (o.status === 'cancelled')
-      return `<div class="card" style="max-width:520px;margin:0 auto;text-align:center"><h1>Đơn đã hủy</h1><p>Đơn ${o.code} quá hạn thanh toán 30 phút nên đã hủy và trả hàng về kho.</p><a class="btn" href="#/">Về trang chủ</a></div>`;
+      return `<div class="empty"><b>Đơn đã hủy</b><p>Đơn ${o.code} quá hạn thanh toán 30 phút nên đã được hủy.</p><a class="btn" href="#/">Về trang chủ</a></div>`;
     const total = PK.orderTotal(o);
-    return `<div class="card" style="max-width:640px;margin:0 auto">
-      <div class="steps"><span class="s">Giỏ hàng</span>›<span class="s">Thông tin</span>›<span class="s on">Thanh toán</span>›<span class="s">Hoàn tất</span></div>
-      <h1 style="margin-top:16px">Quét mã để thanh toán</h1>
-      ${o.flags.includes('underpaid') ? '<div class="alert warn">Đã nhận một phần tiền nhưng chưa đủ. Vui lòng chuyển thêm phần còn thiếu hoặc liên hệ CSKH.</div>' : ''}
-      <div class="row" style="align-items:flex-start;gap:24px;margin-top:12px">
+    return `<div style="max-width:760px;margin:0 auto">${checkoutSteps(2)}
+      <h1>Quét mã để thanh toán</h1><p class="muted">Mở ứng dụng ngân hàng và quét mã VietQR. Đơn được giữ trong <b id="countdown" style="color:var(--ink)">30:00</b>.</p>
+      ${o.flags.includes('underpaid') ? `<div class="alert warn" style="margin:16px 0">${icon('alert', 18)}<span>Đã nhận một phần tiền nhưng chưa đủ. Vui lòng chuyển thêm phần còn thiếu hoặc liên hệ CSKH.</span></div>` : ''}
+      <div class="card" style="display:grid;grid-template-columns:auto 1fr;gap:32px;align-items:center;margin-top:24px">
         ${qrSvg(o.code)}
-        <table class="tbl" style="flex:1"><tr><td class="muted">Ngân hàng</td><td><b>${S.commerceSettings.bank}</b></td></tr>
+        <div><table class="tbl plain"><tr><td class="muted">Ngân hàng</td><td><b>${S.commerceSettings.bank}</b></td></tr>
           <tr><td class="muted">Số tài khoản</td><td><b>${S.commerceSettings.account}</b></td></tr>
-          <tr><td class="muted">Số tiền</td><td><b>${money(total)}</b></td></tr>
-          <tr><td class="muted">Nội dung</td><td><b style="font-size:18px">${o.code}</b></td></tr>
-          <tr><td class="muted">Còn lại</td><td><b id="countdown">30:00</b></td></tr></table>
+          <tr><td class="muted">Số tiền</td><td><b class="num" style="font-size:18px">${money(total)}</b></td></tr>
+          <tr><td class="muted">Nội dung</td><td><code style="font-size:16px;font-weight:700">${o.code}</code></td></tr></table>
+          <p class="small muted" style="margin:12px 0 0">Trang tự cập nhật khi nhận được tiền. Vui lòng ghi đúng nội dung chuyển khoản.</p></div>
       </div>
-      <p class="small muted" style="margin-top:12px">Trang tự kiểm tra mỗi 3 giây và chuyển tiếp khi nhận được tiền. Ghi đúng mã đơn trong nội dung chuyển khoản.</p>
-      <div class="proto-note"><b>Giả lập webhook SePay:</b>
-        <div class="row" style="margin-top:6px">
+      <div class="proto-note" style="display:block"><b>Giả lập webhook SePay:</b>
+        <div class="row tight" style="margin-top:8px">
           <button class="btn sm" data-act="webhook" data-code="${o.code}" data-kind="ok">Chuyển đủ tiền</button>
           <button class="btn sm secondary" data-act="webhook" data-code="${o.code}" data-kind="under">Chuyển thiếu</button>
           <button class="btn sm secondary" data-act="webhook" data-code="${o.code}" data-kind="over">Chuyển thừa</button>
@@ -1051,7 +1154,7 @@
     });
     if (d.kind === 'under') {
       if (!o.flags.includes('underpaid')) o.flags.push('underpaid');
-      toast('Webhook: nhận thiếu tiền, đơn vẫn chờ thanh toán');
+      toast('Đã nhận thiếu tiền, đơn vẫn chờ thanh toán');
       return PK.render();
     }
     if (d.kind === 'over') o.flags.push('overpaid');
@@ -1064,24 +1167,28 @@
       'pending_confirmation',
       'Webhook SePay xác nhận đã thanh toán',
     ]);
-    toast('Webhook SePay: đã nhận tiền');
+    toast('Đã nhận thanh toán');
     PK.go('/order-success/' + o.code);
   });
 
   route('/order-success/:code', (p) => {
     const S = PK.S;
     const o = PK.order(p.code);
-    if (!o) return '<h1>Không tìm thấy đơn</h1>';
+    if (!o) return '<div class="empty"><b>Không tìm thấy đơn</b></div>';
     const link = `#/orders/${o.code}?t=${o.token || 'demo'}`;
-    return `<div class="card" style="max-width:640px;margin:0 auto">
-      <div class="steps"><span class="s">Giỏ hàng</span>›<span class="s">Thông tin</span>›<span class="s">Thanh toán</span>›<span class="s on">Hoàn tất</span></div>
-      <h1 style="margin-top:16px">Đặt hàng thành công</h1>
-      <p>Mã đơn <b>${o.code}</b> · ${PK.orderBadge(o.status)} ${PK.payBadge(o.payment)}</p>
-      <p>Tổng tiền <b>${money(PK.orderTotal(o))}</b> · ${o.method === 'cod' ? 'Thanh toán khi nhận hàng' : 'Chuyển khoản SePay'}</p>
-      <div class="row"><a class="btn" href="${S.role === 'customer' ? '#/orders/' + o.code : link}">Xem đơn hàng</a><a class="btn secondary" href="#/">Tiếp tục mua sắm</a></div>
-      <div class="card muted-bg" style="margin-top:20px"><div class="small muted">Xem trước email gửi tới ${esc(o.email)}</div>
-        <b>Pickory: Xác nhận đơn hàng ${o.code}</b><p class="small">Cảm ơn ${esc(o.customer)} đã mua hàng. ${S.role === 'guest' ? `Tra cứu đơn mà không cần tài khoản: <a href="${link}">pickory.vn/orders/${o.code}?t=…</a>` : 'Xem đơn trong mục Đơn hàng của tôi.'}</p></div>
-      ${S.role === 'guest' ? note('Khách vãng lai có thể <a href="#/register">đăng ký</a> ngay sau khi mua: đơn và giỏ được gộp vào tài khoản (UserLinkedEvent).') : ''}
+    return `<div style="max-width:640px;margin:0 auto">${checkoutSteps(3)}
+      <div style="width:56px;height:56px;border-radius:50%;background:var(--success-bg);color:var(--success);display:flex;align-items:center;justify-content:center;margin-bottom:16px">${icon('check', 28)}</div>
+      <h1>Cảm ơn ${esc(o.customer.split(' ').pop())}, đơn hàng đã được đặt</h1>
+      <p class="muted">Mã đơn <b style="color:var(--ink)">${o.code}</b>. Xác nhận đã được gửi tới ${esc(o.email)}.</p>
+      <div class="card" style="margin:24px 0">
+        <div class="summary-line"><span class="muted">Trạng thái</span><span>${PK.orderBadge(o.status)} ${PK.payBadge(o.payment)}</span></div>
+        <div class="summary-line" style="margin-top:12px"><span class="muted">Thanh toán</span><span>${o.method === 'cod' ? 'Khi nhận hàng (COD)' : 'Chuyển khoản VietQR'}</span></div>
+        <div class="summary-line" style="margin-top:12px"><span class="muted">Giao tới</span><span style="text-align:right">${esc(o.address)}</span></div>
+        <div class="summary-line total" style="margin-top:12px"><span>Tổng cộng</span><span class="num">${money(PK.orderTotal(o))}</span></div>
+      </div>
+      <div class="row"><a class="btn" href="${S.role === 'customer' ? '#/orders/' + o.code : link}">Theo dõi đơn hàng</a><a class="btn secondary" href="#/">Tiếp tục mua sắm</a></div>
+      ${S.role === 'guest' ? `<div class="card muted-bg" style="margin-top:32px"><b>Lưu đơn vào tài khoản?</b><p class="small muted" style="margin:6px 0 12px">Tạo tài khoản để theo dõi đơn và nhận gợi ý phù hợp. Đơn và giỏ hàng hiện tại sẽ được gộp vào tài khoản.</p><a class="btn sm secondary" href="#/register">Tạo tài khoản</a></div>` : ''}
+      ${note(`Email xác nhận cho khách vãng lai chứa link tra cứu không cần đăng nhập: <a href="${link}">/orders/${o.code}?t=…</a>`)}
     </div>`;
   });
 
@@ -1089,41 +1196,48 @@
   route('/orders', () => {
     const S = PK.S;
     if (S.role !== 'customer')
-      return `<h1>Đơn hàng của tôi</h1><div class="card muted-bg"><p>Đăng nhập để xem đơn hàng. Khách mua không cần tài khoản thì dùng link trong email xác nhận.</p><a class="btn" href="#/login">Đăng nhập</a></div>`;
+      return `<div class="auth"><h1>Đơn hàng của tôi</h1><p class="lead">Đăng nhập để xem đơn hàng. Nếu mua không cần tài khoản, hãy dùng link trong email xác nhận đơn.</p><a class="btn block" href="#/login">Đăng nhập</a></div>`;
     const mine = S.orders.filter((o) => o.userId === 'u1');
-    return `<h1>Đơn hàng của tôi</h1><div class="table-wrap"><table class="tbl"><tr><th>Mã đơn</th><th>Ngày</th><th class="num">Tổng</th><th>Trạng thái</th><th>Thanh toán</th></tr>
-      ${mine.map((o) => `<tr class="click" data-act="nav" data-href="#/orders/${o.code}"><td><b>${o.code}</b></td><td>${o.createdAt}</td><td class="num">${money(PK.orderTotal(o))}</td><td>${PK.orderBadge(o.status)}</td><td>${PK.payBadge(o.payment)}</td></tr>`).join('')}</table></div>`;
+    return `<h1>Đơn hàng của tôi</h1><div class="table-wrap" style="margin-top:24px"><table class="tbl"><tr><th>Mã đơn</th><th>Ngày đặt</th><th>Sản phẩm</th><th class="num">Tổng tiền</th><th>Trạng thái</th></tr>
+      ${mine.map((o) => `<tr class="click" data-act="nav" data-href="#/orders/${o.code}"><td><b>${o.code}</b></td><td class="muted">${dmy(o.createdAt)}</td><td>${esc(o.items[0].name)}${o.items.length > 1 ? ` <span class="muted">+${o.items.length - 1}</span>` : ''}</td><td class="num">${money(PK.orderTotal(o))}</td><td>${PK.orderBadge(o.status)}</td></tr>`).join('')}</table></div>`;
   });
   route('/orders/:code', (p, q) => {
     const S = PK.S;
     const o = PK.order(p.code);
-    if (!o) return '<h1>Không tìm thấy đơn</h1>';
+    if (!o) return '<div class="empty"><b>Không tìm thấy đơn</b></div>';
     const tokenView = !!q.t && S.role !== 'customer';
     if (!tokenView && (S.role !== 'customer' || o.userId !== 'u1'))
-      return `<h1>Không tìm thấy đơn</h1><p class="muted">Bạn chỉ xem được đơn của chính mình.</p>`;
+      return `<div class="empty"><b>Không tìm thấy đơn</b>Bạn chỉ xem được đơn của chính mình.</div>`;
     const canCancel = !tokenView && ['pending_payment', 'pending_confirmation'].includes(o.status);
     const steps = ['pending_confirmation', 'confirmed', 'shipping', 'delivered'];
     const curIdx = steps.indexOf(o.status);
-    return `<div class="breadcrumb"><a href="#/orders">Đơn hàng</a> / ${o.code}</div>
-      <div class="row between"><h1>Đơn ${o.code}</h1><div class="row">${PK.orderBadge(o.status)} ${PK.payBadge(o.payment)}</div></div>
-      ${tokenView ? '<div class="alert">Bạn đang xem đơn bằng link trong email (chỉ đọc).</div>' : ''}
-      ${o.status !== 'cancelled' ? `<div class="steps" style="margin:16px 0">${steps.map((s, i) => `<span class="s ${i <= curIdx ? 'on' : ''}">${PK.ORDER_STATUS[s]}</span>`).join('›')}</div>` : `<div class="alert err">Đơn đã hủy (${esc(o.cancelReason || '')}). ${o.payment === 'refund_pending' ? 'Pickory đang hoàn tiền cho bạn.' : ''}</div>`}
-      <div class="grid cols-2" style="margin-top:16px">
-        <div class="card stack"><h3>Sản phẩm</h3>${o.items.map((i) => `<div class="row between"><span>${i.qty} × ${esc(i.name)}</span><b>${money(i.price * i.qty)}</b></div>`).join('')}
-          <div class="row between small"><span>Phí vận chuyển</span><span>${money(o.shippingFee - o.shippingDiscount)}</span></div>
-          <div class="row between"><b>Tổng</b><b>${money(PK.orderTotal(o))}</b></div>
-          ${o.vat ? `<div class="small muted">Hóa đơn VAT: ${esc(o.vat.company)}, MST ${esc(o.vat.taxCode)}</div>` : ''}
-          ${o.status === 'pending_payment' ? `<a class="btn" href="#/pay/${o.code}">Thanh toán ngay</a>` : ''}
-          ${canCancel ? `<button class="btn danger" data-act="customerCancel" data-code="${o.code}">Hủy đơn</button>` : ''}</div>
-        <div class="card stack"><h3>Giao hàng</h3><p class="small">${esc(o.customer)} · ${tokenView ? '***' : esc(o.phone)}<br>${esc(o.address)}</p>
+    return `${crumbs([['Đơn hàng', S.role === 'customer' ? '#/orders' : ''], [o.code]])}
+      <div class="page-title"><div><h1>Đơn ${o.code}</h1><p class="muted" style="margin:6px 0 0">Đặt lúc ${o.createdAt.split(' ')[1]} ngày ${dmy(o.createdAt)}</p></div><div class="row tight">${PK.orderBadge(o.status)} ${PK.payBadge(o.payment)}</div></div>
+      ${tokenView ? `<div class="alert" style="margin-bottom:16px">${icon('info', 18)}<span>Bạn đang xem đơn qua link trong email.</span></div>` : ''}
+      ${o.status !== 'cancelled' ? `<div class="progress">${steps.map((s, i) => `<div class="${i <= curIdx ? 'on' : ''}">${PK.ORDER_STATUS[s]}</div>`).join('')}</div>` : `<div class="alert err" style="margin-bottom:24px">${icon('alert', 18)}<span>Đơn đã hủy (${esc(o.cancelReason || '')}). ${o.payment === 'refund_pending' ? 'Pickory đang hoàn tiền cho bạn trong 1 đến 3 ngày làm việc.' : ''}</span></div>`}
+      <div class="grid" style="grid-template-columns:1.3fr 1fr;gap:32px;align-items:start">
+        <div class="card"><h3>Sản phẩm</h3>${o.items.map((i) => `<div class="row" style="flex-wrap:nowrap;padding:8px 0"><span style="width:56px;height:56px;background:var(--bg-2);border-radius:8px;display:flex;align-items:center;justify-content:center;flex:none">${productImg(PK.prod(i.pid), 46)}</span><span style="flex:1">${esc(i.name)}<br><span class="small muted">Số lượng ${i.qty}</span></span><b class="num">${money(i.price * i.qty)}</b></div>`).join('')}
+          <hr class="sep"><div class="summary-line"><span class="muted">Phí vận chuyển</span><span class="num">${o.shippingFee - o.shippingDiscount ? money(o.shippingFee - o.shippingDiscount) : 'Miễn phí'}</span></div>
+          <div class="summary-line total" style="margin-top:12px"><span>Tổng cộng</span><span class="num">${money(PK.orderTotal(o))}</span></div>
+          ${o.vat ? `<p class="small muted" style="margin-top:12px">Hóa đơn VAT: ${esc(o.vat.company)}, MST ${esc(o.vat.taxCode)}</p>` : ''}
+          <div class="row" style="margin-top:16px">${o.status === 'pending_payment' ? `<a class="btn" href="#/pay/${o.code}">Thanh toán ngay</a>` : ''}${canCancel ? `<button class="btn danger" data-act="customerCancel" data-code="${o.code}">Hủy đơn</button>` : ''}</div></div>
+        <div class="card"><h3>Giao hàng</h3><p class="small">${esc(o.customer)} · ${tokenView ? '•••• ••• ' + o.phone.slice(-3) : esc(o.phone)}<br>${esc(o.address)}</p>
           ${
             o.tracking
-              ? `<p>Mã vận đơn GHN: <b>${o.tracking}</b> · <span class="badge">${PK.SHIP_STATUS[o.shipStatus] || ''}</span></p>
-          <ul class="timeline">${(o.shipEvents || []).map((e) => `<li class="done"><b>${PK.SHIP_STATUS[e[1]]}</b><div class="small muted">${e[0]}</div></li>`).join('')}</ul>`
-              : '<p class="muted small">Chưa tạo vận đơn.</p>'
+              ? `<p class="small" style="margin-bottom:16px">GHN · <b>${o.tracking}</b></p><ul class="timeline">${(
+                  o.shipEvents || []
+                )
+                  .slice()
+                  .reverse()
+                  .map(
+                    (e) =>
+                      `<li class="done"><b>${PK.SHIP_STATUS[e[1]]}</b><div class="small muted">${e[0].split(' ')[1]} · ${dmy(e[0])}</div></li>`,
+                  )
+                  .join('')}</ul>`
+              : '<p class="small muted">Đơn chưa được bàn giao cho đơn vị vận chuyển.</p>'
           }</div>
       </div>
-      ${note('Khách chỉ hủy được khi đơn ở "Chờ thanh toán" hoặc "Chờ xác nhận". Hủy đơn đã thanh toán chuyển sang "Chờ hoàn tiền".')}`;
+      ${note('Khách chỉ hủy được khi đơn "Chờ thanh toán" hoặc "Chờ xác nhận". Hủy đơn đã thanh toán chuyển sang "Chờ hoàn tiền".')}`;
   });
   act('customerCancel', (d) => {
     const o = PK.order(d.code);
@@ -1138,21 +1252,24 @@
 
   // ================= identity: đăng nhập, đăng ký, quên mật khẩu =================
   let failCount = 0;
+  const googleBtn = (label) =>
+    `<button type="button" class="btn secondary block" data-act="googleLogin"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M22.5 12.3c0-.8-.1-1.5-.2-2.2H12v4.2h5.9a5 5 0 0 1-2.2 3.3v2.7h3.6c2-1.9 3.2-4.7 3.2-8Z"/><path fill="#34A853" d="M12 23c3 0 5.5-1 7.3-2.7l-3.6-2.7c-1 .7-2.2 1-3.7 1-2.8 0-5.2-1.9-6.1-4.5H2.2v2.8A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.9 14.1a6.6 6.6 0 0 1 0-4.2V7.1H2.2a11 11 0 0 0 0 9.8l3.7-2.8Z"/><path fill="#EA4335" d="M12 5.4c1.6 0 3 .6 4.1 1.6l3.1-3.1A11 11 0 0 0 2.2 7.1l3.7 2.8C6.8 7.3 9.2 5.4 12 5.4Z"/></svg> ${label}</button>`;
   route(
     '/login',
-    () => `<div class="card" style="max-width:420px;margin:0 auto"><h1>Đăng nhập</h1>
-      <form data-form="login" class="stack"><label class="field"><span>Email</span><input name="email" type="email" value="minhanh@example.vn"></label>
-      <label class="field"><span>Mật khẩu</span><input name="password" type="password" placeholder="Mật khẩu đúng: 12345678"></label>
+    () => `<div class="auth"><h1>Đăng nhập</h1><p class="lead">Theo dõi đơn hàng và nhận gợi ý phù hợp với bạn.</p>
+      ${googleBtn('Tiếp tục với Google')}<div class="or">hoặc</div>
+      <form data-form="login" class="stack"><label class="field"><span>Email</span><input name="email" type="email" value="minhanh@example.vn" autocomplete="email"></label>
+      <label class="field"><span class="row between">Mật khẩu <a href="#/forgot" class="small" style="font-weight:500"><u>Quên mật khẩu?</u></a></span><input name="password" type="password" autocomplete="current-password"></label>
       <button class="btn block">Đăng nhập</button></form>
-      <button class="btn secondary block" style="margin-top:8px" data-act="googleLogin">Đăng nhập bằng Google</button>
-      <div class="row between small" style="margin-top:12px"><a href="#/forgot">Quên mật khẩu?</a><a href="#/register">Tạo tài khoản</a></div>
-      ${note('Sai mật khẩu 5 lần trong 15 phút thì lần 6 bị khóa 15 phút (429), kể cả nhập đúng. Thông báo lỗi không tiết lộ email có tồn tại hay không.')}</div>`,
+      <p class="small muted" style="text-align:center;margin-top:20px">Chưa có tài khoản? <a href="#/register"><b>Tạo tài khoản</b></a></p>
+      ${note('Mật khẩu đúng: 12345678. Sai 5 lần trong 15 phút thì lần 6 bị khóa 15 phút (429). Thông báo lỗi không tiết lộ email có tồn tại hay không.')}</div>`,
   );
   form('login', (data) => {
-    if (failCount >= 5) return toast('Bạn đã nhập sai quá nhiều lần. Thử lại sau 15 phút.');
+    if (failCount >= 5)
+      return toast('Bạn đã nhập sai quá nhiều lần. Vui lòng thử lại sau 15 phút.');
     if (data.password !== '12345678') {
       failCount += 1;
-      return toast(`Email hoặc mật khẩu không đúng (lần ${failCount}/5)`);
+      return toast('Email hoặc mật khẩu không đúng');
     }
     failCount = 0;
     loginCustomer();
@@ -1161,13 +1278,13 @@
     const S = PK.S;
     S.role = 'customer';
     S.draft = null;
-    toast('Chào Minh Anh! Đã gộp giỏ hàng và lịch sử xem của phiên khách (UserLinkedEvent)');
+    toast('Chào mừng Minh Anh quay lại');
     PK.go('/');
   }
   act('googleLogin', () => {
-    modal(`<h2>Google</h2><p>Chọn tài khoản để tiếp tục với Pickory</p>
-      <button class="btn secondary block" data-act="googlePick">minhanh@example.vn (email đã xác thực, trùng tài khoản: tự liên kết)</button>
-      <p class="small muted" style="margin-top:12px">Email Google chưa xác thực thì không tự liên kết. Email thuộc nhân viên bị từ chối.</p>`);
+    modal(`<h2>Chọn tài khoản Google</h2><p class="muted">để tiếp tục tới Pickory</p>
+      <button class="radio-card" style="width:100%;background:none;font:inherit;text-align:left" data-act="googlePick"><span class="avatar light">MA</span><span><b>Nguyễn Minh Anh</b><br><span class="small muted">minhanh@example.vn</span></span></button>
+      ${note('Email Google đã xác thực và trùng tài khoản thì tự liên kết. Chưa xác thực thì không liên kết. Email thuộc nhân viên bị từ chối.')}`);
   });
   act('googlePick', () => {
     closeModal();
@@ -1175,52 +1292,54 @@
   });
   route(
     '/register',
-    () => `<div class="card" style="max-width:420px;margin:0 auto"><h1>Tạo tài khoản</h1>
-      <form data-form="register" class="stack"><label class="field"><span>Họ tên</span><input name="name"></label>
-      <label class="field"><span>Email</span><input name="email" type="email"></label>
-      <label class="field"><span>Mật khẩu (tối thiểu 8 ký tự)</span><input name="password" type="password"></label>
-      <button class="btn block">Đăng ký</button></form>
-      <button class="btn secondary block" style="margin-top:8px" data-act="googleLogin">Đăng ký bằng Google</button>
-      ${note('Thử email có đuôi @pickory.vn để thấy lỗi "email thuộc tài khoản nhân viên". Đăng ký xong được đăng nhập luôn và nhận email xác thực (hạn 24 giờ).')}</div>`,
+    () => `<div class="auth"><h1>Tạo tài khoản</h1><p class="lead">Mua nhanh hơn, theo dõi đơn và lưu sổ địa chỉ.</p>
+      ${googleBtn('Đăng ký với Google')}<div class="or">hoặc</div>
+      <form data-form="register" class="stack"><label class="field"><span>Họ và tên</span><input name="name" autocomplete="name"></label>
+      <label class="field"><span>Email</span><input name="email" type="email" autocomplete="email"></label>
+      <label class="field"><span>Mật khẩu</span><input name="password" type="password" autocomplete="new-password" aria-describedby="pw-hint"><span id="pw-hint" class="xs muted" style="display:block;margin-top:6px">Tối thiểu 8 ký tự</span></label>
+      <button class="btn block">Tạo tài khoản</button></form>
+      <p class="small muted" style="text-align:center;margin-top:20px">Đã có tài khoản? <a href="#/login"><b>Đăng nhập</b></a></p>
+      ${note('Thử email đuôi @pickory.vn để thấy lỗi "email thuộc tài khoản nhân viên". Đăng ký xong được đăng nhập luôn và nhận email xác thực (hạn 24 giờ).')}</div>`,
   );
   form('register', (data) => {
     if (!/.+@.+\..+/.test(data.email)) return toast('Email không hợp lệ');
     if (String(data.password).length < 8) return toast('Mật khẩu cần tối thiểu 8 ký tự');
     if (/@pickory\.vn$/.test(data.email))
-      return toast('Email này thuộc tài khoản nhân viên, không đăng ký làm khách được');
+      return toast('Email này không dùng được để đăng ký tài khoản khách');
     PK.S.role = 'customer';
-    modal(`<h2>Đăng ký thành công</h2><p>Chúng tôi đã gửi email xác thực tới <b>${esc(data.email)}</b>.</p>
-      <div class="card muted-bg"><div class="small muted">Xem trước email</div><b>Xác thực email Pickory</b><p class="small">Nhấn vào link để xác thực (hạn 24 giờ): <a href="#/verify" data-act="closeModal">pickory.vn/verify-email?t=…</a></p></div>
-      <button class="btn" style="margin-top:12px" data-act="closeModal">Tiếp tục mua sắm</button>`);
+    modal(`<div style="width:48px;height:48px;border-radius:50%;background:var(--success-bg);color:var(--success);display:flex;align-items:center;justify-content:center;margin-bottom:16px">${icon('check', 24)}</div><h2>Tài khoản đã được tạo</h2><p>Chúng tôi đã gửi email xác thực tới <b>${esc(data.email)}</b>. Link có hiệu lực trong 24 giờ.</p>
+      ${note('Xem trước email: <a href="#/verify" data-act="closeModal">pickory.vn/verify-email?t=…</a>')}
+      <div class="row" style="justify-content:flex-end"><button class="btn" data-act="closeModal">Tiếp tục mua sắm</button></div>`);
     PK.render();
   });
   route(
     '/verify',
     () =>
-      `<div class="card" style="max-width:420px;margin:0 auto;text-align:center"><h1>Đã xác thực email</h1><p>Cảm ơn bạn. Tài khoản đã được xác thực.</p><a class="btn" href="#/">Về trang chủ</a></div>`,
+      `<div class="auth" style="text-align:center"><div style="width:56px;height:56px;border-radius:50%;background:var(--success-bg);color:var(--success);display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px">${icon('check', 28)}</div><h1>Email đã được xác thực</h1><p class="lead">Cảm ơn bạn. Tài khoản của bạn đã sẵn sàng.</p><a class="btn" href="#/">Về trang chủ</a></div>`,
   );
   route(
     '/forgot',
-    () => `<div class="card" style="max-width:420px;margin:0 auto"><h1>Quên mật khẩu</h1>
-      <form data-form="forgot" class="stack"><label class="field"><span>Email</span><input name="email" type="email"></label><button class="btn block">Gửi link đặt lại</button></form>
+    () => `<div class="auth"><h1>Quên mật khẩu</h1><p class="lead">Nhập email của bạn, chúng tôi sẽ gửi link đặt lại mật khẩu.</p>
+      <form data-form="forgot" class="stack"><label class="field"><span>Email</span><input name="email" type="email" autocomplete="email"></label><button class="btn block">Gửi link đặt lại</button></form>
+      <p class="small" style="text-align:center;margin-top:20px"><a href="#/login">${icon('chevronLeft', 14)} Quay lại đăng nhập</a></p>
       ${note('Luôn trả cùng một thông báo và độ trễ dù email có tồn tại hay không.')}</div>`,
   );
   form('forgot', (data) => {
-    modal(`<h2>Kiểm tra email của bạn</h2><p>Nếu ${esc(data.email)} có tài khoản, chúng tôi đã gửi link đặt lại mật khẩu. Link có hạn 30 phút và chỉ dùng được 1 lần.</p>
-      <div class="card muted-bg"><div class="small muted">Xem trước email</div><b>Đặt lại mật khẩu Pickory</b><p class="small"><a href="#/reset" data-act="closeModal">pickory.vn/reset-password?t=…</a></p></div>`);
+    modal(`<h2>Kiểm tra hộp thư</h2><p>Nếu <b>${esc(data.email)}</b> có tài khoản, chúng tôi đã gửi link đặt lại mật khẩu. Link có hiệu lực 30 phút và chỉ dùng được một lần.</p>
+      ${note('Xem trước email: <a href="#/reset" data-act="closeModal">pickory.vn/reset-password?t=…</a>')}<div class="row" style="justify-content:flex-end"><button class="btn" data-act="closeModal">Đã hiểu</button></div>`);
   });
   route(
     '/reset',
     (
       _,
       q,
-    ) => `<div class="card" style="max-width:420px;margin:0 auto"><h1>${q.invite ? 'Đặt mật khẩu cho tài khoản nhân viên' : 'Đặt lại mật khẩu'}</h1>
-      <form data-form="reset" class="stack"><label class="field"><span>Mật khẩu mới (tối thiểu 8 ký tự)</span><input name="password" type="password"></label><button class="btn block">Lưu mật khẩu</button></form>
-      ${note(q.invite ? 'Trang này dùng chung cho lời mời nhân viên (link hạn 72 giờ, dùng 1 lần).' : 'Đặt lại xong, mọi phiên đăng nhập cũ bị xóa.')}</div>`,
+    ) => `<div class="auth"><h1>${q.invite ? 'Kích hoạt tài khoản nhân viên' : 'Đặt mật khẩu mới'}</h1><p class="lead">${q.invite ? 'Đặt mật khẩu để đăng nhập back-office Pickory.' : 'Mật khẩu mới sẽ đăng xuất mọi thiết bị đang đăng nhập.'}</p>
+      <form data-form="reset" class="stack"><label class="field"><span>Mật khẩu mới</span><input name="password" type="password" autocomplete="new-password"><span class="xs muted" style="display:block;margin-top:6px">Tối thiểu 8 ký tự</span></label><button class="btn block">Lưu mật khẩu</button></form>
+      ${note(q.invite ? 'Trang dùng chung cho lời mời nhân viên (link hạn 72 giờ, dùng 1 lần).' : 'Đặt lại xong, mọi phiên cũ bị xóa.')}</div>`,
   );
   form('reset', (data) => {
     if (String(data.password).length < 8) return toast('Mật khẩu cần tối thiểu 8 ký tự');
-    toast('Đã đặt mật khẩu mới. Mọi phiên cũ đã bị đăng xuất.');
+    toast('Đã lưu mật khẩu mới');
     const { query } = PK.parseHash();
     PK.go(query.invite ? '/admin/login' : '/login');
   });
@@ -1229,62 +1348,68 @@
   route('/account', (_, q) => {
     const S = PK.S;
     if (S.role !== 'customer')
-      return `<h1>Tài khoản</h1><p><a href="#/login">Đăng nhập</a> để quản lý tài khoản.</p>`;
+      return `<div class="auth"><h1>Tài khoản</h1><p class="lead">Đăng nhập để quản lý tài khoản của bạn.</p><a class="btn block" href="#/login">Đăng nhập</a></div>`;
     const u = PK.me();
     const tab = q.tab || 'info';
     const tabs = [
-      ['info', 'Thông tin'],
-      ['password', 'Đổi mật khẩu'],
-      ['addresses', 'Sổ địa chỉ'],
-      ['privacy', 'Quyền riêng tư'],
-      ['delete', 'Xóa tài khoản'],
+      ['info', 'Thông tin cá nhân', 'user'],
+      ['addresses', 'Sổ địa chỉ', 'pin'],
+      ['password', 'Mật khẩu', 'key'],
+      ['privacy', 'Quyền riêng tư', 'shield'],
+      ['delete', 'Xóa tài khoản', 'x'],
     ];
     let body = '';
     if (tab === 'info')
-      body = `<form data-form="profile" class="stack" style="max-width:420px"><label class="field"><span>Họ tên</span><input name="name" value="${esc(u.name)}"></label>
+      body = `<h2>Thông tin cá nhân</h2><form data-form="profile" class="stack" style="max-width:480px;margin-top:20px"><label class="field"><span>Họ và tên</span><input name="name" value="${esc(u.name)}"></label>
         <label class="field"><span>Số điện thoại</span><input name="phone" value="${esc(u.phone)}"></label>
-        <label class="field"><span>Email (không đổi được)</span><input value="${esc(u.email)}" disabled></label> <span class="badge ok">Đã xác thực</span>
-        <button class="btn">Lưu</button></form>`;
+        <label class="field"><span>Email</span><input value="${esc(u.email)}" disabled></label><div class="row tight small" style="color:var(--success)">${icon('check', 14)} Email đã xác thực</div>
+        <div><button class="btn">Lưu thay đổi</button></div></form>`;
     if (tab === 'password')
-      body = `<form data-form="changePassword" class="stack" style="max-width:420px"><label class="field"><span>Mật khẩu hiện tại</span><input type="password" name="old"></label><label class="field"><span>Mật khẩu mới</span><input type="password" name="password"></label><button class="btn">Đổi mật khẩu</button>${note('Đổi mật khẩu xong, mọi phiên khác bị đăng xuất.')}</form>`;
+      body = `<h2>Đổi mật khẩu</h2><form data-form="changePassword" class="stack" style="max-width:480px;margin-top:20px"><label class="field"><span>Mật khẩu hiện tại</span><input type="password" name="old" autocomplete="current-password"></label><label class="field"><span>Mật khẩu mới</span><input type="password" name="password" autocomplete="new-password"></label><p class="small muted">Đổi mật khẩu sẽ đăng xuất các thiết bị khác.</p><div><button class="btn">Đổi mật khẩu</button></div></form>`;
     if (tab === 'addresses')
-      body = `<div class="grid cols-2">${[
+      body = `<div class="row between"><h2 style="margin:0">Sổ địa chỉ</h2><button class="btn sm secondary" data-act="toastMsg" data-msg="Mở form thêm địa chỉ (tối đa 10)">${icon('plus', 16)} Thêm địa chỉ</button></div><div class="grid cols-2" style="margin-top:20px">${[
         ['Nhà riêng', '12 Nguyễn Huệ, Phường Bến Nghé, TP. Hồ Chí Minh', true],
         ['Công ty', '8 Lý Thường Kiệt, Phường Hoàn Kiếm, Hà Nội', false],
       ]
         .map(
           ([l, a, def]) =>
-            `<div class="card"><div class="row between"><b>${l}</b>${def ? '<span class="badge">Mặc định</span>' : ''}</div><p class="small">${u.name} · ${u.phone}<br>${a}</p><div class="row"><button class="btn sm secondary" data-act="toastMsg" data-msg="Mở form sửa địa chỉ">Sửa</button><button class="btn sm ghost" data-act="toastMsg" data-msg="Đã xóa địa chỉ">Xóa</button></div></div>`,
+            `<div class="card tight"><div class="row between"><b>${l}</b>${def ? '<span class="badge">Mặc định</span>' : ''}</div><p class="small" style="margin:8px 0 12px">${u.name} · ${u.phone}<br><span class="muted">${a}</span></p><div class="row tight"><button class="btn sm secondary" data-act="toastMsg" data-msg="Mở form sửa địa chỉ">Sửa</button>${def ? '' : '<button class="btn sm ghost" data-act="toastMsg" data-msg="Đã đặt làm mặc định">Đặt mặc định</button>'}</div></div>`,
         )
-        .join('')}</div>
-        <button class="btn secondary" style="margin-top:12px" data-act="toastMsg" data-msg="Mở form thêm địa chỉ (tối đa 10)">Thêm địa chỉ</button>`;
+        .join('')}</div>`;
     if (tab === 'privacy') {
       const c = S.consent || { personalization: false, marketing: false };
-      const interests = S.recent.map(PK.prod).filter(Boolean);
-      body = `<div class="grid cols-2"><div class="card stack"><h3>Lựa chọn của bạn</h3>
-        <label class="switch"><input type="checkbox" checked disabled> Cần thiết (luôn bật)</label>
-        <label class="switch"><input type="checkbox" data-change="togglePersonalization" ${c.personalization ? 'checked' : ''}> Cá nhân hóa</label>
-        <label class="switch"><input type="checkbox" data-change="toggleMarketing" ${c.marketing ? 'checked' : ''}> Tiếp thị</label>
-        <p class="small muted">Phiên bản chính sách 2026-09. Mỗi lần đổi được lưu thành 1 bản ghi mới.</p></div>
-        <div class="card stack"><h3>Hệ thống hiểu bạn thích gì</h3>
+      body = `<h2>Quyền riêng tư</h2><div class="card" style="margin-top:20px;max-width:640px;padding:8px 24px">
+        <label class="pref-row switch"><div><b>Cần thiết</b><p>Giỏ hàng, đăng nhập, bảo mật. Luôn bật.</p></div><input type="checkbox" checked disabled></label>
+        <label class="pref-row switch"><div><b>Cá nhân hóa</b><p>Gợi ý sản phẩm dựa trên những gì bạn xem và mua. Tắt thì dữ liệu bị xóa ngay.</p></div><input type="checkbox" data-change="togglePersonalization" ${c.personalization ? 'checked' : ''}></label>
+        <label class="pref-row switch"><div><b>Tiếp thị</b><p>Nhận ưu đãi phù hợp qua email.</p></div><input type="checkbox" data-change="toggleMarketing" ${c.marketing ? 'checked' : ''}></label></div>
+        <h3 style="margin-top:32px">Pickory hiểu bạn thích gì</h3>
         ${
           c.personalization
-            ? `<p>Quan tâm: <b>Laptop gaming</b> (nhiều nhất), Tai nghe.<br>Thương hiệu hay xem: ASUS, MSI.<br>Tầm giá laptop: 25 đến 35 triệu.<br>Ưu tiên RAM 16GB, màn hình 16 inch.<br>Đã mua: chuột Logitech G502.</p>
-          <p class="small muted">${interests.length} sản phẩm đã xem gần đây.</p><button class="btn secondary sm" data-act="clearHistory">Xóa lịch sử</button>`
-            : '<p class="muted">Bạn chưa bật cá nhân hóa nên hệ thống không lưu sở thích.</p>'
-        }</div></div>`;
+            ? `<div class="card" style="max-width:640px"><div class="grid cols-2"><div><div class="small muted">Danh mục quan tâm</div><b>Laptop gaming, Tai nghe</b></div><div><div class="small muted">Thương hiệu hay xem</div><b>ASUS, MSI</b></div><div><div class="small muted">Tầm giá laptop</div><b>25 đến 35 triệu</b></div><div><div class="small muted">Ưu tiên</div><b>RAM 16GB, màn 16 inch</b></div></div>
+          <hr class="sep"><div class="row between"><span class="small muted">Dựa trên ${S.recent.length} sản phẩm đã xem và 1 đơn đã mua</span><button class="btn sm secondary" data-act="clearHistory">Xóa lịch sử xem</button></div></div>`
+            : `<p class="muted">Bạn chưa bật cá nhân hóa nên Pickory không lưu sở thích của bạn.</p>`
+        }`;
     }
     if (tab === 'delete')
-      body = `<div class="card stack" style="max-width:480px"><h3>Xóa tài khoản</h3><p>Email và tên sẽ bị ẩn danh, bạn không thể đăng nhập lại. Đơn hàng cũ vẫn được giữ cho kế toán.</p>
-        <form data-form="deleteAccount" class="stack"><label class="field"><span>Nhập mật khẩu để xác nhận</span><input type="password" name="password" placeholder="12345678"></label><button class="btn danger">Xóa vĩnh viễn</button></form></div>`;
-    return `<h1>Tài khoản của tôi</h1><div class="tabs">${tabs.map(([k, l]) => `<a href="#/account?tab=${k}" class="${tab === k ? 'on' : ''}">${l}</a>`).join('')}</div>${body}`;
+      body = `<h2>Xóa tài khoản</h2><div class="card" style="max-width:560px;margin-top:20px"><p>Email và tên của bạn sẽ bị ẩn danh và bạn không thể đăng nhập lại. Lịch sử đơn hàng được giữ cho mục đích kế toán, không gắn với danh tính của bạn.</p>
+        <form data-form="deleteAccount" class="stack"><label class="field"><span>Nhập mật khẩu để xác nhận</span><input type="password" name="password" autocomplete="current-password"></label><div><button class="btn danger">Xóa vĩnh viễn tài khoản</button></div></form></div>`;
+    return `<div class="grid" style="grid-template-columns:240px 1fr;gap:48px;align-items:start">
+      <nav aria-label="Tài khoản"><div class="row tight" style="margin-bottom:20px;flex-wrap:nowrap"><span class="avatar">${PK.initials(u.name)}</span><div style="line-height:1.3;min-width:0"><b>${esc(u.name)}</b><div class="small muted">${esc(u.email)}</div></div></div>
+        ${tabs.map(([k, l, ic]) => `<a href="#/account?tab=${k}" class="row tight" style="padding:9px 12px;border-radius:10px;${tab === k ? 'background:var(--bg-2);font-weight:600' : 'color:var(--ink-2)'}">${icon(ic, 18)} ${l}</a>`).join('')}
+        <a href="#" class="row tight" style="padding:9px 12px;color:var(--ink-2)" data-act="logoutCustomer">${icon('logout', 18)} Đăng xuất</a></nav>
+      <div>${body}</div></div>`;
   });
   act('toastMsg', (d) => toast(d.msg));
-  form('profile', () => toast('Đã lưu thông tin'));
+  act('logoutCustomer', () => {
+    PK.S.role = 'guest';
+    PK.go('/');
+    return false;
+  });
+  form('profile', () => toast('Đã lưu thay đổi'));
   form('changePassword', (data) =>
     String(data.password).length < 8
       ? toast('Mật khẩu mới cần tối thiểu 8 ký tự')
-      : toast('Đã đổi mật khẩu, các phiên khác đã đăng xuất'),
+      : toast('Đã đổi mật khẩu, các thiết bị khác đã được đăng xuất'),
   );
   change('togglePersonalization', (el) => {
     const S = PK.S;
@@ -1293,7 +1418,7 @@
       at: PK.now(),
     });
     if (!el.checked) S.recent = [];
-    toast(el.checked ? 'Đã bật cá nhân hóa' : 'Đã tắt cá nhân hóa và xóa ngay dữ liệu hành vi');
+    toast(el.checked ? 'Đã bật cá nhân hóa' : 'Đã tắt cá nhân hóa và xóa dữ liệu hành vi');
     PK.render();
   });
   change('toggleMarketing', (el) => {
@@ -1301,7 +1426,7 @@
       marketing: el.checked,
       at: PK.now(),
     });
-    toast('Đã lưu');
+    toast('Đã lưu lựa chọn');
   });
   act('clearHistory', () => {
     PK.S.recent = [];
@@ -1311,7 +1436,7 @@
   form('deleteAccount', (data) => {
     if (data.password !== '12345678') return toast('Mật khẩu không đúng');
     PK.S.role = 'guest';
-    toast('Đã xóa tài khoản (UserDeletedEvent). Email gốc không còn trong hệ thống.');
+    toast('Tài khoản đã được xóa');
     PK.go('/');
   });
 
@@ -1322,21 +1447,23 @@
     guide: 'Hướng dẫn chọn mua',
     internal: 'Nội bộ',
   };
+  const TYPE_ICON = { policy: 'shield', faq: 'help', guide: 'book' };
   const anchor = (s) =>
     norm(s)
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-|-$/g, '');
   route('/help', () => {
     const docs = PK.S.kbDocs.filter((d) => d.status === 'published' && d.type !== 'internal');
-    return `<h1>Trung tâm hỗ trợ</h1><p class="muted">Chính sách, câu hỏi thường gặp và hướng dẫn chọn mua.</p>
+    return `<div style="text-align:center;padding:24px 0 40px"><h1 style="font-size:36px">Chúng tôi có thể giúp gì?</h1><p class="muted">Chính sách, câu hỏi thường gặp và hướng dẫn chọn mua.</p>
+        <button class="btn secondary" data-act="askAbout">${icon('chat', 18)} Hỏi trợ lý Pickory</button></div>
       <div class="grid cols-3">${['policy', 'faq', 'guide']
         .map(
           (t) =>
-            `<div class="card"><h3>${TYPE_LABEL[t]}</h3>${docs
+            `<div class="card"><div class="row tight" style="margin-bottom:12px">${icon(TYPE_ICON[t], 20)}<h3 style="margin:0">${TYPE_LABEL[t]}</h3></div>${docs
               .filter((d) => d.type === t)
               .map(
                 (d) =>
-                  `<a href="#/help/${d.slug}" style="display:block;padding:4px 0">${d.title}</a>`,
+                  `<a href="#/help/${d.slug}" class="row between" style="padding:10px 0;border-top:1px solid var(--line-2)"><span>${d.title}</span>${icon('chevronRight', 16)}</a>`,
               )
               .join('')}</div>`,
         )
@@ -1347,11 +1474,13 @@
     const d = PK.S.kbDocs.find(
       (x) => x.slug === p.slug && x.status === 'published' && x.type !== 'internal',
     );
-    if (!d) return '<h1>Không tìm thấy tài liệu</h1>';
-    return `<div class="breadcrumb"><a href="#/help">Trung tâm hỗ trợ</a> / ${TYPE_LABEL[d.type]}</div>
-      <div class="grid" style="grid-template-columns:220px 1fr;gap:32px"><aside><b class="small">Mục lục</b>${d.body.map(([h]) => `<a href="#/help/${d.slug}?a=${anchor(h)}" style="display:block;padding:4px 0" class="small">${h}</a>`).join('')}</aside>
-      <article class="doc-body"><h1>${d.title}</h1><p class="small muted">Cập nhật ${d.updatedAt} · Hiệu lực từ ${d.effectiveFrom}</p>
-        ${d.body.map(([h, t]) => `<h3 id="${anchor(h)}">${h}</h3><p>${esc(t)}</p>`).join('')}</article></div>`;
+    if (!d)
+      return '<div class="empty"><b>Không tìm thấy tài liệu</b><a href="#/help">Về trung tâm hỗ trợ</a></div>';
+    return `${crumbs([['Trung tâm hỗ trợ', '#/help'], [TYPE_LABEL[d.type]]])}
+      <div class="grid" style="grid-template-columns:220px 1fr;gap:56px;align-items:start"><aside class="toc" style="position:sticky;top:120px"><div class="small muted" style="margin-bottom:8px">Trong bài này</div>${d.body.map(([h]) => `<a href="#/help/${d.slug}?a=${anchor(h)}">${h}</a>`).join('')}</aside>
+      <article class="doc-body"><h1 style="font-size:36px">${d.title}</h1><p class="small muted">Cập nhật ngày ${dmy(d.updatedAt)}</p>
+        ${d.body.map(([h, t]) => `<h3 id="${anchor(h)}">${h}</h3><p>${esc(t)}</p>`).join('')}
+        <div class="card muted-bg" style="margin-top:48px"><b>Vẫn cần hỗ trợ?</b><p class="small muted" style="margin:6px 0 12px">Trợ lý Pickory trả lời ngay, nhân viên CSKH hỗ trợ 8:00 đến 21:00.</p><button class="btn sm" data-act="askAbout">${icon('chat', 16)} Chat với chúng tôi</button></div></article></div>`;
   });
 
   // ================= catalog: so sánh =================
@@ -1368,28 +1497,29 @@
     const ids = q.ids ? q.ids.split(',') : S.compare || [];
     const items = ids.map(PK.prod).filter(Boolean);
     if (!items.length)
-      return `<h1>So sánh</h1><p class="muted">Chưa có sản phẩm. Nhấn "So sánh" trên trang sản phẩm (tối đa 4 sản phẩm cùng danh mục).</p>`;
+      return `<h1>So sánh</h1><div class="empty"><b>Chưa có sản phẩm để so sánh</b>Nhấn "So sánh" trên trang sản phẩm, tối đa 4 sản phẩm cùng danh mục.</div>`;
     const c = PK.cat(items[0].cat);
     const attrs = D.attributes[c.parent || c.id] || [];
     const rows = [
       ['Giá', (p) => money(p.price)],
-      ['Đánh giá', (p) => p.rating + '★'],
+      ['Đánh giá', (p) => p.rating + ' / 5'],
       ...attrs.map((a) => [
         a.label,
         (p) => (p.specs[a.key] ?? '-') + (a.unit && p.specs[a.key] != null ? ' ' + a.unit : ''),
       ]),
       ['Bảo hành', (p) => p.warranty + ' tháng'],
     ];
-    return `<h1>So sánh ${c.name.toLowerCase()}</h1>
-      <div class="table-wrap"><table class="tbl"><tr><th></th>${items.map((p) => `<th style="text-transform:none;font-size:14px;color:var(--color-ink)">${productImg(p, 80)}<br><a href="#/p/${p.slug}">${esc(p.name)}</a></th>`).join('')}</tr>
+    return `${crumbs([['Trang chủ', '#/'], [c.name, '#/c/' + c.id], ['So sánh']])}<div class="page-title"><h1>So sánh ${c.name.toLowerCase()}</h1><span class="small muted">Thông số khác nhau được in đậm</span></div>
+      <div class="table-wrap"><table class="tbl"><tr><th style="width:180px"></th>${items.map((p) => `<th style="color:var(--ink);font-size:14px;font-weight:600;vertical-align:top;padding:20px 16px;white-space:normal"><div style="background:var(--bg-2);border-radius:12px;display:flex;justify-content:center;margin-bottom:12px">${productImg(p, 140)}</div><a href="#/p/${p.slug}">${esc(p.name)}</a></th>`).join('')}</tr>
       ${rows
         .map(([l, f]) => {
           const vals = items.map(f);
           const diff = new Set(vals).size > 1;
-          return `<tr><td class="muted">${l}</td>${vals.map((v) => `<td style="${diff ? 'background:#fffbea' : ''}">${esc(v)}</td>`).join('')}</tr>`;
+          return `<tr><td class="muted">${l}</td>${vals.map((v) => `<td style="${diff ? 'font-weight:600' : 'color:var(--muted)'}">${esc(v)}</td>`).join('')}</tr>`;
         })
-        .join('')}</table></div>
-      ${note('Dòng tô vàng là thông số khác nhau. Thêm sản phẩm khác danh mục sẽ báo lỗi (ở đây tự loại bỏ).')}`;
+        .join('')}
+      <tr><td></td>${items.map((p) => `<td><button class="btn sm block" data-act="addToCart" data-pid="${p.id}" data-sku="${p.variants ? p.variants[0].sku : p.slug.toUpperCase()}" ${p.stock > 0 || p.variants ? '' : 'disabled'}>Thêm vào giỏ</button></td>`).join('')}</tr></table></div>
+      ${note('Sản phẩm khác danh mục sẽ báo lỗi (ở đây tự loại bỏ).')}`;
   });
 
   // ================= shopping-assistant: widget chat =================
@@ -1406,7 +1536,7 @@
     // Giữ focus ở ô nhập nếu người dùng đang thao tác trong chat
     const keepFocus = focus || root.contains(document.activeElement);
     if (!C.open) {
-      root.innerHTML = `<button class="chat-fab" data-act="chatOpen">Hỏi trợ lý Pickory</button>`;
+      root.innerHTML = `<button class="chat-fab" data-act="chatOpen">${icon('chat', 20)} Hỏi trợ lý</button>`;
       return;
     }
     const cp = currentProduct();
@@ -1418,25 +1548,37 @@
           'Đổi trả trong bao lâu?',
           'Đơn của tôi đến đâu rồi?',
         ];
-    const statusLabel = {
-      bot: '<span class="badge ai">Trợ lý AI</span>',
-      waiting_human: '<span class="badge warn">Đang chờ nhân viên</span>',
-      human: '<span class="badge ok">Lan - CSKH</span>',
+    const head = {
+      bot: [
+        `<span class="avatar">${icon('sparkle', 18)}</span>`,
+        'Trợ lý Pickory',
+        '<span class="status">Trả lời ngay</span>',
+      ],
+      waiting_human: [
+        `<span class="avatar">${icon('headset', 18)}</span>`,
+        'Đang kết nối CSKH',
+        '<span class="status wait">Thời gian chờ khoảng 3 phút</span>',
+      ],
+      human: [
+        '<span class="avatar light">L</span>',
+        'Lan · CSKH Pickory',
+        '<span class="status">Đang trực tuyến</span>',
+      ],
     }[C.status];
-    root.innerHTML = `<div class="chat-panel" role="dialog" aria-label="Trợ lý Pickory">
-      <div class="chat-head"><b>Trợ lý Pickory</b> ${statusLabel}<span class="spacer"></span>
-        ${C.status === 'bot' ? '<button class="btn sm secondary" data-act="handoff">Gặp nhân viên</button>' : ''}
-        <button class="btn sm ghost" data-act="chatClose" aria-label="Đóng">✕</button></div>
-      <div class="chat-body" id="chat-body">
-        ${!C.noticeShown ? '' : '<div class="msg system">Hội thoại được lưu 90 ngày để cải thiện chất lượng hỗ trợ.</div>'}
-        ${C.messages.length ? '' : `<div class="msg assistant">Chào bạn! Mình là trợ lý AI của Pickory. Mình giúp tìm, so sánh sản phẩm và giải đáp chính sách.</div><div class="row">${suggestions.map((s) => `<button class="chip" data-act="chatSuggest" data-text="${esc(s)}">${esc(s)}</button>`).join('')}</div>`}
+    const left = LIMIT() - C.used;
+    root.innerHTML = `<div class="chat-panel" role="dialog" aria-label="Trò chuyện với Pickory">
+      <div class="chat-head">${head[0]}<div style="flex:1;min-width:0"><div class="title">${head[1]}</div>${head[2]}</div>
+        ${C.status === 'bot' ? `<button class="btn sm secondary" data-act="handoff" style="height:32px">${icon('headset', 16)} Gặp nhân viên</button>` : ''}
+        <button class="icon-btn" data-act="chatClose" aria-label="Đóng trò chuyện">${icon('x', 18)}</button></div>
+      <div class="chat-body" id="chat-body" aria-live="polite">
+        ${C.messages.length ? '<div class="msg system">Hội thoại được lưu 90 ngày để hỗ trợ bạn tốt hơn</div>' : `<div style="padding:8px 0 4px"><h3 style="margin-bottom:6px">Xin chào, mình có thể giúp gì?</h3><p class="muted" style="margin:0">Mình tìm, so sánh sản phẩm và giải đáp chính sách của Pickory.</p></div><div class="suggest">${suggestions.map((s) => `<button class="chip" data-act="chatSuggest" data-text="${esc(s)}">${esc(s)}</button>`).join('')}</div>`}
         ${C.messages.map((m, i) => renderMsg(m, i)).join('')}
-        ${C.typing ? '<div class="typing">Trợ lý đang trả lời...</div>' : ''}
+        ${C.typing ? '<div class="typing" aria-label="Đang trả lời"><i></i><i></i><i></i></div>' : ''}
       </div>
       <div class="chat-foot">
         ${
           C.messages.length && C.status === 'bot' && !C.typing
-            ? `<div class="row" style="margin-bottom:8px">${suggestions
+            ? `<div class="suggest" style="margin-bottom:10px">${suggestions
                 .slice(0, 2)
                 .map(
                   (s) =>
@@ -1445,8 +1587,8 @@
                 .join('')}</div>`
             : ''
         }
-        <form data-form="chat"><input name="text" maxlength="1000" placeholder="Hỏi về sản phẩm, đơn hàng, chính sách..." autocomplete="off" aria-label="Tin nhắn"><button class="btn" aria-label="Gửi">Gửi</button></form>
-        <div class="chat-disclaimer">Trợ lý AI có thể sai. Thông tin giá và tồn kho trên thẻ sản phẩm là chính xác. · Đã dùng ${C.used}/${LIMIT()} tin hôm nay</div>
+        <form data-form="chat" class="composer"><input name="text" maxlength="1000" placeholder="Nhập câu hỏi..." autocomplete="off" aria-label="Tin nhắn"><button aria-label="Gửi">${icon('send', 16)}</button></form>
+        <div class="chat-disclaimer">Trợ lý AI có thể nhầm. Giá và tồn kho trên thẻ sản phẩm là chính xác.${left <= 3 && C.status === 'bot' ? ` Còn ${Math.max(left, 0)} tin hôm nay.` : ''}</div>
       </div></div>`;
     const body = document.getElementById('chat-body');
     body.scrollTop = body.scrollHeight;
@@ -1457,43 +1599,43 @@
     if (m.role === 'system') {
       let extra = '';
       if (m.form === 'callback' && !m.done)
-        extra = `<form data-form="callback" data-i="${i}" class="row" style="margin-top:6px;justify-content:center"><input name="phone" placeholder="Số điện thoại" style="width:160px"><button class="btn sm">Gửi</button></form>`;
+        extra = `<form data-form="callback" data-i="${i}" class="composer" style="margin:8px auto 0;max-width:280px"><input name="phone" placeholder="Số điện thoại" inputmode="tel" aria-label="Số điện thoại"><button aria-label="Gửi">${icon('send', 16)}</button></form>`;
       if (m.form === 'csat' && !m.done)
-        extra = `<div class="row" style="justify-content:center;margin-top:6px">${[1, 2, 3, 4, 5].map((n) => `<button class="btn sm secondary" data-act="csat" data-i="${i}" data-n="${n}">${n}★</button>`).join('')}</div>`;
+        extra = `<div class="row tight" style="justify-content:center;margin-top:8px">${[1, 2, 3, 4, 5].map((n) => `<button class="icon-btn" style="border:1px solid var(--line)" data-act="csat" data-i="${i}" data-n="${n}" aria-label="${n} sao">${icon('star', 16)}</button>`).join('')}</div>`;
       if (m.form === 'handoffBtn')
-        extra = `<div style="margin-top:6px"><button class="btn sm" data-act="handoff">Gặp nhân viên</button></div>`;
+        extra = `<div style="margin-top:8px"><button class="btn sm" data-act="handoff">${icon('headset', 16)} Gặp nhân viên</button></div>`;
       return `<div class="msg system">${esc(m.text)}${extra}</div>`;
     }
     if (m.role === 'staff')
-      return `<div class="msg staff"><div class="who">${esc(m.staffName || 'Lan - CSKH')}</div>${esc(m.text)}</div>`;
+      return `<div class="msg staff"><div class="who">${esc(m.staffName || 'Lan · CSKH')}</div>${esc(m.text)}</div>`;
     // assistant: trích dẫn [n] thành link tới đúng mục tài liệu
-    let text = esc(m.text).replace(/\[(\d)\]/g, (_, n) => {
+    const text = esc(m.text).replace(/\[(\d)\]/g, (_, n) => {
       const c = (m.cites || [])[Number(n) - 1];
       return c
-        ? `<a class="cite" href="#/help/${c.slug}?a=${c.anchor}" title="${esc(c.title)}">[${n}]</a>`
-        : `[${n}]`;
+        ? `<a class="cite" href="#/help/${c.slug}?a=${c.anchor}" title="${esc(c.title)}">${n}</a>`
+        : '';
     });
     let extra = '';
     if (m.cards) extra += m.cards.map((id) => miniCard(PK.prod(id))).join('');
     if (m.compare) extra += compareMini(m.compare);
     if (m.order) {
       const o = PK.order(m.order);
-      extra += `<div class="mini-card" style="display:block"><b>${o.code}</b> · ${PK.orderBadge(o.status)}<div class="small">${o.items.map((x) => esc(x.name)).join(', ')}</div><div class="small muted">Vận đơn ${o.tracking || 'chưa có'} · ${PK.SHIP_STATUS[o.shipStatus] || ''}</div><a class="small" href="#/orders/${o.code}">Xem chi tiết</a></div>`;
+      extra += `<div class="order-card"><div class="row between"><b>${o.code}</b>${PK.orderBadge(o.status)}</div><div style="margin:6px 0">${o.items.map((x) => esc(x.name)).join(', ')}</div><div class="muted">GHN ${o.tracking || ''} · ${PK.SHIP_STATUS[o.shipStatus] || ''}</div><a class="link" style="margin-top:8px" href="#/orders/${o.code}">Xem chi tiết ${icon('arrowRight', 14)}</a></div>`;
     }
     if (m.cites && m.cites.length)
-      extra += `<div class="small muted" style="margin-top:6px">Nguồn: ${m.cites.map((c, k) => `<a href="#/help/${c.slug}?a=${c.anchor}">[${k + 1}] ${esc(c.title)}</a>`).join(' · ')}</div>`;
+      extra += `<div class="sources">${m.cites.map((c, k) => `<a href="#/help/${c.slug}?a=${c.anchor}"><b>${k + 1}</b>${esc(c.title)}</a>`).join('')}</div>`;
     const fb = m.noFeedback
       ? ''
-      : `<div class="fb"><button class="${m.fb === 'up' ? 'on' : ''}" data-act="fb" data-i="${i}" data-v="up" aria-label="Hữu ích">👍</button><button class="${m.fb === 'down' ? 'on' : ''}" data-act="fb" data-i="${i}" data-v="down" aria-label="Chưa tốt">👎</button>${m.fb === 'down' && !m.fbReason ? ['sai thông tin', 'không hữu ích', 'khác'].map((r) => `<button data-act="fbReason" data-i="${i}" data-r="${r}">${r}</button>`).join('') : ''}</div>`;
+      : `<div class="fb"><button class="${m.fb === 'up' ? 'on' : ''}" data-act="fb" data-i="${i}" data-v="up" aria-label="Hữu ích" aria-pressed="${m.fb === 'up'}">${icon('thumbUp', 15)}</button><button class="${m.fb === 'down' ? 'on' : ''}" data-act="fb" data-i="${i}" data-v="down" aria-label="Chưa hữu ích" aria-pressed="${m.fb === 'down'}">${icon('thumbDown', 15)}</button>${m.fb === 'down' && !m.fbReason ? ['Sai thông tin', 'Không hữu ích', 'Khác'].map((r) => `<button class="reason" data-act="fbReason" data-i="${i}" data-r="${r}">${r}</button>`).join('') : ''}</div>`;
     return `<div class="msg assistant">${text.replace(/\n/g, '<br>')}${extra}${fb}</div>`;
   }
   function miniCard(p) {
     const v = p.variants ? p.variants[0] : null;
     const stock = v ? v.stock : p.stock;
-    return `<div class="mini-card"><div class="thumb">${productImg(p, 52)}</div><div style="flex:1;min-width:0"><a href="#/p/${p.slug}"><b class="small">${esc(p.name)}</b></a>
-      <div><b>${money(v ? v.price : p.price)}</b></div>${p.variants ? `<select class="small" style="padding:2px;margin:2px 0">${p.variants.map((x) => `<option>${Object.values(x.opts).join(' ')}</option>`).join('')}</select>` : ''}
-      <div class="small muted">${stock > 0 ? 'Còn hàng' : 'Hết hàng'}</div></div>
-      <button class="btn sm" ${stock > 0 ? '' : 'disabled'} data-act="addToCart" data-pid="${p.id}" data-sku="${v ? v.sku : p.slug.toUpperCase()}" data-source="shopping-assistant">Thêm vào giỏ</button></div>`;
+    return `<div class="mini-card"><a class="thumb" href="#/p/${p.slug}">${productImg(p, 56)}</a><div class="meta"><a href="#/p/${p.slug}">${esc(p.name)}</a>
+      <div class="xs muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(PK.specLine(p))}</div><div style="margin-top:2px"><b class="num">${money(v ? v.price : p.price)}</b> <span class="xs ${stock > 0 ? '' : 'muted'}">· ${stock > 0 ? 'Còn hàng' : 'Hết hàng'}</span></div></div>
+      <div class="actions">${p.variants ? `<select aria-label="Phiên bản">${p.variants.map((x) => `<option>${Object.values(x.opts).join(' · ')}</option>`).join('')}</select>` : '<span class="spacer"></span>'}
+      <button class="btn sm" ${stock > 0 ? '' : 'disabled'} data-act="addToCart" data-pid="${p.id}" data-sku="${v ? v.sku : p.slug.toUpperCase()}" data-source="shopping-assistant">${icon('bag', 14)} Thêm vào giỏ</button></div></div>`;
   }
   function compareMini(ids) {
     const [a, b] = ids.map(PK.prod);
@@ -1502,9 +1644,9 @@
       ['CPU', a.specs.cpu, b.specs.cpu],
       ['GPU', a.specs.gpu, b.specs.gpu],
       ['RAM', a.specs.ram_gb + 'GB', b.specs.ram_gb + 'GB'],
-      ['Trọng lượng', a.specs.weight + ' kg', b.specs.weight + ' kg'],
+      ['Nặng', a.specs.weight + ' kg', b.specs.weight + ' kg'],
     ];
-    return `<table class="tbl small" style="margin-top:6px"><tr><th></th><th>${esc(a.name.replace('Laptop ', ''))}</th><th>${esc(b.name.replace('Laptop ', ''))}</th></tr>${rows.map((r) => `<tr><td class="muted">${r[0]}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</table><a class="small" href="#/compare?ids=${a.id},${b.id}">Xem so sánh đầy đủ</a>`;
+    return `<div class="table-wrap" style="margin-top:8px"><table class="tbl compact small"><tr><th></th><th>${esc(a.name.replace('Laptop ', ''))}</th><th>${esc(b.name.replace('Laptop ', ''))}</th></tr>${rows.map((r) => `<tr><td class="muted">${r[0]}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join('')}</table></div><a class="link small" style="margin-top:8px" href="#/compare?ids=${a.id},${b.id}">So sánh đầy đủ ${icon('arrowRight', 14)}</a>`;
   }
   act('chatOpen', () => {
     const C = PK.S.chat;
@@ -1521,10 +1663,10 @@
   act('askAbout', () => {
     PK.S.chat.open = true;
     PK.S.chat.noticeShown = true;
-    renderChat();
+    renderChat(true);
   });
   act('chatSuggest', (d) => sendChat(d.text));
-  form('chat', (data, f) => {
+  form('chat', (data) => {
     const t = String(data.text || '').trim();
     if (t) sendChat(t);
   });
@@ -1543,7 +1685,7 @@
   act('csat', (d) => {
     const m = PK.S.chat.messages[Number(d.i)];
     m.done = true;
-    m.text = `Bạn đã đánh giá ${d.n}★. Cảm ơn bạn! Trợ lý AI sẽ tiếp tục hỗ trợ.`;
+    m.text = `Bạn đã đánh giá ${d.n}/5. Cảm ơn bạn! Trợ lý AI tiếp tục hỗ trợ nếu bạn cần.`;
     renderChat();
     PK.save();
   });
@@ -1553,7 +1695,7 @@
       return toast('Số điện thoại chưa đúng');
     const m = S.chat.messages[Number(f.dataset.i)];
     m.done = true;
-    m.text = 'Đã ghi nhận số điện thoại. CSKH sẽ gọi lại trong giờ làm việc.';
+    m.text = 'Đã ghi nhận. CSKH sẽ gọi lại cho bạn trong giờ làm việc.';
     S.callbacks.unshift({
       id: 'cb' + Date.now(),
       phone: String(data.phone)
@@ -1570,8 +1712,7 @@
 
   // Đẩy tin vào hội thoại đang chờ ở support-desk (để vai trò CSKH thấy)
   function syncLive(role, text) {
-    const S = PK.S;
-    const conv = S.convs.find((c) => c.id === 'c-live');
+    const conv = PK.S.convs.find((c) => c.id === 'c-live');
     if (conv && conv.status !== 'closed') conv.messages.push([role, text]);
   }
   function push(m) {
@@ -1585,7 +1726,7 @@
     if (S.outOfHours) {
       push({
         role: 'system',
-        text: 'Hiện ngoài giờ hỗ trợ (8:00 đến 21:00). Bạn để lại SĐT, CSKH sẽ gọi lại.',
+        text: 'Hiện ngoài giờ hỗ trợ (8:00 đến 21:00). Bạn để lại số điện thoại, CSKH sẽ gọi lại.',
         form: 'callback',
       });
     } else {
@@ -1605,9 +1746,8 @@
       });
       push({
         role: 'system',
-        text: 'Đã chuyển cho nhân viên CSKH. Thời gian chờ dự kiến khoảng 3 phút. Trợ lý AI tạm dừng.',
+        text: 'Đã chuyển cho nhân viên CSKH. Trợ lý AI tạm dừng trong lúc chờ.',
       });
-      toast('Mẹo: đổi vai trò sang "CSKH: Lan" để nhận hội thoại này');
     }
     renderChat();
     PK.save();
@@ -1625,7 +1765,7 @@
     if (C.used >= LIMIT()) {
       push({
         role: 'system',
-        text: `Bạn đã dùng hết ${LIMIT()} tin nhắn với trợ lý hôm nay${S.role === 'guest' ? '. Đăng nhập để có 50 tin mỗi ngày' : ''}. Bạn vẫn có thể gặp nhân viên CSKH.`,
+        text: `Bạn đã dùng hết ${LIMIT()} tin nhắn với trợ lý hôm nay${S.role === 'guest' ? '. Đăng nhập để có 50 tin mỗi ngày' : ''}. Nhân viên CSKH vẫn sẵn sàng hỗ trợ.`,
         form: 'handoffBtn',
       });
       renderChat();
@@ -1634,7 +1774,7 @@
     if (S.aiDown || S.budgetPct >= 120) {
       push({
         role: 'system',
-        text: 'Trợ lý tạm thời không khả dụng. Bạn có thể gặp nhân viên CSKH.',
+        text: 'Trợ lý tạm thời không khả dụng. Bạn có thể trò chuyện với nhân viên CSKH.',
         form: 'handoffBtn',
       });
       renderChat();
@@ -1657,7 +1797,7 @@
       } else C.noInfo = 0;
       renderChat();
       PK.save();
-    }, 700);
+    }, 800);
   }
 
   // Kịch bản trả lời giả lập theo các tool: search_products, compare_products, get_review_insights, search_knowledge, get_my_orders
@@ -1673,9 +1813,10 @@
         ids = [cp.id, S.products.find((p) => p.cat === cp.cat && p.id !== cp.id).id];
       if (ids.length < 2) ids = ['p1', 'p2'];
       const [a, b] = ids.map(PK.prod);
+      const lighter = a.specs.weight < b.specs.weight ? a : b;
       return {
         role: 'assistant',
-        text: `So sánh nhanh ${a.name} và ${b.name}: ${a.specs.weight < b.specs.weight ? a.name : b.name} nhẹ hơn, cả hai đều có ${a.specs.gpu}. Giá chính xác xem trên thẻ sản phẩm.`,
+        text: `Hai máy cùng dùng ${a.specs.gpu === b.specs.gpu ? a.specs.gpu : 'card RTX'}, hiệu năng chơi game tương đương. ${lighter.name} nhẹ hơn nên hợp mang đi học hơn.`,
         compare: [a.id, b.id],
         tools: ['compare_products'],
       };
@@ -1697,7 +1838,7 @@
           {
             slug: 'chinh-sach-doi-tra',
             anchor: 'thoi-han-doi-tra',
-            title: 'Chính sách đổi trả > Thời hạn đổi trả',
+            title: 'Chính sách đổi trả · Thời hạn đổi trả',
           },
         ],
         tools: ['search_knowledge'],
@@ -1705,12 +1846,12 @@
     if (/bao hanh|roi vo/.test(t))
       return {
         role: 'assistant',
-        text: 'Sản phẩm được bảo hành theo thời gian của hãng [1]. Riêng hàng bị rơi vỡ không được bảo hành miễn phí, Pickory hỗ trợ báo giá sửa [1].',
+        text: 'Sản phẩm được bảo hành theo thời gian của hãng [1]. Hàng bị rơi vỡ không được bảo hành miễn phí, Pickory hỗ trợ báo giá sửa chữa [1].',
         cites: [
           {
             slug: 'chinh-sach-bao-hanh',
             anchor: 'hang-bi-roi-vo',
-            title: 'Chính sách bảo hành > Hàng bị rơi vỡ',
+            title: 'Chính sách bảo hành · Hàng bị rơi vỡ',
           },
         ],
         tools: ['search_knowledge'],
@@ -1718,12 +1859,12 @@
     if (/giao hang|ship|bao lau|van chuyen/.test(t))
       return {
         role: 'assistant',
-        text: 'Pickory giao qua GHN, nội thành TP. Hồ Chí Minh khoảng 1 ngày, tỉnh khác 2 đến 4 ngày [1]. Đơn từ 500.000 đ được miễn phí vận chuyển [1].',
+        text: 'Pickory giao qua GHN: nội thành TP. Hồ Chí Minh khoảng 1 ngày, tỉnh khác 2 đến 4 ngày [1]. Đơn từ 500.000 đ được miễn phí vận chuyển [1].',
         cites: [
           {
             slug: 'chinh-sach-van-chuyen',
             anchor: 'thoi-gian-giao',
-            title: 'Chính sách vận chuyển > Thời gian giao',
+            title: 'Chính sách vận chuyển · Thời gian giao',
           },
         ],
         tools: ['search_knowledge'],
@@ -1745,14 +1886,14 @@
     if (/tai nghe/.test(t))
       return {
         role: 'assistant',
-        text: 'Với nhu cầu đi máy bay, chống ồn là quan trọng nhất. Mình gợi ý 3 mẫu chống ồn tốt theo đánh giá của khách:',
+        text: 'Đi máy bay thì khả năng chống ồn là quan trọng nhất. Đây là 3 mẫu chống ồn được khách đánh giá cao:',
         cards: ['p17', 'p18', 'p19'],
         tools: ['search_products'],
       };
     if (/dien thoai|iphone|samsung|pin trau|chup anh/.test(t))
       return {
         role: 'assistant',
-        text: 'Mình gợi ý vài mẫu điện thoại pin lâu và chụp ảnh đẹp trong tầm giá phổ biến:',
+        text: 'Mình gợi ý vài mẫu pin lâu và chụp ảnh đẹp trong tầm giá phổ biến:',
         cards: ['p14', 'p15', 'p13'],
         tools: ['search_products'],
       };
@@ -1773,7 +1914,7 @@
         };
       return {
         role: 'assistant',
-        text: `Trong tầm ${m ? m[1] + ' triệu' : 'giá bạn nêu'}${light ? ' và cần nhẹ để mang đi học' : ''}, mình gợi ý ${picks.length} mẫu:\n• ${picks.map((p) => `${p.name}: ${p.specs.gpu}, nặng ${p.specs.weight} kg`).join('\n• ')}\nGiá chính xác xem trên thẻ sản phẩm.`,
+        text: `Trong tầm ${m ? m[1] + ' triệu' : 'giá bạn nêu'}${light ? ', ưu tiên máy nhẹ để mang đi học' : ''}, mình gợi ý ${picks.length} mẫu.${light ? ` ${picks[0].name} nhẹ nhất (${picks[0].specs.weight} kg) mà vẫn có ${picks[0].specs.gpu}.` : ''}`,
         cards: picks.map((p) => p.id),
         tools: ['search_products'],
       };
@@ -1781,12 +1922,12 @@
     if (/thoi tiet|bong da|chinh tri|lap trinh|viet code|bai tap/.test(t))
       return {
         role: 'assistant',
-        text: 'Mình chỉ hỗ trợ về sản phẩm, đơn hàng và chính sách của Pickory thôi. Bạn cần tìm sản phẩm gì không?',
+        text: 'Mình chỉ hỗ trợ về sản phẩm, đơn hàng và chính sách của Pickory. Bạn đang tìm sản phẩm gì?',
         tools: [],
       };
     return {
       role: 'assistant',
-      text: 'Mình chưa có thông tin về câu hỏi này.',
+      text: 'Xin lỗi, mình chưa có thông tin về câu hỏi này.',
       noInfo: true,
       tools: ['search_knowledge'],
     };

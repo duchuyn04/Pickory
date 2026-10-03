@@ -267,11 +267,16 @@
           [['"đơn của tôi đến đâu rồi"', 'note:Gõ trong chat khi là Khách hàng']],
         ],
         [
+          'Nhân viên xem lại hội thoại AI',
+          'Admin hoặc CSKH',
+          [['Tool đã gọi, trích dẫn, cờ grounding, phản hồi của khách', '#/admin/conversations']],
+        ],
+        [
           'Giới hạn và dự phòng',
           'Khách vãng lai',
           [
-            ['15 tin mỗi ngày cho khách, 50 cho người đăng nhập', 'note:Bộ đếm ở chân chat'],
-            ['Bật "AI lỗi": trợ lý tạm không khả dụng', 'note:Thanh trên cùng'],
+            ['15 tin mỗi ngày cho khách, 50 cho người đăng nhập', 'note:Báo khi còn 3 tin'],
+            ['Bật "API AI đang lỗi": trợ lý tạm không khả dụng', 'note:Bảng Prototype'],
           ],
         ],
       ],
@@ -360,9 +365,10 @@
         return `<li>${label} <span class="muted small">(${link.slice(5)})</span></li>`;
       return `<li><a href="${link}">${label}</a></li>`;
     };
-    return `<h1>Bản đồ luồng Pickory</h1>
-      <p class="muted">Prototype bấm được với dữ liệu giả lập, phủ 13 module trong <code>spec/</code>. Đổi vai trò, bật "AI lỗi", "Ngoài giờ CSKH" hoặc mức ngân sách AI ở thanh trên cùng. Mọi thay đổi (đơn, chat, duyệt banner...) được nhớ giữa các màn hình; bấm "Đặt lại dữ liệu" để quay về ban đầu.</p>
-      <div class="grid cols-4" style="margin:16px 0 24px">
+    return `<div style="max-width:760px;margin-bottom:32px"><h1 style="font-size:36px">Bản đồ luồng Pickory</h1>
+      <p class="muted" style="font-size:16px">Prototype bấm được với dữ liệu giả lập, phủ 13 module trong <code>spec/</code>. Nút <b>Prototype</b> ở góc trái dưới cho phép đổi vai trò, giả lập AI lỗi, ngoài giờ CSKH, mức ngân sách AI và bật ghi chú cho người review. Mọi thay đổi (đơn, chat, duyệt banner) được nhớ giữa các màn hình.</p></div>
+      <h3>Vào với vai trò</h3>
+      <div class="grid" style="grid-template-columns:repeat(5,minmax(0,1fr));margin:12px 0 40px">
         ${[
           ['Khách vãng lai', 'guest', '#/'],
           ['Khách hàng Minh Anh', 'customer', '#/'],
@@ -372,7 +378,7 @@
         ]
           .map(
             ([l, r, h]) =>
-              `<a class="card" href="#" data-act="asRole" data-role="${r}" data-href="${h}" style="text-decoration:none"><b>${l}</b><div class="small muted">Vào với vai trò này</div></a>`,
+              `<a class="todo" href="#" data-act="asRole" data-role="${r}" data-href="${h}"><div class="top">${PK.icon(r === 'guest' || r === 'customer' ? 'store' : r === 'support' ? 'headset' : 'users', 18)}${PK.icon('arrowRight', 16)}</div><b>${l}</b></a>`,
           )
           .join('')}
       </div>
