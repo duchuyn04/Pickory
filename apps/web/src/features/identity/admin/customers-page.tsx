@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { useCan } from '../use-actor';
 
+// Một dòng khách hàng như API trả về; không có passwordHash.
 export interface CustomerRow {
   id: string;
   email: string;
@@ -21,27 +22,34 @@ interface CustomersResponse {
   limit: number;
 }
 
+// Trang tra cứu khách hàng, khóa và mở khóa tài khoản.
 export function CustomersPage() {
+  // Hai quyền tách nhau: sales và support xem được danh sách nhưng không thấy nút khóa.
   const canReadCustomers = useCan('customers:read');
   const canManageCustomers = useCan('customers:manage');
   const queryClient = useQueryClient();
 
+  // searchTerm là chữ đang gõ; debouncedSearch chỉ đổi khi bấm tìm, để không gọi API sau mỗi phím gõ.
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Kiểm tra tường minh lỗi truy vấn để thông báo chính xác cho người dùng thay vì hiển thị giao diện danh sách rỗng.
+  // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại; nếu bỏ qua thì lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
   const { data, isLoading, isError, error } = useQuery<CustomersResponse>({
+    // Từ khóa nằm trong khóa truy vấn để mỗi từ khóa có cache riêng và đổi từ khóa thì tự gọi lại.
     queryKey: ['admin-customers', debouncedSearch],
     queryFn: () => {
+      // encodeURIComponent để ký tự đặc biệt trong từ khóa (như & hay #) không làm sai URL.
       const url = debouncedSearch
         ? `/api/admin/customers?search=${encodeURIComponent(debouncedSearch)}`
         : '/api/admin/customers';
       return apiRequest<CustomersResponse>(url);
     },
+    // Không gọi API khi không có quyền, vì chắc chắn bị từ chối với 403.
     enabled: canReadCustomers,
   });
 
+  // Hook ở trên phải chạy hết trước lệnh return sớm này; backend vẫn chặn mọi request thật sự.
   if (!canReadCustomers) {
     return (
       <div
@@ -60,27 +68,32 @@ export function CustomersPage() {
   }
 
   function handleSearchSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setDebouncedSearch(searchTerm);
   }
 
+  // Một nút dùng cho cả khóa và mở khóa, tùy trạng thái hiện tại của khách.
   async function handleToggleLock(customer: CustomerRow) {
     const isLocking = !customer.lockedAt;
     const confirmMsg = isLocking
       ? `Bạn có chắc chắn muốn khóa tài khoản khách hàng "${customer.email}"?`
       : `Bạn có chắc chắn muốn mở khóa tài khoản khách hàng "${customer.email}"?`;
 
+    // Hỏi lại trước khi khóa hay mở khóa vì thao tác này ảnh hưởng ngay tới khách.
     if (!window.confirm(confirmMsg)) return;
 
+    // Xóa lỗi của lần thao tác trước để không hiện lẫn.
     setActionError(null);
     try {
       const endpoint = isLocking
         ? `/api/admin/customers/${customer.id}/lock`
         : `/api/admin/customers/${customer.id}/unlock`;
       await apiRequest(endpoint, { method: 'POST' });
-      // Làm mới danh sách khách hàng sau khi khóa hoặc mở khóa để cập nhật ngay trạng thái trên bảng điều khiển.
+      // Nạp lại danh sách (mọi từ khóa) để dòng của khách hiện trạng thái khóa mới.
       await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (không đủ quyền, không tìm thấy khách...) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setActionError(err.message);
       } else {

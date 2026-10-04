@@ -6,11 +6,14 @@ import type { RoleData } from './role-form';
 
 interface InviteDialogProps {
   availableRoles: RoleData[];
+  // Cha nạp lại danh sách nhân viên sau khi mời xong.
   onSuccess: () => void;
   onClose: () => void;
 }
 
+// Hộp thoại mời nhân viên mới bằng email, tên và role.
 export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialogProps) {
+  // Hook đưa focus vào hộp thoại khi mở, đóng bằng phím Esc, và trả focus về nút đã mở.
   const dialogRef = useDialogFocus({ onClose });
   const [email, setEmail] = useState('');
   const [name, setName] = useState('');
@@ -18,9 +21,10 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Loại bỏ vai trò customer để đảm bảo tài khoản nhân viên mới chỉ được phân công các vai trò quản trị nội bộ.
+  // Ẩn role customer vì tài khoản khách và nhân viên tách riêng, server cũng từ chối gán.
   const staffAssignableRoles = availableRoles.filter((r) => r.code !== 'customer');
 
+  // Bấm một role thì chọn, bấm lần nữa thì bỏ chọn.
   function toggleRole(code: string) {
     if (selectedRoles.includes(code)) {
       setSelectedRoles(selectedRoles.filter((r) => r !== code));
@@ -30,9 +34,11 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
   }
 
   async function handleSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
 
+    // Kiểm tra ở trình duyệt để báo lỗi tiếng Việt ngay; server vẫn kiểm tra lại mọi thứ.
     const emailErr = getEmailError(email);
     if (emailErr) {
       setError(emailErr);
@@ -44,7 +50,7 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
       return;
     }
 
-    // Bắt buộc chọn ít nhất một vai trò để nhân viên mới có đủ quyền thực hiện công việc được giao ngay sau khi kích hoạt.
+    // Nhân viên không có role nào thì không làm được gì, nên bắt chọn ít nhất một.
     if (selectedRoles.length === 0) {
       setError('Vui lòng chọn ít nhất một vai trò cho nhân viên.');
       return;
@@ -55,15 +61,18 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
     try {
       await apiRequest('/api/admin/staff/invitations', {
         method: 'POST',
+        // trim để khoảng trắng thừa khi dán email không làm email sai.
         body: JSON.stringify({
           email: email.trim(),
           name: name.trim(),
           roleCodes: selectedRoles,
         }),
       });
+      // onSuccess để trang cha nạp lại danh sách, rồi mới đóng.
       onSuccess();
       onClose();
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (email đã dùng, không đủ quyền để mời vào role này...) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setError(err.message);
       } else {

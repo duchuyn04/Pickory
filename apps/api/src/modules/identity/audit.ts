@@ -1,21 +1,24 @@
 import { Prisma } from '../../generated/prisma/client';
 import type { PrismaClient } from '../../generated/prisma/client';
 
+// Tên trường chứa bí mật; khớp một phần tên để bắt cả accessToken, newPassword, passwordHash.
 const SENSITIVE_KEY_REGEXP = /(password|token|secret|apikey|cvv|cardnumber|hash)/i;
 
-/**
- * Loại bỏ đệ quy các trường nhạy cảm khỏi dữ liệu trước khi ghi nhật ký kiểm toán.
- */
+// Xóa giá trị nhạy cảm khỏi dữ liệu trước khi ghi nhật ký.
 export function sanitizeAuditData(data: unknown): unknown {
+  // Giá trị rỗng giữ nguyên để nhật ký phân biệt được "không có" với "có giá trị".
   if (data === null || data === undefined) {
     return data;
   }
+  // Số, chuỗi, boolean không có tên trường để xét nên giữ nguyên.
   if (typeof data !== 'object') {
     return data;
   }
+  // Mảng thì làm sạch từng phần tử, vì bí mật có thể nằm trong object con của mảng.
   if (Array.isArray(data)) {
     return data.map((item) => sanitizeAuditData(item));
   }
+  // Date chuyển sang chuỗi ISO vì cột before/after là JSON, không lưu được đối tượng Date.
   if (data instanceof Date) {
     return data.toISOString();
   }
@@ -24,11 +27,12 @@ export function sanitizeAuditData(data: unknown): unknown {
   const result: Record<string, unknown> = {};
 
   for (const [key, val] of Object.entries(record)) {
-    // Xóa bỏ dấu gạch nối và gạch dưới trước khi kiểm tra để bắt được cả snake_case và kebab-case như api-key, card_number.
+    // Bỏ gạch nối và gạch dưới trước khi so khớp để bắt cả api_key, card-number.
     if (SENSITIVE_KEY_REGEXP.test(key.replace(/[-_]/g, ''))) {
+      // Giữ lại tên trường nhưng giấu giá trị, để người xem biết trường đó từng được đổi.
       result[key] = '[REDACTED]';
     } else if (typeof val === 'object' && val !== null) {
-      // Đệ quy để lọc sạch dữ liệu nhạy cảm lồng trong object hoặc mảng con.
+      // Đệ quy vì bí mật có thể nằm sâu trong object lồng nhau.
       result[key] = sanitizeAuditData(val);
     } else {
       result[key] = val;
@@ -39,23 +43,24 @@ export function sanitizeAuditData(data: unknown): unknown {
 }
 
 export interface RecordAuditParams {
+  // Người thực hiện thao tác; lưu id để lịch sử vẫn đúng khi tên người đó đổi.
   actorId: string;
+  // Tên hành động theo mẫu 'đối_tượng.hành_động', ví dụ 'role.assign'.
   action: string;
   targetType: string;
   targetId: string;
+  // Trạng thái trước và sau thao tác, để xem lại chính xác cái gì đã đổi.
   before?: unknown;
   after?: unknown;
 }
 
-/**
- * Ghi nhật ký thao tác (audit log) vào database.
- * Nhận transaction client (`tx`) để có thể ghi trong cùng transaction với thao tác chính.
- */
+// Ghi một dòng nhật ký thao tác nhân viên.
 export async function recordAudit(
+  // Nhận tx để ghi cùng transaction với thao tác chính: thao tác lỗi rollback thì dòng nhật ký cũng không còn.
   tx: PrismaClient | Prisma.TransactionClient,
   params: RecordAuditParams,
 ) {
-  // Luôn làm sạch dữ liệu trước khi lưu để phòng ngừa rò rỉ bí mật vào nhật ký kiểm toán.
+  // Luôn làm sạch ở đây thay vì tin người gọi, để không bao giờ lưu bí mật vào nhật ký.
   const sanitizedBefore =
     params.before !== undefined ? sanitizeAuditData(params.before) : undefined;
   const sanitizedAfter = params.after !== undefined ? sanitizeAuditData(params.after) : undefined;
@@ -66,7 +71,7 @@ export async function recordAudit(
       action: params.action,
       targetType: params.targetType,
       targetId: params.targetId,
-      // Prisma yêu cầu dùng JsonNull thay vì null thông thường để phân biệt rõ giá trị JSON null với việc bỏ qua trường.
+      // Prisma bắt dùng Prisma.JsonNull để lưu JSON null; truyền null thường sẽ bị hiểu là bỏ qua trường.
       before:
         sanitizedBefore !== undefined
           ? (sanitizedBefore as Prisma.InputJsonValue)

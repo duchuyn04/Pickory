@@ -3,7 +3,9 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../shared/api';
 
+// Khối xóa tài khoản trong trang tài khoản, có bước xác nhận bằng mật khẩu trước khi xóa.
 export function DeleteAccountDialog() {
+  // open điều khiển việc hiện form xác nhận; bấm "Xóa tài khoản" chỉ mở form chứ chưa xóa ngay.
   const [open, setOpen] = useState(false);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -13,6 +15,7 @@ export function DeleteAccountDialog() {
   const navigate = useNavigate();
 
   async function handleDelete(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
     setLoading(true);
@@ -20,14 +23,16 @@ export function DeleteAccountDialog() {
     try {
       await apiRequest('/api/me', {
         method: 'DELETE',
+        // Mật khẩu rỗng không gửi, vì tài khoản chỉ dùng Google không có mật khẩu và xác nhận bằng cách đăng nhập lại Google.
         body: JSON.stringify({ password: password || undefined }),
       });
-      // Đặt lại trạng thái actor về khách vãng lai (guest) sau khi tài khoản đã bị xóa và phiên bị hủy.
+      // Server đã xóa phiên, nên nạp lại actor để giao diện về trạng thái khách.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       setOpen(false);
-      // Điều hướng về trang chủ và thay thế lịch sử duyệt web để người dùng không quay lại trang tài khoản đã xóa.
+      // replace để nút Quay lại không đưa người dùng về trang tài khoản đã xóa.
       navigate('/', { replace: true });
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (ví dụ sai mật khẩu, cần đăng nhập lại Google) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setError(err.message);
       } else {

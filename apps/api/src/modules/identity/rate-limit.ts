@@ -3,12 +3,11 @@ import { loginThrottle } from './login-throttle';
 
 interface RateLimitRecord {
   attempts: number;
+  // Thời điểm cửa sổ đếm kết thúc.
   resetAt: number;
 }
 
-/**
- * Bộ giới hạn tần suất trong bộ nhớ phục vụ kiểm soát lưu lượng mà không phụ thuộc vào hạ tầng bên ngoài.
- */
+// Giới hạn số lần gọi theo khóa bất kỳ (IP, email) trong một khoảng thời gian; nằm trong bộ nhớ nên chỉ đúng khi chạy 1 instance.
 export class RateLimiter {
   private readonly records = new Map<string, RateLimitRecord>();
 
@@ -18,35 +17,30 @@ export class RateLimiter {
     private readonly errorMessage: string = 'Quá nhiều yêu cầu. Vui lòng thử lại sau.',
   ) {}
 
-  /**
-   * Kiểm tra xem khóa định danh đã vượt quá số lần cho phép trong cửa sổ hiện tại chưa.
-   * Nếu đã vượt ngưỡng thì ném lỗi 429 TOO_MANY_REQUESTS với thông báo tiếng Việt.
-   */
+  // Ném 429 nếu khóa đã dùng hết số lần cho phép trong cửa sổ hiện tại.
   assertNotRateLimited(key: string, now = Date.now()): void {
     const record = this.records.get(key);
+    // Khóa chưa từng gọi thì cho qua.
     if (!record) {
       return;
     }
 
-    // Giải phóng bộ nhớ khi thời gian theo dõi của cửa sổ hiện tại đã trôi qua.
+    // Cửa sổ đã hết thì xóa bản ghi, vừa cho gọi lại vừa giải phóng bộ nhớ.
     if (now >= record.resetAt) {
       this.records.delete(key);
       return;
     }
 
-    // Chặn yêu cầu ngay khi số lượt gọi đạt hoặc vượt quá ngưỡng tối đa cho phép.
+    // Đã chạm ngưỡng thì chặn.
     if (record.attempts >= this.maxAttempts) {
       throw new AppError('TOO_MANY_REQUESTS', 429, this.errorMessage);
     }
   }
 
-  /**
-   * Ghi nhận một lần gọi cho khóa định danh.
-   * Khởi tạo bản ghi mới nếu khóa chưa tồn tại hoặc cửa sổ trước đó đã hết hạn.
-   */
+  // Tính thêm một lần gọi cho khóa.
   recordAttempt(key: string, now = Date.now()): void {
     const record = this.records.get(key);
-    // Bắt đầu chu kỳ đếm mới nếu khóa chưa từng xuất hiện hoặc chu kỳ cũ đã kết thúc.
+    // Khóa mới hoặc cửa sổ cũ đã hết: bắt đầu cửa sổ mới.
     if (!record || now >= record.resetAt) {
       this.records.set(key, {
         attempts: 1,
@@ -58,10 +52,8 @@ export class RateLimiter {
     record.attempts += 1;
   }
 
-  /**
-   * Kiểm tra trạng thái vượt ngưỡng mà không ném lỗi (trả về boolean).
-   * Dùng cho forgot-password để nuốt lỗi và trả response chung, chống dò tài khoản.
-   */
+  // Giống assertNotRateLimited nhưng trả boolean thay vì ném lỗi.
+  // Dùng cho forgot-password: vượt ngưỡng vẫn phải trả response như bình thường, nếu không sẽ lộ email nào bị gọi nhiều.
   isRateLimited(key: string, now = Date.now()): boolean {
     const record = this.records.get(key);
     if (!record) {
@@ -76,17 +68,13 @@ export class RateLimiter {
     return record.attempts >= this.maxAttempts;
   }
 
-  /**
-   * Kiểm tra và ghi nhận trong một bước. Ném 429 nếu đã chạm ngưỡng.
-   */
+  // Kiểm tra rồi mới tính lượt, để request bị chặn không tự kéo dài thời gian bị chặn.
   consume(key: string, now = Date.now()): void {
     this.assertNotRateLimited(key, now);
     this.recordAttempt(key, now);
   }
 
-  /**
-   * Xóa một khóa cụ thể hoặc toàn bộ bộ đếm.
-   */
+  // Xóa một khóa, hoặc xóa tất cả nếu không truyền khóa.
   clear(key?: string): void {
     if (key) {
       this.records.delete(key);
@@ -96,30 +84,28 @@ export class RateLimiter {
   }
 }
 
-// Giới hạn 5 lần đăng ký mỗi giờ trên một IP nhằm ngăn chặn bot tạo tài khoản rác và gây cạn kiệt tài nguyên băm Argon2.
+// Đăng ký: 5 lần mỗi giờ mỗi IP, để bot không tạo hàng loạt tài khoản rác và không ép máy chủ chạy Argon2 liên tục.
 export const registerRateLimiter = new RateLimiter(
   60 * 60 * 1000,
   5,
   'Bạn đã đăng ký quá nhiều lần từ địa chỉ này. Vui lòng thử lại sau 1 giờ.',
 );
 
-// Giới hạn 3 lần quên mật khẩu mỗi 15 phút trên một email để ngăn kẻ xấu lợi dụng hệ thống nhằm gửi thư rác quấy rối nạn nhân.
+// Quên mật khẩu theo email: 3 lần mỗi 15 phút, để kẻ xấu không dùng hệ thống spam hòm thư của nạn nhân.
 export const forgotPasswordEmailLimiter = new RateLimiter(
   15 * 60 * 1000,
   3,
   'Yêu cầu đặt lại mật khẩu quá thường xuyên cho email này.',
 );
 
-// Giới hạn 10 lần quên mật khẩu mỗi giờ trên một IP nhằm ngăn chặn các công cụ tự động quét dò email hàng loạt.
+// Quên mật khẩu theo IP: 10 lần mỗi giờ, để một máy không quét hàng loạt email dù đổi email từng lần.
 export const forgotPasswordIpLimiter = new RateLimiter(
   60 * 60 * 1000,
   10,
   'Yêu cầu đặt lại mật khẩu quá thường xuyên từ IP này.',
 );
 
-/**
- * Đặt lại trạng thái toàn bộ bộ giới hạn tần suất phục vụ cô lập môi trường giữa các ca kiểm thử.
- */
+// Dùng trong test để các test không ảnh hưởng nhau; gồm cả bộ đếm đăng nhập vì chúng cùng dựa vào IP.
 export function clearAllRateLimits(): void {
   registerRateLimiter.clear();
   forgotPasswordEmailLimiter.clear();

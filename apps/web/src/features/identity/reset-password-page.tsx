@@ -4,24 +4,27 @@ import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../shared/api';
 import { getPasswordError } from '../../shared/identity-validation';
 
+// Trang đặt mật khẩu mới từ link trong email; dùng chung cho quên mật khẩu và lời mời nhân viên.
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Lưu token từ query string vào state nội bộ để giữ lại giá trị phục vụ gửi form sau khi đã xóa token khỏi URL hiển thị.
+  // Giữ token trong state vì effect bên dưới sẽ xóa nó khỏi URL; lấy một lần lúc khởi tạo nên không đổi theo URL nữa.
   const [token] = useState(() => searchParams.get('token') || '');
 
   const [newPassword, setNewPassword] = useState('');
+  // Ô nhập lại để người dùng không đặt nhầm mật khẩu do gõ sai.
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  // Server cho biết đây là khách hay nhân viên, để nút "Đăng nhập" dẫn tới đúng trang đăng nhập.
   const [userKind, setUserKind] = useState<'customer' | 'staff' | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Loại bỏ tham số token trên thanh địa chỉ trình duyệt nhằm tránh lộ token nhạy cảm trong lịch sử duyệt web hoặc header Referer.
+  // Xóa token khỏi thanh địa chỉ để nó không nằm lại trong lịch sử trình duyệt hay bị gửi đi qua header Referer.
   useEffect(() => {
     if (searchParams.has('token')) {
       navigate(location.pathname, { replace: true });
@@ -29,9 +32,11 @@ export function ResetPasswordPage() {
   }, [searchParams, location.pathname, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
 
+    // Kiểm tra ở trình duyệt trước khi gửi: token chỉ dùng được một lần, nên không nên để lỗi nhập liệu làm hỏng token oan.
     const passwordError = getPasswordError(newPassword, 8);
     if (passwordError) {
       setError(passwordError);
@@ -59,12 +64,13 @@ export function ResetPasswordPage() {
         },
       );
 
-      // Đặt lại dữ liệu actor trong cache về trạng thái ban đầu vì thao tác đổi mật khẩu đã thu hồi toàn bộ phiên đăng nhập cũ trên server.
+      // Server đã xóa mọi phiên, nên xóa hẳn actor khỏi cache; nếu giữ bản cũ (đang là khách đăng nhập) thì trang đăng nhập sẽ tự chuyển đi.
       await queryClient.resetQueries({ queryKey: ['actor'], exact: true });
 
       setUserKind(res.userKind);
       setSubmitted(true);
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (link hết hạn, đã dùng...) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setError(err.message);
       } else {
@@ -75,6 +81,7 @@ export function ResetPasswordPage() {
     }
   }
 
+  // Không có token thì không có gì để đặt lại, báo ngay thay vì hiện form không bao giờ thành công.
   if (!token) {
     return (
       <div

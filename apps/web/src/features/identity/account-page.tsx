@@ -6,23 +6,28 @@ import { ChangePasswordForm } from './change-password-form';
 import { DeleteAccountDialog } from './delete-account-dialog';
 import { useActor } from './use-actor';
 
+// Trang tài khoản của khách: sửa hồ sơ, đổi mật khẩu, quyền riêng tư, xóa tài khoản.
 export function AccountPage() {
   const { data: actor, isLoading } = useActor();
   const queryClient = useQueryClient();
 
+  // Giá trị đang gõ trong form, tách khỏi dữ liệu actor để người dùng sửa dở không bị ghi đè khi actor nạp lại.
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  // saving khóa nút trong lúc gửi để tránh bấm lưu hai lần.
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    // Điền sẵn form bằng thông tin hiện tại, vì /api/me trả về tên và số điện thoại.
     if (actor) {
       setName(actor.name || '');
       setPhone(actor.phone || '');
     }
   }, [actor]);
 
+  // Đang hỏi server xem ai đang đăng nhập; chưa biết thì chưa quyết định chuyển hướng, nếu không khách đã đăng nhập bị đẩy ra login oan.
   if (isLoading) {
     return (
       <div
@@ -37,35 +42,40 @@ export function AccountPage() {
     );
   }
 
-  // Chỉ cho phép khách hàng truy cập trang quản lý tài khoản cá nhân, chuyển hướng nếu chưa đăng nhập.
+  // Nhân viên có khu vực /admin riêng và việc xóa tài khoản ở đây chỉ dành cho khách, nên chỉ khách đã đăng nhập mới vào được.
   if (!actor || actor.kind !== 'customer') {
     return <Navigate to="/login" replace />;
   }
 
   async function handleUpdateProfile(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setSaving(true);
+    // Xóa kết quả của lần lưu trước để thông báo cũ không còn hiển thị cùng lúc với kết quả mới.
     setError(null);
     setSuccess(false);
 
     try {
       await apiRequest('/api/me', {
         method: 'PATCH',
+        // Ô để trống gửi null để người dùng xóa được thông tin; gửi chuỗi rỗng thì backend cũng coi là xóa nhưng null rõ ràng hơn.
         body: JSON.stringify({
           name: name.trim() === '' ? null : name.trim(),
           phone: phone.trim() === '' ? null : phone.trim(),
         }),
       });
-      // Làm mới dữ liệu actor trong React Query cache để cập nhật tên và số điện thoại trên toàn bộ giao diện.
+      // Nạp lại actor để header và các nơi khác hiển thị tên mới, thay vì giữ bản cũ trong cache.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       setSuccess(true);
     } catch (err: unknown) {
+      // Lỗi từ API đã có thông báo tiếng Việt nên hiện nguyên văn; lỗi lạ mới dùng câu chung.
       if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('Cập nhật thông tin thất bại.');
       }
     } finally {
+      // Luôn mở lại nút dù thành công hay lỗi.
       setSaving(false);
     }
   }

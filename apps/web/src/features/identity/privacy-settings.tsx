@@ -3,17 +3,21 @@ import React, { useEffect, useState } from 'react';
 import { apiRequest } from '../../shared/api';
 import { useActor } from './use-actor';
 
+// Trang để khách vãng lai và khách đã đăng nhập xem và đổi lựa chọn đồng ý bất cứ lúc nào.
 export function PrivacySettingsPage() {
   const { data: actor, isLoading } = useActor();
   const queryClient = useQueryClient();
 
+  // Trạng thái các ô tick đang chỉnh, tách khỏi actor để chỉ lưu khi người dùng bấm nút Lưu.
+  // Mặc định tắt vì chưa chọn thì không được thu thập.
   const [personalization, setPersonalization] = useState(false);
   const [marketing, setMarketing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    // Khởi tạo các giá trị checkbox từ bản ghi đồng ý hiện tại của người dùng.
+    // Điền các ô tick theo lựa chọn hiện tại đang lưu trên server.
     if (actor?.consent) {
       setPersonalization(actor.consent.personalization);
       setMarketing(actor.consent.marketing);
@@ -21,8 +25,10 @@ export function PrivacySettingsPage() {
   }, [actor]);
 
   async function handleSave(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setSaving(true);
+    // Xóa thông báo của lần lưu trước để không hiện lẫn với kết quả mới.
     setSavedMessage(false);
     setError(null);
 
@@ -30,17 +36,19 @@ export function PrivacySettingsPage() {
       await apiRequest('/api/me/consent', {
         method: 'PUT',
         body: JSON.stringify({
+          // Nhóm cần thiết luôn bật, không cho tắt.
           necessary: true,
           personalization,
           marketing,
         }),
       });
-      // Đánh dấu đã xác nhận lựa chọn trong localStorage để không hiện lại banner hỏi sự đồng ý.
+      // Người vào trang này trực tiếp mà chưa qua banner cũng coi là đã chọn, để banner không hỏi lại.
       localStorage.setItem('pk_consent_chosen', 'true');
-      // Làm mới dữ liệu actor trong cache để các trang khác lập tức áp dụng quyền riêng tư mới.
+      // Nạp lại actor để các nơi đọc lựa chọn đồng ý dùng giá trị mới ngay.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       setSavedMessage(true);
     } catch (err: unknown) {
+      // Phải báo lỗi: nếu im lặng thì người dùng tưởng đã lưu trong khi server chưa ghi nhận.
       setError(err instanceof Error ? err.message : 'Lưu cài đặt quyền riêng tư thất bại.');
     } finally {
       setSaving(false);

@@ -3,6 +3,7 @@ import { apiRequest } from '../../../shared/api';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import type { RoleData } from './role-form';
 
+// Một dòng nhân viên như GET /api/admin/staff trả về; roles là mã role chứ không phải đối tượng.
 export interface StaffRow {
   id: string;
   email: string;
@@ -10,35 +11,41 @@ export interface StaffRow {
   phone: string | null;
   emailVerified: boolean;
   kind: string;
+  // Có giá trị nghĩa là đang bị khóa.
   lockedAt: string | null;
   createdAt: string;
   roles: string[];
 }
 
 interface AssignRolesDialogProps {
+  // null nghĩa là hộp thoại đang đóng.
   staff: StaffRow | null;
   availableRoles: RoleData[];
   onSuccess: () => void;
   onClose: () => void;
 }
 
+// Hộp thoại đổi role của một nhân viên.
 export function AssignRolesDialog({
   staff,
   availableRoles,
   onSuccess,
   onClose,
 }: AssignRolesDialogProps) {
+  // Hook đưa focus vào hộp thoại khi mở, đóng bằng phím Esc, và trả focus về nút đã mở.
   const dialogRef = useDialogFocus({
     isOpen: Boolean(staff),
     onClose,
   });
 
+  // Bắt đầu bằng role hiện có của nhân viên để người dùng chỉ phải thêm hoặc bớt.
   const [selectedRoles, setSelectedRoles] = useState<string[]>(() => staff?.roles || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Hook ở trên phải chạy trước dòng này, vì không được gọi hook sau một lệnh return sớm.
   if (!staff) return null;
-  // Loại bỏ role customer khỏi danh sách lựa chọn vì nhân viên nội bộ không thể nhận vai trò của khách hàng.
+  // Ẩn role customer vì tài khoản khách và nhân viên tách riêng, server cũng từ chối gán.
   const staffAssignableRoles = availableRoles.filter((r) => r.code !== 'customer');
 
   function toggleRole(code: string) {
@@ -50,20 +57,24 @@ export function AssignRolesDialog({
   }
 
   async function handleSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
+      // PUT đặt lại toàn bộ role bằng danh sách này; danh sách rỗng nghĩa là gỡ hết role (phiên của người đó bị xóa).
       await apiRequest(`/api/admin/staff/${staff!.id}/roles`, {
         method: 'PUT',
         body: JSON.stringify({
           roleCodes: selectedRoles,
         }),
       });
+      // onSuccess để trang cha nạp lại danh sách, rồi mới đóng.
       onSuccess();
       onClose();
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (tự sửa role mình, admin cuối cùng, không đủ quyền...) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setError(err.message);
       } else {

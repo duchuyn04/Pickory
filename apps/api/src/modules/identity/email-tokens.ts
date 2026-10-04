@@ -13,16 +13,15 @@ export interface CreateEmailTokenParams {
   expiresInMs: number;
 }
 
-/**
- * Tạo token một lần lưu hash SHA-256 vào database, trả về token gốc để gửi email.
- */
+// Tạo token dùng một lần cho link trong email; trả về token gốc để đưa vào thư.
 export async function createEmailToken(
   params: CreateEmailTokenParams,
+  // Nhận client để gọi được trong transaction của nơi khác (ví dụ mời nhân viên tạo user và token cùng lúc).
   client: PrismaClient | Prisma.TransactionClient = db,
 ): Promise<string> {
   const { userId, purpose, expiresInMs } = params;
   const token = generateToken();
-  // Chỉ lưu SHA-256 hash của token vào DB để phòng ngừa lộ token nếu DB bị rò rỉ.
+  // DB chỉ giữ hash, nên lộ DB cũng không dùng được link.
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + expiresInMs);
 
@@ -30,6 +29,7 @@ export async function createEmailToken(
     data: {
       tokenHash,
       userId,
+      // purpose để token reset không dùng được vào việc xác thực email, và ngược lại.
       purpose,
       expiresAt,
     },
@@ -38,9 +38,7 @@ export async function createEmailToken(
   return token;
 }
 
-/**
- * Kiểm tra tính hợp lệ của token (chưa dùng, chưa hết hạn, đúng mục đích).
- */
+// Kiểm tra token còn dùng được không: đúng mục đích, chưa dùng, chưa hết hạn.
 export async function verifyEmailToken(token: string, purpose: EmailTokenPurpose) {
   const tokenHash = hashToken(token);
   const record = await db.emailToken.findUnique({
@@ -49,6 +47,7 @@ export async function verifyEmailToken(token: string, purpose: EmailTokenPurpose
   });
 
   const now = new Date();
+  // Một thông báo chung cho mọi lý do hỏng, để người ngoài không phân biệt được token sai với token hết hạn hay đã dùng.
   if (!record || record.purpose !== purpose || record.usedAt !== null || record.expiresAt <= now) {
     throw new AppError(
       'INVALID_TOKEN',
@@ -60,9 +59,7 @@ export async function verifyEmailToken(token: string, purpose: EmailTokenPurpose
   return record;
 }
 
-/**
- * Đánh dấu token đã được sử dụng.
- */
+// Đánh dấu token đã dùng để không dùng lại được.
 export async function markTokenUsed(tokenId: string): Promise<void> {
   await db.emailToken.update({
     where: { id: tokenId },
@@ -70,13 +67,12 @@ export async function markTokenUsed(tokenId: string): Promise<void> {
   });
 }
 
-/**
- * Xác thực email của người dùng. Link xác thực có hạn 24 giờ.
- */
+// Xác thực email từ link trong thư (hạn 24 giờ).
 export async function verifyEmail(token: string): Promise<void> {
   const tokenHash = hashToken(token);
   const now = new Date();
 
+  // Dùng transaction để việc đánh dấu token đã dùng và việc xác thực email thành công hoặc hỏng cùng nhau.
   await db.$transaction(async (tx) => {
     const record = await tx.emailToken.findUnique({
       where: { tokenHash },
@@ -95,7 +91,8 @@ export async function verifyEmail(token: string): Promise<void> {
       );
     }
 
-    // Dùng updateMany kèm điều kiện usedAt: null để tiêu thụ token nguyên tử (atomic), chống race condition khi bị click đồng thời.
+    // Đánh dấu đã dùng bằng một lệnh có điều kiện usedAt: null; hai request đồng thời cùng đọc thấy token còn dùng được,
+    // nhưng chỉ một request cập nhật được dòng này (count = 1), request kia thấy count = 0.
     const updated = await tx.emailToken.updateMany({
       where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
       data: { usedAt: now },
@@ -116,27 +113,27 @@ export async function verifyEmail(token: string): Promise<void> {
   });
 }
 
-/**
- * Xử lý yêu cầu quên mật khẩu và gửi email khôi phục tài khoản nếu email tồn tại.
- */
+// Quên mật khẩu: gửi link đặt lại nếu email tồn tại, và luôn kết thúc theo cùng một cách dù tồn tại hay không.
 export async function forgotPassword(
   email: string,
   ip = '127.0.0.1',
+  // Cho test truyền thời gian giả.
   now = Date.now(),
 ): Promise<void> {
   const normalizedEmail = email.trim().toLowerCase();
   const normalizedIp = ip.trim();
 
-  // Áp dụng giới hạn tần suất kép theo cả email và IP để chống càn quét gửi thư rác và làm nghẽn dịch vụ gửi email.
+  // Kiểm tra giới hạn theo cả email (không spam hòm thư một người) lẫn IP (không quét hàng loạt email).
   const isEmailLimited = forgotPasswordEmailLimiter.isRateLimited(normalizedEmail, now);
   const isIpLimited = forgotPasswordIpLimiter.isRateLimited(normalizedIp, now);
 
-  // Ghi nhận lần gọi cho cả email và IP
+  // Tính lượt gọi cả khi đã bị chặn, để kẻ cố tình gọi liên tục không được mở lại sớm hơn.
   forgotPasswordEmailLimiter.recordAttempt(normalizedEmail, now);
   forgotPasswordIpLimiter.recordAttempt(normalizedIp, now);
 
   if (isEmailLimited || isIpLimited) {
-    // Khi bị rate limit vẫn tính toán hash giả để thời gian phản hồi tương đương luồng thường, tránh lộ thông tin qua timing attack.
+    // Không báo lỗi 429, vì lỗi sẽ cho kẻ dò biết email đang bị gọi nhiều (nghĩa là có thể tồn tại); trả về như bình thường nhưng không gửi thư.
+    // Băm một lần để thời gian phản hồi gần bằng nhánh có gửi thư.
     await hashPassword('dummy-password-timing-defense');
     return;
   }
@@ -144,11 +141,12 @@ export async function forgotPassword(
   const user = await db.user.findUnique({
     where: { email: normalizedEmail },
   });
+  // Tài khoản bị khóa hoặc đã xóa không được đặt lại mật khẩu để quay lại.
   if (user && !user.lockedAt && !user.deletedAt) {
     const token = await createEmailToken({
       userId: user.id,
       purpose: 'reset',
-      // Giới hạn hiệu lực 30 phút để thu hẹp khung thời gian rủi ro nếu đường dẫn trong email bị lộ.
+      // 30 phút theo spec, để link lọt vào tay người khác chỉ dùng được trong thời gian ngắn.
       expiresInMs: 30 * 60 * 1000,
     });
 
@@ -156,11 +154,12 @@ export async function forgotPassword(
     await getEmailSender().send({
       to: user.email,
       subject: 'Đặt lại mật khẩu Pickory',
+      // Ghép WEB_ORIGIN vì link trong email phải là địa chỉ đầy đủ, đường dẫn tương đối không mở được từ hòm thư.
       text: `Chào bạn, vui lòng truy cập liên kết sau để đặt lại mật khẩu: ${config.WEB_ORIGIN}/reset-password?token=${token}`,
       metadata: { token, purpose: 'reset' },
     });
   } else {
-    // Chạy hash giả lập khi không tìm thấy tài khoản để cân bằng độ trễ với nhánh có tài khoản, chống timing attack dò email.
+    // Email không tồn tại cũng băm một lần để thời gian phản hồi giống nhánh có tài khoản, không lộ email nào đã đăng ký.
     await hashPassword('dummy-password-timing-defense');
   }
 }
@@ -171,15 +170,14 @@ export interface ResetPasswordParams {
 }
 
 export interface ResetPasswordResult {
+  // Để giao diện biết đưa người dùng sang trang đăng nhập của khách hay của nhân viên.
   userKind: 'customer' | 'staff';
 }
 
-/**
- * Cập nhật mật khẩu mới thông qua mã xác thực từ email đặt lại mật khẩu hoặc thư mời.
- */
+// Đặt mật khẩu mới bằng token; dùng cho cả link quên mật khẩu và link mời nhân viên.
 export async function resetPassword(params: ResetPasswordParams): Promise<ResetPasswordResult> {
   const { token, newPassword } = params;
-  // Yêu cầu mật khẩu tối thiểu 8 ký tự để bảo đảm an toàn dữ liệu người dùng.
+  // Kiểm tra độ dài trước khi chạm DB để không tiêu thụ token khi mật khẩu chưa hợp lệ.
   if (newPassword.length < 8) {
     throw new AppError('WEAK_PASSWORD', 400, 'Mật khẩu phải chứa tối thiểu 8 ký tự.');
   }
@@ -187,12 +185,14 @@ export async function resetPassword(params: ResetPasswordParams): Promise<ResetP
   const tokenHash = hashToken(token);
   const now = new Date();
 
+  // Mọi bước đổi mật khẩu, tiêu thụ token và xóa phiên nằm trong một transaction để không có trạng thái nửa vời.
   return db.$transaction(async (tx) => {
     const record = await tx.emailToken.findUnique({
       where: { tokenHash },
       include: { user: true },
     });
 
+    // Nhận cả 'reset' và 'invite': lời mời nhân viên dùng chung trang đặt mật khẩu; token 'verify' thì không được dùng ở đây.
     if (
       !record ||
       (record.purpose !== 'reset' && record.purpose !== 'invite') ||
@@ -206,7 +206,7 @@ export async function resetPassword(params: ResetPasswordParams): Promise<ResetP
       );
     }
 
-    // Tiêu thụ token nguyên tử (atomic) bằng điều kiện usedAt: null để ngăn chặn tấn công phát lại (replay attack) cùng lúc.
+    // Tiêu thụ token bằng lệnh có điều kiện usedAt: null để hai request gửi cùng lúc chỉ có một request thành công.
     const updated = await tx.emailToken.updateMany({
       where: { id: record.id, usedAt: null, expiresAt: { gt: now } },
       data: { usedAt: now },
@@ -220,18 +220,19 @@ export async function resetPassword(params: ResetPasswordParams): Promise<ResetP
       );
     }
 
+    // Băm sau khi đã giữ được token, để request thua cuộc không tốn công băm Argon2.
     const passwordHash = await hashPassword(newPassword);
 
     await tx.user.update({
       where: { id: record.userId },
       data: {
         passwordHash,
-        // Xác thực email luôn tại đây vì người dùng đã chứng minh quyền sở hữu hòm thư thông qua việc nhận token.
+        // Nhận được thư và bấm link chứng tỏ người này sở hữu hòm thư, nên coi như đã xác thực email.
         emailVerified: true,
       },
     });
 
-    // Hủy toàn bộ token khôi phục và lời mời đang chờ khác để ngăn chặn việc tái sử dụng các đường dẫn cũ.
+    // Vô hiệu các link đặt lại hoặc lời mời khác còn hạn của cùng người này, để không còn link cũ nào dùng lại được.
     await tx.emailToken.updateMany({
       where: {
         userId: record.userId,
@@ -242,7 +243,7 @@ export async function resetPassword(params: ResetPasswordParams): Promise<ResetP
       data: { usedAt: now },
     });
 
-    // Thu hồi mọi phiên đăng nhập đang hoạt động để buộc tất cả thiết bị phải xác thực lại bằng mật khẩu mới.
+    // Xóa mọi phiên: nếu mật khẩu bị đổi vì nghi bị lộ thì ai đang đăng nhập bằng mật khẩu cũ cũng bị đá ra.
     await tx.session.deleteMany({
       where: { userId: record.userId },
     });

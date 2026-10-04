@@ -5,9 +5,11 @@ import { apiRequest } from '../../../shared/api';
 import { getEmailError, getPasswordError } from '../../../shared/identity-validation';
 import { useActor } from '../use-actor';
 
+// Trang đăng nhập nhân viên, tách khỏi trang đăng nhập khách và không có nút đăng nhập Google.
 export function StaffLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Cho người dùng bật xem mật khẩu để kiểm tra gõ đúng.
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -16,7 +18,7 @@ export function StaffLoginPage() {
   const navigate = useNavigate();
   const { data: actor } = useActor();
 
-  // Tự động điều hướng nhân viên đã đăng nhập vào bảng điều khiển quản trị, tránh hiển thị lại form đăng nhập.
+  // Nhân viên đã đăng nhập mà vào lại trang này thì đưa vào khu quản trị, không hiện lại form đăng nhập vô nghĩa.
   React.useEffect(() => {
     if (actor?.kind === 'staff') {
       navigate('/admin', { replace: true });
@@ -24,8 +26,10 @@ export function StaffLoginPage() {
   }, [actor, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
+    // Mật khẩu chỉ cần không rỗng (độ dài tối thiểu 1): quy tắc 8 ký tự chỉ áp khi đặt mật khẩu mới.
     const validationError = getEmailError(email) || getPasswordError(password, 1);
     if (validationError) {
       setError(validationError);
@@ -38,11 +42,12 @@ export function StaffLoginPage() {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
-      // Làm mới dữ liệu actor trong cache để các trang admin nhận diện ngay vai trò và danh sách quyền hạn của nhân viên.
+      // Nạp lại actor để menu quản trị vẽ theo đúng quyền của nhân viên vừa đăng nhập.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
-      // Điều hướng tới bảng điều khiển quản trị và xóa trang đăng nhập khỏi lịch sử duyệt web để tránh quay lại nhầm.
+      // replace để nút Quay lại không đưa người dùng về trang đăng nhập.
       navigate('/admin', { replace: true });
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API: sai email và sai mật khẩu cùng một câu, còn bị khóa thì có câu riêng.
       if (err instanceof Error) {
         setError(err.message);
       } else {

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { useCan } from '../use-actor';
 
+// Một dòng nhật ký như API trả về; actorEmail và actorName do server tra thêm để hiển thị người làm thay vì chuỗi UUID.
 export interface AuditLogRow {
   id: string;
   actorId: string;
@@ -11,6 +12,7 @@ export interface AuditLogRow {
   action: string;
   targetType: string;
   targetId: string;
+  // Trạng thái trước và sau thao tác; kiểu unknown vì cấu trúc phụ thuộc loại thao tác.
   before: unknown;
   after: unknown;
   createdAt: string;
@@ -23,15 +25,18 @@ interface AuditLogsResponse {
   limit: number;
 }
 
+// Trang xem nhật ký thao tác, chỉ đọc, có lọc theo hành động, người làm, đối tượng và khoảng ngày.
 export function AuditLogPage() {
   const canReadAudit = useCan('audit-logs:read');
 
+  // Giá trị đang gõ trong các ô lọc, chưa áp dụng cho tới khi bấm nút Lọc.
   const [filterAction, setFilterAction] = useState('');
   const [filterActor, setFilterActor] = useState('');
   const [filterTargetType, setFilterTargetType] = useState('');
   const [filterStartDate, setFilterStartDate] = useState('');
   const [filterEndDate, setFilterEndDate] = useState('');
 
+  // Bộ lọc đã áp dụng, nằm trong khóa truy vấn để đổi bộ lọc thì tự gọi lại API.
   const [appliedFilters, setAppliedFilters] = useState<{
     action?: string;
     actorId?: string;
@@ -40,24 +45,28 @@ export function AuditLogPage() {
     endDate?: string;
   }>({});
 
-  // Kiểm tra tường minh cờ isError và đối tượng error để phân biệt rõ giữa trường hợp truy vấn gặp sự cố với trường hợp dữ liệu rỗng.
+  // Lấy cả cờ lỗi để phân biệt "tải thất bại" với "không có dòng nào khớp bộ lọc".
   const { data, isLoading, isError, error } = useQuery<AuditLogsResponse>({
     queryKey: ['admin-audit-logs', appliedFilters],
     queryFn: () => {
+      // Chỉ thêm tham số nào có giá trị, để URL gọn và server không lọc theo chuỗi rỗng.
       const params = new URLSearchParams();
       if (appliedFilters.action) params.set('action', appliedFilters.action);
       if (appliedFilters.actorId) params.set('actorId', appliedFilters.actorId);
       if (appliedFilters.targetType) params.set('targetType', appliedFilters.targetType);
       if (appliedFilters.startDate) params.set('startDate', appliedFilters.startDate);
       if (appliedFilters.endDate) params.set('endDate', appliedFilters.endDate);
+      // Lấy 50 dòng mỗi lần; server giới hạn tối đa 100.
       params.set('limit', '50');
       const qs = params.toString();
       const url = qs ? `/api/admin/audit-logs?${qs}` : '/api/admin/audit-logs';
       return apiRequest<AuditLogsResponse>(url);
     },
+    // Không gọi API khi không có quyền, vì chắc chắn bị từ chối với 403.
     enabled: canReadAudit,
   });
 
+  // Hook ở trên phải chạy hết trước lệnh return sớm này; backend vẫn chặn mọi request thật sự.
   if (!canReadAudit) {
     return (
       <div
@@ -76,11 +85,14 @@ export function AuditLogPage() {
   }
 
   function handleFilterSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
+    // Ô ngày trả về chuỗi 'YYYY-MM-DD'. Tách ra rồi tạo Date theo giờ máy người dùng, vì new Date('YYYY-MM-DD') hiểu là nửa đêm UTC và lệch 7 tiếng ở Việt Nam.
     let startIso: string | undefined;
     if (filterStartDate) {
       const [year, month, day] = filterStartDate.split('-').map(Number);
       if (year && month && day) {
+        // Từ ngày: bắt đầu từ 00:00:00 của ngày đó.
         startIso = new Date(year, month - 1, day, 0, 0, 0, 0).toISOString();
       }
     }
@@ -89,10 +101,13 @@ export function AuditLogPage() {
     if (filterEndDate) {
       const [year, month, day] = filterEndDate.split('-').map(Number);
       if (year && month && day) {
+        // Đến ngày: lấy tới 23:59:59.999 để bao trọn cả ngày đó; nếu để 00:00 thì mất hết thao tác trong ngày chọn.
+        // toISOString vì server chỉ nhận chuỗi ISO có múi giờ.
         endIso = new Date(year, month - 1, day, 23, 59, 59, 999).toISOString();
       }
     }
 
+    // Ô để trống thành undefined để không gửi tham số lọc rỗng.
     setAppliedFilters({
       action: filterAction.trim() || undefined,
       actorId: filterActor.trim() || undefined,
