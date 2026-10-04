@@ -64,7 +64,7 @@ Dữ liệu sản phẩm và review **không** nằm ở đây. Hai nguồn đó
 ### Truy xuất
 
 ```ts
-// apps/api/src/modules/knowledge-base/index.ts
+// apps/backend/src/modules/knowledge-base/index.ts
 export const knowledge: {
   retrieve(input: {
     query: string;

@@ -81,7 +81,7 @@ const reviewSummarySchema = z.object({
 ### Interface public
 
 ```ts
-// apps/api/src/modules/personalized-content/index.ts
+// apps/backend/src/modules/personalized-content/index.ts
 export const contentReader: {
   getReviewSummary(productId: string, actor: Actor): Promise<ReviewSummaryView | null>;
   getHighlights(productId: string, actor: Actor): Promise<HighlightsView | null>;

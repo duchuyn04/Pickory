@@ -103,7 +103,7 @@ Thẻ sản phẩm do frontend render từ dữ liệu `catalog` mới nhất, k
 ### Interface public (cho `support-desk`)
 
 ```ts
-// apps/api/src/modules/shopping-assistant/index.ts
+// apps/backend/src/modules/shopping-assistant/index.ts
 export const conversations: {
   get(id: string): Promise<ConversationDetail | null>;
   list(filter: { status?: ConversationStatus; userId?: string; cursor?: string }): Promise<ConversationPage>;
