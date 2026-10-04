@@ -95,10 +95,10 @@ Danh mục này mở rộng khi viết spec các module sau. Thêm quyền mới
 **Quy tắc an toàn:**
 - Không được xóa hoặc khóa admin cuối cùng còn hoạt động.
 - Không ai tự sửa role của chính mình.
+- Chống leo thang đặc quyền: nhân viên không phải admin không được tự sửa role mà chính mình đang giữ; chỉ được cấp những quyền mà chính actor đang sở hữu (`requestedPermissions ⊆ actor.permissions`); chỉ admin mới có quyền mời hoặc gán role `admin`.
 - Không xóa được role đang có người giữ, phải gỡ role khỏi mọi người trước.
 - Không gán được `customer` cùng role nhân viên cho một tài khoản (tài khoản khách và tài khoản nhân viên tách riêng).
 - Đổi quyền của role có hiệu lực ngay từ request tiếp theo, không cần đăng nhập lại.
-
 ### Actor
 
 Mọi request đều có `req.actor`, do middleware gắn vào:
@@ -164,15 +164,37 @@ ordersRouter.patch(
 - Người có `staff:manage` mời nhân viên: nhập email, tên, chọn role. Hệ thống gửi link đặt mật khẩu (hạn 72 giờ, dùng 1 lần).
 - Nhân viên đăng nhập bằng email + mật khẩu tại `/admin/login`, không dùng Google.
 - Khóa nhân viên: không xóa bản ghi, đặt `lockedAt`, xóa mọi phiên. Lịch sử thao tác vẫn giữ tên người đó.
+- Với thao tác khóa, mở khóa hoặc đổi role, nhân viên không phải admin chỉ được quản lý người có toàn bộ quyền hiện tại nằm trong quyền của mình. Đọc role và quyền của người đích trong cùng transaction với thao tác; không đủ quyền trả 403 `FORBIDDEN`. Admin vẫn chịu các ràng buộc bảo vệ chính mình và admin cuối cùng.
+- Trang quản trị hiển thị thông báo lỗi tải dữ liệu trong khối `role="alert"`, không coi lỗi 401/403 là danh sách rỗng. `QueryCache` và `MutationCache` gặp lỗi 401 thì invalidate `['actor']` để layout cập nhật phiên và chuyển về `/admin/login` nếu phiên đã mất hiệu lực.
 
 ### Chống dò mật khẩu
 
 - Sai 5 lần trong 15 phút theo cặp (email, IP) thì khóa thử đăng nhập 15 phút, trả 429.
 - Thông báo lỗi không phân biệt "sai email" và "sai mật khẩu".
 
+### Chống spam đăng ký và yêu cầu đặt lại mật khẩu
+
+- **Đăng ký (`POST /api/auth/register`)**: Giới hạn tối đa 5 lần / giờ / IP. Vượt ngưỡng trả lỗi 429 `TOO_MANY_REQUESTS` với thông báo tiếng Việt, không tạo tài khoản và không gửi email xác thực.
+- **Quên mật khẩu (`POST /api/auth/forgot-password`)**: Giới hạn tối đa 3 lần / 15 phút / email và 10 lần / giờ / IP. Vượt ngưỡng vẫn trả phản hồi chung thành công giống hệt bình thường (chống dò email), nhưng không tạo token trong DB và không gửi email.
+- **Honeypot form đăng ký**: Form đăng ký chứa trường ẩn (`website`, ẩn khỏi màn hình và trình đọc bằng CSS, `tabIndex=-1`, `autoComplete="off"`, `aria-hidden="true"`). Request có dữ liệu honeypot bị từ chối với lỗi 400 chung, không tạo tài khoản, không gửi email.
+- **Cấu hình Trust Proxy**: Biến môi trường `TRUST_PROXY` nhận số hop (số nguyên >= 0, ví dụ 1) hoặc danh sách IP/subnet proxy phân tách bằng dấu phẩy (mặc định tắt: 0 / false). Khi bật, ứng dụng truyền số hop hoặc danh sách IP vào `app.set('trust proxy', ...)`, tuyệt đối không dùng giá trị `true` để ngăn chặn kẻ xấu tự tạo header `X-Forwarded-For` giả mạo nhằm vượt qua các bộ đếm tần suất theo IP.
+- **Bộ đếm trong bộ nhớ**: Bộ đếm tần suất tự cài đặt trong bộ nhớ (hỗ trợ tham số thời gian phục vụ kiểm thử), không dùng thư viện ngoài.
+
+### Phòng chống chiếm tài khoản trước (pre-hijacking) khi liên kết Google
+
+- Khi người dùng đăng nhập bằng Google và email Google đã xác thực trùng với một tài khoản khách đã tồn tại trong hệ thống:
+  - Nếu tài khoản đã xác thực email (`emailVerified = true`): giữ nguyên mật khẩu và các phiên hiện có, chỉ tạo liên kết OAuth.
+  - Nếu tài khoản chưa xác thực email (`emailVerified = false`): để ngăn chặn kẻ xấu đăng ký trước bằng email nạn nhân để giữ quyền truy cập qua mật khẩu, hệ thống thực hiện trong cùng transaction:
+    1. Xóa `passwordHash` (đặt về null).
+    2. Xóa toàn bộ phiên cũ trong bảng `sessions`.
+    3. Vô hiệu hóa mọi token xác thực và đặt lại mật khẩu còn hạn (`usedAt = now`).
+    4. Cập nhật `emailVerified = true`.
+    5. Tạo liên kết OAuth và cấp phiên mới.
+    Mật khẩu do kẻ xấu đặt trước đó lập tức bị vô hiệu, không thể dùng để đăng nhập.
+
 ### Nhật ký thao tác (audit log)
 
-- `recordAudit({ actor, action, targetType, targetId, before?, after? })` ghi vào bảng `audit_logs`.
+- `recordAudit(tx, { actorId, action, targetType, targetId, before?, after? })` ghi vào bảng `audit_logs` trong cùng transaction client (`tx`) với thao tác chính.
 - `identity` tự ghi: mời, khóa, mở khóa nhân viên; gán, gỡ role; tạo, sửa, xóa role; khóa tài khoản khách.
 - Module khác gọi `recordAudit` cho thao tác back-office của họ (đổi trạng thái đơn, khớp tay thanh toán, ẩn review...). Ghi trong cùng transaction với thao tác chính.
 - Audit log chỉ thêm, không sửa, không xóa qua API.
@@ -299,6 +321,13 @@ model ConsentRecord { /* anonymousId, userId?, personalization, marketing, polic
 - `features/identity/` (khách): đăng nhập, đăng ký, quên và đặt lại mật khẩu, trang tài khoản (thông tin, đổi mật khẩu, quyền riêng tư, xóa tài khoản), banner đồng ý.
 - `features/identity/admin/` (back-office): đăng nhập nhân viên, danh sách và mời nhân viên, quản lý role (bảng tick quyền theo nhóm), tra cứu khách, xem audit log.
 - Hook `useActor()` và `useCan(permission)` để các feature ẩn hoặc hiện menu, nút.
+- Layout khách dùng chung Header trên mọi route, kể cả `/`: trạng thái phiên, đăng xuất và link quyền riêng tư phản ánh cùng cache actor.
+- Verify hoàn tất đúng trong StrictMode, chỉ gửi một request cho token đã đọc. Verify và reset giữ token trong component nhưng xóa token khỏi URL bằng navigation `replace`.
+- Reset thành công phải reset cache actor và nạp lại trạng thái guest trước khi hiện link đăng nhập; khách ở `/login`, nhân viên ở `/admin/login`.
+- Query không retry lỗi HTTP 4xx; phiên nhân viên bị thu hồi phải chuyển về `/admin/login` trong 2 giây khi điều hướng.
+- Form identity dùng `noValidate` và kiểm tra email, mật khẩu bằng thông báo tiếng Việt của ứng dụng. Reset thiếu token hiện lỗi ngay, không hiện form.
+- Login và register không tràn ngang ở viewport 375px. Dialog mời, gán role, tạo và sửa role đưa focus vào trong, giữ Tab trong dialog, Escape đóng và trả focus đúng opener.
+- Hai ô ngày lọc audit gắn label với input để có accessible name.
 
 ## Testing
 
@@ -306,11 +335,14 @@ model ConsentRecord { /* anonymousId, userId?, personalization, marketing, polic
 - Integration: mọi endpoint ở bảng API, gồm 401/403, token hết hạn hoặc dùng lại, Origin sai; đổi quyền của role thì request tiếp theo của nhân viên bị từ chối hoặc được phép ngay.
 - Test ma trận quyền: với mỗi role tạo sẵn, gọi mọi endpoint back-office và so với bảng quyền mặc định.
 - Google OAuth test bằng phản hồi giả lập, không gọi Google thật.
+- Component trong StrictMode: verify thành công hoặc lỗi không treo và không dùng token hai lần; reset bỏ actor cũ rồi giữ đúng route login cho khách và nhân viên; dialog giữ focus qua rerender, Escape đóng và trả opener.
 - E2E: khách đăng ký → đăng xuất → đăng nhập; admin mời nhân viên `sales` → nhân viên đặt mật khẩu → đăng nhập chỉ thấy menu đơn hàng.
+- Rate limit: unit test kiểm tra bộ đếm vượt ngưỡng, hết cửa sổ thì mở lại, các khóa độc lập; integration test đăng ký lần 6 cùng IP nhận 429, forgot-password lần 4 cùng email không gửi email nhưng phản hồi giống hệt; honeypot không tạo user; kịch bản pre-hijacking tài khoản chưa xác thực đăng nhập Google thì mật khẩu cũ không đăng nhập được và phiên cũ bị xóa.
 
 ## Boundaries (riêng module)
 
 - **Always:** kiểm tra quyền ở backend cho mọi endpoint back-office; so sánh token bằng hàm constant-time; ghi audit log cho thao tác phân quyền.
+- **Always:** kiểm tra rate limit cho register và forgot-password; xóa credential và phiên cũ khi liên kết Google với tài khoản chưa xác thực email.
 - **Ask first:** thêm quyền vào danh mục; đổi quyền mặc định của role tạo sẵn; thêm phương thức đăng nhập; đổi thời hạn phiên; đổi các nhóm đồng ý.
 - **Never:** dựa vào việc ẩn nút ở frontend thay cho kiểm tra quyền; lưu token gốc trong DB; trả `passwordHash` ra API; cho phép sửa hoặc xóa audit log qua API.
 
@@ -330,6 +362,8 @@ model ConsentRecord { /* anonymousId, userId?, personalization, marketing, polic
 - [ ] Request thay đổi dữ liệu với `Origin` lạ bị từ chối 403.
 - [ ] Xóa tài khoản khách xong thì không đăng nhập lại được, email gốc không còn trong DB.
 - [ ] Coverage `service.ts` ≥ 80%.
+- [ ] Đăng ký quá 5 lần / giờ / IP nhận 429; forgot-password quá 3 lần / 15 phút / email hoặc 10 lần / giờ / IP không gửi email; honeypot chặn bot không tạo user.
+- [ ] Tài khoản chưa xác thực email khi liên kết Google bị xóa mật khẩu cũ và phiên cũ, kẻ xấu không thể đăng nhập lại bằng mật khẩu đặt trước.
 
 ## Open Questions
 

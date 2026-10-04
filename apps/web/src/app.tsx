@@ -1,11 +1,81 @@
-import { Route, Routes } from 'react-router-dom';
+import { Outlet, Route, Routes } from 'react-router-dom';
+import { AccountPage } from './features/identity/account-page';
+import { AdminDashboardPage } from './features/identity/admin/dashboard-page';
+import { AdminLayout } from './features/identity/admin/admin-layout';
+import { AuditLogPage } from './features/identity/admin/audit-log-page';
+import { CustomersPage } from './features/identity/admin/customers-page';
+import { RolesPage } from './features/identity/admin/roles-page';
+import { StaffLoginPage } from './features/identity/admin/login-page';
+import { StaffPage } from './features/identity/admin/staff-page';
+import { ConsentBanner } from './features/identity/consent-banner';
+import { ForgotPasswordPage } from './features/identity/forgot-password-page';
+import { LoginPage } from './features/identity/login-page';
+import { PrivacySettingsPage } from './features/identity/privacy-settings';
+import { RegisterPage } from './features/identity/register-page';
+import { ResetPasswordPage } from './features/identity/reset-password-page';
+import { VerifyEmailPage } from './features/identity/verify-email-page';
 import { HealthPage } from './shared/health-page';
+import { Header } from './shared/header';
 
-// Bảng route của web. Mỗi module thêm route của mình ở đây khi có trang.
+function CustomerLayout() {
+  // Header thuộc layout để trang chủ và mọi luồng tài khoản cùng phản ánh phiên hiện tại.
+  return (
+    <>
+      <Header />
+      <Outlet />
+    </>
+  );
+}
+
+function AdminPlaceholderPage({ title }: { title: string }) {
+  return (
+    <div
+      style={{
+        padding: 'var(--space-6)',
+        backgroundColor: 'var(--color-surface)',
+        borderRadius: 'var(--radius-card)',
+        border: '1px solid var(--color-border)',
+      }}
+    >
+      <h2 style={{ margin: '0 0 var(--space-2) 0', color: 'var(--color-ink)' }}>{title}</h2>
+      <p style={{ margin: 0, color: 'var(--color-ink-muted)' }}>
+        Chức năng đang được phát triển trong module kế tiếp.
+      </p>
+    </div>
+  );
+}
+
 export function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HealthPage />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route element={<CustomerLayout />}>
+          <Route path="/" element={<HealthPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/me" element={<AccountPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/privacy" element={<PrivacySettingsPage />} />
+        </Route>
+        <Route path="/admin/login" element={<StaffLoginPage />} />
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route index element={<AdminDashboardPage />} />
+          <Route path="roles" element={<RolesPage />} />
+          <Route path="staff" element={<StaffPage />} />
+          <Route path="customers" element={<CustomersPage />} />
+          <Route path="audit-logs" element={<AuditLogPage />} />
+          <Route path="orders" element={<AdminPlaceholderPage title="Quản lý đơn hàng" />} />
+          <Route path="products" element={<AdminPlaceholderPage title="Quản lý sản phẩm" />} />
+          <Route
+            path="conversations"
+            element={<AdminPlaceholderPage title="Chăm sóc khách hàng" />}
+          />
+          <Route path="ai" element={<AdminPlaceholderPage title="Cấu hình AI" />} />
+        </Route>
+      </Routes>
+      <ConsentBanner />
+    </>
   );
 }

@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from 'vitest';
-import { db } from './db';
+import { db } from '../../../src/shared/db';
 
 // Test mẫu chạy qua PostgreSQL thật. Dùng bảng tạm riêng vì chưa có module nào có bảng.
 describe('hạ tầng DB test', () => {

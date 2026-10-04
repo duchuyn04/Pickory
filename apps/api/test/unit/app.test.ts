@@ -2,8 +2,8 @@ import express from 'express';
 import request from 'supertest';
 import { z } from 'zod';
 import { describe, expect, it } from 'vitest';
-import { createApp } from './app';
-import { AppError, errorHandler } from './shared/errors';
+import { createApp } from '../../src/app';
+import { AppError, errorHandler } from '../../src/shared/errors';
 
 describe('GET /api/health', () => {
   it('trả ok', async () => {

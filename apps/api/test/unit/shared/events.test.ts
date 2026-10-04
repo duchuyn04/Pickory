@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EventBus } from './events';
+import { EventBus } from '../../../src/shared/events';
 
 describe('EventBus', () => {
   it('gọi handler với payload', async () => {
