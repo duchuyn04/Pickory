@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "db:migrate": "pnpm --filter @pickory/api db:migrate",
     "db:seed": "pnpm --filter @pickory/api db:seed",
+    "admin:create": "pnpm --filter @pickory/api admin:create",
     "postinstall": "pnpm --filter @pickory/api db:generate"
   },
   "devDependencies": {
@@ -24,6 +25,7 @@
     "eslint": "^10.11.0",
     "eslint-config-prettier": "^10.1.8",
     "globals": "^17.13.0",
+    "jsdom": "^30.1.1",
     "prettier": "^3.9.9",
     "tsx": "^4.23.15",
     "typescript": "^6.0.3",

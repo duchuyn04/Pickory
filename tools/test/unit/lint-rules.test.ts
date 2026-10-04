@@ -10,8 +10,8 @@ import { describe, expect, it } from 'vitest';
 //   // @expect error | none            mong đợi `no-restricted-imports` báo lỗi hay không
 // Dùng đường dẫn giả lập vì quy tắc phụ thuộc vị trí file (ví dụ chỉ providers/ được import `ai`).
 
-const REPO_ROOT = fileURLToPath(new URL('..', import.meta.url));
-const FIXTURES_DIR = new URL('./lint-fixtures/', import.meta.url);
+const REPO_ROOT = fileURLToPath(new URL('../../..', import.meta.url));
+const FIXTURES_DIR = new URL('../../lint-fixtures/', import.meta.url);
 
 // Đọc một file mẫu: lấy đường dẫn giả lập, kết quả mong đợi và mã nguồn.
 function readFixture(name: string) {

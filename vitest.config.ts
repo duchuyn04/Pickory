@@ -9,13 +9,7 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       include: ['apps/api/src/**/*.ts'],
-      exclude: [
-        '**/*.test.ts',
-        '**/*.int.test.ts',
-        '**/index.ts',
-        '**/*.d.ts',
-        'apps/api/src/generated/**',
-      ],
+      exclude: ['**/index.ts', '**/*.d.ts', 'apps/api/src/generated/**'],
       // Ngưỡng 80% dòng cho logic nghiệp vụ của từng module.
       thresholds: {
         'apps/api/src/modules/**/service.ts': { lines: 80 },
@@ -26,16 +20,21 @@ export default defineConfig({
         extends: true,
         test: {
           name: 'unit',
-          include: ['**/*.test.{ts,tsx}'],
-          exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**', '**/*.int.test.ts'],
+          include: [
+            'apps/*/test/unit/**/*.test.{ts,tsx}',
+            'packages/*/test/unit/**/*.test.{ts,tsx}',
+            'tools/test/unit/**/*.test.ts',
+          ],
         },
       },
       {
         extends: true,
         test: {
           name: 'integration',
-          include: ['**/*.int.test.ts'],
-          exclude: ['**/node_modules/**', '**/dist/**'],
+          include: [
+            'apps/*/test/integration/**/*.int.test.{ts,tsx}',
+            'packages/*/test/integration/**/*.int.test.{ts,tsx}',
+          ],
           globalSetup: ['apps/api/test/global-setup.ts'],
           setupFiles: ['apps/api/test/setup.ts'],
           fileParallelism: false,

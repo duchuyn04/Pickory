@@ -1,6 +1,6 @@
 import { Writable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
-import { createLogger } from './logger';
+import { createLogger } from '../../../src/shared/logger';
 
 function capture() {
   const lines: string[] = [];
