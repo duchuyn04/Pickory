@@ -50,9 +50,9 @@ T01 workspace + tooling
 2. **`admin` có mọi quyền một cách ngầm định**: actor có role `admin` nhận toàn bộ danh mục trong code, không dựa vào dòng `role_permissions`. Quyền thêm sau này admin có ngay, không cần seed lại.
 3. **Lát cắt dọc ở mức backend, UI đi ngay sau.** Mỗi task backend đi trọn một đường schema → repository → service → route → integration test, kiểm tra được bằng Supertest. Task UI tương ứng đặt ngay sau, không dồn UI xuống cuối. Lý do: gộp cả API lẫn UI vào một task sẽ vượt 5 file.
 4. **Migration tuần tự giữa hai track.** Task nào tạo migration thì trước khi merge phải rebase lên `main` rồi chạy lại `pnpm db:migrate`. Không sửa migration đã merge. Nếu bản Prisma khóa lúc khởi tạo hỗ trợ schema nhiều file (GA từ Prisma 6.7), mỗi module có file riêng: `prisma/schema/identity.prisma`, `prisma/schema/ai-gateway.prisma`. T03 đã xác nhận: Prisma 7.10.0 hỗ trợ `prisma/schema/` nhiều file (`prisma.config.ts` trỏ `schema: 'prisma/schema'`), nên mỗi module một file `.prisma`.
-5. **Gửi email qua port `EmailSender`.** Test dùng bản in-memory. Dev dùng bản "file outbox" ghi email ra `apps/api/.dev-outbox/` (thư mục bị gitignore), để Playwright đọc được link mời và link đặt lại mật khẩu. Provider thật làm sau khi chốt dịch vụ email (Open Question của `SPEC.md`).
+5. **Gửi email qua port `EmailSender`.** Test dùng bản in-memory. Dev dùng bản "file outbox" ghi email ra `apps/backend/.dev-outbox/` (thư mục bị gitignore), để Playwright đọc được link mời và link đặt lại mật khẩu. Provider thật làm sau khi chốt dịch vụ email (Open Question của `SPEC.md`).
 6. **Bộ đếm trong bộ nhớ** cho chống dò mật khẩu (`identity`) và hạn mức chat theo người (`ai-gateway`), vì MVP chạy 1 instance. Spec `ai-gateway` đã ghi rõ ràng buộc này.
-7. **Event bus trong process**: `apps/api/src/shared/events.ts` là emitter có kiểu. `identity` phát `UserLinkedEvent` và `UserDeletedEvent`. Handler lỗi chỉ ghi log, không làm hỏng luồng chính.
+7. **Event bus trong process**: `apps/backend/src/shared/events.ts` là emitter có kiểu. `identity` phát `UserLinkedEvent` và `UserDeletedEvent`. Handler lỗi chỉ ghi log, không làm hỏng luồng chính.
 8. **Định nghĩa dòng `ai_usage_logs`**: 1 dòng cho mỗi bước LLM (đã gồm các lần retry của bước đó). Lời gọi không có tool là 1 bước, nên đúng 1 dòng. Vòng lặp tool 3 bước ghi 3 dòng. Lời gọi không phát sinh request ra ngoài (bị chặn ngân sách, circuit đang mở, embed trúng cache toàn bộ) vẫn ghi đúng 1 dòng, với `status` là `blocked`, `error` hoặc `ok` và `costUsd = 0`. Cách hiểu này gỡ mâu thuẫn giữa hai tiêu chí trong spec.
 9. **Bậc ưu tiên ngân sách** (ghi trong code `ai-gateway/budget.ts`):
 
@@ -65,7 +65,7 @@ T01 workspace + tooling
 10. **`actorKey` có tiền tố** `user:<id>` hoặc `anon:<id>` để gateway phân biệt hạn mức 50 và 15 mà không đổi interface `CallContext` (Open Question 4).
 11. **Cache embedding lưu `Float[]`**, không dùng kiểu `vector`, vì bảng cache không cần tìm kiếm tương đồng. Cột `vector(1536)` để dành cho `smart-search`. T03 vẫn bật extension `pgvector`. Key cache là SHA-256 của `model + "\0" + text đã qua redactPII`, tức chính text được gửi đi.
 12. **Retry chỉ nằm ở gateway**: adapter AI SDK đặt `maxRetries: 0`. Vòng lặp tool cần một chỗ móc vào giữa các bước (kiểm tra ngân sách, redactPII kết quả tool, ghi log). AI-00 xác minh hook `prepareStep`/`onStepFinish` của bản AI SDK được khóa. Nếu không có hook phù hợp, gateway tự điều khiển từng bước (mỗi bước gọi 1 lần `generateText` một bước).
-13. **Tên package**: `@pickory/api`, `@pickory/web`, `@pickory/shared`. Lệnh test tập trung: `pnpm --filter @pickory/api test -- <đường dẫn>`.
+13. **Tên package**: `@pickory/backend`, `@pickory/frontend`, `@pickory/shared`. Lệnh test tập trung: `pnpm --filter @pickory/backend test -- <đường dẫn>`.
 14. **Khung back-office tối thiểu** (layout + menu theo quyền) làm trong UI-05 vì `identity` cần trang admin ngay. Sau này `admin-console` thay khung này bằng bản đầy đủ.
 
 ## Task List

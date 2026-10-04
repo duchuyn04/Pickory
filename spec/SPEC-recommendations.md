@@ -76,7 +76,7 @@ Khách chưa đồng ý: `for-you` thay bằng "Bán chạy" (theo danh mục ph
 ### Interface public
 
 ```ts
-// apps/api/src/modules/recommendations/index.ts
+// apps/backend/src/modules/recommendations/index.ts
 export const recommender: {
   recommend(input: {
     placement: 'for-you' | 'similar' | 'bought-together' | 'cart';

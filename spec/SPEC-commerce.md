@@ -157,7 +157,7 @@ Khách có tài khoản lưu tối đa 10 địa chỉ, chọn 1 địa chỉ m�
 ### Interface public
 
 ```ts
-// apps/api/src/modules/commerce/index.ts
+// apps/backend/src/modules/commerce/index.ts
 export const commerceReader: {
   getRatingSummary(productIds: string[]): Promise<Map<string, RatingSummary>>;
   getVisibleReviews(productId: string, opts: { limit: number; cursor?: string }): Promise<ReviewPage>;

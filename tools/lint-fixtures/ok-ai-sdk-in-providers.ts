@@ -1,3 +1,3 @@
-// @lint-as apps/api/src/modules/ai-gateway/providers/deepseek.ts
+// @lint-as apps/backend/src/modules/ai-gateway/providers/deepseek.ts
 // @expect none
 import { generateText } from 'ai';

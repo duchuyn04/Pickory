@@ -1,3 +1,3 @@
-// @lint-as apps/api/src/modules/catalog/ok.ts
+// @lint-as apps/backend/src/modules/catalog/ok.ts
 // @expect none
 import { requirePermission } from '../identity';

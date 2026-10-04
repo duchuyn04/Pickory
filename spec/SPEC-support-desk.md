@@ -86,7 +86,7 @@ Bàn làm việc của nhân viên CSKH: nhận các hội thoại chatbot chuy�
 ### Interface public
 
 ```ts
-// apps/api/src/modules/support-desk/index.ts
+// apps/backend/src/modules/support-desk/index.ts
 export const supportMetrics: {
   get(range: DateRange): Promise<{
     handoffs: number;

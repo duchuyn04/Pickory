@@ -104,7 +104,7 @@ Danh mục này mở rộng khi viết spec các module sau. Thêm quyền mới
 Mọi request đều có `req.actor`, do middleware gắn vào:
 
 ```ts
-// apps/api/src/modules/identity/index.ts
+// apps/backend/src/modules/identity/index.ts
 export type Actor = {
   anonymousId: string;              // luôn có, lấy từ cookie pk_anon
   userId: string | null;            // null nếu chưa đăng nhập

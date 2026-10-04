@@ -1,3 +1,3 @@
-// @lint-as apps/web/src/shared/bad.ts
+// @lint-as apps/frontend/src/shared/bad.ts
 // @expect error
 import { streamText } from 'ai';

@@ -114,7 +114,7 @@ Bộ lọc làm kết quả rỗng thì nới lỏng lần lượt: bỏ bộ l�
 ### Interface public
 
 ```ts
-// apps/api/src/modules/smart-search/index.ts
+// apps/backend/src/modules/smart-search/index.ts
 export const productSearch: {
   search(input: {
     query: string;

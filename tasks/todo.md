@@ -3,14 +3,14 @@
 Plan và quyết định thiết kế: `tasks/plan.md`. Spec: `spec/SPEC-identity.md`, `spec/SPEC-ai-gateway.md`.
 Lịch 6 tuần, 6 sprint 1 tuần (chi tiết ở `tasks/plan.md`): Sprint 1: T01 đến T05, AI-00, AI-01. Sprint 2: ID-01 đến ID-04, AI-02, AI-03. Sprint 3: UI-05, ID-05, UI-01, ID-06, AI-04 đến AI-06. Sprint 4: ID-07, UI-02, ID-08, UI-03, AI-07, AI-08. Sprint 5: ID-09, ID-10, UI-04, ID-11, UI-06, AI-09. Sprint 6: ID-12, ID-13, UI-07, ID-14, UI-08, E2E-01.
 
-Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` trước khi commit. Lệnh test tập trung: `pnpm --filter @pickory/api test -- <đường dẫn>`. Kích thước: XS 1 file, S 1-2, M 3-5.
+Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` trước khi commit. Lệnh test tập trung: `pnpm --filter @pickory/backend test -- <đường dẫn>`. Kích thước: XS 1 file, S 1-2, M 3-5.
 
 ---
 
 ## Phase 0: Nền tảng chung
 
 ### T01: Khởi tạo pnpm workspace và tooling
-**Mô tả:** Dựng monorepo `apps/api`, `apps/web`, `packages/shared`, TypeScript strict, ESLint, Prettier, Vitest. Chưa có logic nghiệp vụ.
+**Mô tả:** Dựng monorepo `apps/backend`, `apps/frontend`, `packages/shared`, TypeScript strict, ESLint, Prettier, Vitest. Chưa có logic nghiệp vụ.
 **Tiêu chí nghiệm thu:**
 - [x] `pnpm install`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build` chạy sạch trên cây rỗng
 - [x] Có `.env.example` (chưa có secret), `.gitignore` đã đủ
@@ -26,7 +26,7 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 - [x] Logger không in được giá trị của key có tên `password`, `token`, `apiKey`
 - [x] Event bus: handler ném lỗi thì được log, không ném ra nơi phát
 **Kiểm tra:** Supertest cho `/api/health` và đường lỗi; unit test event bus và logger redact
-**Phụ thuộc:** T01 · **File:** `apps/api/src/{app,server}.ts`, `shared/{errors,logger,config,events}.ts` · **Quy mô:** M
+**Phụ thuộc:** T01 · **File:** `apps/backend/src/{app,server}.ts`, `shared/{errors,logger,config,events}.ts` · **Quy mô:** M
 
 ### T03: PostgreSQL, Prisma và test DB
 **Mô tả:** Docker Compose cho PostgreSQL + pgvector, Prisma, `pnpm db:migrate`, `pnpm db:seed` (khung rỗng), DB test riêng, hạ tầng test integration.
@@ -36,7 +36,7 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 - [x] Test integration dùng DB riêng, migrate trước bộ test, dọn bảng giữa các test
 - [x] Có 1 test integration mẫu chạy qua DB thật
 **Kiểm tra:** `pnpm test` có test integration pass; DB dev và DB test tách biệt
-**Phụ thuộc:** T02 · **File:** `docker-compose.yml`, `apps/api/prisma/schema/base.prisma`, `apps/api/src/shared/db.ts`, `apps/api/test/setup.ts` · **Quy mô:** M
+**Phụ thuộc:** T02 · **File:** `docker-compose.yml`, `apps/backend/prisma/schema/base.prisma`, `apps/backend/src/shared/db.ts`, `apps/backend/test/setup.ts` · **Quy mô:** M
 
 ### T04: Web skeleton
 **Mô tả:** React + Vite, React Router, TanStack Query, client gọi API, proxy dev tới port 3000, trang placeholder.
@@ -44,7 +44,7 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 - [x] `pnpm dev` chạy web 5173 và api 3000 cùng lúc, web gọi được `/api/health`
 - [x] `pnpm build` build được cả web
 **Kiểm tra:** mở trình duyệt xem trang hiển thị trạng thái health
-**Phụ thuộc:** T01, T02 · **File:** `apps/web/{vite.config.ts,index.html}`, `src/{main,app}.tsx`, `src/shared/api.ts` · **Quy mô:** S
+**Phụ thuộc:** T01, T02 · **File:** `apps/frontend/{vite.config.ts,index.html}`, `src/{main,app}.tsx`, `src/shared/api.ts` · **Quy mô:** S
 
 ### T05: ESLint chặn import sai ranh giới module
 **Mô tả:** Quy tắc `no-restricted-imports`: ngoài `ai-gateway/providers/` cấm `ai`, `@ai-sdk/*`, `openai`; ngoài `knowledge-base/ingest/` cấm `@langchain/*`; module chỉ import `modules/<id>/index.ts` của module khác.
@@ -108,7 +108,7 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 - [x] Nhân viên đăng nhập được, menu chỉ hiện mục có quyền; khách hoặc người chưa đăng nhập vào `/admin` bị chuyển về đăng nhập
 - [x] Ẩn nút chỉ để tiện dùng, backend vẫn kiểm tra
 **Kiểm tra:** chạy `pnpm dev`, đăng nhập bằng admin dev, kiểm tra thủ công; test hook `useCan`
-**Phụ thuộc:** ID-04, T04 · **File:** `apps/web/src/features/identity/{use-actor,admin/login-page,admin/admin-layout}.tsx` · **Quy mô:** M
+**Phụ thuộc:** ID-04, T04 · **File:** `apps/frontend/src/features/identity/{use-actor,admin/login-page,admin/admin-layout}.tsx` · **Quy mô:** M
 
 ### ID-05: Đăng ký, đăng nhập khách và UserLinkedEvent
 **Mô tả:** `POST /api/auth/register`, `POST /api/auth/login`, role `customer`, phiên khách 30 ngày (gia hạn khi còn dưới 7 ngày), phát `UserLinkedEvent { anonymousId, userId }` khi đăng ký hoặc đăng nhập khách. Email thuộc tài khoản nhân viên thì không đăng ký làm khách được.
@@ -262,7 +262,7 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 - [x] `lockStaff`, `unlockStaff`, `assignStaffRoles`: actor không phải admin thì hợp quyền hiện tại của target phải nằm trong `actor.permissions`, nếu không trả 403 `FORBIDDEN`; admin không bị ảnh hưởng
 - [x] Integration test: người có `staff:manage` khóa và đổi role của nhân viên giữ quyền mình không có nhận 403; khóa nhân viên có quyền là tập con vẫn 200
 **Kiểm tra:** `pnpm lint && pnpm typecheck && pnpm test`; thủ công trên `pnpm dev`: xóa phiên trong DB rồi bấm sang trang admin khác thì bị chuyển về `/admin/login`
-**Phụ thuộc:** UI-07, UI-08, ID-13 · **File:** `apps/web/src/main.tsx`, `features/identity/admin/{staff-page,roles-page,customers-page,audit-log-page}.tsx`, `modules/identity/{staff,routes}.ts`, `staff.int.test.ts` · **Quy mô:** S
+**Phụ thuộc:** UI-07, UI-08, ID-13 · **File:** `apps/frontend/src/main.tsx`, `features/identity/admin/{staff-page,roles-page,customers-page,audit-log-page}.tsx`, `modules/identity/{staff,routes}.ts`, `staff.int.test.ts` · **Quy mô:** S
 
 ### ID-16: Sửa lỗi frontend từ đợt test thủ công identity
 **Mô tả:** Sửa 10 lỗi giao diện tìm thấy khi chạy `docs/testing/identity-manual-test-cases.md` (run `20261004-mutnnjow`). Backend và bảo mật đã đạt, các lỗi đều ở frontend. Hai mục đầu là P1, phải xong trước khi coi UI-01 và UI-02 là hoàn tất.
@@ -280,7 +280,7 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 **Kiểm tra:** `pnpm lint && pnpm typecheck && pnpm test`; chạy lại bằng Playwright mọi case FAILED trong `docs/testing/identity-manual-test-cases.md` và 3 case đã sửa kịch bản (MT-ID-045, 067, 078), cập nhật trạng thái và bảng tổng hợp
 **Kết quả:** 2026-10-04, run `20261004-mutpl1w0`: 18/18 case chạy lại PASS, tổng hợp 96 PASS / 0 FAILED / 4 UNKNOWN. `pnpm lint && pnpm typecheck && pnpm test` đạt 201 test trong 32 file.
 **Dependency:** jsdom (devDependency, test component web) được người dùng duyệt ngày 2026-10-04 theo mục Ask first của SPEC.md.
-**Phụ thuộc:** ID-15, UI-01, UI-02, UI-03, UI-06, UI-07, UI-08 · **File:** `apps/web/src/main.tsx`, `apps/web/src/app.tsx`, `shared/header.tsx`, `features/identity/{verify-email-page,reset-password-page,login-page,register-page}.tsx`, `features/identity/admin/{invite-dialog,assign-roles-dialog,role-form,audit-log-page}.tsx` · **Quy mô:** M
+**Phụ thuộc:** ID-15, UI-01, UI-02, UI-03, UI-06, UI-07, UI-08 · **File:** `apps/frontend/src/main.tsx`, `apps/frontend/src/app.tsx`, `shared/header.tsx`, `features/identity/{verify-email-page,reset-password-page,login-page,register-page}.tsx`, `features/identity/admin/{invite-dialog,assign-roles-dialog,role-form,audit-log-page}.tsx` · **Quy mô:** M
 
 ### ID-17: Chống spam đăng ký và chặn chiếm tài khoản trước khi liên kết Google
 **Mô tả:** Hai lỗ hổng tìm thấy sau review. (1) `register` và `forgot-password` không giới hạn tần suất: bot có thể tạo tài khoản rác, dùng Pickory gửi email hàng loạt tới địa chỉ bất kỳ và làm quá tải CPU (Argon2). (2) Chiếm tài khoản trước (pre-hijacking): kẻ xấu đăng ký trước bằng email nạn nhân, nạn nhân sau đó đăng nhập Google, hệ thống tự liên kết vào tài khoản có mật khẩu do kẻ xấu đặt, kẻ xấu vẫn vào được. Đổi hành vi nên cập nhật `SPEC-identity.md` trước.
@@ -316,7 +316,7 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 - [ ] Giá VND thường gặp (`25.990.000`, `25990000đ`, `5 triệu`) và mã model (`RTX 4070`, `SM-S918B`) không bị ẩn nhầm
 - [ ] Idempotent: chạy 2 lần cho cùng kết quả
 **Kiểm tra:** unit với bộ ví dụ dương và âm (cả hai nhóm đều bắt buộc)
-**Phụ thuộc:** T02 · **File:** `apps/api/src/shared/privacy.ts` (+ test) · **Quy mô:** S
+**Phụ thuộc:** T02 · **File:** `apps/backend/src/shared/privacy.ts` (+ test) · **Quy mô:** S
 
 ### AI-02: Hợp đồng gateway, fake provider và usage log
 **Mô tả:** Kiểu public trong `ai-gateway/index.ts` (`AiFeature`, `CallContext`, `AiGateway`, `ToolDefinition`, 3 lớp lỗi), cổng `Provider`, `fake-provider.ts` (kết quả cố định, ghi lại request), bảng `ai_usage_logs`, `pricing.ts`, hàm tính chi phí, `chat()` đi qua `redactPII` rồi provider, ghi log theo Decision 8.
@@ -344,7 +344,7 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 - [ ] Adapter test bằng HTTP mock: 200, 429, 500, timeout đều ánh xạ đúng và đi qua bộ retry của AI-03
 - [ ] API key không xuất hiện trong log hay lỗi trả ra
 - [ ] Với `AI_LIVE_TESTS=1`: live test chat với DeepSeek thật pass
-**Kiểm tra:** `pnpm test`; chạy thêm `AI_LIVE_TESTS=1 pnpm --filter @pickory/api test -- ai-gateway/providers`
+**Kiểm tra:** `pnpm test`; chạy thêm `AI_LIVE_TESTS=1 pnpm --filter @pickory/backend test -- ai-gateway/providers`
 **Phụ thuộc:** AI-03, AI-00 · **File:** `modules/ai-gateway/providers/{deepseek,index}.ts`, `shared/config.ts` (+ test, `msw`) · **Quy mô:** M
 
 ### AI-05: Ngân sách và hạn mức
@@ -395,7 +395,7 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 - [ ] `getUsageSummary` đúng số liệu trên dữ liệu log mẫu (gồm p95)
 - [ ] Giá trị âm hoặc không hợp lệ bị 400
 **Kiểm tra:** integration; thủ công trang cấu hình bằng admin dev
-**Phụ thuộc:** AI-05, ID-04 · **File:** `modules/ai-gateway/{routes,usage-summary,index}.ts`, `apps/web/src/features/ai-gateway/admin/ai-settings-page.tsx` (+ test) · **Quy mô:** M
+**Phụ thuộc:** AI-05, ID-04 · **File:** `modules/ai-gateway/{routes,usage-summary,index}.ts`, `apps/frontend/src/features/ai-gateway/admin/ai-settings-page.tsx` (+ test) · **Quy mô:** M
 
 ---
 

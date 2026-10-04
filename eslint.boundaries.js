@@ -27,7 +27,7 @@ export const MODULE_IDS = [
   'admin-console',
 ];
 
-const MODULES_DIR = 'apps/api/src/modules';
+const MODULES_DIR = 'apps/backend/src/modules';
 
 // Quy tắc 1: SDK AI chỉ dùng trong ai-gateway/providers.
 const AI_SDK_BAN = {

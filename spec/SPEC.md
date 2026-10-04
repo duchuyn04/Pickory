@@ -64,17 +64,22 @@ pnpm admin:create -- --email <email>   # tạo tài khoản admin
 
 ```
 apps/
-  web/                    → React app
+  frontend/               → React app (Vite), package @pickory/frontend
     src/features/<module-id>/   → trang, component, hook của từng module
+      customer/           → trang dành cho khách (module lớn)
+      admin/              → trang back-office (module lớn)
+      components/         → component dùng trong nhiều trang của module
+      hooks/              → hook của module
     src/shared/                 → component và tiện ích dùng chung
     test/unit/features/<module-id>/ → test hook và logic UI, đối chiếu với src/features/
-  api/                    → Express API
+  backend/                → Express API, package @pickory/backend
     src/modules/<module-id>/
       routes.ts           → khai báo route, chỉ parse request và gọi service
       service.ts          → logic nghiệp vụ
       repository.ts       → truy cập database qua Prisma
       schemas.ts          → Zod schema của request/response
       index.ts            → public interface cho module khác dùng
+      (module lớn như identity tách thành thư mục: routes/, services/, security/, data/)
     src/shared/           → error, logger, config, middleware chung
     test/unit/modules/<module-id>/        → *.test.ts, đối chiếu với src/modules/
     test/unit/shared/                     → test tiện ích dùng chung
@@ -101,7 +106,7 @@ Test nằm ngoài `src/`; dưới `test/unit/` và `test/integration/`, giữ c�
 ## Code Style
 
 ```ts
-// apps/api/src/modules/catalog/routes.ts
+// apps/backend/src/modules/catalog/routes.ts
 import { Router } from 'express';
 import { requirePermission } from '../identity';
 import { createProductSchema } from './schemas';
@@ -117,7 +122,7 @@ catalogRouter.post('/admin/products', requirePermission('products:write'), async
 ```
 
 ```ts
-// apps/api/src/shared/errors.ts
+// apps/backend/src/shared/errors.ts
 export class AppError extends Error {
   constructor(
     public readonly code: string,      // 'PRODUCT_NOT_FOUND'

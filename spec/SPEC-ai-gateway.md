@@ -17,7 +17,7 @@ Là cửa duy nhất để hệ thống gọi API AI bên ngoài. Các module t�
 ## Interface public
 
 ```ts
-// apps/api/src/modules/ai-gateway/index.ts
+// apps/backend/src/modules/ai-gateway/index.ts
 export type AiFeature =
   | 'smart-search.parse-query'
   | 'smart-search.index'
@@ -129,7 +129,7 @@ Vì chưa biết ngân sách, mặc định đặt 30 USD/tháng. Giá trị tro
 
 ### Bảo vệ dữ liệu cá nhân
 
-- Mọi text gửi đi (message, text cần embed) đi qua `redactPII()` (hàm dùng chung ở `apps/api/src/shared/privacy.ts`), thay SĐT Việt Nam, email và số thẻ/số tài khoản ngân hàng bằng `[đã ẩn]`.
+- Mọi text gửi đi (message, text cần embed) đi qua `redactPII()` (hàm dùng chung ở `apps/backend/src/shared/privacy.ts`), thay SĐT Việt Nam, email và số thẻ/số tài khoản ngân hàng bằng `[đã ẩn]`.
 - Module gọi không được đưa tên, địa chỉ hay ID người dùng vào prompt. Hồ sơ sở thích chỉ gửi dạng tóm tắt (ví dụ: "quan tâm laptop gaming, ngân sách 20 đến 30 triệu").
 - `redactPII()` là lớp chặn cuối, không thay thế trách nhiệm của module gọi.
 
