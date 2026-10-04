@@ -13,6 +13,7 @@ export function PrivacySettingsPage() {
   const [savedMessage, setSavedMessage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
+    // Khởi tạo các giá trị checkbox từ bản ghi đồng ý hiện tại của người dùng.
     if (actor?.consent) {
       setPersonalization(actor.consent.personalization);
       setMarketing(actor.consent.marketing);
@@ -34,7 +35,9 @@ export function PrivacySettingsPage() {
           marketing,
         }),
       });
+      // Đánh dấu đã xác nhận lựa chọn trong localStorage để không hiện lại banner hỏi sự đồng ý.
       localStorage.setItem('pk_consent_chosen', 'true');
+      // Làm mới dữ liệu actor trong cache để các trang khác lập tức áp dụng quyền riêng tư mới.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       setSavedMessage(true);
     } catch (err: unknown) {
@@ -129,7 +132,7 @@ export function PrivacySettingsPage() {
               onSubmit={handleSave}
               style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
             >
-              {/* Nhóm 1: Necessary */}
+              {/* Nhóm tùy chọn cookie bắt buộc */}
               <div
                 style={{
                   padding: 'var(--space-4)',
@@ -176,7 +179,7 @@ export function PrivacySettingsPage() {
                 </div>
               </div>
 
-              {/* Nhóm 2: Personalization */}
+              {/* Nhóm tùy chọn cá nhân hóa trải nghiệm */}
               <div
                 style={{
                   padding: 'var(--space-4)',
@@ -227,7 +230,7 @@ export function PrivacySettingsPage() {
                 </label>
               </div>
 
-              {/* Nhóm 3: Marketing */}
+              {/* Nhóm tùy chọn nhận thông tin tiếp thị */}
               <div
                 style={{
                   padding: 'var(--space-4)',

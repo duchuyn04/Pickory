@@ -7,24 +7,24 @@ export function VerifyEmailPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Lưu token ban đầu từ URL vào state để sau khi xóa khỏi URL vẫn giữ được giá trị
+  // Lưu token vào state nội bộ để giữ lại giá trị phục vụ gọi API sau khi đã xóa token khỏi URL hiển thị.
   const [token] = useState(() => searchParams.get('token') || '');
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Dùng ref ghi nhớ token đã gọi xác thực, ngăn gọi lặp trong React StrictMode
+  // Dùng ref lưu token đã gửi API nhằm ngăn chặn việc gọi 2 lần trong môi trường React StrictMode khiến token bị lỗi đã dùng.
   const calledTokenRef = useRef<string | null>(null);
 
-  // Xóa token khỏi URL sau khi đã nhận để bảo mật token dùng một lần
+  // Xóa tham số token khỏi thanh URL trình duyệt để tránh rò rỉ token dùng một lần qua lịch sử hoặc header Referer.
   useEffect(() => {
     if (searchParams.has('token')) {
       navigate(location.pathname, { replace: true });
     }
   }, [searchParams, location.pathname, navigate]);
 
-  // Tự động gọi xác thực nếu có token trong URL
+  // Tự động kích hoạt quy trình xác thực khi trang được tải kèm token hợp lệ từ đường dẫn trong email.
   useEffect(() => {
     if (!token || calledTokenRef.current === token) return;
     calledTokenRef.current = token;

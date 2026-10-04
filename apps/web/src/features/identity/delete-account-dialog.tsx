@@ -22,8 +22,10 @@ export function DeleteAccountDialog() {
         method: 'DELETE',
         body: JSON.stringify({ password: password || undefined }),
       });
+      // Đặt lại trạng thái actor về khách vãng lai (guest) sau khi tài khoản đã bị xóa và phiên bị hủy.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       setOpen(false);
+      // Điều hướng về trang chủ và thay thế lịch sử duyệt web để người dùng không quay lại trang tài khoản đã xóa.
       navigate('/', { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {

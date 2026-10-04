@@ -37,6 +37,7 @@ export function AccountPage() {
     );
   }
 
+  // Chỉ cho phép khách hàng truy cập trang quản lý tài khoản cá nhân, chuyển hướng nếu chưa đăng nhập.
   if (!actor || actor.kind !== 'customer') {
     return <Navigate to="/login" replace />;
   }
@@ -55,6 +56,7 @@ export function AccountPage() {
           phone: phone.trim() === '' ? null : phone.trim(),
         }),
       });
+      // Làm mới dữ liệu actor trong React Query cache để cập nhật tên và số điện thoại trên toàn bộ giao diện.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       setSuccess(true);
     } catch (err: unknown) {
@@ -97,7 +99,7 @@ export function AccountPage() {
           Tài khoản của tôi
         </h1>
 
-        {/* 1. Thông tin cá nhân */}
+        {/* Khu vực cập nhật thông tin định danh cá nhân */}
         <div
           style={{
             backgroundColor: 'var(--color-surface)',
@@ -237,10 +239,10 @@ export function AccountPage() {
           </form>
         </div>
 
-        {/* 2. Đổi mật khẩu */}
+        {/* Khu vực thay đổi mật khẩu đăng nhập */}
         <ChangePasswordForm />
 
-        {/* 3. Cài đặt quyền riêng tư */}
+        {/* Khu vực điều hướng tới cài đặt quyền riêng tư và xử lý dữ liệu */}
         <div
           style={{
             backgroundColor: 'var(--color-surface)',
@@ -283,7 +285,7 @@ export function AccountPage() {
           </Link>
         </div>
 
-        {/* 4. Xóa tài khoản */}
+        {/* Khu vực thao tác xóa tài khoản và ẩn danh hóa dữ liệu */}
         <DeleteAccountDialog />
       </div>
     </div>

@@ -18,7 +18,7 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Lọc bỏ role customer khỏi danh sách có thể gán cho nhân viên
+  // Loại bỏ vai trò customer để đảm bảo tài khoản nhân viên mới chỉ được phân công các vai trò quản trị nội bộ.
   const staffAssignableRoles = availableRoles.filter((r) => r.code !== 'customer');
 
   function toggleRole(code: string) {
@@ -44,6 +44,7 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
       return;
     }
 
+    // Bắt buộc chọn ít nhất một vai trò để nhân viên mới có đủ quyền thực hiện công việc được giao ngay sau khi kích hoạt.
     if (selectedRoles.length === 0) {
       setError('Vui lòng chọn ít nhất một vai trò cho nhân viên.');
       return;

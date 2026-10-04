@@ -32,6 +32,7 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
     const trimmedCode = code.trim();
     const trimmedName = name.trim();
 
+    // Khi tạo mới cần kiểm tra định dạng slug của mã vai trò để bảo đảm an toàn khi đối soát phân quyền.
     if (!isEditing) {
       if (!trimmedCode) {
         setError('Mã vai trò không được để trống.');
@@ -43,6 +44,7 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
       }
     }
 
+    // Tên vai trò hiển thị là bắt buộc để nhân viên dễ dàng nhận diện và phân biệt trên bảng quản trị.
     if (!trimmedName) {
       setError('Tên vai trò không được để trống.');
       return;

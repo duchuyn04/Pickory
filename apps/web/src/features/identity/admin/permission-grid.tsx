@@ -25,8 +25,11 @@ interface PermissionGridProps {
   disabled?: boolean;
 }
 
+/**
+ * Lưới phân quyền trực quan theo từng phân hệ chức năng cho phép chọn nhanh từng quyền hoặc cả nhóm quyền.
+ */
 export function PermissionGrid({ permissions, selected, onChange, disabled }: PermissionGridProps) {
-  // Gom nhóm theo group/module
+  // Phân loại danh sách quyền theo phân hệ chức năng để hiển thị trực quan và dễ quản lý trên giao diện.
   const grouped = permissions.reduce<Record<string, PermissionItem[]>>((acc, item) => {
     const list = acc[item.group] || [];
     list.push(item);
@@ -43,6 +46,7 @@ export function PermissionGrid({ permissions, selected, onChange, disabled }: Pe
     }
   }
 
+  // Cho phép bật hoặc tắt nhanh toàn bộ các quyền trong một phân hệ chức năng để tiết kiệm thời gian thao tác.
   function toggleGroup(groupItems: PermissionItem[]) {
     if (disabled) return;
     const groupIds = groupItems.map((i) => i.id);

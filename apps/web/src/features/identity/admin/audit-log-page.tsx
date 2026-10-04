@@ -40,7 +40,7 @@ export function AuditLogPage() {
     endDate?: string;
   }>({});
 
-  // Tiêu thụ isError và error để không hiển thị nhầm thành danh sách rỗng khi tải thất bại
+  // Kiểm tra tường minh cờ isError và đối tượng error để phân biệt rõ giữa trường hợp truy vấn gặp sự cố với trường hợp dữ liệu rỗng.
   const { data, isLoading, isError, error } = useQuery<AuditLogsResponse>({
     queryKey: ['admin-audit-logs', appliedFilters],
     queryFn: () => {
@@ -136,7 +136,7 @@ export function AuditLogPage() {
         </p>
       </div>
 
-      {/* Bộ lọc */}
+      {/* Biểu mẫu lọc và tìm kiếm nhật ký thao tác */}
       <form
         noValidate
         onSubmit={handleFilterSubmit}
@@ -269,7 +269,7 @@ export function AuditLogPage() {
         </button>
       </form>
 
-      {/* Bảng danh sách */}
+      {/* Bảng hiển thị chi tiết các bản ghi kiểm toán */}
       {isLoading ? (
         <div>Đang nạp dữ liệu nhật ký...</div>
       ) : isError ? (

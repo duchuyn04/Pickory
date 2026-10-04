@@ -47,8 +47,9 @@ export function ChangePasswordForm() {
       setNewPassword('');
       setConfirmPassword('');
 
+      // Xóa cache trạng thái đăng nhập để giao diện lập tức phản ánh việc phiên cũ đã bị hủy.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
-      // Đổi mật khẩu xóa mọi phiên nên điều hướng về login
+      // Đổi mật khẩu thành công sẽ thu hồi toàn bộ phiên trong DB, chuyển hướng về trang đăng nhập sau 1.5 giây để người dùng kịp đọc thông báo thành công.
       setTimeout(() => {
         navigate('/login', { replace: true });
       }, 1500);

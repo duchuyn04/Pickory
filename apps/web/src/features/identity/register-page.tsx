@@ -20,6 +20,7 @@ export function RegisterPage() {
   const { data: actor } = useActor();
 
   React.useEffect(() => {
+    // Nếu khách hàng đã đăng nhập từ trước thì chuyển thẳng về trang chủ để tránh đăng ký đè.
     if (actor?.kind === 'customer') {
       navigate('/', { replace: true });
     }
@@ -29,6 +30,7 @@ export function RegisterPage() {
     e.preventDefault();
     setError(null);
 
+    // Xác thực định dạng email và độ mạnh mật khẩu tại client để cảnh báo lỗi sớm trước khi gửi request.
     const validationError = getEmailError(email) || getPasswordError(password);
     if (validationError) {
       setError(validationError);
@@ -48,6 +50,8 @@ export function RegisterPage() {
           website: website || undefined,
         }),
       });
+      // Cập nhật thông tin phiên đăng nhập mới của khách hàng vào cache để các thành phần UI nhận diện ngay.
+      // Chuyển hướng về trang chủ và thay thế lịch sử duyệt web để ngăn việc quay lại trang đăng ký.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       navigate('/', { replace: true });
     } catch (err: unknown) {

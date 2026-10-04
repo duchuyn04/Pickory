@@ -38,6 +38,7 @@ export function AssignRolesDialog({
   const [error, setError] = useState<string | null>(null);
 
   if (!staff) return null;
+  // Loại bỏ role customer khỏi danh sách lựa chọn vì nhân viên nội bộ không thể nhận vai trò của khách hàng.
   const staffAssignableRoles = availableRoles.filter((r) => r.code !== 'customer');
 
   function toggleRole(code: string) {

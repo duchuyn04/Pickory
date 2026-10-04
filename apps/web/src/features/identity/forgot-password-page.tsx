@@ -12,6 +12,7 @@ export function ForgotPasswordPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    // Kiểm tra định dạng email ngay tại client để phản hồi tức thì mà không cần gửi request lên server.
     const validationError = getEmailError(email);
     if (validationError) {
       setError(validationError);
@@ -24,6 +25,7 @@ export function ForgotPasswordPage() {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
+      // Chuyển sang giao diện xác nhận chung dù email có tồn tại hay không nhằm ngăn chặn dò quét tài khoản.
       setSubmitted(true);
     } catch (err: unknown) {
       if (err instanceof Error) {
