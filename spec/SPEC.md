@@ -50,6 +50,8 @@ pnpm db:migrate                   # prisma migrate dev
 pnpm db:seed                      # dữ liệu mẫu + tài khoản admin dev
 pnpm dev                          # chạy web (5173) và api (3000) cùng lúc
 pnpm test                         # unit + integration (Vitest)
+pnpm test --project unit           # chỉ unit, không cần PostgreSQL
+pnpm test --project integration    # integration với DB test riêng
 pnpm test -- --coverage           # kèm báo cáo coverage
 pnpm test:e2e                     # Playwright
 pnpm lint                         # ESLint
@@ -65,6 +67,7 @@ apps/
   web/                    → React app
     src/features/<module-id>/   → trang, component, hook của từng module
     src/shared/                 → component và tiện ích dùng chung
+    test/unit/features/<module-id>/ → test hook và logic UI, đối chiếu với src/features/
   api/                    → Express API
     src/modules/<module-id>/
       routes.ts           → khai báo route, chỉ parse request và gọi service
@@ -72,15 +75,26 @@ apps/
       repository.ts       → truy cập database qua Prisma
       schemas.ts          → Zod schema của request/response
       index.ts            → public interface cho module khác dùng
-      *.test.ts           → test đặt cạnh file được test
     src/shared/           → error, logger, config, middleware chung
+    test/unit/modules/<module-id>/        → *.test.ts, đối chiếu với src/modules/
+    test/unit/shared/                     → test tiện ích dùng chung
+    test/integration/modules/<module-id>/ → *.int.test.ts với DB test riêng
+    test/integration/shared/              → test hạ tầng DB
+    test/{setup,global-setup,env,db}.ts    → setup và helper test, không thuộc src/
     prisma/               → schema.prisma, migrations, seed
 packages/
   shared/                 → type và Zod schema dùng chung web/api
+    src/                  → code dùng chung
+    test/unit/            → *.test.ts
+tools/
+  test/unit/              → test quy tắc tooling
+  lint-fixtures/          → file mẫu cho ESLint
 e2e/                      → Playwright test
 spec/                     → CAPABILITY-MAP.md, SPEC.md (file này), SPEC-<module-id>.md
 docs/adr/                 → Architecture Decision Records
 ```
+
+Test nằm ngoài `src/`; dưới `test/unit/` và `test/integration/`, giữ cấu trúc thư mục tương ứng với code được test. Import trực tiếp từ `src/`, không tạo bản sao hay re-export trung gian. Typecheck bao gồm cả `src/` và `test/`; API build chỉ biên dịch `src/`. Vitest tìm test trong các thư mục này, không tìm test đặt cạnh code nguồn.
 
 **Quy tắc ranh giới module:** module khác chỉ được import từ `modules/<module-id>/index.ts`, không import thẳng `service.ts` hay `repository.ts` của module khác. Mỗi module chỉ ghi vào bảng của chính nó.
 
@@ -127,8 +141,8 @@ export class AppError extends Error {
 
 | Cấp | Công cụ | Dùng cho | Vị trí |
 |---|---|---|---|
-| Unit | Vitest | Logic thuần trong service, hàm tiện ích, parse/validate | `*.test.ts` cạnh file |
-| Integration | Vitest + Supertest + PostgreSQL thật (DB test riêng) | API endpoint, truy vấn Prisma, webhook | `*.int.test.ts` cạnh `routes.ts` |
+| Unit | Vitest | Logic thuần trong service, hàm tiện ích, parse/validate | `<app hoặc package>/test/unit/**/*.test.{ts,tsx}`; tooling trong `tools/test/unit/` |
+| Integration | Vitest + Supertest + PostgreSQL thật (DB test riêng) | API endpoint, truy vấn Prisma, webhook | `<app hoặc package>/test/integration/**/*.int.test.{ts,tsx}` |
 | E2E | Playwright | Luồng quan trọng: đăng ký, tìm kiếm, thêm giỏ, checkout, chat | `e2e/` |
 | AI contract | Vitest, gọi API thật | Kiểm tra provider thật vẫn trả đúng định dạng | chỉ chạy khi `AI_LIVE_TESTS=1` |
 

@@ -1,0 +1,47 @@
+/*
+ * Design token của Pickory. Nguồn và lý do từng giá trị: docs/design/design-system.md.
+ * Component chỉ dùng biến ở đây, không viết màu hoặc cỡ chữ cứng.
+ */
+:root {
+  /* Màu: cam ấm làm màu thương hiệu (đo từ Klook #EC6436), nền kem và cát cho khối nhấn */
+  --color-brand: #ec6436;
+  --color-brand-hover: #d4521f;
+  --color-brand-soft: #fdece4;
+  --color-sand: #f6dda8;
+  --color-sand-soft: #fbeed3;
+  --color-ink: #1f1a17;
+  --color-ink-muted: #7a6e65;
+  --color-surface: #ffffff;
+  --color-surface-muted: #fcf8e7;
+  --color-border: #ece4d8;
+  --color-star: #f5a524;
+  --color-info: #1d6fe0;
+  --color-success: #127a43;
+  --color-warning: #93530a;
+  --color-danger: #b42318;
+
+  /* Bo góc */
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --radius-pill: 999px;
+
+  /* Khoảng cách: thang 4px */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Chữ: dùng font hệ thống để hiển thị tiếng Việt có dấu đúng và không thêm dependency */
+  --font-sans:
+    'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  --text-md: 16px;
+  --text-lg: 20px;
+  --text-xl: 28px;
+}

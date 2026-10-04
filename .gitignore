@@ -28,3 +28,10 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Prisma client sinh tu dong (pnpm db:generate)
+apps/api/src/generated/
+.playwright-mcp/
+
+# Dev outbox
+**/.dev-outbox/

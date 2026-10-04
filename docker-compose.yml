@@ -1,0 +1,23 @@
+# PostgreSQL + pgvector cho môi trường dev. Chạy: docker compose up -d db
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pickory
+      POSTGRES_PASSWORD: pickory
+      POSTGRES_DB: pickory
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Chạy 1 lần khi tạo volume mới: tạo thêm DB riêng cho test.
+      - ./docker/init-test-db.sql:/docker-entrypoint-initdb.d/init-test-db.sql:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pickory -d pickory']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
