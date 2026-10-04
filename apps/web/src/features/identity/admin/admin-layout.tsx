@@ -37,7 +37,7 @@ export function AdminLayout() {
     );
   }
 
-  // Chưa đăng nhập hoặc không phải nhân viên thì chuyển về /admin/login
+  // Kiểm tra quyền truy cập khu vực quản trị, ngăn chặn khách hàng hoặc khách vãng lai truy cập bằng cách chuyển hướng về trang đăng nhập nhân viên.
   if (!actor || actor.kind !== 'staff') {
     return <Navigate to="/admin/login" replace />;
   }
@@ -46,11 +46,13 @@ export function AdminLayout() {
     try {
       await apiRequest('/api/auth/logout', { method: 'POST' });
     } finally {
+      // Luôn xóa sạch trạng thái phiên trong cache và chuyển hướng về trang đăng nhập kể cả khi request logout gặp lỗi mạng.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       navigate('/admin/login', { replace: true });
     }
   }
 
+  // Lọc các mục menu điều hướng dựa trên quyền hạn thực tế của nhân viên để tránh hiển thị tính năng không được phép truy cập.
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (!item.requiredPermission) return true;
     return checkPermission(actor, item.requiredPermission);

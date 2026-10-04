@@ -17,6 +17,7 @@ export function LoginPage() {
   const { data: actor } = useActor();
 
   React.useEffect(() => {
+    // Nếu khách hàng đã đăng nhập thì tự động chuyển hướng về trang chủ để không hiển thị lại biểu mẫu đăng nhập.
     if (actor?.kind === 'customer') {
       navigate('/', { replace: true });
     }
@@ -37,7 +38,9 @@ export function LoginPage() {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
+      // Cập nhật lại trạng thái người dùng trong bộ nhớ cache để thanh điều hướng và giao diện phản ánh phiên mới.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
+      // Điều hướng về trang chủ và thay thế lịch sử duyệt web để nút quay lại không đưa về trang đăng nhập.
       navigate('/', { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {

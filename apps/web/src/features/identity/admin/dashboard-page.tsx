@@ -1,5 +1,8 @@
 import { useActor } from '../use-actor';
 
+/**
+ * Trang tổng quan back-office hiển thị lời chào và hướng dẫn điều hướng theo vai trò nhân viên.
+ */
 export function AdminDashboardPage() {
   const { data: actor } = useActor();
 

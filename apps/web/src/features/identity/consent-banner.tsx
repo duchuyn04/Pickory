@@ -13,7 +13,7 @@ export function ConsentBanner() {
   const { data: actor } = useActor();
 
   useEffect(() => {
-    // Nếu chưa từng lưu cờ ở localStorage và actor chưa có lựa chọn
+    // Kiểm tra cờ localStorage để không hiển thị lại banner làm phiền nếu người dùng đã từng đưa ra lựa chọn trên trình duyệt này.
     const chosen = localStorage.getItem(CONSENT_CHOSEN_KEY);
     if (!chosen) {
       setVisible(true);
@@ -33,7 +33,9 @@ export function ConsentBanner() {
           marketing,
         }),
       });
+      // Đánh dấu đã phản hồi vào bộ nhớ cục bộ để ẩn banner ngay cả khi chuyển trang hoặc tải lại.
       localStorage.setItem(CONSENT_CHOSEN_KEY, 'true');
+      // Đồng bộ trạng thái actor trong cache để các thành phần giao diện khác nhận diện quyền riêng tư mới.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       setVisible(false);
     } catch {

@@ -10,7 +10,7 @@ export function ResetPasswordPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Lưu token ban đầu từ URL vào state để sau khi xóa khỏi URL vẫn giữ được giá trị
+  // Lưu token từ query string vào state nội bộ để giữ lại giá trị phục vụ gửi form sau khi đã xóa token khỏi URL hiển thị.
   const [token] = useState(() => searchParams.get('token') || '');
 
   const [newPassword, setNewPassword] = useState('');
@@ -21,7 +21,7 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Xóa token khỏi URL sau khi đã nhận để bảo mật token dùng một lần
+  // Loại bỏ tham số token trên thanh địa chỉ trình duyệt nhằm tránh lộ token nhạy cảm trong lịch sử duyệt web hoặc header Referer.
   useEffect(() => {
     if (searchParams.has('token')) {
       navigate(location.pathname, { replace: true });
@@ -59,7 +59,7 @@ export function ResetPasswordPage() {
         },
       );
 
-      // Đặt lại mật khẩu thu hồi mọi phiên, nên bỏ actor cũ và nạp lại trước khi hiện link đăng nhập.
+      // Đặt lại dữ liệu actor trong cache về trạng thái ban đầu vì thao tác đổi mật khẩu đã thu hồi toàn bộ phiên đăng nhập cũ trên server.
       await queryClient.resetQueries({ queryKey: ['actor'], exact: true });
 
       setUserKind(res.userKind);

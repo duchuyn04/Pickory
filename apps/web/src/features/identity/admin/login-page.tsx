@@ -16,7 +16,7 @@ export function StaffLoginPage() {
   const navigate = useNavigate();
   const { data: actor } = useActor();
 
-  // Nếu đã đăng nhập staff thì chuyển thẳng vào /admin
+  // Tự động điều hướng nhân viên đã đăng nhập vào bảng điều khiển quản trị, tránh hiển thị lại form đăng nhập.
   React.useEffect(() => {
     if (actor?.kind === 'staff') {
       navigate('/admin', { replace: true });
@@ -38,7 +38,9 @@ export function StaffLoginPage() {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
+      // Làm mới dữ liệu actor trong cache để các trang admin nhận diện ngay vai trò và danh sách quyền hạn của nhân viên.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
+      // Điều hướng tới bảng điều khiển quản trị và xóa trang đăng nhập khỏi lịch sử duyệt web để tránh quay lại nhầm.
       navigate('/admin', { replace: true });
     } catch (err: unknown) {
       if (err instanceof Error) {

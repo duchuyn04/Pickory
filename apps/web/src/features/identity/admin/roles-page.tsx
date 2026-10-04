@@ -18,7 +18,7 @@ export function RolesPage() {
   const [editingRole, setEditingRole] = useState<RoleRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Tiêu thụ isError và error để không nuốt lỗi khi tải danh sách vai trò
+  // Kiểm tra cờ lỗi từ React Query để hiển thị thông báo lỗi tường minh thay vì giao diện trống khi truy vấn vai trò thất bại.
   const {
     data: roles = [],
     isLoading: rolesLoading,
@@ -30,7 +30,7 @@ export function RolesPage() {
     enabled: canManageRoles,
   });
 
-  // Truy vấn phụ lấy quyền hạn; nếu lỗi cũng không được ẩn giấu thành danh sách rỗng
+  // Truy vấn danh mục quyền hạn để nạp vào form phân quyền, đồng thời xử lý trạng thái lỗi độc lập với danh sách vai trò.
   const {
     data: permissions = [],
     isError: permissionsIsError,
@@ -73,6 +73,7 @@ export function RolesPage() {
         body: JSON.stringify(data),
       });
     }
+    // Làm mới danh sách vai trò trong bộ nhớ cache để cập nhật ngay lập tức các thay đổi lên giao diện.
     await queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
   }
 
@@ -85,6 +86,7 @@ export function RolesPage() {
       await apiRequest(`/api/admin/roles/${role.id}`, {
         method: 'DELETE',
       });
+      // Cập nhật lại danh sách vai trò sau khi xóa để bảng dữ liệu phản ánh chính xác trạng thái hiện tại.
       await queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
     } catch (err: unknown) {
       if (err instanceof Error) {

@@ -30,7 +30,7 @@ export function CustomersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Tiêu thụ isError và error để không hiển thị nhầm thành danh sách rỗng khi tải thất bại
+  // Kiểm tra tường minh lỗi truy vấn để thông báo chính xác cho người dùng thay vì hiển thị giao diện danh sách rỗng.
   const { data, isLoading, isError, error } = useQuery<CustomersResponse>({
     queryKey: ['admin-customers', debouncedSearch],
     queryFn: () => {
@@ -78,6 +78,7 @@ export function CustomersPage() {
         ? `/api/admin/customers/${customer.id}/lock`
         : `/api/admin/customers/${customer.id}/unlock`;
       await apiRequest(endpoint, { method: 'POST' });
+      // Làm mới danh sách khách hàng sau khi khóa hoặc mở khóa để cập nhật ngay trạng thái trên bảng điều khiển.
       await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
     } catch (err: unknown) {
       if (err instanceof Error) {

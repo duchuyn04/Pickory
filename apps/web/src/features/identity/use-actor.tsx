@@ -17,25 +17,25 @@ export interface ActorData {
 }
 
 /**
- * Hook nạp thông tin Actor hiện tại từ GET /api/me.
+ * Hook truy vấn thông tin Actor hiện tại kèm trạng thái phiên và quyền hạn từ endpoint /api/me.
  */
 export function useActor() {
   return useQuery<ActorData>({
     queryKey: ['actor'],
     queryFn: () => apiRequest<ActorData>('/api/me'),
+    // Giữ cache trong 30 giây để giảm tải số lượng request GET /api/me khi người dùng chuyển qua lại giữa các trang.
     staleTime: 30_000,
   });
 }
 
 /**
- * Kiểm tra actor hiện tại có quyền cụ thể không.
- * Trả về false nếu chưa có dữ liệu hoặc không có quyền.
+ * Kiểm tra xem Actor có sở hữu quyền hạn cụ thể hay không.
  */
 export function checkPermission(actor: ActorData | undefined | null, permission: string): boolean {
   if (!actor || !Array.isArray(actor.permissions)) {
     return false;
   }
-  // admin có mọi quyền
+  // Quản trị viên (admin) mặc định có toàn bộ quyền trong hệ thống nên luôn trả về true.
   if (actor.roles.includes('admin')) {
     return true;
   }
@@ -43,7 +43,7 @@ export function checkPermission(actor: ActorData | undefined | null, permission:
 }
 
 /**
- * Hook kiểm tra quyền của actor hiện tại.
+ * Hook kiểm tra nhanh quyền hạn của người dùng đang đăng nhập để ẩn hiện các thành phần giao diện.
  */
 export function useCan(permission: string): boolean {
   const { data: actor } = useActor();
@@ -51,7 +51,7 @@ export function useCan(permission: string): boolean {
 }
 
 /**
- * Hook kiểm tra actor có phải nhân viên không.
+ * Hook xác định xem Actor hiện tại có phải là nhân viên nội bộ hay không.
  */
 export function useIsStaff(): boolean {
   const { data: actor } = useActor();

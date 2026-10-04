@@ -15,7 +15,7 @@ export function StaffPage() {
   const [selectedStaff, setSelectedStaff] = useState<StaffRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Tiêu thụ isError và error để không nuốt lỗi khi tải danh sách nhân viên
+  // Kiểm tra cờ lỗi của truy vấn để cảnh báo rõ ràng khi nạp danh sách nhân viên thất bại thay vì âm thầm hiển thị bảng rỗng.
   const {
     data: staffList = [],
     isLoading: staffLoading,
@@ -27,7 +27,7 @@ export function StaffPage() {
     enabled: canReadStaff,
   });
 
-  // Truy vấn phụ lấy vai trò; nếu lỗi cũng không được ẩn giấu thành danh sách rỗng
+  // Truy vấn danh sách vai trò để nạp vào dialog gán quyền và hiển thị thông báo riêng nếu xảy ra lỗi.
   const {
     data: roles = [],
     isError: rolesIsError,
@@ -69,6 +69,7 @@ export function StaffPage() {
         ? `/api/admin/staff/${staff.id}/lock`
         : `/api/admin/staff/${staff.id}/unlock`;
       await apiRequest(endpoint, { method: 'POST' });
+      // Làm mới danh sách nhân viên trong cache để cập nhật ngay trạng thái khóa/mở khóa lên giao diện.
       await queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
     } catch (err: unknown) {
       if (err instanceof Error) {
