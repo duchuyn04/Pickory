@@ -4,9 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../shared/api';
 import { getPasswordError } from '../../shared/identity-validation';
 
+// Form đổi mật khẩu trong trang tài khoản.
 export function ChangePasswordForm() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
+  // Ô nhập lại mật khẩu mới để người dùng không đặt nhầm do gõ sai mà không hay.
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -16,16 +18,19 @@ export function ChangePasswordForm() {
   const navigate = useNavigate();
 
   async function handleSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
     setSuccess(false);
 
+    // Kiểm tra ở trình duyệt để báo lỗi tiếng Việt ngay, không tốn một lượt gọi API; server vẫn kiểm tra lại.
     const validationError = getPasswordError(newPassword);
     if (validationError) {
       setError(validationError);
       return;
     }
 
+    // Việc khớp với ô nhập lại chỉ kiểm được ở phía giao diện vì server không nhận ô này.
     if (newPassword !== confirmPassword) {
       setError('Mật khẩu xác nhận không khớp.');
       return;
@@ -36,6 +41,7 @@ export function ChangePasswordForm() {
     try {
       await apiRequest('/api/me/password', {
         method: 'POST',
+        // Chuỗi rỗng đổi thành undefined để không gửi trường này, vì tài khoản chỉ dùng Google không có mật khẩu cũ.
         body: JSON.stringify({
           currentPassword: currentPassword || undefined,
           newPassword,
@@ -43,23 +49,26 @@ export function ChangePasswordForm() {
       });
 
       setSuccess(true);
+      // Xóa các ô mật khẩu khỏi bộ nhớ trang ngay sau khi gửi xong.
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
 
-      // Xóa cache trạng thái đăng nhập để giao diện lập tức phản ánh việc phiên cũ đã bị hủy.
+      // Server đã xóa mọi phiên, nên nạp lại actor để giao diện biết mình không còn đăng nhập.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       // Đổi mật khẩu thành công sẽ thu hồi toàn bộ phiên trong DB, chuyển hướng về trang đăng nhập sau 1.5 giây để người dùng kịp đọc thông báo thành công.
       setTimeout(() => {
         navigate('/login', { replace: true });
       }, 1500);
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (ví dụ sai mật khẩu hiện tại) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setError(err.message);
       } else {
         setError('Đổi mật khẩu thất bại. Vui lòng thử lại.');
       }
     } finally {
+      // Luôn mở lại nút dù thành công hay lỗi.
       setLoading(false);
     }
   }

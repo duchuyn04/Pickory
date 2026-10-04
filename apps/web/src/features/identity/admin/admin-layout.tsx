@@ -6,9 +6,11 @@ import { checkPermission, useActor } from '../use-actor';
 interface NavItem {
   label: string;
   path: string;
+  // Không có nghĩa là mục nào nhân viên cũng thấy.
   requiredPermission?: string;
 }
 
+// Mục menu cùng quyền cần có để thấy mục đó; mục của module chưa làm vẫn có route giữ chỗ nên bấm không ra trang trắng.
 const NAV_ITEMS: NavItem[] = [
   { label: 'Tổng quan', path: '/admin' },
   { label: 'Đơn hàng', path: '/admin/orders', requiredPermission: 'orders:read' },
@@ -21,12 +23,14 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Nhật ký thao tác', path: '/admin/audit-logs', requiredPermission: 'audit-logs:read' },
 ];
 
+// Khung chung của khu vực quản trị: kiểm tra đăng nhập, vẽ menu theo quyền, chứa trang con.
 export function AdminLayout() {
   const { data: actor, isLoading } = useActor();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
 
+  // Chưa biết ai đang đăng nhập thì chưa chuyển hướng, nếu không nhân viên đã đăng nhập bị đẩy ra trang login oan.
   if (isLoading) {
     return (
       <div
@@ -37,7 +41,8 @@ export function AdminLayout() {
     );
   }
 
-  // Kiểm tra quyền truy cập khu vực quản trị, ngăn chặn khách hàng hoặc khách vãng lai truy cập bằng cách chuyển hướng về trang đăng nhập nhân viên.
+  // Khách vãng lai, khách hàng, và nhân viên vừa mất phiên đều về trang đăng nhập nhân viên.
+  // Đây chỉ là tiện dụng cho người dùng; dữ liệu thật vẫn do backend chặn bằng requirePermission.
   if (!actor || actor.kind !== 'staff') {
     return <Navigate to="/admin/login" replace />;
   }
@@ -46,13 +51,13 @@ export function AdminLayout() {
     try {
       await apiRequest('/api/auth/logout', { method: 'POST' });
     } finally {
-      // Luôn xóa sạch trạng thái phiên trong cache và chuyển hướng về trang đăng nhập kể cả khi request logout gặp lỗi mạng.
+      // Dùng finally để dù gọi đăng xuất lỗi (mạng) vẫn nạp lại actor và về trang đăng nhập, không kẹt ở khu vực quản trị.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       navigate('/admin/login', { replace: true });
     }
   }
 
-  // Lọc các mục menu điều hướng dựa trên quyền hạn thực tế của nhân viên để tránh hiển thị tính năng không được phép truy cập.
+  // Chỉ hiện mục mà nhân viên có quyền, để người chỉ có quyền của sales không thấy menu Nhân viên hay Quản lý Role.
   const visibleNavItems = NAV_ITEMS.filter((item) => {
     if (!item.requiredPermission) return true;
     return checkPermission(actor, item.requiredPermission);

@@ -1,14 +1,13 @@
 import type { PrismaClient } from '../../generated/prisma/client';
 import { DEFAULT_ROLE_PERMISSIONS, INITIAL_ROLES } from './permissions';
 
-/**
- * Khởi tạo các vai trò và quyền mặc định ban đầu vào cơ sở dữ liệu với tính chất idempotent.
- */
+// Tạo 4 role mặc định và quyền của chúng; chạy lại nhiều lần vẫn an toàn.
 export async function seedIdentityRoles(prisma: PrismaClient): Promise<void> {
   for (const roleDef of INITIAL_ROLES) {
-    // Dùng upsert để đảm bảo quá trình chạy seed nhiều lần không gây lỗi trùng lặp dữ liệu.
+    // upsert thay vì create để chạy seed lần hai không lỗi trùng mã role.
     const role = await prisma.role.upsert({
       where: { code: roleDef.code },
+      // Cập nhật tên và cờ hệ thống để role cũ luôn khớp với định nghĩa trong code.
       update: {
         name: roleDef.name,
         isSystem: roleDef.isSystem,
@@ -20,9 +19,10 @@ export async function seedIdentityRoles(prisma: PrismaClient): Promise<void> {
       },
     });
 
+    // Role không có trong bảng quyền mặc định (ví dụ admin) thì không có dòng nào; admin có mọi quyền ngầm định trong code.
     const defaultPerms = DEFAULT_ROLE_PERMISSIONS[roleDef.code] ?? [];
     for (const permission of defaultPerms) {
-      // Dùng upsert theo cặp khóa (roleId, permission) để giữ tính toàn vẹn khi gán quyền mặc định.
+      // Khóa chính là cặp (roleId, permission) nên upsert theo cặp này, không tạo trùng.
       await prisma.rolePermission.upsert({
         where: {
           roleId_permission: {
@@ -30,6 +30,7 @@ export async function seedIdentityRoles(prisma: PrismaClient): Promise<void> {
             permission,
           },
         },
+        // update rỗng vì dòng đã tồn tại thì không có gì cần đổi; chỉ bổ sung quyền mặc định còn thiếu.
         update: {},
         create: {
           roleId: role.id,

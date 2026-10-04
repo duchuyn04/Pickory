@@ -5,20 +5,23 @@ import { useCan } from '../use-actor';
 import type { PermissionItem } from './permission-grid';
 import { RoleForm, type RoleData } from './role-form';
 
+// Role khi đã tạo thì có id, kèm số người đang giữ để biết role nào xóa được.
 interface RoleRow extends RoleData {
   id: string;
   userCount: number;
 }
 
+// Trang quản lý role: danh sách, tạo, sửa, xóa.
 export function RolesPage() {
   const canManageRoles = useCan('roles:manage');
   const queryClient = useQueryClient();
 
+  // formOpen mở hộp thoại; editingRole là null khi tạo mới, có giá trị khi sửa.
   const [formOpen, setFormOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Kiểm tra cờ lỗi từ React Query để hiển thị thông báo lỗi tường minh thay vì giao diện trống khi truy vấn vai trò thất bại.
+  // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại; nếu bỏ qua thì lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
   const {
     data: roles = [],
     isLoading: rolesLoading,
@@ -27,10 +30,11 @@ export function RolesPage() {
   } = useQuery<RoleRow[]>({
     queryKey: ['admin-roles'],
     queryFn: () => apiRequest<RoleRow[]>('/api/admin/roles'),
+    // Không gọi API khi không có quyền, vì chắc chắn bị từ chối với 403.
     enabled: canManageRoles,
   });
 
-  // Truy vấn danh mục quyền hạn để nạp vào form phân quyền, đồng thời xử lý trạng thái lỗi độc lập với danh sách vai trò.
+  // Danh mục quyền để vẽ bảng tick; truy vấn riêng để lỗi của một bên không che mất bên kia.
   const {
     data: permissions = [],
     isError: permissionsIsError,
@@ -41,6 +45,7 @@ export function RolesPage() {
     enabled: canManageRoles,
   });
 
+  // Hook ở trên phải chạy hết trước lệnh return sớm này; backend vẫn chặn mọi request thật sự.
   if (!canManageRoles) {
     return (
       <div
@@ -58,10 +63,12 @@ export function RolesPage() {
     );
   }
 
+  // Không bắt lỗi ở đây: RoleForm bắt và hiện lỗi trong hộp thoại, để người dùng sửa rồi lưu lại.
   async function handleSaveRole(data: { code: string; name: string; permissions: string[] }) {
     if (editingRole) {
       await apiRequest(`/api/admin/roles/${editingRole.id}`, {
         method: 'PATCH',
+        // Khi sửa chỉ gửi tên và quyền, vì mã role không đổi được.
         body: JSON.stringify({
           name: data.name,
           permissions: data.permissions,
@@ -73,22 +80,25 @@ export function RolesPage() {
         body: JSON.stringify(data),
       });
     }
-    // Làm mới danh sách vai trò trong bộ nhớ cache để cập nhật ngay lập tức các thay đổi lên giao diện.
+    // Nạp lại danh sách để role mới hoặc vừa sửa hiện ngay.
     await queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
   }
 
   async function handleDeleteRole(role: RoleRow) {
+    // Hỏi lại vì xóa không hoàn tác được.
     if (!window.confirm(`Bạn có chắc chắn muốn xóa role "${role.name}"?`)) {
       return;
     }
+    // Xóa lỗi của lần thao tác trước để không hiện lẫn.
     setActionError(null);
     try {
       await apiRequest(`/api/admin/roles/${role.id}`, {
         method: 'DELETE',
       });
-      // Cập nhật lại danh sách vai trò sau khi xóa để bảng dữ liệu phản ánh chính xác trạng thái hiện tại.
+      // Nạp lại danh sách để role đã xóa biến mất khỏi bảng.
       await queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (role hệ thống, role đang có người giữ...) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setActionError(err.message);
       } else {

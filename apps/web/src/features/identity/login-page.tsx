@@ -5,9 +5,11 @@ import { apiRequest } from '../../shared/api';
 import { getEmailError, getPasswordError } from '../../shared/identity-validation';
 import { useActor } from './use-actor';
 
+// Trang đăng nhập của khách (nhân viên đăng nhập ở /admin/login).
 export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  // Cho người dùng bật xem mật khẩu để kiểm tra gõ đúng, nhất là trên điện thoại.
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -17,15 +19,18 @@ export function LoginPage() {
   const { data: actor } = useActor();
 
   React.useEffect(() => {
-    // Nếu khách hàng đã đăng nhập thì tự động chuyển hướng về trang chủ để không hiển thị lại biểu mẫu đăng nhập.
+    // Khách đã đăng nhập mà vào lại trang này thì đưa về trang chủ, không hiện lại form đăng nhập vô nghĩa.
+    // Chỉ xét khách: nhân viên (kind staff) không bị đẩy đi vì họ dùng trang đăng nhập riêng.
     if (actor?.kind === 'customer') {
       navigate('/', { replace: true });
     }
   }, [actor, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
+    // Mật khẩu chỉ cần không rỗng (độ dài tối thiểu 1): quy tắc 8 ký tự chỉ áp khi đặt mật khẩu mới, không áp khi đăng nhập tài khoản cũ.
     const validationError = getEmailError(email) || getPasswordError(password, 1);
     if (validationError) {
       setError(validationError);
@@ -38,11 +43,12 @@ export function LoginPage() {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
-      // Cập nhật lại trạng thái người dùng trong bộ nhớ cache để thanh điều hướng và giao diện phản ánh phiên mới.
+      // Nạp lại actor để header hiện trạng thái đã đăng nhập ngay, thay vì chờ cache hết hạn 30 giây.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
-      // Điều hướng về trang chủ và thay thế lịch sử duyệt web để nút quay lại không đưa về trang đăng nhập.
+      // replace để nút Quay lại không đưa người dùng về trang đăng nhập.
       navigate('/', { replace: true });
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API: sai email và sai mật khẩu cùng một câu, còn bị khóa thì có câu riêng.
       if (err instanceof Error) {
         setError(err.message);
       } else {

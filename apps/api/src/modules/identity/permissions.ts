@@ -1,9 +1,8 @@
 import type { PrismaClient, Prisma } from '../../generated/prisma/client';
 import { logger } from '../../shared/logger';
 
-/**
- * Danh mục quyền ban đầu được định nghĩa cứng trong mã nguồn để bảo đảm type-safety ở tầng compile time.
- */
+// Danh mục quyền khai báo trong code, không lưu trong DB: code là nơi kiểm tra quyền, admin chỉ gom quyền có sẵn thành role.
+// Thêm quyền mới thuộc nhóm "Ask first" của dự án, và quyền mới phải có thêm mục trong PERMISSION_CATALOG bên dưới.
 export const PERMISSIONS = [
   // identity
   'staff:read',
@@ -43,24 +42,29 @@ export const PERMISSIONS = [
   'reports:export',
 ] as const;
 
+// Lấy kiểu từ mảng ở trên để requirePermission('...') báo lỗi ngay lúc biên dịch nếu gõ sai tên quyền.
 export type Permission = (typeof PERMISSIONS)[number];
 
-// Tạo bảng tra cứu O(1) để tối ưu hiệu năng kiểm tra tính hợp lệ của quyền hạn khi xử lý request.
+// Bảng tra cứu theo khóa, nhanh hơn duyệt mảng mỗi lần kiểm tra quyền.
 export const PERMISSION_LOOKUP: Record<string, true> = Object.fromEntries(
   PERMISSIONS.map((p) => [p, true]),
 );
 
+// Kiểm tra một chuỗi (ví dụ từ DB hoặc từ client gửi lên) có thuộc danh mục quyền không.
 export function isPermission(value: string): value is Permission {
   return PERMISSION_LOOKUP[value] === true;
 }
 
 export interface PermissionMetadata {
   id: Permission;
+  // Nhóm dùng để giao diện hiển thị bảng tick quyền theo từng module.
   group: string;
+  // Tên và mô tả tiếng Việt cho người dùng thấy trên giao diện, khác với id dùng trong code.
   name: string;
   description: string;
 }
 
+// Thông tin hiển thị của từng quyền, gửi cho giao diện qua GET /api/admin/permissions.
 export const PERMISSION_CATALOG: PermissionMetadata[] = [
   // identity
   {
@@ -235,9 +239,8 @@ export const PERMISSION_CATALOG: PermissionMetadata[] = [
   },
 ];
 
-/**
- * Quyền mặc định khi khởi tạo cơ sở dữ liệu cho các vai trò hệ thống và vai trò nghiệp vụ mẫu.
- */
+// Quyền mặc định của các role tạo sẵn, theo bảng trong spec; chỉ dùng khi seed.
+// Không có mục admin vì admin có mọi quyền ngầm định trong mergePermissions, kể cả quyền thêm sau này mà không cần seed lại.
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
   customer: [],
   sales: [
@@ -264,9 +267,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
   ],
 };
 
-/**
- * Role tạo sẵn và hệ thống cần seed.
- */
+// 4 role tạo sẵn; customer và admin là role hệ thống (isSystem) nên không sửa hay xóa được.
 export const INITIAL_ROLES = [
   { code: 'customer', name: 'Khách hàng', isSystem: true },
   { code: 'admin', name: 'Quản trị viên', isSystem: true },
@@ -274,26 +275,24 @@ export const INITIAL_ROLES = [
   { code: 'support', name: 'Nhân viên CSKH', isSystem: false },
 ] as const;
 
-/**
- * Tính toán tập hợp quyền hiệu lực bằng cách gộp các quyền từ tất cả vai trò mà Actor nắm giữ.
- */
+// Tính quyền của một người từ các role họ giữ.
 export function mergePermissions(
   roleCodes: string[],
   rawPermissions: string[],
   warnOnUnknown = true,
 ): Set<Permission> {
-  // Quản trị viên (admin) ngầm định sở hữu toàn bộ quyền trong hệ thống mà không cần gán thủ công từng quyền.
+  // Admin có mọi quyền theo danh mục trong code, nên thêm quyền mới vào danh mục là admin có ngay.
   if (roleCodes.includes('admin')) {
     return new Set<Permission>(PERMISSIONS);
   }
 
   const result = new Set<Permission>();
   for (const raw of rawPermissions) {
-    // Chỉ đưa vào danh sách nếu quyền thuộc danh mục hợp lệ đã khai báo trong mã nguồn.
+    // Bỏ qua quyền không còn trong danh mục (ví dụ quyền đã bị xóa khỏi code), không để nó lọt vào quyền hiệu lực.
     if (isPermission(raw)) {
       result.add(raw);
     } else if (warnOnUnknown) {
-      // Ghi log cảnh báo để kịp thời phát hiện dữ liệu rác hoặc quyền cũ đã bị xóa khỏi hệ thống.
+      // Cảnh báo để người vận hành biết còn dữ liệu cũ trong DB; middleware tắt cảnh báo này vì đã có kiểm tra lúc khởi động.
       logger.warn(
         { permission: raw, roles: roleCodes },
         'Quyền lạ trong role_permissions bị bỏ qua',
@@ -304,9 +303,7 @@ export function mergePermissions(
   return result;
 }
 
-/**
- * Quét toàn bộ quyền đã lưu trong cơ sở dữ liệu khi khởi động máy chủ để phát hiện quyền không còn hỗ trợ.
- */
+// Chạy một lần lúc khởi động server để cảnh báo quyền lạ trong DB.
 export async function validateStoredPermissions(
   dbClient: PrismaClient | Prisma.TransactionClient,
 ): Promise<string[]> {
@@ -318,7 +315,7 @@ export async function validateStoredPermissions(
   });
   const unknownPermissions: string[] = [];
   for (const item of allPermissions) {
-    // Phát hiện sớm các quyền tồn dư trong database nhưng đã bị loại bỏ khỏi danh mục code hiện hành.
+    // Quyền còn trong DB nhưng đã bị bỏ khỏi code: chỉ cảnh báo, không xóa, vì xóa dữ liệu là quyết định của người vận hành.
     if (!isPermission(item.permission)) {
       unknownPermissions.push(item.permission);
       logger.warn(

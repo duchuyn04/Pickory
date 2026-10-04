@@ -5,12 +5,15 @@ import { apiRequest } from '../../shared/api';
 import { getEmailError, getPasswordError } from '../../shared/identity-validation';
 import { useActor } from './use-actor';
 
+// Trang đăng ký tài khoản khách bằng email và mật khẩu.
 export function RegisterPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
+  // Giá trị của ô bẫy bot (honeypot): người thật không thấy ô này nên luôn rỗng.
   const [website, setWebsite] = useState('');
+  // Cho người dùng bật xem mật khẩu để kiểm tra gõ đúng.
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -20,17 +23,18 @@ export function RegisterPage() {
   const { data: actor } = useActor();
 
   React.useEffect(() => {
-    // Nếu khách hàng đã đăng nhập từ trước thì chuyển thẳng về trang chủ để tránh đăng ký đè.
+    // Khách đã đăng nhập thì không cần đăng ký nữa, đưa về trang chủ.
     if (actor?.kind === 'customer') {
       navigate('/', { replace: true });
     }
   }, [actor, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
 
-    // Xác thực định dạng email và độ mạnh mật khẩu tại client để cảnh báo lỗi sớm trước khi gửi request.
+    // Kiểm tra ở trình duyệt để báo lỗi tiếng Việt ngay và không tốn một trong 5 lượt đăng ký mỗi giờ của IP này.
     const validationError = getEmailError(email) || getPasswordError(password);
     if (validationError) {
       setError(validationError);
@@ -42,6 +46,8 @@ export function RegisterPage() {
     try {
       await apiRequest('/api/auth/register', {
         method: 'POST',
+        // Trường để trống không gửi (undefined) thay vì gửi chuỗi rỗng.
+        // website luôn rỗng với người thật; có giá trị thì server nhận ra là bot và từ chối.
         body: JSON.stringify({
           email,
           password,
@@ -50,11 +56,12 @@ export function RegisterPage() {
           website: website || undefined,
         }),
       });
-      // Cập nhật thông tin phiên đăng nhập mới của khách hàng vào cache để các thành phần UI nhận diện ngay.
-      // Chuyển hướng về trang chủ và thay thế lịch sử duyệt web để ngăn việc quay lại trang đăng ký.
+      // Server đăng nhập luôn sau khi đăng ký, nên nạp lại actor để header hiện trạng thái đã đăng nhập.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
+      // replace để nút Quay lại không đưa người dùng về trang đăng ký.
       navigate('/', { replace: true });
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (email đã dùng, quá nhiều lần đăng ký...) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setError(err.message);
       } else {

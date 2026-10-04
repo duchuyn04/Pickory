@@ -3,16 +3,19 @@ import { Link } from 'react-router-dom';
 import { apiRequest } from '../../shared/api';
 import { getEmailError } from '../../shared/identity-validation';
 
+// Trang nhập email để nhận link đặt lại mật khẩu.
 export function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
+  // submitted chuyển trang sang màn "đã gửi", thay thế form.
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
-    // Kiểm tra định dạng email ngay tại client để phản hồi tức thì mà không cần gửi request lên server.
+    // Kiểm tra định dạng ngay ở trình duyệt để báo lỗi tiếng Việt tức thì, không tốn một lượt gọi API (và một lượt trong giới hạn tần suất).
     const validationError = getEmailError(email);
     if (validationError) {
       setError(validationError);
@@ -25,9 +28,10 @@ export function ForgotPasswordPage() {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
-      // Chuyển sang giao diện xác nhận chung dù email có tồn tại hay không nhằm ngăn chặn dò quét tài khoản.
+      // Luôn hiện cùng một màn xác nhận, vì server cũng trả cùng một phản hồi; nếu khác nhau thì dò được email nào đã đăng ký.
       setSubmitted(true);
     } catch (err: unknown) {
+      // Chỉ lỗi thật (mạng, dữ liệu sai định dạng) mới tới đây; email không tồn tại không gây lỗi.
       if (err instanceof Error) {
         setError(err.message);
       } else {

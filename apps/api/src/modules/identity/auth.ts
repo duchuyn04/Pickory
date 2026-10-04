@@ -6,6 +6,7 @@ import { loginThrottle } from './login-throttle';
 import { hashPassword, verifyPassword } from './password';
 import { generateToken, hashToken } from './tokens';
 
+// Hash Argon2id hợp lệ nhưng không thuộc ai, dùng để tốn thời gian băm như khi có user thật.
 const DUMMY_HASH =
   '$argon2id$v=19$m=19456,t=2,p=1$Q29uc3RhbnRUaW1lU2FsdA$uF7hN93Qx2Tq89jFp1m5A0/X84f/7Dk06u6jJ7uV6U4';
 
@@ -26,20 +27,20 @@ export interface StaffLoginResult {
   expiresAt: Date;
 }
 
-/**
- * Xác thực và tạo phiên làm việc cho nhân viên nội bộ.
- */
+// Đăng nhập nhân viên bằng email và mật khẩu, trả về phiên 12 giờ.
 export async function staffLogin(params: StaffLoginParams): Promise<StaffLoginResult> {
   const { email, password, ip } = params;
+  // Chuẩn hóa email để Abc@x.com và abc@x.com là cùng một tài khoản.
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Kiểm tra giới hạn số lần thử theo IP và email để chặn các đợt tấn công brute-force mật khẩu.
+  // Kiểm tra bộ đếm trước mọi thứ khác, để người đang bị khóa không tốn CPU băm mật khẩu của máy chủ.
   loginThrottle.assertNotLocked(normalizedEmail, ip);
 
   const user = await db.user.findUnique({
     where: { email: normalizedEmail },
   });
 
+  // Gộp mọi lý do không đăng nhập được vào một nhánh để thông báo lỗi không tiết lộ tài khoản có tồn tại hay không.
   if (
     !user ||
     user.kind !== 'staff' ||
@@ -47,9 +48,9 @@ export async function staffLogin(params: StaffLoginParams): Promise<StaffLoginRe
     user.deletedAt !== null ||
     !user.passwordHash
   ) {
-    // Chạy verify với hash giả lập để thời gian phản hồi đồng nhất (constant time), chống tấn công timing attack dò email tồn tại.
+    // Vẫn băm một lần với hash giả, để thời gian phản hồi gần bằng trường hợp user thật; nếu không, đo thời gian là đoán được email có tồn tại.
     await verifyPassword(DUMMY_HASH, password).catch(() => false);
-    // Ghi nhận lần thử sai để tăng dần bộ đếm throttle cho cặp email và IP hiện tại.
+    // Tính vào bộ đếm cả khi email không tồn tại, để kẻ dò email cũng bị giới hạn.
     loginThrottle.recordFailure(normalizedEmail, ip);
     throw new AppError('INVALID_CREDENTIALS', 401, 'Email hoặc mật khẩu không chính xác.');
   }
@@ -57,18 +58,19 @@ export async function staffLogin(params: StaffLoginParams): Promise<StaffLoginRe
   const isValidPassword = await verifyPassword(user.passwordHash, password);
   if (!isValidPassword) {
     loginThrottle.recordFailure(normalizedEmail, ip);
+    // Cùng mã lỗi và cùng thông báo với nhánh trên, để không phân biệt được "sai email" với "sai mật khẩu".
     throw new AppError('INVALID_CREDENTIALS', 401, 'Email hoặc mật khẩu không chính xác.');
   }
 
-  // Xóa bộ đếm số lần sai sau khi đăng nhập thành công để không ảnh hưởng đến các lần đăng nhập hợp lệ tiếp theo.
+  // Đăng nhập đúng thì xóa bộ đếm sai, để lần gõ nhầm trước đó không cộng dồn.
   loginThrottle.recordSuccess(normalizedEmail, ip);
 
+  // Token gốc chỉ trả về một lần để đặt vào cookie; DB chỉ giữ hash.
   const token = generateToken();
   const tokenHash = hashToken(token);
-  // Nhân viên nội bộ chỉ được cấp phiên tối đa 12 giờ không gia hạn tự động để giảm thiểu rủi ro khi quên đăng xuất trên máy công ty.
+  // 12 giờ và không gia hạn, vì tài khoản nhân viên có quyền lớn nên cần giới hạn thời gian một phiên bị đánh cắp có thể dùng.
   const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
 
-  // Chỉ lưu SHA-256 hash của session token vào DB để nếu DB bị rò rỉ thì kẻ tấn công cũng không thể giả mạo phiên.
   await db.session.create({
     data: {
       tokenHash,
@@ -77,6 +79,7 @@ export async function staffLogin(params: StaffLoginParams): Promise<StaffLoginRe
     },
   });
 
+  // Nhân viên đăng nhập không phát UserLinkedEvent vì họ không có giỏ hàng khách cần gộp.
   return {
     user: {
       id: user.id,
@@ -110,14 +113,12 @@ export interface AuthResult {
   expiresAt: Date;
 }
 
-/**
- * Đăng ký tài khoản khách hàng mới kèm khởi tạo phiên đăng nhập ban đầu.
- */
+// Đăng ký khách bằng email và mật khẩu, đăng nhập luôn và gửi email xác thực.
 export async function customerRegister(params: CustomerRegisterParams): Promise<AuthResult> {
   const { email, password, name, phone, anonymousId } = params;
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Quy định độ dài tối thiểu 8 ký tự để bảo đảm mức an toàn cơ bản cho mật khẩu người dùng.
+  // Kiểm tra lại độ dài dù route đã kiểm, vì hàm này có thể được gọi từ nơi khác.
   if (password.length < 8) {
     throw new AppError('WEAK_PASSWORD', 400, 'Mật khẩu phải chứa tối thiểu 8 ký tự.');
   }
@@ -126,7 +127,7 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
     where: { email: normalizedEmail },
   });
 
-  // Email là định danh duy nhất cho mỗi tài khoản trong toàn hệ thống.
+  // Dùng một thông báo cho cả email khách và email nhân viên, để không ai dò được email nào thuộc nhân viên.
   if (existingUser) {
     throw new AppError(
       'EMAIL_ALREADY_EXISTS',
@@ -138,7 +139,7 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
   const customerRole = await db.role.findUnique({
     where: { code: 'customer' },
   });
-  // Role customer là bắt buộc để phân quyền các tính năng mua sắm của khách.
+  // Thiếu role customer là lỗi cấu hình (chưa chạy seed), không phải lỗi người dùng, nên ném lỗi thường để ra 500.
   if (!customerRole) {
     throw new Error('Role customer chưa được seed trong database');
   }
@@ -148,8 +149,10 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
   const newUser = await db.user.create({
     data: {
       email: normalizedEmail,
+      // Chưa xác thực cho tới khi người dùng bấm link trong email.
       emailVerified: false,
       passwordHash,
+      // Chuỗi rỗng đổi thành null để DB không lưu tên trống.
       name: name?.trim() || null,
       phone: phone?.trim() || null,
       kind: 'customer',
@@ -161,7 +164,7 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
     },
   });
 
-  // Cấp token xác thực có hạn 24 giờ để người dùng kịp kích hoạt tài khoản qua hòm thư cá nhân.
+  // Link xác thực hạn 24 giờ theo spec; hash lưu DB, token gốc chỉ nằm trong email.
   const verifyToken = generateToken();
   const verifyTokenHash = hashToken(verifyToken);
   const verifyExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -179,10 +182,11 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
     to: newUser.email,
     subject: 'Xác thực tài khoản Pickory',
     text: `Chào bạn, vui lòng truy cập link sau để xác thực tài khoản: /verify-email?token=${verifyToken}`,
+    // metadata cho test và dev lấy token mà không phải cắt chuỗi từ nội dung thư.
     metadata: { token: verifyToken, purpose: 'verify' },
   });
 
-  // Khách hàng được duy trì phiên dài 30 ngày để tối ưu trải nghiệm mua sắm không phải đăng nhập liên tục.
+  // Đăng nhập luôn sau khi đăng ký để khách không phải nhập lại thông tin vừa gõ; phiên khách 30 ngày.
   const sessionToken = generateToken();
   const sessionTokenHash = hashToken(sessionToken);
   const sessionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -195,7 +199,7 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
     },
   });
 
-  // Liên kết danh tính ẩn danh trước đó với tài khoản mới tạo để hợp nhất giỏ hàng và dữ liệu sự kiện.
+  // Phát sự kiện ở cuối, khi mọi thứ đã lưu xong, để module giỏ hàng gộp dữ liệu khách vãng lai vào tài khoản mới.
   await emitUserLinked(anonymousId, newUser.id);
 
   return {
@@ -218,20 +222,19 @@ export interface CustomerLoginParams {
   ip: string;
 }
 
-/**
- * Xác thực tài khoản khách hàng và gắn phiên làm việc mới.
- */
+// Đăng nhập khách bằng email và mật khẩu, trả về phiên 30 ngày.
 export async function customerLogin(params: CustomerLoginParams): Promise<AuthResult> {
   const { email, password, anonymousId, ip } = params;
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Kiểm tra giới hạn số lần thử theo IP và email để chặn brute-force mật khẩu khách hàng.
+  // Chặn sớm người đang bị khóa, trước khi tốn CPU băm mật khẩu.
   loginThrottle.assertNotLocked(normalizedEmail, ip);
 
   const user = await db.user.findUnique({
     where: { email: normalizedEmail },
   });
 
+  // Gộp mọi lý do không đăng nhập được, gồm cả tài khoản nhân viên (kind khác customer), để không lộ thông tin.
   if (
     !user ||
     user.kind !== 'customer' ||
@@ -239,7 +242,7 @@ export async function customerLogin(params: CustomerLoginParams): Promise<AuthRe
     user.deletedAt !== null ||
     !user.passwordHash
   ) {
-    // Chạy hash giả lập để giữ thời gian xử lý đồng nhất (constant time), tránh bị dò đoán email có tồn tại hay không.
+    // Băm với hash giả để thời gian phản hồi không tiết lộ email có tồn tại hay không.
     await verifyPassword(DUMMY_HASH, password).catch(() => false);
     loginThrottle.recordFailure(normalizedEmail, ip);
     throw new AppError('INVALID_CREDENTIALS', 401, 'Email hoặc mật khẩu không chính xác.');
@@ -253,7 +256,7 @@ export async function customerLogin(params: CustomerLoginParams): Promise<AuthRe
 
   loginThrottle.recordSuccess(normalizedEmail, ip);
 
-  // Phiên đăng nhập khách hàng kéo dài 30 ngày để giữ trạng thái đăng nhập thuận tiện khi duyệt web.
+  // Phiên khách 30 ngày (và tự gia hạn trong middleware) để khách mua sắm không phải đăng nhập liên tục.
   const token = generateToken();
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -266,7 +269,7 @@ export async function customerLogin(params: CustomerLoginParams): Promise<AuthRe
     },
   });
 
-  // Gắn kết phiên ẩn danh hiện tại với tài khoản người dùng vừa đăng nhập nhằm đồng bộ giỏ hàng khách vãng lai.
+  // Gộp giỏ hàng và lịch sử xem của khách vãng lai vào tài khoản; handler lỗi chỉ bị log nên không làm đăng nhập thất bại.
   await emitUserLinked(anonymousId, user.id);
 
   return {
@@ -282,13 +285,13 @@ export async function customerLogin(params: CustomerLoginParams): Promise<AuthRe
   };
 }
 
-/**
- * Hủy bỏ phiên làm việc của người dùng trong cơ sở dữ liệu.
- */
+// Đăng xuất: xóa phiên khỏi DB để token cũ không dùng lại được.
 export async function logout(sessionToken?: string): Promise<void> {
+  // Không có cookie thì không có gì để xóa, và đăng xuất lúc chưa đăng nhập không phải lỗi.
   if (!sessionToken) return;
-  // Hash token trước khi truy vấn vì DB chỉ lưu hash chứ không lưu token gốc dạng plain text.
+  // DB chỉ lưu hash nên phải băm token trước khi tìm.
   const tokenHash = hashToken(sessionToken);
+  // deleteMany thay vì delete để không ném lỗi khi phiên đã bị xóa sẵn.
   await db.session.deleteMany({
     where: { tokenHash },
   });

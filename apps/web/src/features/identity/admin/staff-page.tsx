@@ -6,16 +6,19 @@ import { AssignRolesDialog, type StaffRow } from './assign-roles-dialog';
 import { InviteDialog } from './invite-dialog';
 import type { RoleData } from './role-form';
 
+// Trang quản lý nhân viên: xem danh sách, mời, đổi role, khóa và mở khóa.
 export function StaffPage() {
+  // Hai quyền tách nhau: người chỉ có staff:read xem được danh sách nhưng không thấy các nút thao tác.
   const canReadStaff = useCan('staff:read');
   const canManageStaff = useCan('staff:manage');
   const queryClient = useQueryClient();
 
+  // Trạng thái mở của hai hộp thoại; selectedStaff khác null nghĩa là đang đổi role cho người đó.
   const [inviteOpen, setInviteOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState<StaffRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Kiểm tra cờ lỗi của truy vấn để cảnh báo rõ ràng khi nạp danh sách nhân viên thất bại thay vì âm thầm hiển thị bảng rỗng.
+  // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại; nếu bỏ qua thì lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
   const {
     data: staffList = [],
     isLoading: staffLoading,
@@ -24,10 +27,11 @@ export function StaffPage() {
   } = useQuery<StaffRow[]>({
     queryKey: ['admin-staff'],
     queryFn: () => apiRequest<StaffRow[]>('/api/admin/staff'),
+    // Không gọi API khi không có quyền, vì chắc chắn bị từ chối với 403.
     enabled: canReadStaff,
   });
 
-  // Truy vấn danh sách vai trò để nạp vào dialog gán quyền và hiển thị thông báo riêng nếu xảy ra lỗi.
+  // Danh sách role cho hộp thoại mời và đổi role; chỉ người có quyền quản lý nhân viên mới cần.
   const {
     data: roles = [],
     isError: rolesIsError,
@@ -38,6 +42,7 @@ export function StaffPage() {
     enabled: canManageStaff,
   });
 
+  // Hook ở trên phải chạy hết trước lệnh return sớm này; backend vẫn chặn mọi request thật sự.
   if (!canReadStaff) {
     return (
       <div
@@ -55,23 +60,27 @@ export function StaffPage() {
     );
   }
 
+  // Một nút dùng cho cả khóa và mở khóa, tùy trạng thái hiện tại của nhân viên.
   async function handleToggleLock(staff: StaffRow) {
     const isLocking = !staff.lockedAt;
     const confirmMsg = isLocking
       ? `Bạn có chắc chắn muốn khóa tài khoản nhân viên "${staff.name || staff.email}"?`
       : `Bạn có chắc chắn muốn mở khóa tài khoản nhân viên "${staff.name || staff.email}"?`;
 
+    // Hỏi lại trước khi khóa hay mở khóa vì thao tác này ảnh hưởng ngay tới người khác.
     if (!window.confirm(confirmMsg)) return;
 
+    // Xóa lỗi của lần thao tác trước để không hiện lẫn.
     setActionError(null);
     try {
       const endpoint = isLocking
         ? `/api/admin/staff/${staff.id}/lock`
         : `/api/admin/staff/${staff.id}/unlock`;
       await apiRequest(endpoint, { method: 'POST' });
-      // Làm mới danh sách nhân viên trong cache để cập nhật ngay trạng thái khóa/mở khóa lên giao diện.
+      // Nạp lại danh sách để dòng của người đó hiện trạng thái khóa mới.
       await queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (admin cuối cùng, tự khóa mình, không đủ quyền...) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setActionError(err.message);
       } else {

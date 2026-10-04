@@ -3,36 +3,45 @@ import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import { PermissionGrid, type PermissionItem } from './permission-grid';
 
 export interface RoleData {
+  // Không có id nghĩa là role chưa được tạo.
   id?: string;
   code: string;
   name: string;
+  // Role hệ thống (admin, customer) không sửa hay xóa được.
   isSystem: boolean;
   permissions: string[];
 }
 
 interface RoleFormProps {
+  // Không truyền role nghĩa là đang tạo mới, có role nghĩa là đang sửa.
   role?: RoleData | null;
   allPermissions: PermissionItem[];
+  // Cha thực hiện việc gọi API; ném lỗi thì form hiện lỗi và không đóng.
   onSave: (data: { code: string; name: string; permissions: string[] }) => Promise<void>;
   onClose: () => void;
 }
 
+// Hộp thoại tạo hoặc sửa role, kèm bảng tick quyền.
 export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProps) {
+  // Hook đưa focus vào hộp thoại khi mở, đóng bằng phím Esc, và trả focus về nút đã mở.
   const dialogRef = useDialogFocus({ onClose });
   const isEditing = Boolean(role?.id);
+  // Giá trị ban đầu lấy từ role đang sửa; tạo mới thì để trống.
   const [code, setCode] = useState(role?.code || '');
   const [name, setName] = useState(role?.name || '');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>(role?.permissions || []);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
   async function handleSubmit(e: React.FormEvent) {
+    // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
 
     const trimmedCode = code.trim();
     const trimmedName = name.trim();
 
-    // Khi tạo mới cần kiểm tra định dạng slug của mã vai trò để bảo đảm an toàn khi đối soát phân quyền.
+    // Mã chỉ kiểm khi tạo mới, vì mã không đổi được sau khi đã tạo; kiểm ở đây để báo lỗi tiếng Việt ngay, server vẫn kiểm lại.
     if (!isEditing) {
       if (!trimmedCode) {
         setError('Mã vai trò không được để trống.');
@@ -44,7 +53,7 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
       }
     }
 
-    // Tên vai trò hiển thị là bắt buộc để nhân viên dễ dàng nhận diện và phân biệt trên bảng quản trị.
+    // Tên là thứ người dùng thấy trong danh sách nên không được trống.
     if (!trimmedName) {
       setError('Tên vai trò không được để trống.');
       return;
@@ -54,12 +63,15 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
 
     try {
       await onSave({
+        // Đang sửa thì giữ mã cũ, vì ô mã bị khóa và server không đổi mã.
         code: isEditing ? role?.code || trimmedCode : trimmedCode,
         name: trimmedName,
         permissions: selectedPermissions,
       });
+      // Chỉ đóng khi lưu thành công; lỗi thì ở lại để người dùng sửa.
       onClose();
     } catch (err: unknown) {
+      // Hiện nguyên thông báo của API (không đủ quyền để cấp, mã trùng...) vì đã là tiếng Việt.
       if (err instanceof Error) {
         setError(err.message);
       } else {
