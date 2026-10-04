@@ -1,7 +1,7 @@
 # Design system tham chiếu
 
 Tài liệu này chốt hướng giao diện của Pickory trước khi làm UI (UI-05 trở đi). Token cài sẵn ở
-`apps/web/src/shared/styles/tokens.css`. Mọi component dùng token, không viết màu hoặc cỡ chữ cứng.
+`apps/frontend/src/shared/styles/tokens.css`. Mọi component dùng token, không viết màu hoặc cỡ chữ cứng.
 Prototype bấm được dùng đúng hệ thống này: `prototype/index.html`.
 
 ## Hướng đã chốt: cam ấm, nền kem và cát

@@ -19,7 +19,7 @@ Kết nối với đơn vị vận chuyển GHN: cung cấp danh mục địa ch
 ### Interface public
 
 ```ts
-// apps/api/src/modules/shipping/index.ts
+// apps/backend/src/modules/shipping/index.ts
 export type Address = {
   provinceCode: string;       // mã theo danh mục địa chỉ của GHN
   wardCode: string;

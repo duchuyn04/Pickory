@@ -27,7 +27,7 @@ export default tseslint.config(
   },
   {
     // Code web chạy trong trình duyệt nên dùng globals của browser thay vì node.
-    files: ['apps/web/**/*.{ts,tsx}'],
+    files: ['apps/frontend/**/*.{ts,tsx}'],
     languageOptions: { globals: { ...globals.browser } },
   },
   // Quy tắc ranh giới module (đặt trước prettier, sau các cấu hình chung).
