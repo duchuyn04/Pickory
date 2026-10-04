@@ -10,17 +10,13 @@ import type { ConsentState } from './types';
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 /**
- * Middleware định danh Actor cho mọi request:
- * 1. Chặn request ghi có Origin lạ (chống CSRF).
- * 2. Cấp hoặc giữ cookie `pk_anon` (UUID v4, httpOnly, Secure, SameSite=Lax, 1 năm).
- * 3. Nếu có cookie `pk_session`: nạp phiên, kiểm tra hạn dùng, nạp user + role + permissions bằng 1 truy vấn join.
- * 4. Nếu không có phiên hoặc hết hạn: gán actor kiểu `guest`.
+ * Middleware định danh và phân quyền Actor kèm phòng thủ CSRF cho mọi request gửi tới hệ thống.
  */
 export const actorMiddleware: RequestHandler = async (req, res, next) => {
   try {
     const config = loadConfig();
 
-    // 1. Kiểm tra Origin cho các request ghi
+    // Kiểm tra Origin hoặc Referer với các phương thức thay đổi dữ liệu để chống tấn công CSRF qua trình duyệt.
     if (MUTATING_METHODS.has(req.method.toUpperCase())) {
       const allowedOrigin = new URL(config.WEB_ORIGIN).origin;
       const originHeader = req.headers.origin;
@@ -52,7 +48,7 @@ export const actorMiddleware: RequestHandler = async (req, res, next) => {
       }
     }
 
-    // 2. Xử lý cookie pk_anon
+    // Cấp định danh ẩn danh dài hạn (1 năm) để bám vết hành vi giỏ hàng và trạng thái đồng ý của khách chưa đăng nhập.
     let anonymousId = req.cookies?.pk_anon as string | undefined;
     if (!anonymousId || typeof anonymousId !== 'string' || anonymousId.trim() === '') {
       anonymousId = randomUUID();
@@ -64,9 +60,10 @@ export const actorMiddleware: RequestHandler = async (req, res, next) => {
       });
     }
 
-    // 3. Xử lý phiên đăng nhập nếu có
+    // Nạp phiên làm việc và toàn bộ quyền hạn tương ứng nếu request đính kèm cookie xác thực.
     const rawSessionToken = req.cookies?.pk_session as string | undefined;
     if (rawSessionToken && typeof rawSessionToken === 'string') {
+      // Băm SHA-256 token từ cookie trước khi tra cứu vì cơ sở dữ liệu chỉ lưu giá trị băm nhằm bảo vệ phiên.
       const tokenHash = hashToken(rawSessionToken);
       const session = await db.session.findUnique({
         where: { tokenHash },
@@ -89,7 +86,7 @@ export const actorMiddleware: RequestHandler = async (req, res, next) => {
 
       const now = new Date();
       if (session && session.expiresAt > now && !session.user.lockedAt && !session.user.deletedAt) {
-        // Gia hạn phiên khách khi còn dưới 7 ngày hoạt động (phiên nhân viên không gia hạn)
+        // Phiên của khách hàng được trượt hạn tự động nếu sắp hết hạn (dưới 7 ngày), phiên nhân viên cố định để bảo mật.
         if (session.user.kind === 'customer') {
           const msRemaining = session.expiresAt.getTime() - now.getTime();
           const sevenDaysMs = 7 * 24 * 60 * 60 * 1000;
@@ -115,7 +112,7 @@ export const actorMiddleware: RequestHandler = async (req, res, next) => {
         );
         const permissions = mergePermissions(roleCodes, rawPerms, false);
 
-        // Nạp consent mới nhất của user
+        // Lấy bản ghi đồng ý mới nhất theo userId hoặc anonymousId để áp dụng các thiết lập quyền riêng tư hiện hành.
         const latestConsent = await db.consentRecord.findFirst({
           where: {
             OR: [{ userId: session.user.id }, { anonymousId }],
@@ -143,14 +140,14 @@ export const actorMiddleware: RequestHandler = async (req, res, next) => {
         return;
       }
 
-      // Phiên không hợp lệ hoặc đã hết hạn: xóa cookie và dọn session nếu có
+      // Dọn dẹp bản ghi phiên đã hết hạn trong cơ sở dữ liệu và yêu cầu trình duyệt hủy bỏ cookie cũ.
       if (session && session.expiresAt <= now) {
         await db.session.delete({ where: { id: session.id } }).catch(() => {});
       }
       res.clearCookie('pk_session', { httpOnly: true, sameSite: 'lax' });
     }
 
-    // 4. Khách vãng lai (guest)
+    // Khi không có phiên đăng nhập hợp lệ, thiết lập Actor ở vai trò khách vãng lai (guest) với quyền tối thiểu.
     const latestGuestConsent = await db.consentRecord.findFirst({
       where: { anonymousId },
       orderBy: { createdAt: 'desc' },
@@ -179,7 +176,7 @@ export const actorMiddleware: RequestHandler = async (req, res, next) => {
 };
 
 /**
- * Yêu cầu người dùng đã đăng nhập (customer hoặc staff).
+ * Middleware kiểm tra yêu cầu đăng nhập bắt buộc đối với khách hàng hoặc nhân viên.
  */
 export const requireAuth: RequestHandler = (req, _res, next) => {
   if (!req.actor?.userId) {
@@ -190,7 +187,7 @@ export const requireAuth: RequestHandler = (req, _res, next) => {
 };
 
 /**
- * Yêu cầu actor là nhân viên (staff).
+ * Middleware chỉ cho phép nhân viên nội bộ truy cập vào endpoint quản trị.
  */
 export const requireStaff: RequestHandler = (req, _res, next) => {
   if (!req.actor?.userId) {
@@ -205,8 +202,7 @@ export const requireStaff: RequestHandler = (req, _res, next) => {
 };
 
 /**
- * Yêu cầu có đầy đủ các quyền được truyền vào.
- * 401 nếu chưa đăng nhập; 403 nếu thiếu bất kỳ quyền nào.
+ * Middleware kiểm tra danh sách quyền cụ thể, từ chối nếu Actor thiếu bất kỳ quyền nào.
  */
 export function requirePermission(...permissions: Permission[]): RequestHandler {
   return (req, _res, next) => {

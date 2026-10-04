@@ -19,7 +19,7 @@ export interface GoogleOAuthClient {
 }
 
 /**
- * Client mặc định gọi HTTP thật tới Google OAuth 2.0 endpoints.
+ * Client mặc định gọi HTTP trực tiếp tới các endpoint Google OAuth 2.0.
  */
 export const defaultGoogleClient: GoogleOAuthClient = {
   async exchangeCode(code: string, codeVerifier: string, redirectUri: string): Promise<string> {
@@ -71,10 +71,16 @@ export const defaultGoogleClient: GoogleOAuthClient = {
 
 let activeGoogleClient: GoogleOAuthClient = defaultGoogleClient;
 
+/**
+ * Cho phép thay thế client gọi Google OAuth để phục vụ kiểm thử tự động không phụ thuộc mạng ngoài.
+ */
 export function setGoogleOAuthClient(client: GoogleOAuthClient): void {
   activeGoogleClient = client;
 }
 
+/**
+ * Tạo bộ tham số PKCE (Proof Key for Code Exchange) và state ngẫu nhiên nhằm bảo vệ luồng OAuth 2.0.
+ */
 export function generatePkce() {
   const codeVerifier = randomBytes(32).toString('base64url');
   const codeChallenge = createHash('sha256').update(codeVerifier).digest('base64url');
@@ -82,6 +88,9 @@ export function generatePkce() {
   return { codeVerifier, codeChallenge, state };
 }
 
+/**
+ * Xây dựng URL chuyển hướng người dùng sang trang đồng ý cấp quyền của Google.
+ */
 export function buildGoogleAuthUrl(params: {
   clientId: string;
   redirectUri: string;
@@ -108,10 +117,13 @@ export interface HandleGoogleCallbackParams {
   anonymousId: string;
 }
 
+/**
+ * Xử lý callback sau khi người dùng xác thực thành công tại Google và quay về hệ thống.
+ */
 export async function handleGoogleCallback(params: HandleGoogleCallbackParams) {
   const { code, state, savedState, codeVerifier, redirectUri, anonymousId } = params;
 
-  // 1. Kiểm tra state bằng constant-time
+  // So sánh state bằng hàm so sánh đẳng thời (constant-time) để chống tấn công CSRF và timing attack.
   if (!state || !savedState || !safeEqual(state, savedState)) {
     throw new AppError(
       'INVALID_OAUTH_STATE',
@@ -120,13 +132,13 @@ export async function handleGoogleCallback(params: HandleGoogleCallbackParams) {
     );
   }
 
-  // 2. Trao đổi mã lấy access token và user info
+  // Trao đổi mã ủy quyền lấy token và nạp thông tin người dùng từ máy chủ Google.
   const accessToken = await activeGoogleClient.exchangeCode(code, codeVerifier, redirectUri);
   const userInfo = await activeGoogleClient.getUserInfo(accessToken);
 
   const normalizedEmail = userInfo.email.trim().toLowerCase();
 
-  // 3. Kiểm tra nếu email thuộc nhân viên -> từ chối
+  // Nhân viên nội bộ bắt buộc dùng mật khẩu riêng và không được phép liên kết OAuth để đảm bảo chính sách bảo mật nội bộ.
   const existingUser = await db.user.findUnique({
     where: { email: normalizedEmail },
     include: { roles: { include: { role: true } } },
@@ -140,7 +152,7 @@ export async function handleGoogleCallback(params: HandleGoogleCallbackParams) {
     );
   }
 
-  // 4. Nếu email chưa được xác thực trên Google và đã có tài khoản sẵn -> không tự liên kết
+  // Không tự động gộp tài khoản nếu hòm thư chưa xác thực trên Google nhằm ngăn chặn hành vi mạo danh chiếm đoạt tài khoản.
   if (!userInfo.email_verified && existingUser) {
     throw new AppError(
       'UNVERIFIED_EMAIL',
@@ -149,14 +161,14 @@ export async function handleGoogleCallback(params: HandleGoogleCallbackParams) {
     );
   }
 
-  // 5. Kiểm tra nếu tài khoản hiện có đã bị khóa hoặc xóa
+  // Chặn truy cập nếu tài khoản đang trong trạng thái bị khóa hoặc đã yêu cầu xóa.
   if (existingUser && (existingUser.lockedAt || existingUser.deletedAt)) {
     throw new AppError('UNAUTHORIZED', 401, 'Tài khoản không tồn tại hoặc đã bị khóa.');
   }
 
   let targetUser = existingUser;
 
-  // Kiểm tra tài khoản OAuth đã liên kết trước đó chưa
+  // Tìm tài khoản liên kết theo cặp nhà cung cấp và mã định danh duy nhất (sub) từ Google.
   const existingOAuth = await db.oAuthAccount.findUnique({
     where: {
       provider_providerUserId: {
@@ -209,7 +221,7 @@ export async function handleGoogleCallback(params: HandleGoogleCallbackParams) {
       });
       targetUser = { ...userToLink, emailVerified: true, passwordHash: null };
     } else {
-      // Tài khoản khách đã có sẵn và email Google đã xác thực trùng: giữ nguyên hành vi cũ
+      // Email đã xác thực trước đó trùng khớp, liên kết tài khoản Google này vào người dùng hiện tại.
       await db.oAuthAccount.create({
         data: {
           provider: 'google',
@@ -219,7 +231,7 @@ export async function handleGoogleCallback(params: HandleGoogleCallbackParams) {
       });
     }
   } else {
-    // Khách mới hoàn toàn: tạo tài khoản khách
+    // Tạo mới hồ sơ khách hàng và gán role customer mặc định khi người dùng lần đầu đăng nhập hệ thống qua Google.
     const custRole = await db.role.findUniqueOrThrow({ where: { code: 'customer' } });
     targetUser = await db.user.create({
       data: {
@@ -246,7 +258,7 @@ export async function handleGoogleCallback(params: HandleGoogleCallbackParams) {
   if (targetUser.lockedAt || targetUser.deletedAt) {
     throw new AppError('UNAUTHORIZED', 401, 'Tài khoản không tồn tại hoặc đã bị khóa.');
   }
-  // 6. Tạo phiên 30 ngày cho khách
+  // Cấp phiên đăng nhập 30 ngày cho khách hàng để duy trì trạng thái đăng nhập xuyên suốt các phiên duyệt web.
   const sessionToken = generateToken();
   const sessionTokenHash = hashToken(sessionToken);
   const sessionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -259,7 +271,7 @@ export async function handleGoogleCallback(params: HandleGoogleCallbackParams) {
     },
   });
 
-  // 7. Phát UserLinkedEvent như đăng nhập thường
+  // Gắn kết định danh khách vãng lai trước đó với tài khoản Google để hợp nhất giỏ hàng tạm thời.
   await emitUserLinked(anonymousId, targetUser.id);
 
   return {

@@ -14,12 +14,12 @@ export interface SaveConsentParams {
 }
 
 /**
- * Lưu 1 bản ghi đồng ý mới vào consent_records kèm phiên bản chính sách.
- * Mỗi lần người dùng đổi lựa chọn đều thêm bản ghi mới (không sửa bản ghi cũ).
+ * Lưu bản ghi đồng ý xử lý dữ liệu của người dùng kèm phiên bản chính sách.
  */
 export async function saveConsent(params: SaveConsentParams): Promise<ConsentRecord> {
   const { anonymousId, userId, personalization, marketing, policyVersion } = params;
 
+  // Lưu dưới dạng lịch sử bất biến (append-only) thay vì ghi đè để phục vụ kiểm toán và chứng minh tuân thủ pháp lý.
   return db.consentRecord.create({
     data: {
       anonymousId,
@@ -32,7 +32,7 @@ export async function saveConsent(params: SaveConsentParams): Promise<ConsentRec
 }
 
 /**
- * Logic chọn bản ghi đồng ý mới nhất giữa khách vãng lai và tài khoản khi gộp (UserLinkedEvent).
+ * Xác định trạng thái đồng ý có hiệu lực bằng cách ưu tiên bản ghi có mốc thời gian mới nhất.
  */
 export function resolveLatestConsent(
   guestConsent: { personalization: boolean; marketing: boolean; createdAt: Date } | null,
@@ -48,7 +48,7 @@ export function resolveLatestConsent(
     return { personalization: guestConsent.personalization, marketing: guestConsent.marketing };
   }
 
-  // Cả hai cùng có: lấy bản ghi có thời điểm tạo mới hơn
+  // Khi cả hai danh tính đều có lựa chọn, quyết định gần nhất của người dùng phản ánh đúng ý nguyện hiện tại.
   if (guestConsent!.createdAt.getTime() >= userConsent!.createdAt.getTime()) {
     return { personalization: guestConsent!.personalization, marketing: guestConsent!.marketing };
   }
@@ -56,7 +56,7 @@ export function resolveLatestConsent(
 }
 
 /**
- * Đăng ký xử lý khi UserLinkedEvent phát ra: gộp consent lấy bản ghi mới nhất.
+ * Lắng nghe sự kiện liên kết tài khoản để đồng bộ và gộp trạng thái đồng ý giữa khách vãng lai và tài khoản.
  */
 export function setupConsentLinkListener(): void {
   onUserLinked(async ({ anonymousId, userId }) => {
@@ -73,7 +73,7 @@ export function setupConsentLinkListener(): void {
 
     const resolved = resolveLatestConsent(latestGuest, latestUser);
 
-    // Nếu guest có bản ghi mới hơn user hoặc user chưa có bản ghi, lưu bản ghi mới cho user
+    // Chỉ đồng bộ khi lựa chọn của khách vãng lai mới hơn để tránh ghi đè các cấu hình mới của tài khoản chính.
     if (
       latestGuest &&
       (!latestUser || latestGuest.createdAt.getTime() > latestUser.createdAt.getTime())

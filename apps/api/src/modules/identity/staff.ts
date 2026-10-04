@@ -44,22 +44,19 @@ export interface InviteStaffParams {
 }
 
 /**
- * Mời nhân viên mới:
- * 1. Không gán role customer cho nhân viên.
- * 2. Không mời email đã thuộc khách hoặc nhân viên khác.
- * 3. Tạo link mời hạn 72 giờ dùng 1 lần gửi qua EmailSender.
- * 4. Ghi 1 dòng audit log.
+ * Khởi tạo tài khoản nhân viên mới và gửi email mời kích hoạt kèm đường dẫn thiết lập mật khẩu.
  */
 export async function inviteStaff(params: InviteStaffParams) {
   const { actorId, actorRoles, actorPermissions, email, name, roleCodes } = params;
   const normalizedEmail = email.trim().toLowerCase();
   const uniqueRoleCodes = [...new Set(roleCodes)];
 
+  // Chặn gán role customer cho tài khoản nhân viên vì nhân viên chịu cơ chế xác thực và phiên riêng biệt.
   if (uniqueRoleCodes.includes('customer')) {
     throw new AppError('INVALID_ROLE', 400, 'Không thể gán role customer cho tài khoản nhân viên.');
   }
 
-  // Chống leo thang đặc quyền: chỉ admin mới có quyền mời role admin
+  // Chống leo thang đặc quyền: chỉ quản trị viên (admin) mới có thẩm quyền phân quyền admin cho người khác.
   if (uniqueRoleCodes.includes('admin') && !actorRoles.includes('admin')) {
     throw new AppError(
       'FORBIDDEN',
@@ -67,11 +64,10 @@ export async function inviteStaff(params: InviteStaffParams) {
       'Chỉ quản trị viên (admin) mới có quyền mời tài khoản làm admin.',
     );
   }
-
+  // Kiểm tra tính duy nhất của email để không mời trùng tài khoản hoặc nhầm lẫn giữa khách và nhân viên.
   const existingUser = await db.user.findUnique({
     where: { email: normalizedEmail },
   });
-
   if (existingUser) {
     if (existingUser.kind === 'customer') {
       throw new AppError(
@@ -86,7 +82,7 @@ export async function inviteStaff(params: InviteStaffParams) {
       'Email này đã được sử dụng cho một nhân viên khác.',
     );
   }
-
+  // Kiểm tra sự tồn tại của tất cả các role được chỉ định để không gán các mã role sai lệch.
   const roles = await db.role.findMany({
     where: { code: { in: uniqueRoleCodes } },
     include: { permissions: true },
@@ -125,7 +121,7 @@ export async function inviteStaff(params: InviteStaffParams) {
       },
     });
 
-    // Tạo email token 72 giờ (purpose: invite)
+    // Cấp token kích hoạt có thời hạn 72 giờ để nhân viên mới có đủ thời gian tiếp nhận thư mời và đặt mật khẩu.
     const token = await createEmailToken(
       {
         userId: newUser.id,
@@ -135,6 +131,7 @@ export async function inviteStaff(params: InviteStaffParams) {
       tx,
     );
 
+    // Ghi nhật ký kiểm toán để theo dõi người gửi lời mời và danh sách vai trò dự kiến bàn giao.
     await recordAudit(tx, {
       actorId,
       action: 'staff.invite',
@@ -219,20 +216,18 @@ export interface AssignStaffRolesParams {
   roleCodes: string[];
 }
 /**
- * Gán role cho nhân viên:
- * 1. Không tự sửa role của chính mình.
- * 2. Không gỡ quyền admin của admin cuối cùng.
- * 3. Nếu gỡ hết role: xóa mọi phiên ngay lập tức.
- * 4. Ghi 1 dòng audit log.
+ * Điều chỉnh danh sách vai trò được phân công cho một nhân viên nội bộ.
  */
 export async function assignStaffRoles(params: AssignStaffRolesParams) {
   const { actorId, actorRoles, actorPermissions, targetUserId, roleCodes } = params;
   const uniqueRoleCodes = [...new Set(roleCodes)];
 
+  // Không cho phép tự sửa role của chính mình nhằm ngăn nhân viên tự ý nâng đặc quyền hoặc gỡ bỏ ràng buộc.
   if (actorId === targetUserId) {
     throw new AppError('CANNOT_MODIFY_SELF', 400, 'Không thể tự sửa đổi role của chính mình.');
   }
 
+  // Phân tách hoàn toàn giữa nhân viên và khách hàng, không thể gán role customer trong luồng quản trị nhân sự.
   if (uniqueRoleCodes.includes('customer')) {
     throw new AppError('INVALID_ROLE', 400, 'Không thể gán role customer cho nhân viên.');
   }
@@ -303,7 +298,7 @@ export async function assignStaffRoles(params: AssignStaffRolesParams) {
         // Lý do: Nhân viên không phải admin chỉ được sửa đổi role nếu sở hữu toàn bộ quyền hiện tại của mục tiêu.
         assertActorCanManageTargetRoles(actorRoles, actorPermissions, targetUser.roles);
 
-        // Kiểm tra an toàn: không gỡ admin cuối cùng (chỉ bảo vệ nếu admin đích đang hoạt động)
+        // Bảo vệ hệ thống khỏi trạng thái mất quyền quản trị hoàn toàn bằng cách không cho phép gỡ admin cuối cùng đang hoạt động.
         if (isCurrentlyAdmin && !willBeAdmin && targetUser.lockedAt === null) {
           const activeAdminCount = await countActiveAdmins(tx);
           if (activeAdminCount <= 1) {
@@ -325,11 +320,12 @@ export async function assignStaffRoles(params: AssignStaffRolesParams) {
           });
         }
 
-        // Nếu gỡ hết role: xóa mọi phiên ngay lập tức
+        // Thu hồi ngay lập tức mọi phiên đăng nhập nếu nhân viên bị tước toàn bộ role để họ không tiếp tục thao tác trái phép.
         if (newRoles.length === 0) {
           await tx.session.deleteMany({ where: { userId: targetUserId } });
         }
 
+        // Ghi lại sự thay đổi vai trò vào nhật ký kiểm toán để phục vụ thanh tra phân quyền nội bộ.
         await recordAudit(tx, {
           actorId,
           action: 'staff.roles_update',
@@ -361,15 +357,12 @@ export interface StaffLockParams {
 }
 
 /**
- * Khóa tài khoản nhân viên:
- * 1. Không tự khóa chính mình.
- * 2. Không khóa admin cuối cùng.
- * 3. Xóa mọi phiên ngay lập tức.
- * 4. Ghi 1 dòng audit log.
+ * Khóa tài khoản nhân viên nội bộ và chấm dứt toàn bộ phiên làm việc của tài khoản đó.
  */
 export async function lockStaff(params: StaffLockParams): Promise<void> {
   const { actorId, actorRoles, actorPermissions, targetUserId } = params;
 
+  // Ngăn chặn nhân viên tự khóa chính mình để tránh vô tình mất quyền truy cập hoặc làm gián đoạn vận hành hệ thống.
   if (actorId === targetUserId) {
     throw new AppError('CANNOT_MODIFY_SELF', 400, 'Không thể tự khóa tài khoản của chính mình.');
   }
@@ -410,10 +403,12 @@ export async function lockStaff(params: StaffLockParams): Promise<void> {
         // Lý do: Kiểm tra quyền trước khi thực hiện no-op nếu tài khoản đã bị khóa.
         assertActorCanManageTargetRoles(actorRoles, actorPermissions, targetUser.roles);
 
+        // Nếu tài khoản đã bị khóa từ trước thì bỏ qua bước cập nhật nhưng vẫn giữ tính idempotent.
         if (targetUser.lockedAt !== null) {
           return;
         }
 
+        // Đếm số lượng admin đang hoạt động để ngăn chặn khóa tài khoản admin cuối cùng, tránh sự cố mất kiểm soát hệ thống.
         if (isCurrentlyAdmin) {
           const activeAdminCount = await countActiveAdmins(tx);
           if (activeAdminCount <= 1) {
@@ -431,9 +426,10 @@ export async function lockStaff(params: StaffLockParams): Promise<void> {
           data: { lockedAt: now },
         });
 
-        // Xóa mọi phiên ngay
+        // Thu hồi ngay lập tức toàn bộ phiên đăng nhập để ngăn chặn nhân viên bị khóa tiếp tục thao tác trên hệ thống.
         await tx.session.deleteMany({ where: { userId: targetUserId } });
 
+        // Ghi nhận hành động khóa vào nhật ký kiểm toán để xác minh trách nhiệm của người thực hiện.
         await recordAudit(tx, {
           actorId,
           action: 'staff.lock',
@@ -454,7 +450,7 @@ export async function lockStaff(params: StaffLockParams): Promise<void> {
 }
 
 /**
- * Mở khóa tài khoản nhân viên.
+ * Mở khóa tài khoản nhân viên để khôi phục quyền truy cập vào các tính năng quản trị.
  */
 export async function unlockStaff(params: StaffLockParams): Promise<void> {
   const { actorId, actorRoles, actorPermissions, targetUserId } = params;
@@ -481,6 +477,7 @@ export async function unlockStaff(params: StaffLockParams): Promise<void> {
           throw new AppError('USER_NOT_FOUND', 404, 'Không tìm thấy tài khoản nhân viên.');
         }
 
+        // Chỉ admin mới có thẩm quyền mở khóa cho một tài khoản admin khác nhằm duy trì kỷ luật phân quyền cấp cao.
         const isCurrentlyAdmin = targetUser.roles.some((r) => r.role.code === 'admin');
         if (isCurrentlyAdmin && !actorRoles.includes('admin')) {
           throw new AppError(
@@ -498,6 +495,7 @@ export async function unlockStaff(params: StaffLockParams): Promise<void> {
           data: { lockedAt: null },
         });
 
+        // Ghi nhật ký kiểm toán để lưu vết thời điểm và người mở khóa tài khoản nhân viên.
         await recordAudit(tx, {
           actorId,
           action: 'staff.unlock',

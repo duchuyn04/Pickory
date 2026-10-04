@@ -53,8 +53,7 @@ const resetPasswordSchema = z.object({
 });
 
 /**
- * POST /api/auth/register
- * Đăng ký tài khoản khách hàng mới, đăng nhập ngay, cấp phiên 30 ngày.
+ * Đăng ký tài khoản khách hàng mới và cấp phiên đăng nhập ban đầu.
  */
 identityRouter.post('/api/auth/register', async (req, res, next) => {
   try {
@@ -96,8 +95,7 @@ identityRouter.post('/api/auth/register', async (req, res, next) => {
 });
 
 /**
- * POST /api/auth/login
- * Đăng nhập khách hàng, tạo phiên 30 ngày.
+ * Xác thực tài khoản khách hàng và thiết lập cookie phiên làm việc.
  */
 identityRouter.post('/api/auth/login', async (req, res, next) => {
   try {
@@ -129,8 +127,7 @@ identityRouter.post('/api/auth/login', async (req, res, next) => {
 });
 
 /**
- * GET /api/auth/google/start
- * Khởi tạo luồng OAuth 2.0 PKCE, chuyển hướng sang Google.
+ * Khởi tạo luồng xác thực Google OAuth 2.0 PKCE và chuyển hướng trình duyệt.
  */
 identityRouter.get('/api/auth/google/start', (req, res) => {
   const config = loadConfig();
@@ -142,7 +139,7 @@ identityRouter.get('/api/auth/google/start', (req, res) => {
       ? returnToRaw
       : undefined;
 
-  // Lưu state và codeVerifier vào cookie an toàn
+  // Lưu state và codeVerifier vào cookie tạm thời 10 phút để đối soát khi Google callback về.
   res.cookie('pk_oauth_state', JSON.stringify({ state, codeVerifier, returnTo }), {
     httpOnly: true,
     secure: config.NODE_ENV === 'production',
@@ -169,8 +166,7 @@ identityRouter.get('/api/auth/google/start', (req, res) => {
 });
 
 /**
- * GET /api/auth/google/callback
- * Nhận authorization code từ Google, xác thực state PKCE và đăng nhập khách.
+ * Xử lý callback từ Google, xác thực mã state PKCE và tạo phiên đăng nhập cho khách.
  */
 identityRouter.get('/api/auth/google/callback', async (req, res, next) => {
   try {
@@ -241,8 +237,7 @@ identityRouter.get('/api/auth/google/callback', async (req, res, next) => {
 });
 
 /**
- * POST /api/admin/auth/login
- * Đăng nhập nhân viên (12 giờ, không tự gia hạn, cookie pk_session).
+ * Xác thực nhân viên nội bộ và thiết lập phiên làm việc có thời hạn cố định 12 giờ.
  */
 identityRouter.post('/api/admin/auth/login', async (req, res, next) => {
   try {
@@ -269,8 +264,7 @@ identityRouter.post('/api/admin/auth/login', async (req, res, next) => {
 });
 
 /**
- * POST /api/auth/logout
- * Đăng xuất: xóa phiên trong DB và xóa cookie pk_session.
+ * Đăng xuất người dùng, hủy phiên trong cơ sở dữ liệu và xóa cookie phía trình duyệt.
  */
 identityRouter.post('/api/auth/logout', async (req, res, next) => {
   try {
@@ -284,8 +278,7 @@ identityRouter.post('/api/auth/logout', async (req, res, next) => {
 });
 
 /**
- * POST /api/auth/verify-email
- * Xác thực email bằng token (hạn 24 giờ).
+ * Kích hoạt tài khoản người dùng sau khi xác nhận mã xác thực từ email.
  */
 identityRouter.post('/api/auth/verify-email', async (req, res, next) => {
   try {
@@ -303,8 +296,7 @@ identityRouter.post('/api/auth/verify-email', async (req, res, next) => {
 });
 
 /**
- * POST /api/auth/forgot-password
- * Gửi link đặt lại mật khẩu (hạn 30 phút, dùng 1 lần). Luôn trả cùng 1 thông báo.
+ * Tiếp nhận yêu cầu quên mật khẩu và kích hoạt gửi liên kết đặt lại nếu email hợp lệ.
  */
 identityRouter.post('/api/auth/forgot-password', async (req, res, next) => {
   try {
@@ -322,8 +314,7 @@ identityRouter.post('/api/auth/forgot-password', async (req, res, next) => {
 });
 
 /**
- * POST /api/auth/reset-password
- * Đặt mật khẩu mới bằng token, xóa toàn bộ phiên cũ của người dùng.
+ * Đặt lại mật khẩu mới cho người dùng dựa trên token xác thực từ email.
  */
 identityRouter.post('/api/auth/reset-password', async (req, res, next) => {
   try {
@@ -342,8 +333,7 @@ identityRouter.post('/api/auth/reset-password', async (req, res, next) => {
 });
 
 /**
- * GET /api/me
- * Trả thông tin Actor hiện tại (cả khách vãng lai, khách đã đăng nhập và nhân viên).
+ * Trả về thông tin danh tính, quyền hạn và trạng thái đồng ý dữ liệu của Actor hiện tại.
  */
 identityRouter.get('/api/me', async (req, res, next) => {
   try {
@@ -388,8 +378,7 @@ const consentInputSchema = z.object({
 });
 
 /**
- * PUT /api/me/consent
- * Lưu lựa chọn đồng ý thu thập dữ liệu (công khai cho cả khách vãng lai và tài khoản).
+ * Lưu trạng thái đồng ý thu thập dữ liệu áp dụng cho cả khách vãng lai và người dùng đã đăng nhập.
  */
 identityRouter.put('/api/me/consent', async (req, res, next) => {
   try {
@@ -421,8 +410,7 @@ const updateProfileSchema = z.object({
 });
 
 /**
- * PATCH /api/me
- * Sửa tên, SĐT của tài khoản hiện tại.
+ * Cập nhật thông tin cá nhân cơ bản gồm tên và số điện thoại của tài khoản đang đăng nhập.
  */
 identityRouter.patch('/api/me', requireAuth, async (req, res, next) => {
   try {
@@ -448,8 +436,7 @@ const changePasswordSchema = z.object({
 });
 
 /**
- * POST /api/me/password
- * Đổi mật khẩu, xóa mọi phiên cũ.
+ * Đổi mật khẩu tài khoản hiện tại và hủy toàn bộ các phiên làm việc đang hoạt động.
  */
 identityRouter.post('/api/me/password', requireAuth, async (req, res, next) => {
   try {
@@ -477,8 +464,7 @@ const deleteAccountSchema = z.object({
 });
 
 /**
- * DELETE /api/me
- * Xóa tài khoản khách (yêu cầu mật khẩu xác nhận lại).
+ * Xóa tài khoản khách hàng theo yêu cầu người dùng sau khi xác minh lại danh tính.
  */
 identityRouter.delete('/api/me', requireAuth, async (req, res, next) => {
   try {
@@ -511,8 +497,7 @@ const auditQuerySchema = z.object({
 });
 
 /**
- * GET /api/admin/audit-logs
- * Tra cứu nhật ký thao tác (chỉ đọc, yêu cầu quyền audit-logs:read).
+ * Tra cứu nhật ký kiểm toán hệ thống có hỗ trợ lọc theo thời gian, hành động và tác nhân.
  */
 identityRouter.get(
   '/api/admin/audit-logs',
@@ -575,16 +560,14 @@ identityRouter.get(
 );
 
 /**
- * GET /api/admin/permissions
- * Lấy danh mục quyền hệ thống.
+ * Trả về danh mục toàn bộ quyền hạn được định nghĩa trong hệ thống.
  */
 identityRouter.get('/api/admin/permissions', requirePermission('roles:manage'), (_req, res) => {
   res.json({ data: getPermissionsCatalog() });
 });
 
 /**
- * GET /api/admin/roles
- * Lấy danh sách role kèm quyền.
+ * Lấy danh sách các vai trò kèm quyền hạn và số lượng người dùng đang được gán.
  */
 identityRouter.get('/api/admin/roles', requireStaff, async (req, res, next) => {
   try {
@@ -610,8 +593,7 @@ const createRoleSchema = z.object({
 });
 
 /**
- * POST /api/admin/roles
- * Tạo role mới.
+ * Tạo vai trò tùy chỉnh mới và phân quyền tương ứng.
  */
 identityRouter.post(
   '/api/admin/roles',
@@ -643,8 +625,7 @@ const updateRoleSchema = z.object({
 });
 
 /**
- * PATCH /api/admin/roles/:id
- * Cập nhật role.
+ * Cập nhật tên hoặc danh sách quyền hạn của một vai trò tùy chỉnh.
  */
 identityRouter.patch(
   '/api/admin/roles/:id',
@@ -669,8 +650,7 @@ identityRouter.patch(
 );
 
 /**
- * DELETE /api/admin/roles/:id
- * Xóa role.
+ * Xóa vai trò tùy chỉnh khỏi hệ thống nếu không còn nhân viên nào nắm giữ.
  */
 identityRouter.delete(
   '/api/admin/roles/:id',
@@ -687,8 +667,7 @@ identityRouter.delete(
 );
 
 /**
- * GET /api/admin/staff
- * Danh sách nhân viên (quyền staff:read).
+ * Lấy danh sách tài khoản nhân viên nội bộ kèm các vai trò đang được phân công.
  */
 identityRouter.get('/api/admin/staff', requirePermission('staff:read'), async (_req, res, next) => {
   try {
@@ -709,8 +688,7 @@ const inviteStaffSchema = z.object({
 });
 
 /**
- * POST /api/admin/staff/invitations
- * Mời nhân viên mới (quyền staff:manage).
+ * Gửi thư mời tham gia quản trị kèm liên kết tạo tài khoản cho nhân viên mới.
  */
 identityRouter.post(
   '/api/admin/staff/invitations',
@@ -738,8 +716,7 @@ const assignRolesSchema = z.object({
 });
 
 /**
- * PUT /api/admin/staff/:id/roles
- * Gán role cho nhân viên (quyền staff:manage).
+ * Cập nhật danh sách các vai trò được phân công cho một nhân viên cụ thể.
  */
 identityRouter.put(
   '/api/admin/staff/:id/roles',
@@ -763,8 +740,7 @@ identityRouter.put(
 );
 
 /**
- * POST /api/admin/staff/:id/lock
- * Khóa tài khoản nhân viên (quyền staff:manage).
+ * Khóa tài khoản nhân viên và chấm dứt ngay lập tức các phiên đăng nhập đang hoạt động.
  */
 identityRouter.post(
   '/api/admin/staff/:id/lock',
@@ -786,8 +762,7 @@ identityRouter.post(
 );
 
 /**
- * POST /api/admin/staff/:id/unlock
- * Mở khóa tài khoản nhân viên (quyền staff:manage).
+ * Mở khóa tài khoản nhân viên để khôi phục quyền truy cập vào trang quản trị.
  */
 identityRouter.post(
   '/api/admin/staff/:id/unlock',
@@ -815,8 +790,7 @@ const customerQuerySchema = z.object({
 });
 
 /**
- * GET /api/admin/customers
- * Tra cứu danh sách khách hàng (quyền customers:read).
+ * Tra cứu danh sách tài khoản khách hàng phục vụ công tác quản trị và chăm sóc khách hàng.
  */
 identityRouter.get(
   '/api/admin/customers',
@@ -833,8 +807,7 @@ identityRouter.get(
 );
 
 /**
- * GET /api/admin/customers/:id
- * Xem chi tiết khách hàng (quyền customers:read).
+ * Lấy thông tin chi tiết của một khách hàng cụ thể theo định danh.
  */
 identityRouter.get(
   '/api/admin/customers/:id',
@@ -851,8 +824,7 @@ identityRouter.get(
 );
 
 /**
- * POST /api/admin/customers/:id/lock
- * Khóa tài khoản khách hàng (quyền customers:manage).
+ * Khóa tài khoản khách hàng và thu hồi toàn bộ phiên hoạt động.
  */
 identityRouter.post(
   '/api/admin/customers/:id/lock',
@@ -872,8 +844,7 @@ identityRouter.post(
 );
 
 /**
- * POST /api/admin/customers/:id/unlock
- * Mở khóa tài khoản khách hàng (quyền customers:manage).
+ * Mở khóa tài khoản khách hàng để cho phép đăng nhập và mua hàng trở lại.
  */
 identityRouter.post(
   '/api/admin/customers/:id/unlock',

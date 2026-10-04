@@ -36,7 +36,9 @@ export class DevOutboxEmailSender implements EmailSender {
 
   async send(message: EmailMessage): Promise<void> {
     try {
+      // Đảm bảo thư mục lưu trữ tồn tại trước khi ghi file thư vào đĩa.
       await mkdir(this.outboxDir, { recursive: true });
+      // Chuẩn hóa tên file theo mốc thời gian và email để tránh ký tự đặc biệt gây lỗi hệ thống tệp.
       const filename = `${Date.now()}-${message.to.replace(/[^a-zA-Z0-9]/g, '_')}.json`;
       const filePath = join(this.outboxDir, filename);
       await writeFile(filePath, JSON.stringify(message, null, 2), 'utf-8');
@@ -57,6 +59,7 @@ export function getEmailSender(): EmailSender {
     return currentEmailSender;
   }
   const config = loadConfig();
+  // Môi trường test lưu email trong bộ nhớ để tiện kiểm tra assertions, môi trường khác ghi ra thư mục outbox để dev kiểm tra nội dung.
   if (config.NODE_ENV === 'test') {
     currentEmailSender = new InMemoryEmailSender();
   } else {
@@ -65,6 +68,9 @@ export function getEmailSender(): EmailSender {
   return currentEmailSender;
 }
 
+/**
+ * Cho phép ghi đè đối tượng gửi email để phục vụ kiểm thử đơn vị hoặc tích hợp.
+ */
 export function setEmailSender(sender: EmailSender): void {
   currentEmailSender = sender;
 }

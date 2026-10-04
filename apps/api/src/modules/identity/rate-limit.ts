@@ -7,8 +7,7 @@ interface RateLimitRecord {
 }
 
 /**
- * Bộ đếm tần suất thao tác trong bộ nhớ theo cửa sổ thời gian trượt/đặt lại.
- * Tuân thủ quy ước không thêm dependency ngoài, hỗ trợ tham số `now` để kiểm thử giả lập thời gian.
+ * Bộ giới hạn tần suất trong bộ nhớ phục vụ kiểm soát lưu lượng mà không phụ thuộc vào hạ tầng bên ngoài.
  */
 export class RateLimiter {
   private readonly records = new Map<string, RateLimitRecord>();
@@ -29,11 +28,13 @@ export class RateLimiter {
       return;
     }
 
+    // Giải phóng bộ nhớ khi thời gian theo dõi của cửa sổ hiện tại đã trôi qua.
     if (now >= record.resetAt) {
       this.records.delete(key);
       return;
     }
 
+    // Chặn yêu cầu ngay khi số lượt gọi đạt hoặc vượt quá ngưỡng tối đa cho phép.
     if (record.attempts >= this.maxAttempts) {
       throw new AppError('TOO_MANY_REQUESTS', 429, this.errorMessage);
     }
@@ -45,6 +46,7 @@ export class RateLimiter {
    */
   recordAttempt(key: string, now = Date.now()): void {
     const record = this.records.get(key);
+    // Bắt đầu chu kỳ đếm mới nếu khóa chưa từng xuất hiện hoặc chu kỳ cũ đã kết thúc.
     if (!record || now >= record.resetAt) {
       this.records.set(key, {
         attempts: 1,
@@ -94,21 +96,21 @@ export class RateLimiter {
   }
 }
 
-// Đăng ký khách hàng: tối đa 5 lần / giờ / IP để chống spam tài khoản và quá tải CPU do Argon2
+// Giới hạn 5 lần đăng ký mỗi giờ trên một IP nhằm ngăn chặn bot tạo tài khoản rác và gây cạn kiệt tài nguyên băm Argon2.
 export const registerRateLimiter = new RateLimiter(
   60 * 60 * 1000,
   5,
   'Bạn đã đăng ký quá nhiều lần từ địa chỉ này. Vui lòng thử lại sau 1 giờ.',
 );
 
-// Quên mật khẩu: tối đa 3 lần / 15 phút / email để tránh bị lạm dụng làm công cụ spam hòm thư người khác
+// Giới hạn 3 lần quên mật khẩu mỗi 15 phút trên một email để ngăn kẻ xấu lợi dụng hệ thống nhằm gửi thư rác quấy rối nạn nhân.
 export const forgotPasswordEmailLimiter = new RateLimiter(
   15 * 60 * 1000,
   3,
   'Yêu cầu đặt lại mật khẩu quá thường xuyên cho email này.',
 );
 
-// Quên mật khẩu: tối đa 10 lần / 1 giờ / IP để chống một máy quét hàng loạt email
+// Giới hạn 10 lần quên mật khẩu mỗi giờ trên một IP nhằm ngăn chặn các công cụ tự động quét dò email hàng loạt.
 export const forgotPasswordIpLimiter = new RateLimiter(
   60 * 60 * 1000,
   10,
@@ -116,7 +118,7 @@ export const forgotPasswordIpLimiter = new RateLimiter(
 );
 
 /**
- * Xóa toàn bộ bộ đếm tần suất và đăng nhập (dùng giữa các test tự động để tránh ảnh hưởng chéo).
+ * Đặt lại trạng thái toàn bộ bộ giới hạn tần suất phục vụ cô lập môi trường giữa các ca kiểm thử.
  */
 export function clearAllRateLimits(): void {
   registerRateLimiter.clear();

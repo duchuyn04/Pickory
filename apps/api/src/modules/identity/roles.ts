@@ -42,16 +42,14 @@ export async function getRoles() {
 }
 
 /**
- * Tạo role mới:
- * 1. Quyền phải thuộc danh mục trong code (nếu không -> 400).
- * 2. Ghi 1 dòng audit log (after).
+ * Tạo vai trò người dùng mới trong hệ thống kèm danh sách quyền được cấp.
  */
 export async function createRole(params: CreateRoleParams) {
   const { actorId, actorRoles, actorPermissions, code, name, permissions } = params;
   const normalizedCode = code.trim().toLowerCase();
   const uniquePermissions = [...new Set(permissions)];
 
-  // Kiểm tra mã hợp lệ
+  // Giới hạn định dạng mã vai trò theo slug chuẩn để an toàn khi dùng trong URL và logic kiểm tra quyền.
   if (!/^[a-z0-9_-]+$/.test(normalizedCode)) {
     throw new AppError(
       'INVALID_INPUT',
@@ -60,7 +58,7 @@ export async function createRole(params: CreateRoleParams) {
     );
   }
 
-  // Kiểm tra quyền thuộc danh mục
+  // Kiểm tra từng quyền để chắc chắn không cấp các quyền lạ nằm ngoài danh mục hệ thống quy định.
   for (const p of uniquePermissions) {
     if (!isPermission(p)) {
       throw new AppError(
@@ -71,7 +69,7 @@ export async function createRole(params: CreateRoleParams) {
     }
   }
 
-  // Chống leo thang đặc quyền: actor không phải admin chỉ được cấp quyền mà chính mình sở hữu
+  // Chống leo thang đặc quyền: nhân viên không thể tạo role chứa quyền cao hơn các quyền chính mình đang có.
   if (!actorRoles.includes('admin')) {
     for (const p of uniquePermissions) {
       if (!actorPermissions.has(p as Permission)) {
@@ -83,6 +81,7 @@ export async function createRole(params: CreateRoleParams) {
       }
     }
   }
+  // Mã vai trò là định danh duy nhất để tránh xung đột cấu hình phân quyền trong toàn hệ thống.
   const existing = await db.role.findUnique({
     where: { code: normalizedCode },
   });
@@ -103,6 +102,7 @@ export async function createRole(params: CreateRoleParams) {
       include: { permissions: true },
     });
 
+    // Ghi nhật ký kiểm toán để theo dõi người tạo và bộ quyền ban đầu của vai trò mới.
     await recordAudit(tx, {
       actorId,
       action: 'role.create',
@@ -136,10 +136,7 @@ export interface UpdateRoleParams {
 }
 
 /**
- * Sửa role:
- * 1. Role hệ thống (admin, customer) không được sửa.
- * 2. Quyền phải thuộc danh mục.
- * 3. Ghi 1 dòng audit log (before & after).
+ * Cập nhật tên hoặc danh sách quyền hạn được gán cho một vai trò.
  */
 export async function updateRole(params: UpdateRoleParams) {
   const { actorId, actorRoles, actorPermissions, roleId, name, permissions } = params;
@@ -153,11 +150,12 @@ export async function updateRole(params: UpdateRoleParams) {
     throw new AppError('ROLE_NOT_FOUND', 404, 'Không tìm thấy role.');
   }
 
+  // Bảo vệ các vai trò cốt lõi như admin hoặc customer khỏi bị thay đổi cấu hình ngoài dự kiến.
   if (role.isSystem) {
     throw new AppError('FORBIDDEN', 403, 'Không được phép sửa đổi role hệ thống.');
   }
 
-  // Chống leo thang đặc quyền: nhân viên không phải admin không được sửa đổi role mà chính mình đang giữ
+  // Chống leo thang đặc quyền: nhân viên không thể tự bổ sung quyền cho vai trò mà chính mình đang nắm giữ.
   if (!actorRoles.includes('admin') && actorRoles.includes(role.code)) {
     throw new AppError(
       'CANNOT_MODIFY_SELF_ROLE',
@@ -169,6 +167,7 @@ export async function updateRole(params: UpdateRoleParams) {
   let uniquePermissions: string[] | undefined;
   if (permissions) {
     uniquePermissions = [...new Set(permissions)];
+    // Đảm bảo toàn bộ quyền được cập nhật đều thuộc danh mục quyền hợp lệ được hỗ trợ.
     for (const p of uniquePermissions) {
       if (!isPermission(p)) {
         throw new AppError(
@@ -179,7 +178,7 @@ export async function updateRole(params: UpdateRoleParams) {
       }
     }
 
-    // Chống leo thang đặc quyền: actor không phải admin chỉ được cấp quyền mà chính mình sở hữu
+    // Chống leo thang đặc quyền: người sửa không được gán quyền mà bản thân họ không sở hữu.
     if (!actorRoles.includes('admin')) {
       for (const p of uniquePermissions) {
         if (!actorPermissions.has(p as Permission)) {
@@ -198,6 +197,7 @@ export async function updateRole(params: UpdateRoleParams) {
   };
 
   return db.$transaction(async (tx) => {
+    // Thay thế toàn bộ liên kết quyền cũ bằng bộ quyền mới trong cùng transaction để bảo đảm tính nhất quán.
     if (uniquePermissions) {
       await tx.rolePermission.deleteMany({ where: { roleId: role.id } });
       await tx.rolePermission.createMany({
@@ -245,10 +245,7 @@ export async function updateRole(params: UpdateRoleParams) {
 }
 
 /**
- * Xóa role:
- * 1. Role hệ thống không được xóa.
- * 2. Role đang có người giữ không được xóa.
- * 3. Ghi 1 dòng audit log (before).
+ * Xóa một vai trò tùy chỉnh khỏi hệ thống khi không còn người dùng nào nắm giữ.
  */
 export async function deleteRole(actorId: string, roleId: string): Promise<void> {
   const role = await db.role.findUnique({
@@ -263,10 +260,12 @@ export async function deleteRole(actorId: string, roleId: string): Promise<void>
     throw new AppError('ROLE_NOT_FOUND', 404, 'Không tìm thấy role.');
   }
 
+  // Chặn xóa vai trò hệ thống để không phá vỡ logic kiểm tra quyền cốt lõi.
   if (role.isSystem) {
     throw new AppError('FORBIDDEN', 403, 'Không được phép xóa role hệ thống.');
   }
 
+  // Bắt buộc gỡ vai trò khỏi tất cả người dùng trước khi xóa để tránh để lại trạng thái phân quyền mồ côi.
   if (role.users.length > 0) {
     throw new AppError(
       'ROLE_IN_USE',
@@ -278,6 +277,7 @@ export async function deleteRole(actorId: string, roleId: string): Promise<void>
   await db.$transaction(async (tx) => {
     await tx.role.delete({ where: { id: role.id } });
 
+    // Ghi lại trạng thái trước khi xóa vào nhật ký kiểm toán để phục vụ tra cứu lịch sử khi cần thiết.
     await recordAudit(tx, {
       actorId,
       action: 'role.delete',
