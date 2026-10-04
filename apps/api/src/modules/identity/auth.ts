@@ -27,16 +27,13 @@ export interface StaffLoginResult {
 }
 
 /**
- * Đăng nhập nhân viên:
- * 1. Kiểm tra chống dò mật khẩu (throttle).
- * 2. Xác thực email + mật khẩu Argon2id.
- * 3. Tạo phiên 12 giờ không gia hạn, lưu tokenHash SHA-256 vào DB.
- * 4. Không phát UserLinkedEvent.
+ * Xác thực và tạo phiên làm việc cho nhân viên nội bộ.
  */
 export async function staffLogin(params: StaffLoginParams): Promise<StaffLoginResult> {
   const { email, password, ip } = params;
   const normalizedEmail = email.trim().toLowerCase();
 
+  // Kiểm tra giới hạn số lần thử theo IP và email để chặn các đợt tấn công brute-force mật khẩu.
   loginThrottle.assertNotLocked(normalizedEmail, ip);
 
   const user = await db.user.findUnique({
@@ -50,7 +47,9 @@ export async function staffLogin(params: StaffLoginParams): Promise<StaffLoginRe
     user.deletedAt !== null ||
     !user.passwordHash
   ) {
+    // Chạy verify với hash giả lập để thời gian phản hồi đồng nhất (constant time), chống tấn công timing attack dò email tồn tại.
     await verifyPassword(DUMMY_HASH, password).catch(() => false);
+    // Ghi nhận lần thử sai để tăng dần bộ đếm throttle cho cặp email và IP hiện tại.
     loginThrottle.recordFailure(normalizedEmail, ip);
     throw new AppError('INVALID_CREDENTIALS', 401, 'Email hoặc mật khẩu không chính xác.');
   }
@@ -61,12 +60,15 @@ export async function staffLogin(params: StaffLoginParams): Promise<StaffLoginRe
     throw new AppError('INVALID_CREDENTIALS', 401, 'Email hoặc mật khẩu không chính xác.');
   }
 
+  // Xóa bộ đếm số lần sai sau khi đăng nhập thành công để không ảnh hưởng đến các lần đăng nhập hợp lệ tiếp theo.
   loginThrottle.recordSuccess(normalizedEmail, ip);
 
   const token = generateToken();
   const tokenHash = hashToken(token);
+  // Nhân viên nội bộ chỉ được cấp phiên tối đa 12 giờ không gia hạn tự động để giảm thiểu rủi ro khi quên đăng xuất trên máy công ty.
   const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
 
+  // Chỉ lưu SHA-256 hash của session token vào DB để nếu DB bị rò rỉ thì kẻ tấn công cũng không thể giả mạo phiên.
   await db.session.create({
     data: {
       tokenHash,
@@ -109,17 +111,13 @@ export interface AuthResult {
 }
 
 /**
- * Đăng ký tài khoản khách hàng:
- * 1. Mật khẩu tối thiểu 8 ký tự.
- * 2. Email đã thuộc nhân viên thì chặn.
- * 3. Gán role customer, tạo phiên 30 ngày.
- * 4. Gửi email xác thực.
- * 5. Phát UserLinkedEvent { anonymousId, userId }.
+ * Đăng ký tài khoản khách hàng mới kèm khởi tạo phiên đăng nhập ban đầu.
  */
 export async function customerRegister(params: CustomerRegisterParams): Promise<AuthResult> {
   const { email, password, name, phone, anonymousId } = params;
   const normalizedEmail = email.trim().toLowerCase();
 
+  // Quy định độ dài tối thiểu 8 ký tự để bảo đảm mức an toàn cơ bản cho mật khẩu người dùng.
   if (password.length < 8) {
     throw new AppError('WEAK_PASSWORD', 400, 'Mật khẩu phải chứa tối thiểu 8 ký tự.');
   }
@@ -128,6 +126,7 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
     where: { email: normalizedEmail },
   });
 
+  // Email là định danh duy nhất cho mỗi tài khoản trong toàn hệ thống.
   if (existingUser) {
     throw new AppError(
       'EMAIL_ALREADY_EXISTS',
@@ -139,6 +138,7 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
   const customerRole = await db.role.findUnique({
     where: { code: 'customer' },
   });
+  // Role customer là bắt buộc để phân quyền các tính năng mua sắm của khách.
   if (!customerRole) {
     throw new Error('Role customer chưa được seed trong database');
   }
@@ -161,7 +161,7 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
     },
   });
 
-  // Tạo email token xác thực (hạn 24 giờ) và gửi email qua EmailSender
+  // Cấp token xác thực có hạn 24 giờ để người dùng kịp kích hoạt tài khoản qua hòm thư cá nhân.
   const verifyToken = generateToken();
   const verifyTokenHash = hashToken(verifyToken);
   const verifyExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -182,7 +182,7 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
     metadata: { token: verifyToken, purpose: 'verify' },
   });
 
-  // Tạo phiên 30 ngày cho khách
+  // Khách hàng được duy trì phiên dài 30 ngày để tối ưu trải nghiệm mua sắm không phải đăng nhập liên tục.
   const sessionToken = generateToken();
   const sessionTokenHash = hashToken(sessionToken);
   const sessionExpiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -195,7 +195,7 @@ export async function customerRegister(params: CustomerRegisterParams): Promise<
     },
   });
 
-  // Phát UserLinkedEvent { anonymousId, userId }
+  // Liên kết danh tính ẩn danh trước đó với tài khoản mới tạo để hợp nhất giỏ hàng và dữ liệu sự kiện.
   await emitUserLinked(anonymousId, newUser.id);
 
   return {
@@ -219,16 +219,13 @@ export interface CustomerLoginParams {
 }
 
 /**
- * Đăng nhập khách hàng:
- * 1. Kiểm tra throttle.
- * 2. Xác thực Argon2id.
- * 3. Tạo phiên 30 ngày.
- * 4. Phát UserLinkedEvent { anonymousId, userId }.
+ * Xác thực tài khoản khách hàng và gắn phiên làm việc mới.
  */
 export async function customerLogin(params: CustomerLoginParams): Promise<AuthResult> {
   const { email, password, anonymousId, ip } = params;
   const normalizedEmail = email.trim().toLowerCase();
 
+  // Kiểm tra giới hạn số lần thử theo IP và email để chặn brute-force mật khẩu khách hàng.
   loginThrottle.assertNotLocked(normalizedEmail, ip);
 
   const user = await db.user.findUnique({
@@ -242,6 +239,7 @@ export async function customerLogin(params: CustomerLoginParams): Promise<AuthRe
     user.deletedAt !== null ||
     !user.passwordHash
   ) {
+    // Chạy hash giả lập để giữ thời gian xử lý đồng nhất (constant time), tránh bị dò đoán email có tồn tại hay không.
     await verifyPassword(DUMMY_HASH, password).catch(() => false);
     loginThrottle.recordFailure(normalizedEmail, ip);
     throw new AppError('INVALID_CREDENTIALS', 401, 'Email hoặc mật khẩu không chính xác.');
@@ -255,6 +253,7 @@ export async function customerLogin(params: CustomerLoginParams): Promise<AuthRe
 
   loginThrottle.recordSuccess(normalizedEmail, ip);
 
+  // Phiên đăng nhập khách hàng kéo dài 30 ngày để giữ trạng thái đăng nhập thuận tiện khi duyệt web.
   const token = generateToken();
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
@@ -267,7 +266,7 @@ export async function customerLogin(params: CustomerLoginParams): Promise<AuthRe
     },
   });
 
-  // Phát UserLinkedEvent { anonymousId, userId }
+  // Gắn kết phiên ẩn danh hiện tại với tài khoản người dùng vừa đăng nhập nhằm đồng bộ giỏ hàng khách vãng lai.
   await emitUserLinked(anonymousId, user.id);
 
   return {
@@ -284,10 +283,11 @@ export async function customerLogin(params: CustomerLoginParams): Promise<AuthRe
 }
 
 /**
- * Đăng xuất: xóa phiên trong DB.
+ * Hủy bỏ phiên làm việc của người dùng trong cơ sở dữ liệu.
  */
 export async function logout(sessionToken?: string): Promise<void> {
   if (!sessionToken) return;
+  // Hash token trước khi truy vấn vì DB chỉ lưu hash chứ không lưu token gốc dạng plain text.
   const tokenHash = hashToken(sessionToken);
   await db.session.deleteMany({
     where: { tokenHash },

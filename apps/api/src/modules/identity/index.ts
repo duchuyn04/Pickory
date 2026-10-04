@@ -1,6 +1,6 @@
 import { setupConsentLinkListener } from './consent';
 
-// Đăng ký các handler nội bộ của identity
+// Kích hoạt lắng nghe sự kiện nội bộ ngay khi khởi động module identity để tự động đồng bộ trạng thái đồng ý dữ liệu.
 setupConsentLinkListener();
 
 export type { Actor, ConsentState } from './types';

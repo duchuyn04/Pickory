@@ -45,14 +45,12 @@ export interface ChangePasswordParams {
 }
 
 /**
- * Đổi mật khẩu tài khoản:
- * 1. Kiểm tra mật khẩu hiện tại (nếu tài khoản có đặt mật khẩu).
- * 2. Cập nhật mật khẩu mới (Argon2id, tối thiểu 8 ký tự).
- * 3. Xóa MỌI phiên đăng nhập của người dùng.
+ * Đổi mật khẩu tài khoản người dùng.
  */
 export async function changePassword(params: ChangePasswordParams): Promise<void> {
   const { userId, currentPassword, newPassword } = params;
 
+  // Độ dài tối thiểu 8 ký tự để bảo đảm entropy cơ bản chống tấn công brute-force.
   if (newPassword.length < 8) {
     throw new AppError('WEAK_PASSWORD', 400, 'Mật khẩu mới phải chứa tối thiểu 8 ký tự.');
   }
@@ -61,6 +59,7 @@ export async function changePassword(params: ChangePasswordParams): Promise<void
     where: { id: userId },
   });
 
+  // Tài khoản đăng ký bằng OAuth không có passwordHash thì bỏ qua bước xác minh mật khẩu cũ.
   if (user.passwordHash) {
     if (!currentPassword) {
       throw new AppError('INVALID_CREDENTIALS', 400, 'Vui lòng cung cấp mật khẩu hiện tại.');
@@ -71,6 +70,7 @@ export async function changePassword(params: ChangePasswordParams): Promise<void
     }
   }
 
+  // Băm bằng Argon2id trước khi vào transaction để giảm thời gian giữ transaction lock trong DB.
   const newHash = await hashPassword(newPassword);
 
   await db.$transaction(async (tx) => {
@@ -79,7 +79,7 @@ export async function changePassword(params: ChangePasswordParams): Promise<void
       data: { passwordHash: newHash },
     });
 
-    // Xóa mọi phiên cũ
+    // Đăng xuất toàn bộ thiết bị cũ nhằm ngăn chặn kẻ tấn công tiếp tục dùng phiên đã đánh cắp.
     await tx.session.deleteMany({
       where: { userId },
     });
@@ -93,11 +93,7 @@ export interface DeleteAccountParams {
 }
 
 /**
- * Xóa tài khoản khách:
- * 1. Bắt buộc xác nhận lại bằng mật khẩu (hoặc tài khoản liên kết OAuth).
- * 2. Ẩn danh email và tên, đặt deletedAt.
- * 3. Xóa credential, oauth_accounts, email_tokens, sessions.
- * 4. Phát UserDeletedEvent { userId } để các module khác dọn dữ liệu.
+ * Xóa và ẩn danh hóa tài khoản khách hàng theo yêu cầu GDPR và bảo vệ dữ liệu.
  */
 export async function deleteCustomerAccount(params: DeleteAccountParams): Promise<void> {
   const { userId, password } = params;
@@ -107,10 +103,12 @@ export async function deleteCustomerAccount(params: DeleteAccountParams): Promis
     include: { oauthAccounts: true },
   });
 
+  // Không cho phép thao tác trên tài khoản đã bị khóa hoặc đã xóa từ trước.
   if (!user || user.lockedAt || user.deletedAt) {
     throw new AppError('USER_NOT_FOUND', 404, 'Tài khoản không tồn tại hoặc đã bị khóa.');
   }
 
+  // Chặn xóa nhầm tài khoản nhân viên qua luồng khách hàng vì nhân viên phải do admin quản lý.
   if (user.kind !== 'customer') {
     throw new AppError(
       'FORBIDDEN',
@@ -119,7 +117,7 @@ export async function deleteCustomerAccount(params: DeleteAccountParams): Promis
     );
   }
 
-  // Xác nhận lại danh tính trước khi xóa
+  // Bắt buộc xác thực lại (re-authentication) để chống tấn công chiếm phiên thực hiện hành động phá hoại.
   if (user.passwordHash) {
     if (!password) {
       throw new AppError('UNAUTHORIZED', 401, 'Vui lòng nhập mật khẩu để xác nhận xóa tài khoản.');
@@ -129,7 +127,7 @@ export async function deleteCustomerAccount(params: DeleteAccountParams): Promis
       throw new AppError('INVALID_CREDENTIALS', 401, 'Mật khẩu xác nhận không chính xác.');
     }
   } else if (user.oauthAccounts.length > 0) {
-    // Tài khoản Google-only: yêu cầu đăng nhập lại Google trong 5 phút gần nhất
+    // Tài khoản không có mật khẩu chỉ cho phép xóa nếu vừa đăng nhập Google trong 5 phút để xác thực chính chủ.
     const now = Date.now();
     const sessionAgeMs = params.sessionCreatedAt
       ? now - params.sessionCreatedAt.getTime()
@@ -146,16 +144,16 @@ export async function deleteCustomerAccount(params: DeleteAccountParams): Promis
     throw new AppError('UNAUTHORIZED', 401, 'Thiếu phương thức xác nhận tài khoản.');
   }
 
+  // Giữ lại bản ghi nhưng ẩn danh email và tên để không làm đứt gãy khóa ngoại của các đơn hàng lịch sử.
   const anonymizedEmail = `deleted-${user.id}@deleted.pickory.local`;
   const anonymizedName = 'Người dùng đã xóa';
 
   await db.$transaction(async (tx) => {
-    // Xóa liên kết token, OAuth, sessions
+    // Thu hồi toàn bộ quyền truy cập và liên kết xác thực để vô hiệu hóa tài khoản vĩnh viễn.
     await tx.emailToken.deleteMany({ where: { userId: user.id } });
     await tx.oAuthAccount.deleteMany({ where: { userId: user.id } });
     await tx.session.deleteMany({ where: { userId: user.id } });
 
-    // Ẩn danh hóa người dùng và đặt deletedAt
     await tx.user.update({
       where: { id: user.id },
       data: {
@@ -168,6 +166,6 @@ export async function deleteCustomerAccount(params: DeleteAccountParams): Promis
     });
   });
 
-  // Phát đúng 1 sự kiện UserDeletedEvent
+  // Bắn sự kiện để các module khác (như giỏ hàng, thông báo) chủ động dọn dẹp dữ liệu liên quan.
   await emitUserDeleted(user.id);
 }

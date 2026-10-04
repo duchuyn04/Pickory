@@ -17,8 +17,7 @@ class LoginThrottle {
   }
 
   /**
-   * Kiểm tra xem cặp (email, ip) có đang bị khóa hay không.
-   * Nếu đang bị khóa thì ném lỗi 429.
+   * Chặn yêu cầu đăng nhập nếu cặp email và IP đang trong thời gian phạt do nhập sai quá số lần.
    */
   assertNotLocked(email: string, ip: string, now = Date.now()): void {
     const key = this.getKey(email, ip);
@@ -27,11 +26,13 @@ class LoginThrottle {
       return;
     }
 
+    // Tự động giải phóng bộ nhớ khi bản ghi đã vượt quá khung thời gian theo dõi cửa sổ trượt.
     if (now >= record.resetAt) {
       this.records.delete(key);
       return;
     }
 
+    // Ngăn chặn thử tiếp nếu thời điểm hiện tại vẫn nằm trong khoảng thời gian bị tạm khóa.
     if (record.lockedUntil > now) {
       throw new AppError(
         'TOO_MANY_ATTEMPTS',
@@ -42,8 +43,7 @@ class LoginThrottle {
   }
 
   /**
-   * Ghi nhận 1 lần đăng nhập thất bại.
-   * Lần thứ 5 vẫn chưa khóa ngay lúc gửi, nhưng lần thứ 6 sẽ bị chặn bởi `assertNotLocked`.
+   * Tăng bộ đếm số lần đăng nhập sai và kích hoạt khóa tạm thời nếu chạm ngưỡng tối đa.
    */
   recordFailure(email: string, ip: string, now = Date.now()): void {
     const key = this.getKey(email, ip);
@@ -59,6 +59,7 @@ class LoginThrottle {
     }
 
     record.attempts += 1;
+    // Khi chạm ngưỡng thất bại cho phép, kích hoạt khóa tạm thời 15 phút để ngăn chặn tấn công tự động hóa.
     if (record.attempts >= MAX_ATTEMPTS) {
       record.lockedUntil = now + WINDOW_MS;
       record.resetAt = now + WINDOW_MS;
@@ -66,7 +67,7 @@ class LoginThrottle {
   }
 
   /**
-   * Xóa bộ đếm khi đăng nhập thành công.
+   * Đặt lại bộ đếm khi xác thực thành công để không ảnh hưởng đến các phiên đăng nhập tương lai.
    */
   recordSuccess(email: string, ip: string): void {
     const key = this.getKey(email, ip);
@@ -74,7 +75,7 @@ class LoginThrottle {
   }
 
   /**
-   * Dọn sạch dữ liệu (dùng cho unit test).
+   * Xóa toàn bộ dữ liệu điều tiết trong bộ nhớ phục vụ cô lập trạng thái giữa các ca kiểm thử.
    */
   clear(): void {
     this.records.clear();

@@ -2,9 +2,7 @@ import type { PrismaClient, Prisma } from '../../generated/prisma/client';
 import { logger } from '../../shared/logger';
 
 /**
- * Danh mục quyền (permission) ban đầu của Pickory theo spec/SPEC-identity.md.
- * Khai báo trong code vì code là nơi kiểm tra quyền.
- * `Permission` là union literal để `requirePermission('...')` được kiểm tra lúc compile.
+ * Danh mục quyền ban đầu được định nghĩa cứng trong mã nguồn để bảo đảm type-safety ở tầng compile time.
  */
 export const PERMISSIONS = [
   // identity
@@ -47,6 +45,7 @@ export const PERMISSIONS = [
 
 export type Permission = (typeof PERMISSIONS)[number];
 
+// Tạo bảng tra cứu O(1) để tối ưu hiệu năng kiểm tra tính hợp lệ của quyền hạn khi xử lý request.
 export const PERMISSION_LOOKUP: Record<string, true> = Object.fromEntries(
   PERMISSIONS.map((p) => [p, true]),
 );
@@ -237,8 +236,7 @@ export const PERMISSION_CATALOG: PermissionMetadata[] = [
 ];
 
 /**
- * Quyền mặc định của 4 role hệ thống và tạo sẵn theo spec/SPEC-identity.md.
- * `admin` có mọi quyền ngầm định trong code nên không cần liệt kê toàn bộ vào DB.
+ * Quyền mặc định khi khởi tạo cơ sở dữ liệu cho các vai trò hệ thống và vai trò nghiệp vụ mẫu.
  */
 export const DEFAULT_ROLE_PERMISSIONS: Record<string, Permission[]> = {
   customer: [],
@@ -277,25 +275,25 @@ export const INITIAL_ROLES = [
 ] as const;
 
 /**
- * Hợp quyền của nhiều role:
- * 1. Role `admin` luôn có mọi quyền trong danh mục ngầm định.
- * 2. Hợp nhất quyền của các role khác.
- * 3. Bỏ qua các quyền lạ không thuộc danh mục và ghi cảnh báo.
+ * Tính toán tập hợp quyền hiệu lực bằng cách gộp các quyền từ tất cả vai trò mà Actor nắm giữ.
  */
 export function mergePermissions(
   roleCodes: string[],
   rawPermissions: string[],
   warnOnUnknown = true,
 ): Set<Permission> {
+  // Quản trị viên (admin) ngầm định sở hữu toàn bộ quyền trong hệ thống mà không cần gán thủ công từng quyền.
   if (roleCodes.includes('admin')) {
     return new Set<Permission>(PERMISSIONS);
   }
 
   const result = new Set<Permission>();
   for (const raw of rawPermissions) {
+    // Chỉ đưa vào danh sách nếu quyền thuộc danh mục hợp lệ đã khai báo trong mã nguồn.
     if (isPermission(raw)) {
       result.add(raw);
     } else if (warnOnUnknown) {
+      // Ghi log cảnh báo để kịp thời phát hiện dữ liệu rác hoặc quyền cũ đã bị xóa khỏi hệ thống.
       logger.warn(
         { permission: raw, roles: roleCodes },
         'Quyền lạ trong role_permissions bị bỏ qua',
@@ -307,7 +305,7 @@ export function mergePermissions(
 }
 
 /**
- * Kiểm tra toàn bộ quyền đang lưu trong database khi khởi động server theo spec.
+ * Quét toàn bộ quyền đã lưu trong cơ sở dữ liệu khi khởi động máy chủ để phát hiện quyền không còn hỗ trợ.
  */
 export async function validateStoredPermissions(
   dbClient: PrismaClient | Prisma.TransactionClient,
@@ -320,6 +318,7 @@ export async function validateStoredPermissions(
   });
   const unknownPermissions: string[] = [];
   for (const item of allPermissions) {
+    // Phát hiện sớm các quyền tồn dư trong database nhưng đã bị loại bỏ khỏi danh mục code hiện hành.
     if (!isPermission(item.permission)) {
       unknownPermissions.push(item.permission);
       logger.warn(
