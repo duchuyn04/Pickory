@@ -7,17 +7,17 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm -r --parallel --filter @pickory/api --filter @pickory/web dev",
+    "dev": "pnpm -r --parallel --filter @pickory/backend --filter @pickory/frontend dev",
     "build": "pnpm -r build",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "typecheck": "pnpm -r typecheck",
     "test": "vitest run",
     "test:watch": "vitest",
-    "db:migrate": "pnpm --filter @pickory/api db:migrate",
-    "db:seed": "pnpm --filter @pickory/api db:seed",
-    "admin:create": "pnpm --filter @pickory/api admin:create",
-    "postinstall": "pnpm --filter @pickory/api db:generate"
+    "db:migrate": "pnpm --filter @pickory/backend db:migrate",
+    "db:seed": "pnpm --filter @pickory/backend db:seed",
+    "admin:create": "pnpm --filter @pickory/backend admin:create",
+    "postinstall": "pnpm --filter @pickory/backend db:generate"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

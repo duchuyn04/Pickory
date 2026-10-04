@@ -191,7 +191,7 @@ Ngày chạy lần 3: 2026-10-04 · Commit/branch: feat/phase-0-foundation · Tr
 - Thời gian: 2026-10-04, kết thúc 10:45 UTC. Branch: `feat/phase-0-foundation`.
 - Chạy `PORT=3107 API_BASE_URL=http://localhost:3107 pnpm dev`. Windows giữ port 3000 nên Playwright dùng proxy tạm bằng `context.route('**/api/**')` chuyển tiếp API sang 3107; không sửa cấu hình Vite hay code ứng dụng.
 - Google Chrome 154.0.8037.97 qua Playwright, cửa sổ thật (`headless: false`), viewport mặc định 1366x900; MT-ID-098 dùng 375x812. Đóng tab sau mỗi case; đã đóng toàn bộ browser/context và dừng server dev khi hoàn tất.
-- DB đã có 4 role seed: admin, customer, sales, support. ADMIN riêng được tạo bằng `pnpm admin:create -- --email mt-20261004-mutnnjow-admin@pickory.test --password <mật khẩu mạnh>`; nhân viên qua luồng mời, mật khẩu qua link đọc từ `apps/api/.dev-outbox`.
+- DB đã có 4 role seed: admin, customer, sales, support. ADMIN riêng được tạo bằng `pnpm admin:create -- --email mt-20261004-mutnnjow-admin@pickory.test --password <mật khẩu mạnh>`; nhân viên qua luồng mời, mật khẩu qua link đọc từ `apps/backend/.dev-outbox`.
 - Tiền tố duy nhất: `mt-20261004-mutnnjow-`. Role trong kịch bản như mt-kho, mt-hr, mt-qlkho được thêm runId để tránh trùng dữ liệu. Dùng các fixture CUST riêng cho nhóm reset/xóa, hồ sơ và khóa/mở khóa để không tái sử dụng tài khoản đã xóa/khóa ở case trước; tên fixture được ghi trong Ghi chú. Không tạo user, role, token hoặc session trực tiếp trong DB.
 - Chỉ ghi DB khi thực thi case để lùi `expiresAt` tại MT-ID-035, 045, 055, 076, 077; câu lệnh nằm trong Ghi chú. MT-ID-078 không thực thi thao tác xóa phiên vì trái quy ước. MT-ID-079 chờ thực tế 24,1 phút, không restart API để xóa bộ đếm.
 

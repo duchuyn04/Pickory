@@ -8,11 +8,13 @@ export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      include: ['apps/api/src/**/*.ts'],
-      exclude: ['**/index.ts', '**/*.d.ts', 'apps/api/src/generated/**'],
+      include: ['apps/backend/src/**/*.ts'],
+      exclude: ['**/index.ts', '**/*.d.ts', 'apps/backend/src/generated/**'],
       // Ngưỡng 80% dòng cho logic nghiệp vụ của từng module.
       thresholds: {
-        'apps/api/src/modules/**/service.ts': { lines: 80 },
+        'apps/backend/src/modules/**/service.ts': { lines: 80 },
+        // Module lớn tách logic nghiệp vụ thành thư mục services/ (ví dụ identity).
+        'apps/backend/src/modules/**/services/*.ts': { lines: 80 },
       },
     },
     projects: [
@@ -35,8 +37,8 @@ export default defineConfig({
             'apps/*/test/integration/**/*.int.test.{ts,tsx}',
             'packages/*/test/integration/**/*.int.test.{ts,tsx}',
           ],
-          globalSetup: ['apps/api/test/global-setup.ts'],
-          setupFiles: ['apps/api/test/setup.ts'],
+          globalSetup: ['apps/backend/test/global-setup.ts'],
+          setupFiles: ['apps/backend/test/setup.ts'],
           fileParallelism: false,
         },
       },

@@ -27,7 +27,7 @@ Báo cáo hiệu quả AI là nơi trả lời câu hỏi quan trọng nhất c�
 - **Đăng ký menu:** mỗi module frontend khai báo mục menu của mình kèm quyền cần có:
 
 ```ts
-// apps/web/src/features/commerce/admin/menu.ts
+// apps/frontend/src/features/commerce/admin/menu.ts
 export const commerceMenu: AdminMenuItem[] = [
   { label: 'Đơn hàng', path: '/admin/orders', permission: 'orders:read', badge: 'orders.pendingConfirmation' },
   { label: 'Đối soát thanh toán', path: '/admin/payments', permission: 'payments:read', badge: 'payments.unmatched' },

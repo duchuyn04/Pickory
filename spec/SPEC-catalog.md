@@ -89,7 +89,7 @@ export type AttributeDefinition = {
 **Interface giữ hàng cho `commerce`:**
 
 ```ts
-// apps/api/src/modules/catalog/index.ts
+// apps/backend/src/modules/catalog/index.ts
 export const stock: {
   /** Giữ hàng cho đơn. Tất cả hoặc không: thiếu 1 SKU thì không giữ SKU nào. */
   reserve(orderId: string, items: { skuId: string; quantity: number }[], tx?: Tx): Promise<ReserveResult>;
