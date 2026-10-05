@@ -37,8 +37,8 @@ Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dot
 **Tiêu chí nghiệm thu:**
 
 - [ ] Mỗi module có `DbContext` riêng trong project của module, chỉ map bảng của module đó
-- [ ] Đủ 22 model và 5 enum có trong `apps/backend/prisma/schema/*.prisma`: tên bảng, tên cột, kiểu, độ dài, khóa, unique, index, khóa ngoại và hành vi khi xóa khớp DB thật
-- [ ] Enum PostgreSQL (`UserKind`, `EmailTokenPurpose`, `ProductStatus`, `InventoryMovementType` và enum còn lại) map qua Npgsql, không lưu thành số
+- [ ] Đủ 20 model và 4 enum có trong `apps/backend/prisma/schema/*.prisma`: tên bảng, tên cột, kiểu, độ dài, khóa, unique, index, khóa ngoại và hành vi khi xóa khớp DB thật
+- [ ] Enum PostgreSQL (`UserKind`, `EmailTokenPurpose`, `ProductStatus`, `InventoryMovementType`) map qua Npgsql, không lưu thành số
 - [ ] Cột JSON map sang `jsonb`. Cột `TIMESTAMP(3)` không múi giờ map đúng kiểu, đọc ra giá trị UTC
 - [ ] Hàm đổi `DATABASE_URL` dạng `postgresql://user:pass@host:port/db` sang chuỗi kết nối Npgsql, có unit test kể cả mật khẩu có ký tự đặc biệt
 - [ ] Migration mốc của từng `DbContext` có `Up` và `Down` rỗng. Áp lên DB hiện có không đổi schema.
