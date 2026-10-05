@@ -95,6 +95,7 @@ ASD-STE100 (Simplified Technical English) is an English controlled language. Thi
 - MUST NOT use slang, idioms, or vague words such as `xử lý`, `làm gì đó`, `cái này`, or `v.v.` when a specific word exists.
 - SHOULD use a common Vietnamese word instead of an English loanword when the Vietnamese word is clear. Keep the English term when it is the established technical name, for example `token`, `cache`, or `retry`.
 - MUST define an abbreviation at its first use in a document, unless it is a code identifier.
+- MAY use these common technical abbreviations without a definition: API, CORS, DB, E2E, HTTP, HTTPS, JSON, SQL, UI, URL, PII, RBAC. In a code comment, MUST NOT spell out an abbreviation that this list covers.
 
 ### Sentences
 
