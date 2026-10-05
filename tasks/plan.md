@@ -107,12 +107,16 @@ Chi tiết từng task ở `tasks/todo.md`. Hai track A và B chạy song song �
 - [ ] ID-11 · [ ] UI-06 · [ ] ID-12 · [ ] ID-13 · [ ] UI-07 · [ ] ID-14 · [ ] UI-08
 
 ### Phase 5: E2E và nghiệm thu
-1. Chạy `docker compose up -d db` để khởi động PostgreSQL cho E2E (end-to-end).
+- [x] E2E-01: Playwright + hai luồng E2E của `identity`
+
+Cách chạy E2E-01:
+
+1. Chạy `docker compose up -d db` để khởi động PostgreSQL cho E2E.
 2. Không dùng cơ sở dữ liệu dev hoặc integration.
    Startup xóa dữ liệu cũ khi chạy suite. Startup chỉ chấp nhận `pickory_e2e`.
 3. Cấu hình thông tin kết nối trong `.env` hoặc biến môi trường.
    Khi `E2E_DATABASE_URL` trống, startup dùng kết nối `DATABASE_URL` với tên cơ sở dữ liệu `pickory_e2e`.
-4. Giữ port 3101 cho API (Application Programming Interface) E2E.
+4. Giữ port 3101 cho API E2E.
 5. Giữ port 4173 cho web E2E.
    Playwright không tái sử dụng server đang chạy. Playwright mở hai server khi chạy suite.
 6. Chạy `pnpm exec playwright install chromium` trên máy chưa cài Chromium của Playwright.

@@ -424,7 +424,7 @@ Xác minh cục bộ đã chạy qua SDK HTTP mock, PostgreSQL và UI thật; Cl
 - [deepmerge-ts](https://github.com/advisories/GHSA-ggr8-5vv4-36mx) cần đồ thị object tự tham chiếu. Cấu hình Prisma là object tĩnh từ repo. Cấu hình không nhận đồ thị object từ request.
 - [Rò thông tin kết nối](https://github.com/advisories/GHSA-3f6p-5ww8-9rcr) của `mysql2` cần kết nối MySQL.
 - [Giải nén không giới hạn](https://github.com/advisories/GHSA-rgwj-5xj2-c3m3) của `mysql2` cần kết nối MySQL.
-- Backend dùng PostgreSQL qua adapter `PrismaPg`. E2E (end-to-end) dùng cùng adapter.
+- Backend dùng PostgreSQL qua adapter `PrismaPg`. E2E dùng cùng adapter.
 - [INFERENCE] Chưa thấy đường khai thác ba cảnh báo trong luồng E2E hiện tại.
 **Tiêu chí nghiệm thu:**
 - [ ] Rà soát ba advisory trước hạn.
