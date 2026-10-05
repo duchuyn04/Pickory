@@ -4,6 +4,17 @@ import { logger } from './logger';
 export interface DomainEvents {
   UserLinkedEvent: { anonymousId: string; userId: string };
   UserDeletedEvent: { userId: string };
+  // Sự kiện phát khi sản phẩm thay đổi trạng thái hoặc thông tin.
+  ProductChangedEvent: {
+    productId: string;
+    change: 'created' | 'updated' | 'status' | 'deleted';
+  };
+  // Sự kiện phát khi số lượng tồn kho của SKU thay đổi.
+  StockChangedEvent: {
+    skuId: string;
+    stock: number;
+    previousStock: number;
+  };
 }
 
 // Hàm xử lý sự kiện, có thể bất đồng bộ.

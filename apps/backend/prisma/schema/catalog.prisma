@@ -1,0 +1,165 @@
+// Schema cho module catalog (danh mục, thương hiệu, sản phẩm, SKU, ảnh, tồn kho).
+
+// Danh mục sản phẩm dạng cây tối đa hai cấp.
+model Category {
+  id         String     @id @default(uuid())
+  parentId   String?
+  name       String
+  slug       String     @unique
+  position   Int        @default(0)
+  attributes Json       // AttributeDefinition[] của riêng danh mục này
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  parent     Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children   Category[] @relation("CategoryHierarchy")
+  products   Product[]
+
+  @@map("categories")
+}
+
+// Thương hiệu sản xuất sản phẩm điện tử.
+model Brand {
+  id           String    @id @default(uuid())
+  name         String
+  slug         String    @unique
+  logoPublicId String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  products     Product[]
+
+  @@map("brands")
+}
+
+// Trạng thái vòng đời sản phẩm trong hệ thống.
+enum ProductStatus {
+  draft
+  active
+  hidden
+  discontinued
+}
+
+// Sản phẩm điện tử với đầy đủ thông số kỹ thuật và tùy chọn.
+model Product {
+  id             String               @id @default(uuid())
+  categoryId     String
+  brandId        String
+  name           String
+  slug           String               @unique
+  shortDesc      String
+  description    Json                 // tài liệu JSON của trình soạn thảo theo cập nhật 2026-10-05
+  specs          Json                 // { ram_gb: 16, cpu: 'Intel Core i7-13650HX', ... }
+  options        Json                 // [{ name: 'Dung lượng', values: ['512GB', '1TB'] }]
+  warrantyMonths Int                  @default(12)
+  status         ProductStatus        @default(draft)
+  minPrice       Int?                 // tính lại khi biến thể đổi, phục vụ lọc và sắp xếp
+  inStock        Boolean              @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+
+  category       Category             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  brand          Brand                @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  skus           Sku[]
+  images         ProductImage[]
+  slugHistory    ProductSlugHistory[]
+
+  @@index([categoryId, status])
+  @@map("products")
+}
+
+// Biến thể bán hàng cụ thể có mã SKU và tồn kho riêng.
+model Sku {
+  id             String              @id @default(uuid())
+  productId      String
+  code           String              @unique
+  optionValues   Json                // { 'Dung lượng': '1TB', 'Màu': 'Đen' }
+  price          Int
+  compareAtPrice Int?
+  stock          Int                 @default(0) // ràng buộc CHECK (stock >= 0) ở mức DB
+  enabled        Boolean             @default(true)
+  weightGrams    Int?                // bắt buộc khi enabled = true
+  lengthCm       Int?
+  widthCm        Int?
+  heightCm       Int?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+
+  product        Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images         ProductImage[]
+  movements      InventoryMovement[]
+
+  @@map("skus")
+}
+
+// Ảnh đại diện hoặc ảnh chi tiết của sản phẩm và biến thể.
+model ProductImage {
+  id        String   @id @default(uuid())
+  productId String
+  skuId     String?
+  publicId  String
+  alt       String
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku       Sku?     @relation(fields: [skuId], references: [id], onDelete: SetNull)
+
+  @@index([productId, position])
+  @@map("product_images")
+}
+
+// Lịch sử slug cũ để phục vụ chuyển hướng 301 sau khi đổi tên sản phẩm.
+model ProductSlugHistory {
+  id        String   @id @default(uuid())
+  oldSlug   String   @unique
+  productId String
+  createdAt DateTime @default(now())
+
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+  @@map("product_slug_history")
+}
+
+// Phân loại biến động tồn kho của SKU.
+enum InventoryMovementType {
+  manual
+  order_reserve
+  order_release
+  return
+}
+
+// Bản ghi lịch sử biến động số lượng tồn kho của SKU.
+model InventoryMovement {
+  id        String                @id @default(uuid())
+  skuId     String
+  delta     Int
+  type      InventoryMovementType
+  orderId   String?
+  actorId   String?
+  reason    String
+  createdAt DateTime              @default(now())
+
+  sku       Sku                   @relation(fields: [skuId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, skuId, type])
+  @@index([skuId, createdAt])
+  @@map("inventory_movements")
+}
+
+// Hàng đợi tác vụ xóa ảnh trên Cloudinary khi ảnh bị gỡ khỏi sản phẩm.
+model ImageDeletionJob {
+  id          String   @id @default(uuid())
+  publicId    String
+  status      String   @default("pending")
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(8)
+  nextRetryAt DateTime @default(now())
+  lastError   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, nextRetryAt])
+  @@map("image_deletion_jobs")
+}

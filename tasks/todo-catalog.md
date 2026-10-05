@@ -35,17 +35,17 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 ### CAT-03: Schema, migration, khung module và sự kiện
 **Mô tả:** `prisma/schema/catalog.prisma` với `categories`, `brands`, `products`, `skus`, `product_images`, `product_slug_history`, `inventory_movements`, `image_deletion_jobs`. Migration thêm `CHECK (stock >= 0)`, chỉ mục GIN trên `products.specs`, `@@unique([orderId, skuId, type])`. Thêm `ProductChangedEvent` và `StockChangedEvent` vào `shared/events.ts`. Tạo `modules/catalog/index.ts` (re-export `catalogPermissions`, sự kiện) và `catalogRouter` rỗng gắn vào `app.ts`.
 **Tiêu chí nghiệm thu:**
-- [ ] `pnpm db:migrate` chạy trên DB sạch và trên DB đã có migration cũ
-- [ ] Cập nhật `stock` thành số âm bị PostgreSQL từ chối
-- [ ] Hai movement cùng `orderId`, `skuId`, `type` bị từ chối
-- [ ] Hàm `emitAfterCommit` không phát sự kiện khi transaction ném lỗi, phát đúng 1 lần khi commit
-- [ ] ESLint vẫn chặn module khác import file nội bộ của `catalog`
-- [ ] `vitest.config.ts` có ngưỡng 80% dòng cho `modules/catalog/services/*.ts` và `modules/catalog/domain/*.ts`
+- [x] `pnpm db:migrate` chạy trên DB sạch và trên DB đã có migration cũ
+- [x] Cập nhật `stock` thành số âm bị PostgreSQL từ chối
+- [x] Hai movement cùng `orderId`, `skuId`, `type` bị từ chối
+- [x] Hàm `emitAfterCommit` không phát sự kiện khi transaction ném lỗi, phát đúng 1 lần khi commit
+- [x] ESLint vẫn chặn module khác import file nội bộ của `catalog`
+- [x] `vitest.config.ts` có ngưỡng 80% dòng cho `modules/catalog/services/*.ts` và `modules/catalog/domain/*.ts`
 **Kiểm tra:** integration test ràng buộc DB; unit test `emitAfterCommit`
 **Phụ thuộc:** CAT-02, T03 · **File:** `prisma/schema/catalog.prisma`, migration mới, `shared/events.ts`, `modules/catalog/{index,data/events}.ts`, `app.ts`, `vitest.config.ts` · **Quy mô:** M (vượt 5 file vì phần khung chỉ thêm vài dòng mỗi file)
 
 ### Checkpoint C1
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch
 
 ---
 

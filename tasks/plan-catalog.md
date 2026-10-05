@@ -60,11 +60,11 @@ CAT-01 bộ thuộc tính + validate thông số (packages/shared)
 Chi tiết từng task ở `tasks/todo-catalog.md`.
 
 ### Phase 1: Nền tảng logic và dữ liệu
-- [x] CAT-01 · [x] CAT-02 · [ ] CAT-03
+- [x] CAT-01 · [x] CAT-02 · [x] CAT-03
 
 ### Checkpoint C1
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch
-- [ ] Migration chạy trên DB sạch, `CHECK (stock >= 0)` chặn giá trị âm
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch
+- [x] Migration chạy trên DB sạch, `CHECK (stock >= 0)` chặn giá trị âm
 
 ### Phase 2: Back-office backend và UI
 - [ ] CAT-13 · [ ] UI-C8 · [ ] CAT-04 · [ ] UI-C4 · [ ] CAT-05 · [ ] UI-C5 · [ ] CAT-06 · [ ] UI-C6 · [ ] CAT-07 · [ ] CAT-08 · [ ] UI-C7

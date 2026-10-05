@@ -17,6 +17,9 @@ export default defineConfig({
         'apps/backend/src/modules/ai-gateway/**/*.ts': { lines: 80, perFile: true },
         // Module lớn tách logic nghiệp vụ thành thư mục services/ (ví dụ identity).
         'apps/backend/src/modules/**/services/*.ts': { lines: 80 },
+        // Ngưỡng dòng cho tầng domain và services của module catalog.
+        'apps/backend/src/modules/catalog/domain/*.ts': { lines: 80 },
+        'apps/backend/src/modules/catalog/services/*.ts': { lines: 80 },
       },
     },
     projects: [
