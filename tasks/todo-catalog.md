@@ -125,6 +125,7 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 - [ ] Thêm 2 trục tùy chọn thì bảng biến thể hiện đủ tổ hợp để nhập giá, tồn kho, cân nặng, kích thước
 - [ ] Lỗi validate hiện ngay dưới ô sai, có nhãn truy cập được
 - [ ] `sales` mở form ở chế độ chỉ xem, không có nút lưu
+- [ ] Trang admin sản phẩm tải theo kiểu lazy (`React.lazy`), để Tiptap không nằm trong bundle chính của trang khách; ghi kích thước bundle chính trước và sau
 **Kiểm tra:** test component; Playwright trên `pnpm dev`
 **Phụ thuộc:** CAT-05, UI-C4, UI-C8 · **File:** `features/catalog/admin/{products-page,product-form,spec-fields,variant-table}.tsx`, `app.tsx` · **Quy mô:** M
 
