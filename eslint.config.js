@@ -11,6 +11,9 @@ export default tseslint.config(
       '**/dist/**',
       '**/build/**',
       '**/coverage/**',
+      // Bỏ artifact Playwright vì runner tạo chúng, không phải source của dự án.
+      'playwright-report/**',
+      'test-results/**',
       '.agents/**',
       '.claude/**',
       'tools/lint-fixtures/**',

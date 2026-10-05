@@ -407,10 +407,34 @@ Xác minh cục bộ đã chạy qua SDK HTTP mock, PostgreSQL và UI thật; Cl
 ### E2E-01: Playwright và hai luồng E2E của identity
 **Mô tả:** Cài Playwright, DB và seed cho E2E, đọc link từ file outbox dev. Luồng 1: khách đăng ký, đăng xuất, đăng nhập. Luồng 2: admin mời nhân viên `sales`, nhân viên đặt mật khẩu, đăng nhập.
 **Tiêu chí nghiệm thu:**
-- [ ] `pnpm test:e2e` chạy sạch cả hai luồng
-- [ ] Luồng 2 xác nhận nhân viên `sales` không thấy các mục menu ngoài quyền của mình. Phần "thấy menu đơn hàng" hoãn tới khi `commerce` và `admin-console` có (ghi trong Traceability)
-**Kiểm tra:** `pnpm test:e2e`
-**Phụ thuộc:** UI-01, UI-02, UI-07, ID-12 · **File:** `e2e/{auth,staff-invite}.spec.ts`, `playwright.config.ts` · **Quy mô:** M
+- [x] `pnpm test:e2e` chạy sạch cả hai luồng
+- [x] Luồng 2 xác nhận nhân viên `sales` không thấy các mục menu ngoài quyền của mình. Phần "thấy menu đơn hàng" hoãn tới khi `commerce` và `admin-console` có (ghi trong Traceability)
+- [x] Chạy lại toàn bộ E2E lần hai với cùng email vẫn PASS, không dùng dữ liệu còn từ lần trước
+- [x] DB `pickory_e2e` riêng; migrate, reset và seed trước khi API báo ready; không tái sử dụng API dev
+- [x] Locator dùng `getByRole`/`getByLabel`, chờ điều kiện thay vì sleep cố định; mật khẩu fixture sinh ở runtime, outbox/report bị gitignore
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` PASS
+**Kiểm tra:** `pnpm test:e2e`: lần 1 có 2 PASS (18.8s), lần 2 có 2 PASS (13.3s). Suite Vitest có 361 PASS, 4 live test SKIP như trước task này. Số user và fingerprint bảng `users` của DB dev không đổi qua lần chạy E2E thứ hai. Đã xem ảnh profile customer và menu sales trong `test-results/`. Build còn cảnh báo chunk frontend 668.23 kB và runner có cảnh báo `NO_COLOR`/`FORCE_COLOR` từ môi trường terminal.
+**Phụ thuộc:** UI-01, UI-02, UI-07, ID-12 · **File:** `e2e/{auth,staff-invite}.spec.ts`, `e2e/{environment,outbox}.ts`, `playwright.config.ts`, `tsconfig.e2e.json`, `apps/backend/scripts/e2e-start.ts`, script/dependency root, compiler backend và proxy Vite · **Quy mô:** M
+
+### SEC-01: Rà soát dependency qua Prisma
+**Trạng thái:** Chưa hoàn tất.
+**Hạn rà soát:** 2026-10-12 hoặc trước release, tùy mốc nào đến trước.
+**Mô tả:** Audit hiện có 2 High và 1 Moderate qua chuỗi dependency của Prisma.
+**Đánh giá hiện tại:**
+- [deepmerge-ts](https://github.com/advisories/GHSA-ggr8-5vv4-36mx) cần đồ thị object tự tham chiếu. Cấu hình Prisma là object tĩnh từ repo. Cấu hình không nhận đồ thị object từ request.
+- [Rò thông tin kết nối](https://github.com/advisories/GHSA-3f6p-5ww8-9rcr) của `mysql2` cần kết nối MySQL.
+- [Giải nén không giới hạn](https://github.com/advisories/GHSA-rgwj-5xj2-c3m3) của `mysql2` cần kết nối MySQL.
+- Backend dùng PostgreSQL qua adapter `PrismaPg`. E2E (end-to-end) dùng cùng adapter.
+- [INFERENCE] Chưa thấy đường khai thác ba cảnh báo trong luồng E2E hiện tại.
+**Tiêu chí nghiệm thu:**
+- [ ] Rà soát ba advisory trước hạn.
+- [ ] Ghi nhận đường khai thác hoặc lý do chưa thấy đường khai thác.
+- [ ] Chốt biện pháp cho dependency trước release.
+**Phạm vi hiện tại:** Không nâng dependency trong lần sửa E2E-01 này. Không thêm override.
+**Cách rà soát:**
+1. Chạy `pnpm audit`.
+2. Đối chiếu điều kiện khai thác của từng advisory với cấu hình Prisma.
+3. Ghi lại đánh giá trong SEC-01.
 
 ---
 
