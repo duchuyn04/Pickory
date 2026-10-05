@@ -26,9 +26,12 @@ public sealed class ActorMiddleware(
         // Kiểm tra nguồn trước mọi bước khác. Request giả mạo không nhận cookie và không chạm DB.
         RequestOriginGuard.EnsureTrustedOrigin(context.Request, config.WebOrigin);
 
+        // Mọi request đều có mã ẩn danh. Giỏ hàng và consent của khách gắn với mã này.
         var anonymousId = ReadOrIssueAnonymousId(context);
+        // Phiên không dùng được thì request chạy với quyền của khách vãng lai.
         var actor = await ResolveSessionActorAsync(context, database, anonymousId)
             ?? await CreateGuestActorAsync(database, anonymousId, context.RequestAborted);
+        // Gắn actor vào request. Route ở mọi module đọc actor qua `GetActor`.
         context.SetActor(actor);
 
         await next(context);
@@ -77,6 +80,7 @@ public sealed class ActorMiddleware(
                 await RenewCustomerSessionIfNeededAsync(context, database, session, rawToken, now);
             }
 
+            // Quyền là hợp quyền của mọi role. Quyền không còn trong danh mục bị bỏ qua.
             var roleCodes = user.Roles.Select(userRole => userRole.Role!.Code).ToList();
             var storedPermissions = user.Roles.SelectMany(userRole => userRole.Role!.Permissions.Select(rolePermission => rolePermission.Permission));
             // Tìm theo cả tài khoản và mã ẩn danh. Lựa chọn consent trước khi đăng nhập vẫn có hiệu lực.

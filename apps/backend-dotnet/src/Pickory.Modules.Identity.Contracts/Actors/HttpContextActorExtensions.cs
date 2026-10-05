@@ -7,6 +7,7 @@ public static class HttpContextActorExtensions
 {
     public static void SetActor(this HttpContext context, Actor actor)
     {
+        // Feature gắn với request hiện tại. Request khác không đọc được actor này.
         context.Features.Set(actor);
     }
 

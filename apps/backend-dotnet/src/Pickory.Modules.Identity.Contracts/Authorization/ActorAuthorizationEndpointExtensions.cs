@@ -12,6 +12,7 @@ public static class ActorAuthorizationEndpointExtensions
     {
         return builder.AddEndpointFilter(async (context, next) =>
         {
+            // Kiểm tra trước khi handler chạy. Khách chưa đăng nhập không chạm tới logic của route.
             ActorAuthorization.EnsureAuthenticated(context.HttpContext.GetActor());
             return await next(context);
         });
@@ -22,6 +23,7 @@ public static class ActorAuthorizationEndpointExtensions
     {
         return builder.AddEndpointFilter(async (context, next) =>
         {
+            // Kiểm tra trước khi handler chạy. Khách hàng không chạm tới logic của khu vực nhân viên.
             ActorAuthorization.EnsureStaff(context.HttpContext.GetActor());
             return await next(context);
         });
@@ -41,6 +43,7 @@ public static class ActorAuthorizationEndpointExtensions
 
         return builder.AddEndpointFilter(async (context, next) =>
         {
+            // Quyền nạp lại ở mỗi request. Quyền bị thu hồi có hiệu lực ngay ở request kế tiếp.
             ActorAuthorization.EnsurePermissions(context.HttpContext.GetActor(), requiredPermissions);
             return await next(context);
         });

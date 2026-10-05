@@ -20,7 +20,7 @@ public static class GetMeEndpoint
     {
         var actor = context.GetActor();
 
-        // Chỉ người đã đăng nhập mới có hồ sơ. Khách giữ email, tên và số điện thoại bằng null.
+        // Khách không có hồ sơ, nên email, tên và số điện thoại bằng null.
         // Truy vấn chỉ chọn ba trường cần hiển thị, không đọc hash mật khẩu.
         var profile = actor.UserId is null
             ? null
@@ -30,6 +30,7 @@ public static class GetMeEndpoint
                 .Select(user => new { user.Email, user.Name, user.Phone })
                 .SingleOrDefaultAsync(context.RequestAborted);
 
+        // `Permissions` là danh sách vì JSON không có kiểu tập hợp. Thứ tự giữ nguyên thứ tự của bản Node.
         var response = new MeResponse(
             actor.AnonymousId,
             actor.UserId,

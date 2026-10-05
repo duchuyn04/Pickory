@@ -41,8 +41,8 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
     public async Task PostHealth_SaiPhuongThucHttp_TraVeHttp404VaMaNotFound()
     {
         // Gửi yêu cầu POST tới endpoint vốn chỉ chấp nhận phương thức GET.
-        // Request ghi cần `Origin` của web để qua bước chống CSRF, giống trình duyệt thật.
         using var request = new HttpRequestMessage(HttpMethod.Post, "/api/health");
+        // Request ghi cần `Origin` của web để qua bước chống CSRF (Cross-Site Request Forgery), giống trình duyệt thật.
         request.Headers.Add("Origin", "http://localhost:5173");
         var response = await _client.SendAsync(request);
 
@@ -53,6 +53,7 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
         using var document = JsonDocument.Parse(body);
         var error = document.RootElement.GetProperty("error");
 
+        // Mã lỗi và thông điệp giống route không tồn tại. Frontend dùng một nhánh hiển thị cho cả hai trường hợp.
         Assert.Equal("NOT_FOUND", error.GetProperty("code").GetString());
         Assert.Equal("Không tìm thấy tài nguyên.", error.GetProperty("message").GetString());
     }
@@ -79,6 +80,7 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
     // Lỗi ném trong pipeline của app phải thành JSON ở Development. Trang lỗi dev từng trả HTML 500 thay cho JSON.
     public async Task LoiTrongPipelineCuaApp_OMoiTruongDevelopment_TraJsonKhongTraTrangLoiDev()
     {
+        // Trang lỗi dev chỉ bật ở Development. Test chỉ có giá trị khi app chạy ở môi trường này.
         var environment = (IHostEnvironment)_factory.Services.GetService(typeof(IHostEnvironment))!;
         Assert.True(environment.IsDevelopment());
 
@@ -87,8 +89,10 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
         request.Headers.Add("Origin", "https://malicious-site.com");
         var response = await _client.SendAsync(request);
 
+        // Middleware lỗi của app trả 403 dạng JSON. Trang lỗi dev sẽ trả trang web với mã 500.
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        // Body có mã `FORBIDDEN_ORIGIN`, nên frontend đọc được lý do request bị chặn.
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         Assert.Equal("FORBIDDEN_ORIGIN", document.RootElement.GetProperty("error").GetProperty("code").GetString());
     }

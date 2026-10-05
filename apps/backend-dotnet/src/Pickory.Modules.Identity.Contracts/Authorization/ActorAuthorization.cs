@@ -17,6 +17,7 @@ public static class ActorAuthorization
 
     public static void EnsureStaff(Actor actor)
     {
+        // Khách chưa đăng nhập nhận 401 trước, giống `requireStaff` của bản Node.
         EnsureAuthenticated(actor);
         // Trả 403 vì API đã biết người gửi, nhưng người này không được vào khu vực nhân viên.
         if (actor.Kind != ActorKind.Staff)
@@ -27,6 +28,7 @@ public static class ActorAuthorization
 
     public static void EnsurePermissions(Actor actor, IReadOnlyCollection<string> requiredPermissions)
     {
+        // Khách chưa đăng nhập nhận 401 trước, giống `requirePermission` của bản Node.
         EnsureAuthenticated(actor);
         // Danh sách nhiều quyền nghĩa là cần đủ mọi quyền. Thiếu một quyền thì API từ chối.
         foreach (var permission in requiredPermissions)
