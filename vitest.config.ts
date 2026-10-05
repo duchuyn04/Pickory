@@ -1,26 +1,13 @@
 import { defineConfig } from 'vitest/config';
 
-// Hai nhóm test:
-// - unit: logic thuần, chạy song song, không cần DB.
-// - integration (*.int.test.ts): chạy qua PostgreSQL thật (DB test riêng), chạy tuần tự
-//   vì các file dùng chung 1 DB và dọn bảng trước mỗi test.
+// Vitest chỉ còn chạy test TypeScript của frontend, `packages/shared` và `tools`.
+// Test backend chạy bằng `pnpm dotnet:test` vì backend đã chuyển sang .NET.
 export default defineConfig({
   test: {
     coverage: {
       provider: 'v8',
-      include: ['apps/backend/src/**/*.ts'],
-      exclude: ['**/index.ts', '**/*.d.ts', 'apps/backend/src/generated/**'],
-      // Ngưỡng 80% dòng cho logic nghiệp vụ của từng module.
-      thresholds: {
-        'apps/backend/src/modules/**/service.ts': { lines: 80 },
-        // Mọi file gateway có logic chạy được đều phải đạt ngưỡng riêng, không lấy file nhiều test bù cho facade thiếu coverage.
-        'apps/backend/src/modules/ai-gateway/**/*.ts': { lines: 80, perFile: true },
-        // Module lớn tách logic nghiệp vụ thành thư mục services/ (ví dụ identity).
-        'apps/backend/src/modules/**/services/*.ts': { lines: 80 },
-        // Ngưỡng dòng cho tầng domain và services của module catalog.
-        'apps/backend/src/modules/catalog/domain/*.ts': { lines: 80 },
-        'apps/backend/src/modules/catalog/services/*.ts': { lines: 80 },
-      },
+      include: ['apps/frontend/src/**/*.{ts,tsx}', 'packages/shared/src/**/*.ts'],
+      exclude: ['**/index.ts', '**/*.d.ts'],
     },
     projects: [
       {
@@ -32,21 +19,8 @@ export default defineConfig({
             'packages/*/test/unit/**/*.test.{ts,tsx}',
             'tools/test/unit/**/*.test.ts',
           ],
-          // Nạp polyfill DOM cho môi trường jsdom phục vụ kiểm thử giao diện Tiptap.
+          // Nạp polyfill DOM cho môi trường jsdom. Trình soạn thảo Tiptap cần các API này.
           setupFiles: ['apps/frontend/test/setup.ts'],
-        },
-      },
-      {
-        extends: true,
-        test: {
-          name: 'integration',
-          include: [
-            'apps/*/test/integration/**/*.int.test.{ts,tsx}',
-            'packages/*/test/integration/**/*.int.test.{ts,tsx}',
-          ],
-          globalSetup: ['apps/backend/test/global-setup.ts'],
-          setupFiles: ['apps/backend/test/setup.ts'],
-          fileParallelism: false,
         },
       },
     ],

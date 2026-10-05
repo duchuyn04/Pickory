@@ -7,7 +7,9 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "pnpm -r --parallel --filter @pickory/backend --filter @pickory/frontend dev",
+    "dev": "pnpm run \"/^dev:/\"",
+    "dev:web": "pnpm --filter @pickory/frontend dev",
+    "dev:api": "dotnet run --project apps/backend-dotnet/src/Pickory.Api",
     "build": "pnpm -r build",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
@@ -15,10 +17,6 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:watch": "vitest",
-    "db:migrate": "pnpm --filter @pickory/backend db:migrate",
-    "db:seed": "pnpm --filter @pickory/backend db:seed",
-    "admin:create": "pnpm --filter @pickory/backend admin:create",
-    "postinstall": "pnpm --filter @pickory/backend db:generate",
     "dotnet:build": "dotnet build apps/backend-dotnet/Pickory.sln",
     "dotnet:test": "dotnet test apps/backend-dotnet/Pickory.sln",
     "dotnet:dev": "dotnet run --project apps/backend-dotnet/src/Pickory.Api"

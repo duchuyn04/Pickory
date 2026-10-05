@@ -23,43 +23,40 @@ Phân quyền theo RBAC, chi tiết trong `SPEC-identity.md`.
 
 | Thành phần | Lựa chọn |
 |---|---|
-| Ngôn ngữ | TypeScript (strict) cho cả frontend và backend |
-| Runtime | Node.js LTS hiện hành |
+| Ngôn ngữ | TypeScript (strict) cho frontend, C# cho backend |
+| Runtime | Node.js LTS cho frontend và tooling, .NET 10 cho backend |
 | Package manager | pnpm workspaces (monorepo) |
 | Frontend | React + Vite, React Router, TanStack Query |
-| Backend | Express (giai đoạn chuyển đổi sang ASP.NET Core 10) |
-| Validation | Zod, schema dùng chung giữa frontend và backend |
-| Database | PostgreSQL + pgvector, Prisma ORM |
+| Backend | ASP.NET Core 10, Minimal API, modular monolith |
+| Validation | Zod ở frontend, FluentValidation ở backend |
+| Database | PostgreSQL + pgvector, EF Core với Npgsql |
 | LLM | DeepSeek, tên model trong biến môi trường |
 | AI SDK | Vercel AI SDK (`ai`, `@ai-sdk/deepseek`, `@ai-sdk/openai`), chỉ dùng trong `ai-gateway/providers/` |
 | RAG tooling | LangChain.js (`@langchain/textsplitters`, PDF loader của `@langchain/community`), chỉ dùng trong `knowledge-base/ingest/` |
 | Embedding | OpenAI `text-embedding-3-small` (1536 chiều) |
 | Thanh toán | COD, SePay (VietQR + webhook) |
-| Test | Vitest, Supertest, Playwright |
+| Test | Vitest cho frontend, xUnit cho backend, Playwright cho E2E |
 | Lint/format | ESLint + Prettier |
 | Môi trường dev | Docker Compose cho PostgreSQL |
 
 Phiên bản cụ thể lấy bản ổn định mới nhất lúc khởi tạo và khóa trong `pnpm-lock.yaml`. Lý do chọn framework AI ghi tại `docs/adr/0001-ai-frameworks.md`.
 
-Giai đoạn chuyển đổi: hệ thống chuyển backend sang ASP.NET Core 10. Bản .NET mới đặt tại `apps/backend-dotnet`. Bản Node cũ được giữ tại `apps/backend` tới task DN-08.
+Giai đoạn chuyển đổi: backend chuyển sang ASP.NET Core 10 tại `apps/backend-dotnet`. Ngày 2026-10-05 người dùng quyết định xóa bản Node trước khi port xong. Các module chưa port (DN-02 đến DN-07) chưa có API. Code bản Node cũ xem bằng tag `node-backend-final`. Hàng AI SDK và RAG tooling ở bảng trên là lựa chọn của bản Node, sẽ cập nhật khi port `ai-gateway`.
 
 ## Commands
 
 ```bash
 pnpm install                      # cài dependency
 docker compose up -d db           # chạy PostgreSQL + pgvector
-pnpm db:migrate                   # prisma migrate dev
-pnpm db:seed                      # dữ liệu mẫu + tài khoản admin dev
-pnpm dev                          # chạy web (5173) và api (3000) cùng lúc
-pnpm test                         # unit + integration (Vitest)
-pnpm test --project unit           # chỉ unit, không cần PostgreSQL
-pnpm test --project integration    # integration với DB test riêng
+pnpm dev                          # chạy web (5173) và API .NET (3000) cùng lúc
+pnpm dotnet:build                 # build backend .NET
+pnpm dotnet:test                  # test backend .NET (unit, integration, kiến trúc)
+pnpm test                         # test TypeScript của frontend, shared và tools (Vitest)
 pnpm test -- --coverage           # kèm báo cáo coverage
 pnpm test:e2e                     # Playwright
 pnpm lint                         # ESLint
 pnpm typecheck                    # tsc --noEmit cho mọi package
-pnpm build                        # build web và api
-pnpm admin:create -- --email <email>   # tạo tài khoản admin
+pnpm build                        # build frontend và packages
 ```
 
 ## Project Structure
@@ -74,25 +71,11 @@ apps/
       hooks/              → hook của module
     src/shared/                 → component và tiện ích dùng chung
     test/unit/features/<module-id>/ → test hook và logic UI, đối chiếu với src/features/
-  backend/                → Express API, package @pickory/backend (giữ tới DN-08)
-    src/modules/<module-id>/
-      routes.ts           → khai báo route, chỉ parse request và gọi service
-      service.ts          → logic nghiệp vụ
-      repository.ts       → truy cập database qua Prisma
-      schemas.ts          → Zod schema của request/response
-      index.ts            → public interface cho module khác dùng
-      (module lớn như identity tách thành thư mục: routes/, services/, security/, data/)
-    src/shared/           → error, logger, config, middleware chung
-    test/unit/modules/<module-id>/        → *.test.ts, đối chiếu với src/modules/
-    test/unit/shared/                     → test tiện ích dùng chung
-    test/integration/modules/<module-id>/ → *.int.test.ts với DB test riêng
-    test/integration/shared/              → test hạ tầng DB
-    test/{setup,global-setup,env,db}.ts    → setup và helper test, không thuộc src/
-    prisma/               → schema.prisma, migrations, seed
-  backend-dotnet/         → ASP.NET Core 10 API (giai đoạn chuyển đổi)
+  backend-dotnet/         → ASP.NET Core 10 API
     Pickory.sln
     src/                  → Pickory.Api, Pickory.Shared, Pickory.Modules.*
     tests/                → UnitTests, IntegrationTests, ArchitectureTests
+    db/reference-schema.sql → schema DB gốc của bản Node, dùng để đối chiếu migration
 packages/
   shared/                 → type và Zod schema dùng chung web/api
     src/                  → code dùng chung
@@ -110,6 +93,8 @@ Test nằm ngoài `src/`; dưới `test/unit/` và `test/integration/`, giữ c�
 **Quy tắc ranh giới module:** module khác chỉ được import từ `modules/<module-id>/index.ts`, không import thẳng `service.ts` hay `repository.ts` của module khác. Mỗi module chỉ ghi vào bảng của chính nó.
 
 ## Code Style
+
+Các ví dụ backend trong mục này là code bản Node cũ. Viết lại bằng C# khi port xong (DN-08).
 
 ```ts
 // apps/backend/src/modules/catalog/routes.ts

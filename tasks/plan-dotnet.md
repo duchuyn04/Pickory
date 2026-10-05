@@ -15,6 +15,7 @@ Bản .NET phải giữ đúng hợp đồng API của bản Node. Hợp đồng
 3. Chuyển từng module và giữ nguyên API. Xong module nào thì tắt bản Node của module đó.
 4. Code tổ chức theo modular monolith. Mỗi module chỉ gọi module khác qua interface công khai.
 5. Nhánh `feat/catalog` đã merge vào `main`. Bản Node của `catalog` là bản tham chiếu khi port.
+6. Ngày 2026-10-05 người dùng quyết định xóa bản Node ngay sau DN-00, trước khi port. Code Node xem bằng tag `node-backend-final`. Schema DB gốc lưu ở `apps/backend-dotnet/db/reference-schema.sql`. Mục "Cách chạy song song khi chuyển" không còn áp dụng.
 
 ## Bảng thay thế công nghệ
 

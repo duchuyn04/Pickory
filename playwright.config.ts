@@ -20,7 +20,8 @@ export default defineConfig({
   webServer: [
     {
       name: 'E2E API',
-      command: 'pnpm --filter @pickory/backend exec tsx scripts/e2e-start.ts',
+      // Bản Node đã xóa. Bản .NET chưa có script seed admin cho E2E, việc này làm ở DN-05.
+      command: 'dotnet run --project apps/backend-dotnet/src/Pickory.Api',
       url: `${e2eEnvironment.apiOrigin}/api/health`,
       // Không tái sử dụng API đang chạy vì API đó có thể dùng DB dev.
       reuseExistingServer: false,
