@@ -3,7 +3,11 @@ import React, { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
-import { descriptionSchema, type DescriptionDoc } from '@pickory/shared';
+import {
+  DESCRIPTION_MAX_TEXT_LENGTH,
+  descriptionSchema,
+  type DescriptionDoc,
+} from '@pickory/shared';
 import { DescriptionEditor } from '../../../../../src/features/catalog/admin/description-editor';
 
 let container: HTMLDivElement;
@@ -54,8 +58,8 @@ describe('DescriptionEditor', () => {
     expect(buttonTexts).toContain('Nghiêng');
   });
 
-  it('ô nhập nội dung có role textbox và nhãn tiếp cận được', async () => {
-    // Cung cấp ngữ nghĩa chuẩn cho trình đọc màn hình điều hướng vào vùng soạn thảo.
+  it('ô nhập nội dung có role textbox, aria-multiline true và nhãn tiếp cận được', async () => {
+    // Cung cấp đầy đủ ngữ nghĩa vùng nhập văn bản nhiều dòng cho trình đọc màn hình.
     await act(async () => {
       root.render(
         <StrictMode>
@@ -67,6 +71,111 @@ describe('DescriptionEditor', () => {
     const textbox = container.querySelector('[role="textbox"]');
     expect(textbox).not.toBeNull();
     expect(textbox?.getAttribute('aria-label')).toBe('Mô tả sản phẩm');
+    expect(textbox?.getAttribute('aria-multiline')).toBe('true');
+  });
+
+  it('nạp mọi tài liệu mẫu hợp lệ của CAT-13 vào Tiptap thật và getJSON trả lại đúng tài liệu đó', async () => {
+    // Chứng minh tương thích hoàn toàn giữa schema Zod và bộ máy ProseMirror của Tiptap.
+    const validSampleDoc: DescriptionDoc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 1 },
+          content: [{ type: 'text', text: 'Tiêu đề cấp 1' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: 'Tiêu đề cấp 2' }],
+        },
+        {
+          type: 'heading',
+          attrs: { level: 3 },
+          content: [{ type: 'text', text: 'Tiêu đề cấp 3' }],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Chữ thường ' },
+            { type: 'text', text: 'chữ đậm ', marks: [{ type: 'bold' }] },
+            { type: 'text', text: 'chữ nghiêng ', marks: [{ type: 'italic' }] },
+            {
+              type: 'text',
+              text: 'vừa đậm vừa nghiêng',
+              marks: [{ type: 'bold' }, { type: 'italic' }],
+            },
+          ],
+        },
+      ],
+    };
+
+    let editorInstance: Editor | null = null;
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor
+            onEditorReady={(editor) => {
+              editorInstance = editor;
+            }}
+          />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+
+    await act(async () => {
+      editor.commands.setContent(validSampleDoc);
+    });
+
+    const currentJson = editor.getJSON();
+    expect(currentJson).toEqual(validSampleDoc);
+    expect(descriptionSchema.safeParse(currentJson).success).toBe(true);
+  });
+
+  it('từ chối tài liệu có text rỗng hoặc doc thiếu content', () => {
+    // Đảm bảo các cấu trúc ProseMirror cấm đều bị schema Zod từ chối nhất quán.
+    const emptyTextDoc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: '' }],
+        },
+      ],
+    };
+    expect(descriptionSchema.safeParse(emptyTextDoc).success).toBe(false);
+
+    const emptyDoc = {
+      type: 'doc',
+      content: [],
+    };
+    expect(descriptionSchema.safeParse(emptyDoc).success).toBe(false);
+
+    const docWithoutContent = {
+      type: 'doc',
+    };
+    expect(descriptionSchema.safeParse(docWithoutContent).success).toBe(false);
+
+    const duplicateMarksDoc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Văn bản',
+              marks: [{ type: 'bold' }, { type: 'bold' }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(descriptionSchema.safeParse(duplicateMarksDoc).success).toBe(false);
   });
 
   it('bấm Tiêu đề 2 và Đậm cập nhật aria-pressed và cho ra JSON qua schema CAT-13', async () => {
@@ -91,6 +200,7 @@ describe('DescriptionEditor', () => {
 
     expect(editorInstance).not.toBeNull();
     const editor = editorInstance as unknown as Editor;
+
     // Nhập nội dung ban đầu vào trình soạn thảo.
     await act(async () => {
       editor.commands.setContent('<p>Nội dung mẫu</p>');
@@ -136,6 +246,191 @@ describe('DescriptionEditor', () => {
 
     // Xác minh hàm onChange đã nhận được tài liệu JSON hợp lệ.
     expect(latestDoc).not.toBeNull();
+  });
+
+  it('nút đang bật khác nút đang tắt ở cả màu nền và viền, và dùng CSS variable', async () => {
+    // Tuân thủ quy chuẩn thiết kế không dùng Tailwind và thể hiện rõ trạng thái active.
+    let editorInstance: Editor | null = null;
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor
+            onEditorReady={(editor) => {
+              editorInstance = editor;
+            }}
+          />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+
+    const boldButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === 'Đậm',
+    );
+    expect(boldButton).toBeDefined();
+
+    const inactiveBg = boldButton?.style.backgroundColor;
+    const inactiveBorder = boldButton?.style.border || boldButton?.style.borderColor;
+
+    await act(async () => {
+      editor.commands.setContent('<p>Nội dung</p>');
+      editor.commands.selectAll();
+      boldButton?.click();
+    });
+
+    const activeBg = boldButton?.style.backgroundColor;
+    const activeBorder = boldButton?.style.border || boldButton?.style.borderColor;
+
+    expect(activeBg).not.toBe(inactiveBg);
+    expect(activeBorder).not.toBe(inactiveBorder);
+  });
+
+  it('thanh công cụ tuân thủ mẫu ARIA toolbar với roving tabindex và phím điều hướng', async () => {
+    // Đảm bảo người dùng bàn phím duyệt tuần tự giữa các nút theo chuẩn WAI-ARIA Toolbar.
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor />
+        </StrictMode>,
+      );
+    });
+
+    const buttons = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button'),
+    );
+    expect(buttons.length).toBeGreaterThanOrEqual(6);
+
+    // Nút đầu tiên phải có tabIndex 0, các nút còn lại có tabIndex -1.
+    expect(buttons[0]?.tabIndex).toBe(0);
+    for (let i = 1; i < buttons.length; i += 1) {
+      expect(buttons[i]?.tabIndex).toBe(-1);
+    }
+
+    // Phím ArrowRight chuyển tiêu điểm sang nút tiếp theo.
+    buttons[0]?.focus();
+    await act(async () => {
+      buttons[0]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    });
+    expect(buttons[0]?.tabIndex).toBe(-1);
+    expect(buttons[1]?.tabIndex).toBe(0);
+    expect(document.activeElement).toBe(buttons[1]);
+
+    // Phím ArrowLeft chuyển tiêu điểm quay lại nút trước đó.
+    await act(async () => {
+      buttons[1]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    });
+    expect(buttons[0]?.tabIndex).toBe(0);
+    expect(buttons[1]?.tabIndex).toBe(-1);
+    expect(document.activeElement).toBe(buttons[0]);
+
+    // Phím End nhảy thẳng tới nút cuối cùng trên thanh công cụ.
+    await act(async () => {
+      buttons[0]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true }));
+    });
+    const lastIndex = buttons.length - 1;
+    expect(buttons[lastIndex]?.tabIndex).toBe(0);
+    expect(document.activeElement).toBe(buttons[lastIndex]);
+
+    // Phím Home nhảy quay lại nút đầu tiên trên thanh công cụ.
+    await act(async () => {
+      buttons[lastIndex]?.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Home', bubbles: true }),
+      );
+    });
+    expect(buttons[0]?.tabIndex).toBe(0);
+    expect(document.activeElement).toBe(buttons[0]);
+  });
+
+  it('hiển thị thông báo role alert và kích hoạt aria-invalid khi nội dung vượt giới hạn', async () => {
+    // Thông báo lỗi trực quan và phản hồi trạng thái lỗi tới công nghệ trợ năng.
+    let editorInstance: Editor | null = null;
+    let receivedError: string | null = null;
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor
+            onEditorReady={(editor) => {
+              editorInstance = editor;
+            }}
+            onValidationError={(message) => {
+              receivedError = message;
+            }}
+          />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+
+    // Chèn chuỗi ký tự vượt quá 20.000 ký tự text quy định.
+    const longText = 'x'.repeat(DESCRIPTION_MAX_TEXT_LENGTH + 5);
+
+    await act(async () => {
+      editor.commands.setContent(`<p>${longText}</p>`);
+    });
+
+    const alertElement = container.querySelector('[role="alert"]');
+    expect(alertElement).not.toBeNull();
+    expect(receivedError).toBeTruthy();
+
+    const textbox = container.querySelector('[role="textbox"]');
+    expect(textbox?.getAttribute('aria-invalid')).toBe('true');
+    expect(textbox?.getAttribute('aria-describedby')).toBe(alertElement?.id);
+
+    // Nhập lại nội dung hợp lệ thì thông báo lỗi phải tự động biến mất.
+    await act(async () => {
+      editor.commands.setContent('<p>Nội dung ngắn hợp lệ</p>');
+    });
+
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+    expect(receivedError).toBeNull();
+    expect(textbox?.getAttribute('aria-invalid')).toBe('false');
+  });
+
+  it('chế độ disabled khóa chỉnh sửa ô soạn thảo và vô hiệu hóa toàn bộ nút trên thanh công cụ', async () => {
+    // Ngăn chặn thao tác sửa đổi khi người dùng không có quyền hoặc form đang gửi dữ liệu.
+    let editorInstance: Editor | null = null;
+
+    const { rerender } = {
+      rerender: async (disabled: boolean) => {
+        await act(async () => {
+          root.render(
+            <StrictMode>
+              <DescriptionEditor
+                disabled={disabled}
+                onEditorReady={(editor) => {
+                  editorInstance = editor;
+                }}
+              />
+            </StrictMode>,
+          );
+        });
+      },
+    };
+
+    await rerender(false);
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+    expect(editor.isEditable).toBe(true);
+
+    const buttonsBefore = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button'),
+    );
+    expect(buttonsBefore.some((b) => b.disabled)).toBe(false);
+
+    // Chuyển sang trạng thái disabled = true.
+    await rerender(true);
+    expect(editor.isEditable).toBe(false);
+
+    const buttonsAfter = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button'),
+    );
+    expect(buttonsAfter.every((b) => b.disabled)).toBe(true);
   });
 
   it('dán HTML có link, ảnh, danh sách, script chỉ giữ text và định dạng được bật, và qua schema', async () => {

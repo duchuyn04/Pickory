@@ -27,11 +27,18 @@ export const descriptionMarkSchema = z.discriminatedUnion('type', [
 ]);
 
 // Nút text chứa chuỗi hiển thị và danh sách mark định dạng tùy chọn.
+// Chuỗi text bắt buộc có tối thiểu 1 ký tự vì ProseMirror cấm nút text rỗng.
 export const textNodeSchema = z
   .object({
     type: z.literal('text'),
-    text: z.string(),
-    marks: z.array(descriptionMarkSchema).optional(),
+    text: z.string().min(1),
+    // ProseMirror cấm trùng lặp loại mark trên cùng một nút text.
+    marks: z
+      .array(descriptionMarkSchema)
+      .refine((marks) => new Set(marks.map((m) => m.type)).size === marks.length, {
+        message: 'Danh sách mark không được chứa mark trùng lặp cùng một loại.',
+      })
+      .optional(),
   })
   .strict();
 
@@ -66,10 +73,11 @@ export const descriptionBlockNodeSchema = z.discriminatedUnion('type', [
 ]);
 
 // Schema gốc kiểm tra toàn bộ cấu trúc tài liệu mô tả sản phẩm.
+// Nút doc bắt buộc có ít nhất một khối nội dung theo đặc tả của ProseMirror.
 export const descriptionDocSchema = z
   .object({
     type: z.literal('doc'),
-    content: z.array(descriptionBlockNodeSchema).optional(),
+    content: z.array(descriptionBlockNodeSchema).min(1),
   })
   .strict()
   .superRefine((doc, ctx) => {

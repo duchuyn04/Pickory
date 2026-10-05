@@ -69,12 +69,12 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 - [x] Bấm Tiêu đề 2 và Đậm cho ra tài liệu JSON đúng và qua schema
 - [x] Nút trên thanh công cụ có `aria-pressed` theo định dạng tại vị trí con trỏ và có nhãn truy cập được
 - [ ] Dùng được hoàn toàn bằng bàn phím: phím tắt Ctrl+B, Ctrl+I, và di chuyển giữa các nút của thanh công cụ
-  (kiểm ở UI-C5)
+  (di chuyển giữa các nút đã kiểm trong jsdom; phím tắt Ctrl+B và Ctrl+I kiểm ở UI-C5)
 - [ ] Dán nội dung có link, ảnh, danh sách, `script` thì chỉ giữ text và định dạng trong danh sách bật
-  (kiểm ở UI-C5)
+  (kiểm bằng insertContent trong jsdom; dán bằng clipboard thật kiểm ở UI-C5)
 - [x] Trình soạn thảo mở được tài liệu đã lưu và lưu lại không đổi nội dung
 - [ ] Không cuộn ngang ở viewport 375 px; ô nhập có `role="textbox"` và nhãn
-  (kiểm ở UI-C5)
+  (ô nhập đã có role="textbox", aria-multiline và nhãn ở jsdom; cuộn ngang ở 375 px kiểm ở UI-C5)
 - [x] Không thêm extension ngoài danh sách bật; `pnpm-lock.yaml` chỉ thêm các package của Tiptap cần dùng
 **Kiểm tra:** test component với jsdom; Playwright trên `pnpm dev` cho thao tác bàn phím và dán
 **Phụ thuộc:** CAT-13 · **File:** `features/catalog/admin/{description-editor,description-toolbar}.tsx`, `apps/frontend/package.json`, `pnpm-lock.yaml` · **Quy mô:** M

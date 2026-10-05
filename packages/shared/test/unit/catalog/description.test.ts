@@ -60,15 +60,52 @@ describe('descriptionSchema', () => {
     const parsed = descriptionSchema.safeParse(emptyDoc);
     expect(parsed.success).toBe(true);
   });
-
-  it('chấp nhận tài liệu rỗng không có mảng content', () => {
-    // Cho phép tài liệu khởi tạo tối giản từ client khi chưa có khối văn bản nào.
-    const minimalDoc = {
+  it('từ chối tài liệu thiếu mảng content hoặc có mảng content rỗng', () => {
+    // ProseMirror yêu cầu nút doc phải chứa ít nhất một khối nội dung hợp lệ.
+    const docWithoutContent = {
       type: 'doc',
     };
+    expect(descriptionSchema.safeParse(docWithoutContent).success).toBe(false);
 
-    const parsed = descriptionSchema.safeParse(minimalDoc);
-    expect(parsed.success).toBe(true);
+    const docWithEmptyContent = {
+      type: 'doc',
+      content: [],
+    };
+    expect(descriptionSchema.safeParse(docWithEmptyContent).success).toBe(false);
+  });
+
+  it('từ chối nút text có chuỗi text rỗng', () => {
+    // ProseMirror cấm nút text rỗng để tránh suy biến cây cấu trúc văn bản.
+    const docWithEmptyText = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: '' }],
+        },
+      ],
+    };
+    expect(descriptionSchema.safeParse(docWithEmptyText).success).toBe(false);
+  });
+
+  it('từ chối danh sách mark chứa các mark trùng lặp cùng một loại', () => {
+    // ProseMirror quy định tập hợp mark trên một nút text phải là duy nhất.
+    const docWithDuplicateMarks = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              type: 'text',
+              text: 'Chữ kiểm tra',
+              marks: [{ type: 'bold' }, { type: 'bold' }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(descriptionSchema.safeParse(docWithDuplicateMarks).success).toBe(false);
   });
 
   it('từ chối các nút ngoài danh sách trắng như script, image, bulletList, codeBlock', () => {
