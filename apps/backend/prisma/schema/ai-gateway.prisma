@@ -1,0 +1,46 @@
+// Schema cho module ai-gateway: nhật ký sử dụng, cài đặt ngân sách và bộ nhớ đệm embedding.
+
+model AiUsageLog {
+  id            String   @id @default(uuid())
+  feature       String
+  provider      String
+  model         String
+  promptVersion String?
+  inputTokens   Int      @default(0)
+  outputTokens  Int      @default(0)
+  cachedTokens  Int      @default(0)
+  costUsd       Float    @default(0)
+  latencyMs     Int
+  status        String
+  errorCode     String?
+  actorKeyHash  String?
+  createdAt     DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([feature])
+  @@index([status])
+  @@index([actorKeyHash])
+  @@map("ai_usage_logs")
+}
+
+model AiSetting {
+  id                 String   @id @default("singleton")
+  monthlyBudgetUsd   Float
+  chatDailyLimitUser Int
+  chatDailyLimitAnon Int
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("ai_settings")
+}
+
+model AiEmbeddingCache {
+  id        String   @id @default(uuid())
+  key       String   @unique
+  model     String
+  embedding Float[]
+  createdAt DateTime @default(now())
+
+  @@index([model])
+  @@map("ai_embedding_cache")
+}

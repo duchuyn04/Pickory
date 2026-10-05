@@ -1,6 +1,7 @@
 import cookieParser from 'cookie-parser';
 import express, { type Express } from 'express';
 import { pinoHttp } from 'pino-http';
+import { aiRouter } from './modules/ai-gateway';
 import { actorMiddleware, identityRouter } from './modules/identity';
 import { errorHandler, notFoundHandler } from './shared/errors';
 import { logger } from './shared/logger';
@@ -31,6 +32,8 @@ export function createApp(configOverrides?: Partial<Config>): Express {
   });
 
   app.use(identityRouter);
+  // Gắn router của module ai-gateway để phục vụ các endpoint quản trị và tính năng AI.
+  app.use(aiRouter);
 
   // Thứ tự quan trọng: 404 rồi tới error handler, cả hai đặt sau mọi route.
   app.use(notFoundHandler);

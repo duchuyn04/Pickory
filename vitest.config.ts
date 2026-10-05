@@ -13,6 +13,8 @@ export default defineConfig({
       // Ngưỡng 80% dòng cho logic nghiệp vụ của từng module.
       thresholds: {
         'apps/backend/src/modules/**/service.ts': { lines: 80 },
+        // Mọi file gateway có logic chạy được đều phải đạt ngưỡng riêng, không lấy file nhiều test bù cho facade thiếu coverage.
+        'apps/backend/src/modules/ai-gateway/**/*.ts': { lines: 80, perFile: true },
         // Module lớn tách logic nghiệp vụ thành thư mục services/ (ví dụ identity).
         'apps/backend/src/modules/**/services/*.ts': { lines: 80 },
       },

@@ -14,10 +14,13 @@
     "admin:create": "tsx scripts/admin-create.ts"
   },
   "dependencies": {
+    "@ai-sdk/deepseek": "3.0.58",
+    "@ai-sdk/openai": "4.0.83",
     "@node-rs/argon2": "^2.2.1",
     "@pickory/shared": "workspace:*",
     "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
+    "ai": "7.0.127",
     "cookie-parser": "^1.4.7",
     "express": "^5.2.1",
     "pg": "^8.23.1",
