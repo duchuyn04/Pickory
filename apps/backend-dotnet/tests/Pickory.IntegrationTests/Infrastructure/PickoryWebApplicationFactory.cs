@@ -1,7 +1,13 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Pickory.Modules.Identity.Contracts.Events;
+using Pickory.Modules.Identity.Emails;
+using Pickory.Modules.Identity.GoogleOAuth;
+using Pickory.Shared.Events;
 
 namespace Pickory.IntegrationTests.Infrastructure;
 
@@ -89,5 +95,34 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             // Route kiểm thử không được đưa vào ứng dụng sản xuất.
             services.AddSingleton<IStartupFilter, TestEndpointsStartupFilter>();
         });
+        // `ConfigureTestServices` chạy sau đăng ký của app. Bản giả thay được dịch vụ thật đã đăng ký.
+        builder.ConfigureTestServices(services =>
+        {
+            // Test đọc thư trong bộ nhớ thay vì ghi file vào outbox dev.
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<InMemoryEmailSender>();
+            // Trỏ `IEmailSender` về cùng một instance. Test đọc đúng hộp thư mà API đã ghi.
+            services.AddSingleton<IEmailSender>(provider => provider.GetRequiredService<InMemoryEmailSender>());
+
+            // Test không gọi Google thật. Bản giả trả thông tin người dùng do test đặt.
+            services.RemoveAll<IGoogleOAuthClient>();
+            services.AddSingleton<FakeGoogleOAuthClient>();
+            // Trỏ `IGoogleOAuthClient` về cùng một instance. Thông tin test đặt là thông tin API nhận.
+            services.AddSingleton<IGoogleOAuthClient>(provider => provider.GetRequiredService<FakeGoogleOAuthClient>());
+
+            // Ghi lại sự kiện của identity để test kiểm tra số lần phát.
+            services.AddSingleton<RecordedDomainEvents>();
+            services.AddSingleton<IDomainEventHandler<UserLinkedEvent>, RecordingDomainEventHandler<UserLinkedEvent>>();
+            services.AddSingleton<IDomainEventHandler<UserDeletedEvent>, RecordingDomainEventHandler<UserDeletedEvent>>();
+        });
     }
+
+    // Cung cấp hộp thư cho test. Test lấy token xác minh hoặc đặt lại mật khẩu từ thư.
+    public InMemoryEmailSender EmailSender => Services.GetRequiredService<InMemoryEmailSender>();
+
+    // Cung cấp bản giả Google cho test. Test đặt thông tin người dùng trước khi gọi callback.
+    public FakeGoogleOAuthClient GoogleClient => Services.GetRequiredService<FakeGoogleOAuthClient>();
+
+    // Cung cấp danh sách sự kiện cho test. Test kiểm tra sự kiện phát đúng số lần.
+    public RecordedDomainEvents DomainEvents => Services.GetRequiredService<RecordedDomainEvents>();
 }

@@ -77,4 +77,41 @@ public class EventDispatcherTests
         Assert.True(successfulHandler.WasHandled);
         Assert.True(testLogger.HasLoggedError);
     }
+
+    // Singleton ghi lại sự kiện mà handler scoped đã nhận. Test đọc kết quả sau khi scope đã đóng.
+    private sealed class HandledEventProbe
+    {
+        public List<string> HandledUserIds { get; } = [];
+    }
+
+    // Handler dùng `DbContext` có vòng đời scoped. Handler mẫu này mô phỏng phụ thuộc đó.
+    private sealed class ScopedHandler(HandledEventProbe probe) : IDomainEventHandler<SampleUserCreatedEvent>
+    {
+        public Task HandleAsync(SampleUserCreatedEvent @event, CancellationToken cancellationToken = default)
+        {
+            // Ghi mã người dùng vào probe. Test dùng giá trị này để biết handler đã chạy.
+            probe.HandledUserIds.Add(@event.UserId);
+            return Task.CompletedTask;
+        }
+    }
+
+    [Fact]
+    // Dispatcher singleton chạy được handler scoped. Mỗi lần phát sự kiện tạo scope riêng thay vì dùng root provider.
+    public async Task PublishAsync_RunsScopedHandlerFromSingletonDispatcher()
+    {
+        var services = new ServiceCollection();
+        var probe = new HandledEventProbe();
+        services.AddSingleton(probe);
+        // Đăng ký handler scoped, giống handler thật cần `DbContext`.
+        services.AddScoped<IDomainEventHandler<SampleUserCreatedEvent>, ScopedHandler>();
+        // Môi trường Development bật kiểm tra scope. Root provider từ chối cấp dịch vụ scoped.
+        var serviceProvider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        var dispatcher = new InProcessEventDispatcher(serviceProvider, new TestLogger<InProcessEventDispatcher>());
+
+        // Phát sự kiện không ném lỗi scope.
+        await dispatcher.PublishAsync(new SampleUserCreatedEvent("user-456"));
+
+        // Handler chạy đúng một lần với đúng dữ liệu.
+        Assert.Equal(["user-456"], probe.HandledUserIds);
+    }
 }

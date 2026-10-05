@@ -9,13 +9,16 @@ public static class SessionCookies
     public const string AnonymousCookieName = "pk_anon";
 
     public static readonly TimeSpan CustomerSessionLifetime = TimeSpan.FromDays(30);
+    public static readonly TimeSpan StaffSessionLifetime = TimeSpan.FromHours(12);
     public static readonly TimeSpan AnonymousIdLifetime = TimeSpan.FromDays(365);
 
+    // Mọi route đăng nhập dùng hàm này. Cookie phiên luôn có cùng thuộc tính bảo mật.
     public static void AppendSessionCookie(HttpResponse response, string rawToken, TimeSpan lifetime, bool isProduction)
     {
         response.Cookies.Append(SessionCookieName, rawToken, CreateOptions(lifetime, isProduction));
     }
 
+    // Mã ẩn danh sống 1 năm. Giỏ hàng của khách vãng lai còn nguyên khi khách quay lại.
     public static void AppendAnonymousCookie(HttpResponse response, string anonymousId, bool isProduction)
     {
         response.Cookies.Append(AnonymousCookieName, anonymousId, CreateOptions(AnonymousIdLifetime, isProduction));
@@ -23,8 +26,13 @@ public static class SessionCookies
 
     public static void DeleteSessionCookie(HttpResponse response)
     {
+        DeleteCookie(response, SessionCookieName);
+    }
+
+    public static void DeleteCookie(HttpResponse response, string cookieName)
+    {
         // Bản Node xóa cookie không kèm `Secure`. Giữ cùng thuộc tính để trình duyệt xóa đúng cookie.
-        response.Cookies.Delete(SessionCookieName, new CookieOptions
+        response.Cookies.Delete(cookieName, new CookieOptions
         {
             HttpOnly = true,
             SameSite = SameSiteMode.Lax,

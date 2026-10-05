@@ -37,6 +37,42 @@ public class AppConfigTests
     }
 
     [Fact]
+    // Thiếu thông tin Google thì dùng giá trị giả của bản Node. Môi trường dev khởi động được khi chưa có ứng dụng Google thật.
+    public void Load_GoogleCredentialsUseNodeDefaultsWhenMissing()
+    {
+        // Cấu hình chỉ có biến bắt buộc `DATABASE_URL`.
+        var config = CreateConfiguration(new Dictionary<string, string?>
+        {
+            ["DATABASE_URL"] = "postgresql://pickory:pickory@localhost:5432/pickory",
+        });
+
+        var result = AppConfig.Load(config);
+
+        // Hai giá trị giả khớp bản Node, nên test tích hợp đọc được `client_id` cố định.
+        Assert.Equal("mock_google_client_id", result.GoogleClientId);
+        Assert.Equal("mock_google_client_secret", result.GoogleClientSecret);
+    }
+
+    [Fact]
+    // Biến môi trường Google ghi đè giá trị giả. Production dùng ứng dụng Google thật.
+    public void Load_GoogleCredentialsReadFromEnvironment()
+    {
+        // Đặt `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` thật.
+        var config = CreateConfiguration(new Dictionary<string, string?>
+        {
+            ["DATABASE_URL"] = "postgresql://pickory:pickory@localhost:5432/pickory",
+            ["GOOGLE_CLIENT_ID"] = "real-client-id",
+            ["GOOGLE_CLIENT_SECRET"] = "real-client-secret",
+        });
+
+        var result = AppConfig.Load(config);
+
+        // Cấu hình nhận đúng hai giá trị từ môi trường.
+        Assert.Equal("real-client-id", result.GoogleClientId);
+        Assert.Equal("real-client-secret", result.GoogleClientSecret);
+    }
+
+    [Fact]
     // Dừng khởi động ứng dụng và ném lỗi rõ ràng khi thiếu biến DATABASE_URL.
     public void Load_NemNgoaiLe_KhiThieuBienDatabaseUrl()
     {

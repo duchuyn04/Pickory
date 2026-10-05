@@ -49,6 +49,13 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 var app = builder.Build();
 
+// Đọc IP thật của client sau proxy trước mọi middleware khác. Giới hạn tần suất của identity đếm theo IP này.
+var forwardedHeadersOptions = TrustProxyOptions.Create(config.TrustProxy);
+if (forwardedHeadersOptions is not null)
+{
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+}
+
 // Middleware lỗi đứng sau trang lỗi dev của môi trường Development. Lỗi từ middleware và route luôn thành JSON `{ error }` như bản Node.
 app.UseMiddleware<ExceptionHandlingMiddleware>();
 

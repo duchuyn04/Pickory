@@ -20,6 +20,11 @@ public record AppConfig
     // Cấu hình tin cậy proxy trung gian cho request chuyển tiếp.
     public string TrustProxy { get; init; } = "false";
 
+    // Giá trị giả mặc định giữ nguyên bản Node. Môi trường dev chạy được khi chưa có ứng dụng Google thật.
+    public string GoogleClientId { get; init; } = "mock_google_client_id";
+
+    public string GoogleClientSecret { get; init; } = "mock_google_client_secret";
+
     // Đọc và kiểm tra tính hợp lệ của toàn bộ biến môi trường khi khởi động.
     public static AppConfig Load(IConfiguration configuration)
     {
@@ -99,6 +104,10 @@ public record AppConfig
             }
         }
 
+        // Thiếu biến thì dùng giá trị giả của bản Node. Đăng nhập Google chỉ chạy thật khi có ứng dụng Google.
+        var googleClientId = configuration["GOOGLE_CLIENT_ID"];
+        var googleClientSecret = configuration["GOOGLE_CLIENT_SECRET"];
+
         return new AppConfig
         {
             Port = port,
@@ -106,6 +115,8 @@ public record AppConfig
             ApiBaseUrl = apiBaseUrl,
             DatabaseUrl = databaseUrl,
             TrustProxy = trustProxy,
+            GoogleClientId = string.IsNullOrWhiteSpace(googleClientId) ? "mock_google_client_id" : googleClientId,
+            GoogleClientSecret = string.IsNullOrWhiteSpace(googleClientSecret) ? "mock_google_client_secret" : googleClientSecret,
         };
     }
 

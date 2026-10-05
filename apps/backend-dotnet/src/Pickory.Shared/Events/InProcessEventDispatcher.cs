@@ -20,8 +20,9 @@ public class InProcessEventDispatcher : IEventDispatcher
     public async Task PublishAsync<TEvent>(TEvent @event, CancellationToken cancellationToken = default)
         where TEvent : IDomainEvent
     {
-        // Truy xuất danh sách trình lắng nghe được đăng ký trong container dịch vụ.
-        var handlers = _serviceProvider.GetServices<IDomainEventHandler<TEvent>>();
+        // Mỗi lần phát dùng scope riêng. Handler cần `DbContext` scoped không lấy được dịch vụ từ root provider.
+        await using var scope = _serviceProvider.CreateAsyncScope();
+        var handlers = scope.ServiceProvider.GetServices<IDomainEventHandler<TEvent>>();
 
         foreach (var handler in handlers)
         {

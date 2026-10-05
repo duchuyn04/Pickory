@@ -203,6 +203,66 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 
 **Phụ thuộc:** DN-01R · **Quy mô:** M
 
-## DN-03 đến DN-08
+## DN-03: Đăng ký, đăng nhập, Google OAuth, mật khẩu và tài khoản
+
+**Mô tả:** Port route xác thực và tài khoản của identity theo bản Node tại tag `node-backend-final`. Mã nguồn tham chiếu nằm trong `apps/backend/src/modules/identity/routes/auth.ts`, `routes/account.ts` và thư mục `services/`. Test tích hợp của bản Node là đặc tả hành vi. Mỗi phần viết test đỏ trước khi viết code.
+
+**Tiêu chí nghiệm thu:**
+
+- [x] `PasswordHasher` dùng Argon2id với tham số của bản Node: `m=19456`, `t=2`, `p=1`. Hash do `@node-rs/argon2` tạo vẫn xác minh được.
+- [x] Hash hỏng hoặc sai định dạng làm `PasswordHasher` trả kết quả sai, không ném lỗi.
+- [x] Bộ đếm đăng nhập sai khóa cặp email và IP sau 5 lần sai trong 15 phút. Lần thử thứ 6 nhận 429 `TOO_MANY_ATTEMPTS`.
+- [x] Bộ giới hạn đăng ký cho 5 lần mỗi giờ mỗi IP. Bộ giới hạn quên mật khẩu cho 3 lần mỗi 15 phút mỗi email và 10 lần mỗi giờ mỗi IP.
+- [x] `TRUST_PROXY` điều khiển cách API đọc IP từ `X-Forwarded-For`. Giá trị `false` bỏ qua header này.
+- [x] Bộ điều phối sự kiện tạo scope DI riêng cho mỗi lần phát. Handler cần `DbContext` chạy được.
+- [x] Project `Contracts` của identity có `UserLinkedEvent` và `UserDeletedEvent`. Đăng nhập khách phát `UserLinkedEvent`. Xóa tài khoản phát `UserDeletedEvent`.
+- [x] `POST /api/auth/register` tạo khách, gửi thư xác thực hạn 24 giờ và cấp phiên 30 ngày. Ô bẫy bot có giá trị nhận 400 `BAD_REQUEST`.
+- [x] `POST /api/auth/login` và `POST /api/admin/auth/login` trả cùng lỗi 401 `INVALID_CREDENTIALS` cho email sai, mật khẩu sai, sai loại tài khoản, tài khoản bị khóa hoặc bị xóa.
+- [x] Phiên nhân viên có hạn 12 giờ. Cookie `pk_session` của nhân viên có thời hạn 12 giờ.
+- [x] `POST /api/auth/logout` xóa phiên trong DB và xóa cookie `pk_session`.
+- [x] `POST /api/auth/verify-email` và `POST /api/auth/reset-password` dùng mỗi token một lần. Hai request đồng thời chỉ có một request thành công.
+- [x] `POST /api/auth/reset-password` nhận token `reset` hoặc `invite`, vô hiệu token còn lại và xóa mọi phiên của người dùng.
+- [x] `POST /api/auth/forgot-password` luôn trả cùng thông báo, kể cả khi email không tồn tại hoặc bị giới hạn.
+- [x] `GET /api/auth/google/start` dùng PKCE với `S256`, lưu `pk_oauth_state` 10 phút và chỉ nhận `returnTo` là đường dẫn nội bộ.
+- [x] `GET /api/auth/google/callback` kiểm tra `state`, chặn nhân viên, chặn email Google chưa xác thực khi tài khoản đã tồn tại.
+- [x] Callback Google chống chiếm trước tài khoản. Tài khoản email chưa xác thực mất mật khẩu, phiên và token cũ khi chủ email đăng nhập Google.
+- [x] `PUT /api/me/consent` thêm bản ghi consent mới. Khách đăng nhập nhận consent mới hơn của mã ẩn danh.
+- [x] `PATCH /api/me`, `POST /api/me/password` và `DELETE /api/me` yêu cầu đăng nhập. Hành vi giữ nguyên bản Node.
+- [x] Xóa tài khoản ẩn danh email, tên và số điện thoại. Tài khoản chỉ dùng Google phải có phiên tạo trong 5 phút gần nhất.
+- [x] Thư trong môi trường dev nằm trong thư mục outbox. Test dùng bộ gửi thư trong bộ nhớ.
+
+**Kiểm tra:** `dotnet build` không có warning. `dotnet test` xanh. `pnpm lint && pnpm typecheck && pnpm test` xanh.
+
+**Bằng chứng DN-03 (2026-10-05):**
+
+- `dotnet build`: thành công, không có warning hoặc error.
+- `dotnet test`: 255 test thành công. Trước task có 132 test.
+- Phân nhóm .NET: 111 unit test, 141 integration test và ba architecture test.
+- Mỗi phần có test đỏ trước khi viết code. Test port từ test tích hợp của bản Node làm đặc tả.
+- Thư viện `@node-rs/argon2` 2.2.1 xác minh được hash do .NET tạo. .NET xác minh được hash do thư viện đó tạo.
+- Test thử phá code báo lỗi ở các hành vi bảo mật chính:
+  - tiêu thụ token đồng thời;
+  - thu hồi quyền truy cập của tài khoản đăng ký trước;
+  - quy tắc phiên 5 phút khi xóa tài khoản chỉ dùng Google;
+  - gộp consent;
+  - outbox dev.
+- Task sửa lỗi bộ điều phối sự kiện. Handler cần `DbContext` scoped từng không chạy được từ root provider.
+- Task ghi `UpdatedAt` khi sửa user, giống `@updatedAt` của Prisma. Test tái hiện báo lỗi khi bỏ bản sửa.
+- `IdentityRoleSeeder` tạo bốn role mặc định. Test tích hợp dùng seeder này. Lệnh seed cho DB dev thuộc DN-04.
+- `.env.example` ghi `TRUST_PROXY`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` và `DEV_OUTBOX_DIR`.
+- Script kiểm tra comment không thấy vi phạm mục 1 và mục 5 của `CLAUDE.md` trong file C# đã đổi.
+- Comment theo bước của mục 4 được rà thủ công trên mọi file C# đã đổi.
+- `dotnet ef migrations has-pending-model-changes` báo không có thay đổi cho ba `DbContext`.
+- `pnpm lint` và `pnpm typecheck`: thành công.
+- `pnpm test`: 95 test thành công.
+
+**Khác biệt đã biết với bản Node:**
+
+- Trường bắt buộc bị thiếu nhận thông báo `Trường này là bắt buộc.`. Bản Node trả thông báo tiếng Anh mặc định của Zod.
+- Body JSON sai cú pháp vẫn nhận lỗi 500 như bản Node. Task sau sẽ trả lỗi 400 cho trường hợp này khi cần.
+
+**Phụ thuộc:** DN-02 · **Quy mô:** L
+
+## DN-04 đến DN-08
 
 Viết tiêu chí chi tiết khi bắt đầu từng task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.
