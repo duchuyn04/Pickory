@@ -25,9 +25,16 @@ export interface AttributeDefinitionValidationResult {
   errors: AttributeDefinitionError[];
 }
 
+// Tập hợp 4 kiểu dữ liệu thuộc tính hợp lệ được hệ thống hỗ trợ.
+const ALLOWED_ATTRIBUTE_TYPES: ReadonlySet<AttributeType> = new Set([
+  'text',
+  'number',
+  'enum',
+  'boolean',
+]);
+
 // Quy tắc đặt khóa thuộc tính: chữ cái thường đầu tiên, sau đó là chữ thường, số hoặc gạch dưới.
 const ATTRIBUTE_KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
-
 // Kiểm tra tính hợp lệ của một định nghĩa thuộc tính đơn lẻ.
 export function validateAttributeDefinition(
   attribute: AttributeDefinition,
@@ -57,17 +64,46 @@ export function validateAttributeDefinition(
       message: 'Nhóm thuộc tính không được để trống.',
     });
   }
+  // Chặn kiểu dữ liệu lạ ngoài 4 kiểu quy định để tránh lỗi validate thông số về sau.
+  if (!ALLOWED_ATTRIBUTE_TYPES.has(attribute.type)) {
+    errors.push({
+      key: attribute.key,
+      message: `Kiểu thuộc tính "${String(attribute.type)}" không hợp lệ, chỉ nhận text, number, enum hoặc boolean.`,
+    });
+  }
 
-  // Bắt buộc danh sách lựa chọn cho kiểu enum để người dùng có giá trị chọn.
+  // Bắt buộc danh sách lựa chọn cho kiểu enum và kiểm tra tính toàn vẹn của từng lựa chọn.
   if (attribute.type === 'enum') {
     if (!attribute.options || attribute.options.length === 0) {
       errors.push({
         key: attribute.key,
         message: `Thuộc tính "${attribute.key}" kiểu enum bắt buộc phải có danh sách options.`,
       });
+    } else {
+      const seenOptions = new Set<string>();
+      for (const opt of attribute.options) {
+        // Chặn lựa chọn rỗng sau khi cắt khoảng trắng để giao diện không hiện dòng trống.
+        if (typeof opt !== 'string' || opt.trim().length === 0) {
+          errors.push({
+            key: attribute.key,
+            message: `Tùy chọn của thuộc tính "${attribute.key}" không được để trống.`,
+          });
+          break;
+        }
+
+        const trimmedOption = opt.trim();
+        // Chặn các lựa chọn trùng nhau sau khi cắt khoảng trắng để tránh xung đột giá trị.
+        if (seenOptions.has(trimmedOption)) {
+          errors.push({
+            key: attribute.key,
+            message: `Tùy chọn "${trimmedOption}" của thuộc tính "${attribute.key}" bị lặp lại.`,
+          });
+          break;
+        }
+        seenOptions.add(trimmedOption);
+      }
     }
   }
-
   return {
     valid: errors.length === 0,
     errors,

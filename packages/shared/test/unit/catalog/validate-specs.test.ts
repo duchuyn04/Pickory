@@ -155,6 +155,22 @@ describe('validateSpecs', () => {
     expect(result.valid).toBe(false);
     expect(result.errors.some((err) => err.key === 'unknown_field')).toBe(true);
   });
+  it('báo thiếu thuộc tính khi thuộc tính có key constructor bị thiếu thay vì báo sai kiểu', () => {
+    const constructorDefinition: AttributeDefinition = {
+      key: 'constructor',
+      label: 'Nhà sản xuất',
+      group: 'Tổng quan',
+      type: 'text',
+      required: true,
+      filterable: false,
+    };
+    const emptySpecs = {};
+    const result = validateSpecs(emptySpecs, [constructorDefinition]);
+    expect(result.valid).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0]?.key).toBe('constructor');
+    expect(result.errors[0]?.message).toContain('Thiếu thuộc tính bắt buộc');
+  });
 
   it('từ chối dữ liệu thông số không phải object', () => {
     expect(validateSpecs(null as unknown as Record<string, unknown>, definitions).valid).toBe(

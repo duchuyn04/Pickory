@@ -80,6 +80,33 @@ describe('catalog attributes', () => {
       const result = validateAttributeDefinition(textAttribute);
       expect(result.valid).toBe(true);
     });
+    it('từ chối type nằm ngoài 4 giá trị cho phép', () => {
+      const invalidTypeAttribute = {
+        ...baseRamAttribute,
+        type: 'date' as unknown as AttributeDefinition['type'],
+      };
+      const result = validateAttributeDefinition(invalidTypeAttribute);
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((err) => err.key === 'ram_gb')).toBe(true);
+    });
+
+    it('từ chối enum khi options chứa giá trị rỗng sau trim hoặc trùng lặp', () => {
+      const enumWithEmptyOption: AttributeDefinition = {
+        ...baseColorAttribute,
+        options: ['Đen', '   ', 'Bạc'],
+      };
+      const resultEmpty = validateAttributeDefinition(enumWithEmptyOption);
+      expect(resultEmpty.valid).toBe(false);
+      expect(resultEmpty.errors.some((err) => err.key === 'color')).toBe(true);
+
+      const enumWithDuplicateOptions: AttributeDefinition = {
+        ...baseColorAttribute,
+        options: ['Đen', 'Bạc', ' Đen '],
+      };
+      const resultDuplicate = validateAttributeDefinition(enumWithDuplicateOptions);
+      expect(resultDuplicate.valid).toBe(false);
+      expect(resultDuplicate.errors.some((err) => err.key === 'color')).toBe(true);
+    });
   });
 
   describe('validateAttributeDefinitions', () => {

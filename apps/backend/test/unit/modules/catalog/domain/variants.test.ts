@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildVariantCombinations,
+  MAX_VARIANT_COMBINATIONS,
   type ProductOption,
 } from '../../../../../src/modules/catalog/domain/variants';
 
@@ -52,5 +53,35 @@ describe('buildVariantCombinations', () => {
       { name: 'Trục 4', values: ['G', 'H'] },
     ];
     expect(() => buildVariantCombinations(options)).toThrow(/tối đa 3 trục/i);
+  });
+  it('từ chối khi tên trục tùy chọn bị rỗng hoặc trùng lặp', () => {
+    const emptyNameOptions: ProductOption[] = [{ name: '   ', values: ['A', 'B'] }];
+    expect(() => buildVariantCombinations(emptyNameOptions)).toThrow(
+      /tên trục tùy chọn không được để trống/i,
+    );
+
+    const duplicateNameOptions: ProductOption[] = [
+      { name: 'Màu sắc', values: ['Đen'] },
+      { name: ' Màu sắc ', values: ['Trắng'] },
+    ];
+    expect(() => buildVariantCombinations(duplicateNameOptions)).toThrow(/trùng lặp/i);
+  });
+
+  it('từ chối khi giá trị tùy chọn trong trục bị rỗng hoặc trùng lặp', () => {
+    const emptyValueOptions: ProductOption[] = [{ name: 'Màu', values: ['Đen', '   '] }];
+    expect(() => buildVariantCombinations(emptyValueOptions)).toThrow(/không được để trống/i);
+
+    const duplicateValueOptions: ProductOption[] = [{ name: 'Màu', values: ['Đen', ' Đen '] }];
+    expect(() => buildVariantCombinations(duplicateValueOptions)).toThrow(/trùng lặp/i);
+  });
+
+  it('từ chối khi tổng số tổ hợp vượt quá ngưỡng tối đa 100', () => {
+    expect(MAX_VARIANT_COMBINATIONS).toBe(100);
+
+    const largeOptions: ProductOption[] = [
+      { name: 'Trục 1', values: Array.from({ length: 11 }, (_, i) => `Val1_${i}`) },
+      { name: 'Trục 2', values: Array.from({ length: 10 }, (_, i) => `Val2_${i}`) },
+    ];
+    expect(() => buildVariantCombinations(largeOptions)).toThrow(/vượt quá giới hạn tối đa 100/i);
   });
 });

@@ -125,4 +125,81 @@ describe('ràng buộc cơ sở dữ liệu catalog', () => {
     expect(indexRows).toHaveLength(1);
     expect(indexRows[0]?.indexdef).toContain('USING gin');
   });
+
+  it('xác nhận các chỉ mục bổ sung trên bảng products và skus tồn tại', async () => {
+    const productIndexes = await db.$queryRaw<Array<{ indexname: string }>>`
+      SELECT indexname
+      FROM pg_indexes
+      WHERE tablename = 'products' AND indexname IN ('products_minPrice_idx', 'products_createdAt_idx')
+    `;
+    expect(productIndexes).toHaveLength(2);
+
+    const skuIndexes = await db.$queryRaw<Array<{ indexname: string }>>`
+      SELECT indexname
+      FROM pg_indexes
+      WHERE tablename = 'skus' AND indexname = 'skus_productId_idx'
+    `;
+    expect(skuIndexes).toHaveLength(1);
+  });
+
+  it('từ chối xóa sản phẩm khi SKU của sản phẩm vẫn còn bản ghi biến động tồn kho', async () => {
+    // Tạo danh mục mẫu để liên kết khóa ngoại của sản phẩm.
+    const category = await db.category.create({
+      data: {
+        name: 'Màn hình',
+        slug: 'man-hinh',
+        attributes: [],
+      },
+    });
+
+    // Tạo thương hiệu mẫu để liên kết khóa ngoại của sản phẩm.
+    const brand = await db.brand.create({
+      data: {
+        name: 'LG',
+        slug: 'lg',
+      },
+    });
+
+    // Tạo sản phẩm mẫu để chứa biến thể SKU.
+    const product = await db.product.create({
+      data: {
+        categoryId: category.id,
+        brandId: brand.id,
+        name: 'LG UltraGear',
+        slug: 'lg-ultragear',
+        shortDesc: 'Màn hình gaming',
+        description: { type: 'doc', content: [] },
+        specs: {},
+        options: [],
+      },
+    });
+
+    // Tạo biến thể SKU thuộc sản phẩm.
+    const sku = await db.sku.create({
+      data: {
+        productId: product.id,
+        code: 'LG-27GP850',
+        optionValues: {},
+        price: 9000000,
+        stock: 5,
+      },
+    });
+
+    // Tạo bản ghi biến động tồn kho nhập kho ban đầu cho SKU.
+    await db.inventoryMovement.create({
+      data: {
+        skuId: sku.id,
+        delta: 5,
+        type: 'manual',
+        reason: 'Nhập kho ban đầu',
+      },
+    });
+
+    // Thử xóa sản phẩm: Cascade cố xóa Sku nhưng bị chặn bởi FK Restrict từ inventory_movements.
+    await expect(
+      db.product.delete({
+        where: { id: product.id },
+      }),
+    ).rejects.toThrow();
+  });
 });

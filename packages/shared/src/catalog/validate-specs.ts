@@ -50,9 +50,10 @@ export function validateSpecs(
 
   // Kiểm tra từng thuộc tính được định nghĩa trong danh mục.
   for (const attribute of attributes) {
-    const value = specs[attribute.key];
-    const isProvided = attribute.key in specs && value !== undefined && value !== null;
-
+    // Dùng Object.hasOwn để tránh nhận nhầm các thuộc tính kế thừa từ prototype như constructor.
+    const hasProperty = Object.hasOwn(specs, attribute.key);
+    const value = hasProperty ? specs[attribute.key] : undefined;
+    const isProvided = hasProperty && value !== undefined && value !== null;
     // Chặn thiếu thuộc tính bắt buộc để đảm bảo dữ liệu hiển thị tối thiểu.
     if (!isProvided) {
       if (attribute.required) {

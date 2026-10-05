@@ -2,32 +2,32 @@
 
 // Danh mục sản phẩm dạng cây tối đa hai cấp.
 model Category {
-  id         String     @id @default(uuid())
+  id         String   @id @default(uuid())
   parentId   String?
   name       String
-  slug       String     @unique
-  position   Int        @default(0)
-  attributes Json       // AttributeDefinition[] của riêng danh mục này
-  createdAt  DateTime   @default(now())
-  updatedAt  DateTime   @updatedAt
+  slug       String   @unique
+  position   Int      @default(0)
+  attributes Json // AttributeDefinition[] của riêng danh mục này
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  parent     Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
-  children   Category[] @relation("CategoryHierarchy")
-  products   Product[]
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("CategoryHierarchy")
+  products Product[]
 
   @@map("categories")
 }
 
 // Thương hiệu sản xuất sản phẩm điện tử.
 model Brand {
-  id           String    @id @default(uuid())
+  id           String   @id @default(uuid())
   name         String
-  slug         String    @unique
+  slug         String   @unique
   logoPublicId String?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  products     Product[]
+  products Product[]
 
   @@map("brands")
 }
@@ -42,53 +42,56 @@ enum ProductStatus {
 
 // Sản phẩm điện tử với đầy đủ thông số kỹ thuật và tùy chọn.
 model Product {
-  id             String               @id @default(uuid())
+  id             String        @id @default(uuid())
   categoryId     String
   brandId        String
   name           String
-  slug           String               @unique
+  slug           String        @unique
   shortDesc      String
-  description    Json                 // tài liệu JSON của trình soạn thảo theo cập nhật 2026-10-05
-  specs          Json                 // { ram_gb: 16, cpu: 'Intel Core i7-13650HX', ... }
-  options        Json                 // [{ name: 'Dung lượng', values: ['512GB', '1TB'] }]
-  warrantyMonths Int                  @default(12)
-  status         ProductStatus        @default(draft)
-  minPrice       Int?                 // tính lại khi biến thể đổi, phục vụ lọc và sắp xếp
-  inStock        Boolean              @default(false)
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
+  description    Json // tài liệu JSON của trình soạn thảo theo cập nhật 2026-10-05
+  specs          Json // { ram_gb: 16, cpu: 'Intel Core i7-13650HX', ... }
+  options        Json // [{ name: 'Dung lượng', values: ['512GB', '1TB'] }]
+  warrantyMonths Int           @default(12)
+  status         ProductStatus @default(draft)
+  minPrice       Int? // tính lại khi biến thể đổi, phục vụ lọc và sắp xếp
+  inStock        Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
-  category       Category             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  brand          Brand                @relation(fields: [brandId], references: [id], onDelete: Restrict)
-  skus           Sku[]
-  images         ProductImage[]
-  slugHistory    ProductSlugHistory[]
+  category    Category             @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  brand       Brand                @relation(fields: [brandId], references: [id], onDelete: Restrict)
+  skus        Sku[]
+  images      ProductImage[]
+  slugHistory ProductSlugHistory[]
 
   @@index([categoryId, status])
+  @@index([minPrice])
+  @@index([createdAt])
   @@map("products")
 }
 
 // Biến thể bán hàng cụ thể có mã SKU và tồn kho riêng.
 model Sku {
-  id             String              @id @default(uuid())
+  id             String   @id @default(uuid())
   productId      String
-  code           String              @unique
-  optionValues   Json                // { 'Dung lượng': '1TB', 'Màu': 'Đen' }
+  code           String   @unique
+  optionValues   Json // { 'Dung lượng': '1TB', 'Màu': 'Đen' }
   price          Int
   compareAtPrice Int?
-  stock          Int                 @default(0) // ràng buộc CHECK (stock >= 0) ở mức DB
-  enabled        Boolean             @default(true)
-  weightGrams    Int?                // bắt buộc khi enabled = true
+  stock          Int      @default(0) // ràng buộc CHECK (stock >= 0) ở mức DB
+  enabled        Boolean  @default(true)
+  weightGrams    Int? // bắt buộc khi enabled = true
   lengthCm       Int?
   widthCm        Int?
   heightCm       Int?
-  createdAt      DateTime            @default(now())
-  updatedAt      DateTime            @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
-  product        Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  images         ProductImage[]
-  movements      InventoryMovement[]
+  product   Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images    ProductImage[]
+  movements InventoryMovement[]
 
+  @@index([productId])
   @@map("skus")
 }
 
@@ -102,8 +105,8 @@ model ProductImage {
   position  Int      @default(0)
   createdAt DateTime @default(now())
 
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  sku       Sku?     @relation(fields: [skuId], references: [id], onDelete: SetNull)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  sku     Sku?    @relation(fields: [skuId], references: [id], onDelete: SetNull)
 
   @@index([productId, position])
   @@map("product_images")
@@ -116,7 +119,7 @@ model ProductSlugHistory {
   productId String
   createdAt DateTime @default(now())
 
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   @@index([productId])
   @@map("product_slug_history")
@@ -141,7 +144,7 @@ model InventoryMovement {
   reason    String
   createdAt DateTime              @default(now())
 
-  sku       Sku                   @relation(fields: [skuId], references: [id], onDelete: Restrict)
+  sku Sku @relation(fields: [skuId], references: [id], onDelete: Restrict)
 
   @@unique([orderId, skuId, type])
   @@index([skuId, createdAt])
