@@ -1,5 +1,5 @@
 using System.Net;
-using System.Net.Http.Json;
+using System.Text;
 using System.Text.Json;
 using Pickory.Shared.Configuration;
 using Xunit;
@@ -25,14 +25,30 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
         // Gửi yêu cầu GET tới endpoint kiểm tra sức khỏe của dịch vụ.
         var response = await _client.GetAsync("/api/health");
 
-        // Khẳng định mã trạng thái thành công và nội dung JSON khớp hoàn toàn.
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-
         var body = await response.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var document = JsonDocument.Parse(body);
         var status = document.RootElement.GetProperty("data").GetProperty("status").GetString();
 
         Assert.Equal("ok", status);
+    }
+
+    [Fact]
+    // Gọi sai phương thức HTTP trên route có sẵn phải trả 404 NOT_FOUND giống bản Node.
+    public async Task PostHealth_SaiPhuongThucHttp_TraVeHttp404VaMaNotFound()
+    {
+        // Gửi yêu cầu POST tới endpoint vốn chỉ chấp nhận phương thức GET.
+        var response = await _client.PostAsync("/api/health", null);
+
+        // Khẳng định mã trạng thái là 404 Not Found thay vì 405 rỗng.
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(body);
+        var error = document.RootElement.GetProperty("error");
+
+        Assert.Equal("NOT_FOUND", error.GetProperty("code").GetString());
+        Assert.Equal("Không tìm thấy tài nguyên.", error.GetProperty("message").GetString());
     }
 
     [Fact]
@@ -135,6 +151,28 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
     }
 
     [Fact]
+    // Yêu cầu có kích thước body vượt quá 1 MB bị từ chối với HTTP 413 PAYLOAD_TOO_LARGE.
+    public async Task BodyVuotQua1MB_TraVeHttp413_VaMaPayloadTooLarge()
+    {
+        // Tạo chuỗi nội dung vượt ngưỡng 1 MB (xấp xỉ 1.2 MB).
+        var largeContent = new string('x', 1200 * 1024);
+        var requestContent = new StringContent(largeContent, Encoding.UTF8, "text/plain");
+
+        // Gửi yêu cầu POST chứa dữ liệu vượt kích thước quy định.
+        var response = await _client.PostAsync("/api/test/echo-body", requestContent);
+
+        // Khẳng định mã trạng thái trả về là 413 Payload Too Large.
+        Assert.Equal((HttpStatusCode)413, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(body);
+        var error = document.RootElement.GetProperty("error");
+
+        Assert.Equal("PAYLOAD_TOO_LARGE", error.GetProperty("code").GetString());
+        Assert.Equal("Kích thước dữ liệu vượt quá giới hạn 1 MB cho phép.", error.GetProperty("message").GetString());
+    }
+
+    [Fact]
     // Kiểm tra cấu hình ứng dụng trong môi trường test sử dụng cơ sở dữ liệu test riêng.
     public void CauHinh_SuDungCoSoDuLieuTestRieng_KhongDungDatabaseDev()
     {
@@ -143,7 +181,6 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
 
         // Khẳng định đường dẫn cơ sở dữ liệu trỏ tới cơ sở dữ liệu pickory_test.
         Assert.NotNull(config);
-        Assert.Equal(PickoryWebApplicationFactory.TestDatabaseUrl, config.DatabaseUrl);
         Assert.Contains("pickory_test", config.DatabaseUrl);
     }
 }

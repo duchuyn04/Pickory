@@ -20,13 +20,19 @@ public record AppConfig
     // Cấu hình tin cậy proxy trung gian cho request chuyển tiếp.
     public string TrustProxy { get; init; } = "false";
 
-    // Đọc cấu hình từ IConfiguration của ứng dụng.
+    // Đọc và kiểm tra tính hợp lệ của toàn bộ biến môi trường khi khởi động.
     public static AppConfig Load(IConfiguration configuration)
     {
         var rawPort = configuration["PORT"];
         var port = 3000;
-        if (!string.IsNullOrWhiteSpace(rawPort) && int.TryParse(rawPort, out var parsedPort))
+        if (!string.IsNullOrWhiteSpace(rawPort))
         {
+            // Bắt buộc cổng mạng phải là số nguyên dương lớn hơn không.
+            if (!int.TryParse(rawPort, out var parsedPort) || parsedPort <= 0)
+            {
+                throw new InvalidOperationException("Biến môi trường PORT phải là số nguyên dương hợp lệ.");
+            }
+
             port = parsedPort;
         }
 
@@ -35,25 +41,62 @@ public record AppConfig
         {
             webOrigin = "http://localhost:5173";
         }
+        else if (!IsValidAbsoluteUrl(webOrigin))
+        {
+            // Từ chối giá trị nguồn web không phải là địa chỉ URL tuyệt đối.
+            throw new InvalidOperationException("Biến môi trường WEB_ORIGIN phải là một URL tuyệt đối hợp lệ.");
+        }
 
         var apiBaseUrl = configuration["API_BASE_URL"];
         if (string.IsNullOrWhiteSpace(apiBaseUrl))
         {
             apiBaseUrl = "http://localhost:3000";
         }
+        else if (!IsValidAbsoluteUrl(apiBaseUrl))
+        {
+            // Từ chối giá trị địa chỉ gốc API không phải là URL tuyệt đối.
+            throw new InvalidOperationException("Biến môi trường API_BASE_URL phải là một URL tuyệt đối hợp lệ.");
+        }
 
         var databaseUrl = configuration["DATABASE_URL"];
-
-        // Ngăn chặn khởi động ứng dụng khi thiếu cấu hình cơ sở dữ liệu.
         if (string.IsNullOrWhiteSpace(databaseUrl))
         {
+            // Dừng khởi động ứng dụng khi thiếu chuỗi kết nối cơ sở dữ liệu.
             throw new InvalidOperationException("Thiếu biến môi trường DATABASE_URL bắt buộc.");
         }
 
-        var trustProxy = configuration["TRUST_PROXY"];
-        if (string.IsNullOrWhiteSpace(trustProxy))
+        var rawTrustProxy = configuration["TRUST_PROXY"];
+        var trustProxy = "false";
+        if (!string.IsNullOrWhiteSpace(rawTrustProxy))
         {
-            trustProxy = "false";
+            var trimmed = rawTrustProxy.Trim();
+
+            // Chặn giá trị true để tránh tin cậy toàn bộ header chuyển tiếp giả mạo.
+            if (trimmed.Equals("true", StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidOperationException("Biến môi trường TRUST_PROXY không được nhận giá trị 'true'.");
+            }
+
+            if (trimmed.Equals("false", StringComparison.OrdinalIgnoreCase) || trimmed == "0")
+            {
+                trustProxy = "false";
+            }
+            else if (int.TryParse(trimmed, out var hops))
+            {
+                // Yêu cầu số lượng hop ủy thác phải là số nguyên dương.
+                if (hops <= 0)
+                {
+                    throw new InvalidOperationException("Số hop trong TRUST_PROXY phải là số nguyên dương.");
+                }
+
+                trustProxy = hops.ToString();
+            }
+            else
+            {
+                // Tách danh sách địa chỉ IP hoặc mạng con được ủy quyền tin cậy.
+                var parts = trimmed.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+                trustProxy = parts.Length > 0 ? string.Join(",", parts) : "false";
+            }
         }
 
         return new AppConfig
@@ -64,5 +107,12 @@ public record AppConfig
             DatabaseUrl = databaseUrl,
             TrustProxy = trustProxy,
         };
+    }
+
+    private static bool IsValidAbsoluteUrl(string url)
+    {
+        // Xác minh chuỗi cung cấp thỏa mãn định dạng URL tuyệt đối với giao thức http hoặc https.
+        return Uri.TryCreate(url, UriKind.Absolute, out var uri) &&
+               (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps);
     }
 }

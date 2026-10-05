@@ -26,8 +26,13 @@ public class DateTimeUtcJsonConverter : JsonConverter<DateTime>
 
     public override void Write(Utf8JsonWriter writer, DateTime value, JsonSerializerOptions options)
     {
-        // Đồng bộ thời gian sang UTC trước khi định dạng chuỗi.
-        var utcValue = value.Kind == DateTimeKind.Utc ? value : value.ToUniversalTime();
+        // Coi Unspecified là UTC từ cơ sở dữ liệu, chỉ đổi múi giờ khi là Local.
+        var utcValue = value.Kind switch
+        {
+            DateTimeKind.Utc => value,
+            DateTimeKind.Local => value.ToUniversalTime(),
+            _ => DateTime.SpecifyKind(value, DateTimeKind.Utc),
+        };
         writer.WriteStringValue(utcValue.ToString(DateFormat, CultureInfo.InvariantCulture));
     }
 }

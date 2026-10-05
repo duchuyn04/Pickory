@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentValidation;
+using Microsoft.AspNetCore.Http.Features;
 using Pickory.Shared.Exceptions;
 using Pickory.Shared.Json;
 using Pickory.Shared.Models;
@@ -9,6 +10,7 @@ namespace Pickory.Api.Middleware;
 // Bắt ngoại lệ toàn cục và chuẩn hóa định dạng phản hồi lỗi của hệ thống.
 public class ExceptionHandlingMiddleware
 {
+    private const long MaxRequestBodySizeBytes = 1024 * 1024; // 1 MB
     private readonly RequestDelegate _next;
     private readonly ILogger<ExceptionHandlingMiddleware> _logger;
 
@@ -20,12 +22,32 @@ public class ExceptionHandlingMiddleware
 
     public async Task InvokeAsync(HttpContext context)
     {
+        // Áp dụng giới hạn kích thước đọc body cho toàn bộ request.
+        var maxBodySizeFeature = context.Features.Get<IHttpMaxRequestBodySizeFeature>();
+        if (maxBodySizeFeature is { IsReadOnly: false })
+        {
+            maxBodySizeFeature.MaxRequestBodySize = MaxRequestBodySizeBytes;
+        }
+
+        // Chặn request khai báo tiêu đề Content-Length vượt ngưỡng 1 MB.
+        if (context.Request.ContentLength > MaxRequestBodySizeBytes)
+        {
+            await WriteErrorResponseAsync(
+                context,
+                StatusCodes.Status413PayloadTooLarge,
+                "PAYLOAD_TOO_LARGE",
+                "Kích thước dữ liệu vượt quá giới hạn 1 MB cho phép.");
+            return;
+        }
+
         try
         {
             await _next(context);
 
-            // Bắt trường hợp route không khớp và chưa ghi nội dung vào phản hồi.
-            if (!context.Response.HasStarted && context.Response.StatusCode == StatusCodes.Status404NotFound)
+            // Chuyển 404 hoặc 405 thành phản hồi lỗi NOT_FOUND thống nhất.
+            if (!context.Response.HasStarted &&
+                (context.Response.StatusCode == StatusCodes.Status404NotFound ||
+                 context.Response.StatusCode == StatusCodes.Status405MethodNotAllowed))
             {
                 await WriteErrorResponseAsync(
                     context,
@@ -33,6 +55,20 @@ public class ExceptionHandlingMiddleware
                     "NOT_FOUND",
                     "Không tìm thấy tài nguyên.");
             }
+        }
+        catch (BadHttpRequestException badHttpException) when (badHttpException.StatusCode == StatusCodes.Status413PayloadTooLarge)
+        {
+            if (context.Response.HasStarted)
+            {
+                throw;
+            }
+
+            // Trả lỗi 413 khi luồng dữ liệu đọc thực tế vượt ngưỡng 1 MB.
+            await WriteErrorResponseAsync(
+                context,
+                StatusCodes.Status413PayloadTooLarge,
+                "PAYLOAD_TOO_LARGE",
+                "Kích thước dữ liệu vượt quá giới hạn 1 MB cho phép.");
         }
         catch (AppException appException)
         {

@@ -8,6 +8,7 @@ namespace Pickory.UnitTests;
 public class DateTimeJsonConverterTests
 {
     private record SampleDateRecord(DateTime CreatedAt, DateTimeOffset UpdatedAt);
+    private record SingleDateRecord(DateTime Timestamp);
 
     [Fact]
     // Xuất thời gian đúng 3 chữ số phần giây lẻ kèm đuôi Z theo chuẩn ISO 8601 UTC.
@@ -40,5 +41,20 @@ public class DateTimeJsonConverterTests
         Assert.NotNull(result);
         Assert.Equal(new DateTime(2026, 10, 5, 7, 0, 0, DateTimeKind.Utc), result.CreatedAt);
         Assert.Equal(new DateTimeOffset(2026, 10, 5, 8, 30, 0, TimeSpan.Zero), result.UpdatedAt);
+    }
+
+    [Fact]
+    // Coi DateTime có Kind Unspecified là giờ UTC để tránh lệch giờ khi đọc từ cơ sở dữ liệu.
+    public void DateTime_VoiKindUnspecified_DuocXuatChuanUtcKhongLechMuiGio()
+    {
+        // Khởi tạo DateTime với Kind Unspecified giống như Npgsql đọc cột timestamp(3).
+        var unspecifiedDate = new DateTime(2026, 10, 5, 7, 0, 0, DateTimeKind.Unspecified);
+        var record = new SingleDateRecord(unspecifiedDate);
+
+        // Tuần tự hóa đối tượng có giá trị thời gian chưa rõ múi giờ.
+        var json = JsonSerializer.Serialize(record, PickoryJsonDefaults.Options);
+
+        // Khẳng định chuỗi kết quả xuất đúng mốc 07:00:00.000Z mà không bị trừ theo giờ máy.
+        Assert.Equal("{\"timestamp\":\"2026-10-05T07:00:00.000Z\"}", json);
     }
 }
