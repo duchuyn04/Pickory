@@ -75,10 +75,12 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 
 **Tạo schema trên DB trống:**
 
-1. Đặt `DATABASE_URL` tới DB trống.
-2. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.Identity --context IdentityDbContext`.
-3. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.AiGateway --context AiGatewayDbContext`.
-4. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.Catalog --context CatalogDbContext`.
+1. Chạy `dotnet tool restore` tại gốc repo.
+   Manifest `.config/dotnet-tools.json` ghim `dotnet-ef` 10.0.12 để công cụ khớp phiên bản EF Core.
+2. Đặt `DATABASE_URL` tới DB trống.
+3. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.Identity --context IdentityDbContext`.
+4. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.AiGateway --context AiGatewayDbContext`.
+5. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.Catalog --context CatalogDbContext`.
 
 **Bằng chứng DN-01 (2026-10-05):**
 

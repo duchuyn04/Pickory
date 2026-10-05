@@ -67,17 +67,31 @@ Entity Framework Core (EF Core) dùng ba `DbContext` độc lập trong project 
 | `AiGatewayDbContext` | 3 | `ef_ai_gateway` |
 | `CatalogDbContext` | 8 | `ef_catalog` |
 
-Mỗi schema lịch sử có bảng `__EFMigrationsHistory`. Migration `PrismaBaseline` có `Up` rỗng. Migration này có `Down` rỗng.
+Mỗi schema lịch sử có bảng `__EFMigrationsHistory`.
 
-Model giữ tên cột camelCase của Prisma. Model không thêm index khóa ngoại ngoài migration Node.
+`Up` của ba migration `PrismaBaseline` tạo schema theo `apps/backend-dotnet/db/reference-schema.sql`:
 
-- Enum dùng `MapEnum` của Npgsql. `PgName` giữ nhãn DB. `HasPostgresEnum` giữ thứ tự nhãn như migration Node.
+- 20 bảng ứng dụng.
+- Bốn enum PostgreSQL.
+- Index và khóa ngoại.
+- Extension `vector` trong `public`.
+
+`Down` xóa các đối tượng ứng dụng thuộc module theo thứ tự phụ thuộc.
+
+DB đã có schema dùng `apps/backend-dotnet/db/adopt-existing-schema.sql` để ghi nhận mốc.
+
+DB trống dùng `dotnet ef database update` theo thứ tự `Identity`, `AiGateway`, `Catalog`.
+
+Model giữ tên cột camelCase theo `apps/backend-dotnet/db/reference-schema.sql`.
+Model không thêm index khóa ngoại ngoài bản tham chiếu này.
+
+- Enum dùng `MapEnum` của Npgsql. `PgName` giữ nhãn DB. `HasPostgresEnum` giữ thứ tự nhãn như `reference-schema.sql`.
 - JSON dùng `JsonDocument` với kiểu `jsonb`.
 - Thời gian dùng `timestamp(3) without time zone`. Giá trị ứng dụng dùng UTC (Coordinated Universal Time).
 - Bộ chuyển đổi gắn `DateTimeKind.Utc` khi đọc. Bộ chuyển đổi bỏ `Kind` khi ghi, sau khi đổi giờ địa phương về UTC.
 - Npgsql đặt múi giờ kết nối là UTC. Giá trị mặc định `CURRENT_TIMESTAMP` không phụ thuộc múi giờ máy chủ DB.
 - ID dạng `text` dùng UUID (Universally Unique Identifier) do `StringValueGenerator` cấp khi thêm bản ghi.
-- `embedding` giữ `double precision[]` nullable theo DB thật. Migration mốc không tạo extension `vector`.
+- `embedding` giữ `double precision[]` nullable theo DB thật. Migration AiGateway tạo extension `vector` trong `public`.
 
 `PostgresConnectionString.Convert` đổi `DATABASE_URL` dạng URL PostgreSQL sang chuỗi kết nối Npgsql.
 Hàm giải mã thông tin đăng nhập trước khi dùng `NpgsqlConnectionStringBuilder`.
@@ -87,18 +101,21 @@ Hàm từ chối tùy chọn khác thay vì bỏ qua yêu cầu kết nối.
 Các factory migration yêu cầu `DATABASE_URL` trong môi trường. Factory không tự đọc `.env`.
 Ứng dụng không chạy migration khi khởi động.
 
-Integration test chỉ dùng `TEST_DATABASE_URL` đã có schema Node.
-Test báo khác biệt từ metadata PostgreSQL thay vì tự tạo schema.
+Integration test chỉ dùng `TEST_DATABASE_URL` của DB test chuyên dụng.
+Fixture giữ khóa phiên PostgreSQL trước khi reset schema.
+Fixture tự dựng schema bằng migration EF Core.
+Test báo mọi khác biệt giữa metadata PostgreSQL và `reference-schema.sql`.
 Test đọc/ghi toàn bộ bảng trong giao dịch có rollback.
 
 Npgsql không biểu diễn `ON UPDATE` trong metadata khóa ngoại của EF Core.
-Test kiểm tra riêng `ON UPDATE CASCADE` trong DB theo hợp đồng Prisma.
-Migration mốc giữ nguyên các khóa ngoại hiện có.
+Test kiểm tra riêng `ON UPDATE CASCADE` trong DB theo `reference-schema.sql`.
+Migration mốc tạo khóa ngoại theo bản tham chiếu.
 
-Phép so `pg_dump --schema-only` chạy trên bản sao schema DB dev.
-Phép so đầy đủ tạo trước các bảng lịch sử EF Core.
-Phép so chỉ bỏ khóa ngẫu nhiên của lệnh `\restrict` và `\unrestrict`.
-Schema `public`, `_prisma_migrations` và extension `vector` không đổi.
+Phép so `pg_dump --schema-only` dùng DB trống đã chạy migration EF Core.
+Phép so dùng dump của DB đã phục hồi từ `reference-schema.sql` làm bản tham chiếu.
+Phép so bỏ `_prisma_migrations` và ba schema lịch sử EF Core.
+Phép so chuẩn hóa xuống dòng cùng khóa ngẫu nhiên của `\restrict` và `\unrestrict`.
+Dump schema ứng dụng khớp hoàn toàn sau phép so.
 
 ## Cách chạy song song khi chuyển
 
