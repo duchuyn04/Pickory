@@ -1,55 +1,89 @@
-# Quy tắc cho agent trong repo Pickory
+# Pickory Agent Rules
 
-## 1. Không dùng em dash
+These rules apply to all work in this repository, including code, tests, comments, documentation, commit messages, UI copy, and responses to the user.
 
-Không dùng ký tự em dash (—) ở bất kỳ đâu: code, comment, commit message, tài liệu, nội dung UI, câu trả lời cho người dùng. Khi cần ngắt ý thì dùng dấu phẩy, dấu hai chấm, hoặc tách thành câu riêng. Khi cần nối hai cụm liên quan thì dùng gạch ngang thường `-`, không dùng `—` hay `–`.
+`MUST` and `MUST NOT` are mandatory requirements. `SHOULD` identifies a preference, not permission to bypass a mandatory requirement. A task is not complete while an applicable requirement remains unmet.
 
-## 2. Thiết kế test case thủ công bằng Playwright
+## 1. Punctuation
 
-Khi được yêu cầu thiết kế kịch bản test thủ công (manual test case) cho một tính năng hay module:
+- MUST use the ordinary ASCII hyphen (`-`, U+002D) when joining phrases.
+- MUST use commas, colons, parentheses, or separate sentences when a pause is needed.
+- MUST NOT write U+2014 (em dash) or U+2013 (en dash) in any newly authored or modified content, including chat responses and examples.
+- MUST check changed content for both prohibited characters before reporting completion.
+- MUST NOT copy prohibited punctuation from source material into new content.
 
-- Tối đa 100 kịch bản cho một lần thiết kế. Nếu phạm vi lớn hơn 100 case thì chọn các luồng quan trọng nhất, không cố nhồi đủ mọi trường hợp.
-- Kịch bản chạy bằng Playwright, không phải mô tả tay bấm chuột của người dùng.
-- Mỗi kịch bản có: ID, nhóm, các bước, kết quả mong đợi, Priority, trạng thái, ghi chú.
-- Trạng thái chỉ nhận 1 trong 4 giá trị: `Chưa chạy`, `PASS`, `FAILED`, `UNKNOWN`.
-  - `PASS`: kết quả thực tế khớp kết quả mong đợi.
-  - `FAILED`: không khớp, phải ghi kết quả thực tế và bằng chứng (ảnh chụp hoặc log).
-  - `UNKNOWN`: không chạy được trong môi trường hiện tại, phải ghi rõ lý do.
-  - Không tự đổi trạng thái thành PASS khi chưa thực sự chạy.
-- Sắp xếp kịch bản theo Priority, nhóm cao xuống thấp: P0 (bảo mật, dữ liệu, luồng không thể hỏng), P1 (luồng nghiệp vụ chính), P2 (kiểm tra dữ liệu nhập và lỗi), P3 (trải nghiệm, khả năng truy cập, giao diện).
-- Không sửa bước hay kết quả mong đợi của kịch bản chỉ để case thành PASS. Thấy kịch bản viết sai thì báo lại người giao việc, không tự âm thầm đổi cho khớp kết quả.
+## 2. Playwright Manual Test Cases
 
-## 3. Code dễ hiểu, tường minh
+Apply this section whenever the user requests manual test cases for a feature or module.
 
-Ưu tiên code rõ ràng, đọc một lần hiểu luôn hơn code ngắn nhưng phải suy luận. Đặt tên biến, hàm, file theo đúng nghĩa việc nó làm. Tránh viết tắt khó đoán, tránh lồng nhiều tầng điều kiện hay callback khi có thể tách hàm nhỏ.
+### Scope and format
 
-## 4. Chú thích từng dòng, không chú thích tổng quát
+- MUST design at most 100 cases per request. If coverage would exceed this limit, select the most important flows and explicitly list the omitted scope.
+- MUST write executable Playwright scenarios, with concrete setup, locators, actions, and assertions. A description of a human clicking through the UI is not sufficient.
+- MUST give every case these fields: ID, Group, Steps, Expected Result, Priority, Status, and Notes.
+- MUST use a unique, stable ID for every case.
+- MUST describe an observable expected result. Statements such as "works correctly" are not acceptance criteria.
+- MUST sort cases by priority: P0, P1, P2, then P3.
+  - P0: security, data integrity, and flows that must not fail.
+  - P1: main business flows.
+  - P2: input validation and error handling.
+  - P3: usability, accessibility, and visual presentation.
 
-Chú thích giải thích lý do của từng dòng hoặc từng bước xử lý cụ thể, không viết một câu chú thích chung cho cả khối code. Chú thích trả lời "vì sao làm vậy" hơn là lặp lại "đang làm gì" (code đã tự nói lên việc đang làm). Comment bằng tiếng Việt.
+### Status and evidence
 
-Sai (chú thích tổng quát):
+Status MUST be exactly one of `Chưa chạy`, `PASS`, `FAILED`, or `UNKNOWN`. Keep these values unchanged even in an English document.
+
+- `Chưa chạy`: the scenario has not been executed. This is the initial status.
+- `PASS`: Playwright executed the scenario and the observed result matched every expected result.
+- `FAILED`: an observed result differed from the expected result. Notes MUST identify the actual result and reference a screenshot or log as evidence.
+- `UNKNOWN`: execution or verification was not possible in the current environment. Notes MUST identify the specific blocker and any checks that could not be performed.
+
+- MUST NOT mark a case `PASS` based on code inspection, assumptions, a previous run, or a different scenario.
+- MUST NOT treat a partial run as proof that the entire case passed.
+- MUST NOT change Steps, Expected Result, or Priority just to turn a failing case into a passing case.
+- If a case appears incorrect, MUST report the discrepancy to the user and preserve the original acceptance criteria until the user authorizes a correction.
+
+## 3. Explicit, Readable Code
+
+- MUST choose names that describe the responsibility of each variable, function, type, and file.
+- MUST write control flow that a reader can follow without reconstructing hidden assumptions.
+- MUST prefer clear statements over compressed expressions, clever shortcuts, or unexplained abbreviations.
+- SHOULD use early returns and small, purpose-specific functions instead of deeply nested conditions or callbacks.
+- MUST follow existing repository conventions unless the task explicitly requires changing them.
+
+## 4. Vietnamese, Step-Specific Comments
+
+- MUST write newly authored code comments and documentation comments in Vietnamese. English rule text in this file does not change the comment language.
+- MUST explain the reason for each meaningful processing step in new or modified logic: the invariant, business constraint, security requirement, boundary condition, or failure behavior it protects.
+- MUST place each explanation immediately before the relevant line or step. Use an inline comment only when it remains clearly tied to that line.
+- A step may contain several tightly related statements serving one invariant. Independent decisions or side effects MUST have separate explanations.
+- MUST comment security checks, transformations, external calls, retry decisions, state transitions, and non-obvious error handling individually.
+- MUST NOT replace step-specific explanations with a single broad comment above a function or block.
+- MUST NOT write comments that merely repeat the code. State why the step is needed, not just what it does.
+- Imports, braces, straightforward declarations, and obvious assignments do not require artificial comments.
+- MUST update or remove a comment when changing the behavior it explains. An inaccurate comment is a rule violation.
+
+Example of the required comment style:
 
 ```ts
-// Xử lý đăng nhập
 function login(email, password) {
   const user = findUser(email);
-  if (!user) throw new Error('not found');
-  const ok = verify(user.hash, password);
-  if (!ok) throw new Error('wrong password');
-  return createSession(user);
-}
-```
-
-Đúng (chú thích từng dòng, giải thích lý do):
-
-```ts
-function login(email, password) {
-  const user = findUser(email);
-  // Không tìm thấy user vẫn phải báo lỗi giống sai mật khẩu, tránh lộ email nào đã đăng ký.
+  // Báo cùng một lỗi cho tài khoản không tồn tại và mật khẩu sai để tránh lộ email đã đăng ký.
   if (!user) throw new Error('Email hoặc mật khẩu không đúng.');
-  const ok = verify(user.hash, password);
-  if (!ok) throw new Error('Email hoặc mật khẩu không đúng.');
-  // Tạo phiên mới, không tái dùng phiên cũ để tránh cố định session (session fixation).
+  // So sánh với hash đã lưu thay vì lưu hoặc đối chiếu mật khẩu dạng rõ.
+  const passwordMatches = verify(user.hash, password);
+  if (!passwordMatches) throw new Error('Email hoặc mật khẩu không đúng.');
+  // Tạo phiên mới sau xác thực để tránh tái sử dụng phiên do kẻ khác cố định trước đó.
   return createSession(user);
 }
 ```
+
+## 5. Mandatory Compliance Check
+
+Before reporting completion, MUST check every changed file and the final response against all applicable sections above.
+
+- Verify punctuation, descriptive names, and Vietnamese explanations for each meaningful processing step.
+- For requested manual tests, verify the case limit, required fields, priority order, status values, and execution evidence.
+- Fix violations in your own changes before handing off work. Do not label noncompliant work complete.
+- If a requirement cannot be met, report the exact unmet requirement and blocker. Do not silently weaken the rule or fabricate evidence.
+- When delegating repository work, MUST include these requirements in the handoff and check the returned changes against them.
