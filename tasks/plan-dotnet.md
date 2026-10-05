@@ -56,6 +56,49 @@ DB không đổi trong lúc chuyển. Hai backend dùng chung một DB nên có 
 
 Bảng `_prisma_migrations` giữ lại cho tới khi xóa bản Node.
 
+### Mốc DN-01
+
+Entity Framework Core (EF Core) dùng ba `DbContext` độc lập trong project của từng module.
+
+| `DbContext` | Số bảng | Schema lịch sử |
+|---|---|---|
+| `IdentityDbContext` | 9 | `ef_identity` |
+| `AiGatewayDbContext` | 3 | `ef_ai_gateway` |
+| `CatalogDbContext` | 8 | `ef_catalog` |
+
+Mỗi schema lịch sử có bảng `__EFMigrationsHistory`. Migration `PrismaBaseline` có `Up` rỗng. Migration này có `Down` rỗng.
+
+Model giữ tên cột camelCase của Prisma. Model không thêm index khóa ngoại ngoài migration Node.
+
+- Enum dùng `MapEnum` của Npgsql. `PgName` giữ nhãn DB. `HasPostgresEnum` giữ thứ tự nhãn như migration Node.
+- JSON dùng `JsonDocument` với kiểu `jsonb`.
+- Thời gian dùng `timestamp(3) without time zone`. Giá trị ứng dụng dùng UTC (Coordinated Universal Time).
+- Bộ chuyển đổi gắn `DateTimeKind.Utc` khi đọc. Bộ chuyển đổi bỏ `Kind` khi ghi, sau khi đổi giờ địa phương về UTC.
+- Npgsql đặt múi giờ kết nối là UTC. Giá trị mặc định `CURRENT_TIMESTAMP` không phụ thuộc múi giờ máy chủ DB.
+- ID dạng `text` dùng UUID (Universally Unique Identifier) do `StringValueGenerator` cấp khi thêm bản ghi.
+- `embedding` giữ `double precision[]` nullable theo DB thật. Migration mốc không tạo extension `vector`.
+
+`PostgresConnectionString.Convert` đổi `DATABASE_URL` dạng URL PostgreSQL sang chuỗi kết nối Npgsql.
+Hàm giải mã thông tin đăng nhập trước khi dùng `NpgsqlConnectionStringBuilder`.
+Hàm hỗ trợ `schema`, `sslmode`, `connect_timeout` và `application_name`.
+Hàm từ chối tùy chọn khác thay vì bỏ qua yêu cầu kết nối.
+
+Các factory migration yêu cầu `DATABASE_URL` trong môi trường. Factory không tự đọc `.env`.
+Ứng dụng không chạy migration khi khởi động.
+
+Integration test chỉ dùng `TEST_DATABASE_URL` đã có schema Node.
+Test báo khác biệt từ metadata PostgreSQL thay vì tự tạo schema.
+Test đọc/ghi toàn bộ bảng trong giao dịch có rollback.
+
+Npgsql không biểu diễn `ON UPDATE` trong metadata khóa ngoại của EF Core.
+Test kiểm tra riêng `ON UPDATE CASCADE` trong DB theo hợp đồng Prisma.
+Migration mốc giữ nguyên các khóa ngoại hiện có.
+
+Phép so `pg_dump --schema-only` chạy trên bản sao schema DB dev.
+Phép so đầy đủ tạo trước các bảng lịch sử EF Core.
+Phép so chỉ bỏ khóa ngẫu nhiên của lệnh `\restrict` và `\unrestrict`.
+Schema `public`, `_prisma_migrations` và extension `vector` không đổi.
+
 ## Cách chạy song song khi chuyển
 
 Vite proxy chuyển `/api/...` theo tiền tố route. Route của module đã port đi sang .NET. Route chưa port vẫn đi sang Node.

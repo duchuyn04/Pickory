@@ -3,6 +3,8 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Coverlet.collector" />
@@ -11,6 +13,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Pickory.Api\Pickory.Api.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Shared\Pickory.Shared.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.Identity\Pickory.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.Catalog\Pickory.Modules.Catalog.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.AiGateway\Pickory.Modules.AiGateway.csproj" />
   </ItemGroup>
 
 </Project>

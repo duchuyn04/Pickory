@@ -1,8 +1,12 @@
 using Pickory.Api.Middleware;
+using Pickory.Modules.AiGateway.Persistence;
+using Pickory.Modules.Catalog.Persistence;
+using Pickory.Modules.Identity.Persistence;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.Extensions;
 using Pickory.Shared.Json;
 using Pickory.Shared.Models;
+using Pickory.Shared.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -33,6 +37,15 @@ builder.Services.AddTransient<IStartupFilter, ExceptionHandlingStartupFilter>();
 
 // Đăng ký các dịch vụ nền tảng dùng chung gồm bộ điều phối sự kiện.
 builder.Services.AddSharedInfrastructure();
+
+// Đăng ký dữ liệu theo module. Không tự chạy migration khi ứng dụng khởi động.
+var databaseConnectionString = PostgresConnectionString.Convert(config.DatabaseUrl);
+builder.Services.AddDbContext<IdentityDbContext>(options =>
+    IdentityDbContext.ConfigureOptions(options, databaseConnectionString));
+builder.Services.AddDbContext<AiGatewayDbContext>(options =>
+    AiGatewayDbContext.ConfigureOptions(options, databaseConnectionString));
+builder.Services.AddDbContext<CatalogDbContext>(options =>
+    CatalogDbContext.ConfigureOptions(options, databaseConnectionString));
 
 // Chuẩn hóa cấu hình JSON của Minimal API theo camelCase và ISO 8601 UTC.
 builder.Services.ConfigureHttpJsonOptions(options =>

@@ -36,18 +36,34 @@ Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dot
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Mỗi module có `DbContext` riêng trong project của module, chỉ map bảng của module đó
-- [ ] Đủ 20 model và 4 enum có trong `apps/backend/prisma/schema/*.prisma`: tên bảng, tên cột, kiểu, độ dài, khóa, unique, index, khóa ngoại và hành vi khi xóa khớp DB thật
-- [ ] Enum PostgreSQL (`UserKind`, `EmailTokenPurpose`, `ProductStatus`, `InventoryMovementType`) map qua Npgsql, không lưu thành số
-- [ ] Cột JSON map sang `jsonb`. Cột `TIMESTAMP(3)` không múi giờ map đúng kiểu, đọc ra giá trị UTC
-- [ ] Hàm đổi `DATABASE_URL` dạng `postgresql://user:pass@host:port/db` sang chuỗi kết nối Npgsql, có unit test kể cả mật khẩu có ký tự đặc biệt
-- [ ] Migration mốc của từng `DbContext` có `Up` và `Down` rỗng. Áp lên DB hiện có không đổi schema.
-- [ ] Bảng lịch sử migration của EF Core nằm riêng, không đụng `_prisma_migrations`
-- [ ] Integration test chạy trên DB test sau khi bản Node đã migrate: so schema EF Core với schema thật (bảng, cột, kiểu, index) và báo khác biệt
-- [ ] Integration test đọc và ghi thử một bản ghi mỗi module qua EF Core
-- [ ] Không port route hay logic nghiệp vụ nào ở task này
+- [x] Mỗi module có `DbContext` riêng trong project của module, chỉ map bảng của module đó
+- [x] Đủ 20 model và 4 enum có trong `apps/backend/prisma/schema/*.prisma`: tên bảng, tên cột, kiểu, độ dài, khóa, unique, index, khóa ngoại và hành vi khi xóa khớp DB thật
+- [x] Enum PostgreSQL (`UserKind`, `EmailTokenPurpose`, `ProductStatus`, `InventoryMovementType`) map qua Npgsql, không lưu thành số
+- [x] Cột JSON map sang `jsonb`. Cột `TIMESTAMP(3)` không múi giờ map đúng kiểu, đọc ra giá trị UTC
+- [x] Hàm đổi `DATABASE_URL` dạng `postgresql://user:pass@host:port/db` sang chuỗi kết nối Npgsql, có unit test kể cả mật khẩu có ký tự đặc biệt
+- [x] Migration mốc của từng `DbContext` có `Up` và `Down` rỗng. Áp lên DB hiện có không đổi schema.
+- [x] Bảng lịch sử migration của EF Core nằm riêng, không đụng `_prisma_migrations`
+- [x] Integration test chạy trên DB test sau khi bản Node đã migrate: so schema EF Core với schema thật (bảng, cột, kiểu, index) và báo khác biệt
+- [x] Integration test đọc và ghi thử một bản ghi mỗi module qua EF Core
+- [x] Không port route hay logic nghiệp vụ nào ở task này
 
 **Kiểm tra:** `dotnet build`, `dotnet test`; chạy migration mốc trên DB dev bản sao rồi so `pg_dump --schema-only` trước và sau, hai bản phải giống nhau.
+
+**Bằng chứng DN-01 (2026-10-05):**
+
+- `dotnet build Pickory.sln`: thành công, không có warning hoặc error.
+- `dotnet test Pickory.sln --no-build`: 52 test thành công, không có test bị bỏ qua.
+- Phân nhóm .NET: 33 unit test, 16 integration test và 3 architecture test.
+- Test schema dùng `TEST_DATABASE_URL` có đủ năm migration Node. Model khớp 20 bảng ứng dụng, bốn enum và các ràng buộc.
+- Test đọc/ghi kiểm tra toàn bộ bảng của ba module. Giao dịch rollback giữ dữ liệu có sẵn.
+- Migration `PrismaBaseline` của ba module áp dụng thành công trên bản sao schema DB dev.
+- `pg_dump --schema-only`: schema đầy đủ giống nhau trước, sau `Up` và sau `Down`.
+- Phép so tạo trước ba bảng lịch sử. Phép so chỉ bỏ khóa ngẫu nhiên của `\restrict` và `\unrestrict`.
+- Mã SHA-256 (Secure Hash Algorithm, 256 bit) của dump chuẩn hóa: `ec8e1e6bb378f87bbcfb69b4bdb89ec1a104d752e52393d82b6eb33825c60158`.
+- Chương trình thử đọc/ghi ba module xác nhận enum, `jsonb` và thời gian `2026-10-05T07:08:09.1230000Z`, `Kind=Utc`.
+- `pnpm lint` và `pnpm typecheck`: thành công.
+- `pnpm test`: 472 test thành công, 4 test bị bỏ qua; 64 tệp thành công, 1 tệp bị bỏ qua.
+- Code Node, frontend và test cũ không đổi. Chương trình thử cùng DB bản sao đã được xóa.
 
 **Phụ thuộc:** DN-00 · **Quy mô:** M
 

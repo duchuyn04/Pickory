@@ -1,0 +1,512 @@
+﻿// EF Core sinh ảnh chụp model để migration sau mốc so sánh với schema hiện có.
+using System;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pickory.Modules.Identity.Persistence;
+
+#nullable disable
+
+namespace Pickory.Modules.Identity.Persistence.Migrations
+{
+    [DbContext(typeof(IdentityDbContext))]
+    partial class IdentityDbContextModelSnapshot : ModelSnapshot
+    {
+        protected override void BuildModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "EmailTokenPurpose", new[] { "verify", "reset", "invite" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "UserKind", new[] { "customer", "staff" });
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.AuditLog", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("action");
+
+                    b.Property<string>("ActorId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("actorId");
+
+                    b.Property<JsonDocument>("After")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("after");
+
+                    b.Property<JsonDocument>("Before")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("before");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("TargetId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("targetId");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("targetType");
+
+                    b.HasKey("Id")
+                        .HasName("audit_logs_pkey");
+
+                    b.HasIndex("Action")
+                        .HasDatabaseName("audit_logs_action_idx");
+
+                    b.HasIndex("ActorId")
+                        .HasDatabaseName("audit_logs_actorId_idx");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("audit_logs_createdAt_idx");
+
+                    b.ToTable("audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.ConsentRecord", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AnonymousId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("anonymousId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("Marketing")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("marketing");
+
+                    b.Property<bool>("Personalization")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("personalization");
+
+                    b.Property<string>("PolicyVersion")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("policyVersion");
+
+                    b.Property<string>("UserId")
+                        .HasColumnType("text")
+                        .HasColumnName("userId");
+
+                    b.HasKey("Id")
+                        .HasName("consent_records_pkey");
+
+                    b.HasIndex("AnonymousId")
+                        .HasDatabaseName("consent_records_anonymousId_idx");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("consent_records_userId_idx");
+
+                    b.ToTable("consent_records", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.EmailToken", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("expiresAt");
+
+                    b.Property<EmailTokenPurpose>("Purpose")
+                        .HasColumnType("\"EmailTokenPurpose\"")
+                        .HasColumnName("purpose");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tokenHash");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("usedAt");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("userId");
+
+                    b.HasKey("Id")
+                        .HasName("email_tokens_pkey");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("email_tokens_tokenHash_key");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("email_tokens_userId_idx");
+
+                    b.ToTable("email_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.OAuthAccount", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("provider");
+
+                    b.Property<string>("ProviderUserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("providerUserId");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("userId");
+
+                    b.HasKey("Id")
+                        .HasName("oauth_accounts_pkey");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("oauth_accounts_userId_idx");
+
+                    b.HasIndex("Provider", "ProviderUserId")
+                        .IsUnique()
+                        .HasDatabaseName("oauth_accounts_provider_providerUserId_key");
+
+                    b.ToTable("oauth_accounts", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.Role", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("IsSystem")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("isSystem");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.HasKey("Id")
+                        .HasName("roles_pkey");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("roles_code_key");
+
+                    b.ToTable("roles", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.RolePermission", b =>
+                {
+                    b.Property<string>("RoleId")
+                        .HasColumnType("text")
+                        .HasColumnName("roleId");
+
+                    b.Property<string>("Permission")
+                        .HasColumnType("text")
+                        .HasColumnName("permission");
+
+                    b.HasKey("RoleId", "Permission")
+                        .HasName("role_permissions_pkey");
+
+                    b.ToTable("role_permissions", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.Session", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("expiresAt");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("tokenHash");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("userId");
+
+                    b.HasKey("Id")
+                        .HasName("sessions_pkey");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("sessions_tokenHash_key");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("sessions_userId_idx");
+
+                    b.ToTable("sessions", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.User", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("deletedAt");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("email");
+
+                    b.Property<bool>("EmailVerified")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("emailVerified");
+
+                    b.Property<UserKind>("Kind")
+                        .HasColumnType("\"UserKind\"")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTime?>("LockedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("lockedAt");
+
+                    b.Property<string>("Name")
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("PasswordHash")
+                        .HasColumnType("text")
+                        .HasColumnName("passwordHash");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text")
+                        .HasColumnName("phone");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("updatedAt");
+
+                    b.HasKey("Id")
+                        .HasName("users_pkey");
+
+                    b.HasIndex("Email")
+                        .IsUnique()
+                        .HasDatabaseName("users_email_key");
+
+                    b.ToTable("users", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.UserRole", b =>
+                {
+                    b.Property<string>("UserId")
+                        .HasColumnType("text")
+                        .HasColumnName("userId");
+
+                    b.Property<string>("RoleId")
+                        .HasColumnType("text")
+                        .HasColumnName("roleId");
+
+                    b.HasKey("UserId", "RoleId")
+                        .HasName("user_roles_pkey");
+
+                    b.ToTable("user_roles", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.ConsentRecord", b =>
+                {
+                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                        .WithMany("ConsentRecords")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("consent_records_userId_fkey");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.EmailToken", b =>
+                {
+                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                        .WithMany("EmailTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("email_tokens_userId_fkey");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.OAuthAccount", b =>
+                {
+                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                        .WithMany("OAuthAccounts")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("oauth_accounts_userId_fkey");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.RolePermission", b =>
+                {
+                    b.HasOne("Pickory.Modules.Identity.Persistence.Role", "Role")
+                        .WithMany("Permissions")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("role_permissions_roleId_fkey");
+
+                    b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.Session", b =>
+                {
+                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                        .WithMany("Sessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("sessions_userId_fkey");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.UserRole", b =>
+                {
+                    b.HasOne("Pickory.Modules.Identity.Persistence.Role", "Role")
+                        .WithMany("Users")
+                        .HasForeignKey("RoleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("user_roles_roleId_fkey");
+
+                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                        .WithMany("Roles")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("user_roles_userId_fkey");
+
+                    b.Navigation("Role");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.Role", b =>
+                {
+                    b.Navigation("Permissions");
+
+                    b.Navigation("Users");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.User", b =>
+                {
+                    b.Navigation("ConsentRecords");
+
+                    b.Navigation("EmailTokens");
+
+                    b.Navigation("OAuthAccounts");
+
+                    b.Navigation("Roles");
+
+                    b.Navigation("Sessions");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}

@@ -1,6 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Pickory.Shared\Pickory.Shared.csproj" />
     <ProjectReference Include="..\Pickory.Modules.Identity\Pickory.Modules.Identity.csproj" />
     <ProjectReference Include="..\Pickory.Modules.AiGateway\Pickory.Modules.AiGateway.csproj" />
