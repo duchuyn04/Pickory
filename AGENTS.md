@@ -68,21 +68,78 @@ Example of the required comment style:
 ```ts
 function login(email, password) {
   const user = findUser(email);
-  // Báo cùng một lỗi cho tài khoản không tồn tại và mật khẩu sai để tránh lộ email đã đăng ký.
+  // Trả cùng một lỗi khi không có tài khoản. Kẻ tấn công không biết được email nào đã đăng ký.
   if (!user) throw new Error('Email hoặc mật khẩu không đúng.');
-  // So sánh với hash đã lưu thay vì lưu hoặc đối chiếu mật khẩu dạng rõ.
+  // So sánh với hash đã lưu. Hệ thống không lưu mật khẩu dạng rõ.
   const passwordMatches = verify(user.hash, password);
   if (!passwordMatches) throw new Error('Email hoặc mật khẩu không đúng.');
-  // Tạo phiên mới sau xác thực để tránh tái sử dụng phiên do kẻ khác cố định trước đó.
+  // Tạo phiên mới sau khi xác thực. Phiên cũ có thể do kẻ tấn công tạo trước (session fixation).
   return createSession(user);
 }
 ```
 
-## 5. Mandatory Compliance Check
+## 5. ASD-STE100 Writing Rules for Comments and Documentation
+
+ASD-STE100 (Simplified Technical English) is an English controlled language. This repository keeps Vietnamese for comments and documentation, so it applies the STE writing rules to Vietnamese text. There is no Vietnamese STE dictionary. MUST NOT claim full ASD-STE100 compliance.
+
+### Scope
+
+- Applies to newly authored or modified code comments, documentation comments, and Markdown documentation (`spec/`, `docs/`, `tasks/`, README files).
+- Existing text that a task does not touch MAY stay as it is. When a task modifies a sentence, that sentence MUST follow this section.
+- Section 4 decides what a comment explains (the reason for a step). This section decides how the sentence is written.
+
+### Words
+
+- MUST use one term for one concept, and keep that term in the whole file. Example: after choosing `phiên`, do not alternate with `session` or `phiên đăng nhập` for the same concept.
+- MUST write code identifiers, routes, environment variables, and file names exactly as in the code, inside backticks.
+- MUST NOT use slang, idioms, or vague words such as `xử lý`, `làm gì đó`, `cái này`, or `v.v.` when a specific word exists.
+- SHOULD use a common Vietnamese word instead of an English loanword when the Vietnamese word is clear. Keep the English term when it is the established technical name, for example `token`, `cache`, or `retry`.
+- MUST define an abbreviation at its first use in a document, unless it is a code identifier.
+
+### Sentences
+
+- Count words as space-separated tokens. A code identifier in backticks counts as one word.
+- MUST keep each procedural sentence (an instruction or a step) at 20 words or fewer.
+- MUST keep each descriptive sentence (an explanation, a reason, a fact) at 25 words or fewer.
+- MUST write one instruction per sentence. MUST NOT join two actions with `và` or `rồi` in one instruction.
+- MUST write instructions in the imperative form: start with the verb, for example `Chạy`, `Kiểm tra`, `Xóa`.
+- SHOULD use the active voice. Name the actor that does the action, for example `API trả lỗi 403`, not `lỗi 403 được trả về`.
+- MUST give one topic per sentence and one topic per paragraph.
+- MUST keep a paragraph at 6 sentences or fewer.
+- MUST NOT stack more than 3 nouns or modifiers in one noun phrase. Split a long phrase into a short phrase and a separate sentence.
+
+### Procedures, warnings, and lists
+
+- MUST write a procedure as a numbered list, one step per item, in the order of execution.
+- MUST write a warning or caution before the step it applies to. Start with the instruction, then give the risk in a separate sentence.
+- MUST use a list when a sentence would contain more than 3 parallel items.
+
+### Code comments
+
+- MUST keep each comment at one or two sentences. Each sentence follows the length limits above.
+- MUST state the reason (rule, risk, or boundary) directly. MUST NOT start a comment with filler such as `Lưu ý là` or `Ở đây chúng ta`.
+- MUST use the same term for a concept in comments and in the code identifier that holds it.
+
+Example. Not acceptable (too long, two topics, vague word):
+
+```ts
+// Ở đây xử lý việc kiểm tra xem user có tồn tại không và nếu không có thì vẫn trả lỗi giống như sai mật khẩu để hacker không đoán được email nào đã đăng ký trong hệ thống.
+if (!user) throw new Error('Email hoặc mật khẩu không đúng.');
+```
+
+Acceptable:
+
+```ts
+// Trả cùng một lỗi khi không có tài khoản. Kẻ tấn công không biết được email nào đã đăng ký.
+if (!user) throw new Error('Email hoặc mật khẩu không đúng.');
+```
+
+## 6. Mandatory Compliance Check
 
 Before reporting completion, MUST check every changed file and the final response against all applicable sections above.
 
 - Verify punctuation, descriptive names, and Vietnamese explanations for each meaningful processing step.
+- Verify that new or modified comments and documentation follow section 5: sentence length, one instruction per sentence, consistent terms, and imperative procedures.
 - For requested manual tests, verify the case limit, required fields, priority order, status values, and execution evidence.
 - Fix violations in your own changes before handing off work. Do not label noncompliant work complete.
 - If a requirement cannot be met, report the exact unmet requirement and blocker. Do not silently weaken the rule or fabricate evidence.
