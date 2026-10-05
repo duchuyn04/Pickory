@@ -30,6 +30,27 @@ Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dot
 
 **Phụ thuộc:** không có · **Quy mô:** M
 
-## DN-01 đến DN-08
+## DN-01: Model EF Core và migration mốc
+
+**Mô tả:** Tạo model EF Core khớp đúng schema hiện tại của `identity`, `ai-gateway` và `catalog`. Tạo migration EF Core đầu tiên làm mốc. DB không đổi.
+
+**Tiêu chí nghiệm thu:**
+
+- [ ] Mỗi module có `DbContext` riêng trong project của module, chỉ map bảng của module đó
+- [ ] Đủ 22 model và 5 enum có trong `apps/backend/prisma/schema/*.prisma`: tên bảng, tên cột, kiểu, độ dài, khóa, unique, index, khóa ngoại và hành vi khi xóa khớp DB thật
+- [ ] Enum PostgreSQL (`UserKind`, `EmailTokenPurpose`, `ProductStatus`, `InventoryMovementType` và enum còn lại) map qua Npgsql, không lưu thành số
+- [ ] Cột JSON map sang `jsonb`. Cột `TIMESTAMP(3)` không múi giờ map đúng kiểu, đọc ra giá trị UTC
+- [ ] Hàm đổi `DATABASE_URL` dạng `postgresql://user:pass@host:port/db` sang chuỗi kết nối Npgsql, có unit test kể cả mật khẩu có ký tự đặc biệt
+- [ ] Migration mốc của từng `DbContext` có `Up` và `Down` rỗng. Áp lên DB hiện có không đổi schema.
+- [ ] Bảng lịch sử migration của EF Core nằm riêng, không đụng `_prisma_migrations`
+- [ ] Integration test chạy trên DB test sau khi bản Node đã migrate: so schema EF Core với schema thật (bảng, cột, kiểu, index) và báo khác biệt
+- [ ] Integration test đọc và ghi thử một bản ghi mỗi module qua EF Core
+- [ ] Không port route hay logic nghiệp vụ nào ở task này
+
+**Kiểm tra:** `dotnet build`, `dotnet test`; chạy migration mốc trên DB dev bản sao rồi so `pg_dump --schema-only` trước và sau, hai bản phải giống nhau.
+
+**Phụ thuộc:** DN-00 · **Quy mô:** M
+
+## DN-02 đến DN-08
 
 Viết tiêu chí chi tiết khi bắt đầu từng task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.
