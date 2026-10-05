@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Persistence;
 
 #nullable disable
@@ -28,7 +29,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "UserKind", new[] { "customer", "staff" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.AuditLog", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.AuditLog", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -85,7 +86,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.ToTable("audit_logs", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.ConsentRecord", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.ConsentRecord", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -137,7 +138,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.ToTable("consent_records", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.EmailToken", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.EmailToken", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -188,7 +189,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.ToTable("email_tokens", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.OAuthAccount", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.OAuthAccount", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -230,7 +231,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.ToTable("oauth_accounts", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.Role", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.Role", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -270,7 +271,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.ToTable("roles", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.RolePermission", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.RolePermission", b =>
                 {
                     b.Property<string>("RoleId")
                         .HasColumnType("text")
@@ -286,7 +287,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.ToTable("role_permissions", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.Session", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.Session", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -328,7 +329,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.ToTable("sessions", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.User", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.User", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -394,7 +395,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.UserRole", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.UserRole", b =>
                 {
                     b.Property<string>("UserId")
                         .HasColumnType("text")
@@ -410,9 +411,9 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.ConsentRecord", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.ConsentRecord", b =>
                 {
-                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                    b.HasOne("Pickory.Modules.Identity.Entities.User", "User")
                         .WithMany("ConsentRecords")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.SetNull)
@@ -421,9 +422,9 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.EmailToken", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.EmailToken", b =>
                 {
-                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                    b.HasOne("Pickory.Modules.Identity.Entities.User", "User")
                         .WithMany("EmailTokens")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -433,9 +434,9 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.OAuthAccount", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.OAuthAccount", b =>
                 {
-                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                    b.HasOne("Pickory.Modules.Identity.Entities.User", "User")
                         .WithMany("OAuthAccounts")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -445,9 +446,9 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.RolePermission", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.RolePermission", b =>
                 {
-                    b.HasOne("Pickory.Modules.Identity.Persistence.Role", "Role")
+                    b.HasOne("Pickory.Modules.Identity.Entities.Role", "Role")
                         .WithMany("Permissions")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -457,9 +458,9 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.Navigation("Role");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.Session", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.Session", b =>
                 {
-                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                    b.HasOne("Pickory.Modules.Identity.Entities.User", "User")
                         .WithMany("Sessions")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -469,16 +470,16 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.UserRole", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.UserRole", b =>
                 {
-                    b.HasOne("Pickory.Modules.Identity.Persistence.Role", "Role")
+                    b.HasOne("Pickory.Modules.Identity.Entities.Role", "Role")
                         .WithMany("Users")
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("user_roles_roleId_fkey");
 
-                    b.HasOne("Pickory.Modules.Identity.Persistence.User", "User")
+                    b.HasOne("Pickory.Modules.Identity.Entities.User", "User")
                         .WithMany("Roles")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -490,14 +491,14 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
                     b.Navigation("User");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.Role", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.Role", b =>
                 {
                     b.Navigation("Permissions");
 
                     b.Navigation("Users");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Identity.Persistence.User", b =>
+            modelBuilder.Entity("Pickory.Modules.Identity.Entities.User", b =>
                 {
                     b.Navigation("ConsentRecords");
 

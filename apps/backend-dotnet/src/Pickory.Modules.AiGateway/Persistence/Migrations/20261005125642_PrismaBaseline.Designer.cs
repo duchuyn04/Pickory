@@ -27,7 +27,7 @@ namespace Pickory.Modules.AiGateway.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "public", "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Pickory.Modules.AiGateway.Persistence.AiEmbeddingCache", b =>
+            modelBuilder.Entity("Pickory.Modules.AiGateway.Entities.AiEmbeddingCache", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -68,7 +68,7 @@ namespace Pickory.Modules.AiGateway.Persistence.Migrations
                     b.ToTable("ai_embedding_cache", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.AiGateway.Persistence.AiSetting", b =>
+            modelBuilder.Entity("Pickory.Modules.AiGateway.Entities.AiSetting", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -106,7 +106,7 @@ namespace Pickory.Modules.AiGateway.Persistence.Migrations
                     b.ToTable("ai_settings", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.AiGateway.Persistence.AiUsageLog", b =>
+            modelBuilder.Entity("Pickory.Modules.AiGateway.Entities.AiUsageLog", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()

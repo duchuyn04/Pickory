@@ -110,6 +110,57 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 
 **Phụ thuộc:** DN-00 · **Quy mô:** M
 
+## DN-01R: Chuẩn hóa cấu trúc thư mục backend
+
+**Mô tả:** Sắp xếp lại thư mục trước khi port route ở DN-02. Mục tiêu là fresher và junior tìm được code theo tên tính năng hoặc tên bảng. Task này không đổi hành vi, không đổi schema DB.
+
+**Tiêu chí nghiệm thu:**
+
+- [x] `tasks/plan-dotnet.md` có mục "Quy ước thư mục trong module" với cây thư mục mẫu.
+  - `<Module>Module.cs` ở gốc project module là điểm đăng ký duy nhất của module.
+  - `Features/<TínhNăng>/` chứa endpoint, request, validator và handler của một tính năng.
+  - `Entities/` chứa entity và enum.
+  - `Persistence/` chứa `DbContext`, factory thiết kế, `Configurations/` và `Migrations/`.
+  - Code dùng chung trong module đặt ở thư mục theo tên khái niệm, ví dụ `Sessions/`. Không tạo thư mục `Helpers/`, `Utils/`, `Common/` hoặc `Misc/`.
+- [x] Mỗi entity và mỗi enum nằm trong một file riêng dưới `Entities/`. Tên file trùng tên kiểu. Namespace là `Pickory.Modules.<Module>.Entities`.
+- [x] Không còn file gộp `IdentityEntities.cs`, `IdentityEnums.cs`, `AiEntities.cs`, `CatalogEntities.cs` và `CatalogEnums.cs`.
+- [x] Cấu hình mỗi bảng nằm trong `Persistence/Configurations/<Entity>Configuration.cs`, dùng `IEntityTypeConfiguration<T>`.
+- [x] `DbContext` gọi `ApplyConfigurationsFromAssembly` với assembly của chính module. `DbContext` chỉ còn `DbSet`, `ConfigureOptions`, quy ước kiểu và khai báo enum PostgreSQL.
+- [x] Model EF Core không đổi. `dotnet ef migrations has-pending-model-changes` báo không có thay đổi cho cả ba `DbContext`. Không có migration mới.
+- [x] Tên migration `PrismaBaseline`, mã migration và nội dung `Up`, `Down` giữ nguyên.
+- [x] `PrismaModelConventions` đổi thành `DatabaseNamingConventions`. Ngoài thư mục `Migrations/`, không định danh nào trong `src/` chứa chữ `Prisma`.
+- [x] Mỗi `<Module>Module.cs` là lớp `static` có hai hàm:
+  - `Add<Module>Module(IServiceCollection services, string databaseConnectionString)` đăng ký `DbContext` và dịch vụ của module.
+  - `Map<Module>Endpoints(IEndpointRouteBuilder endpoints)` gắn route của module. Hàm có thể chưa gắn route nào ở task này.
+- [x] `Program.cs` không tham chiếu `DbContext` của module. `Program.cs` chỉ gọi `Add<Module>Module` và `Map<Module>Endpoints`.
+- [x] Test kiến trúc vẫn tìm đủ ba module sau khi bỏ lớp đánh dấu rỗng. Test vi phạm mẫu vẫn báo lỗi.
+- [x] `Pickory.Shared/Models/` đổi thành `Pickory.Shared/Http/`. `Pickory.Shared/Extensions/` đổi thành `Pickory.Shared/DependencyInjection/`. Namespace đổi theo thư mục.
+- [x] `Pickory.IntegrationTests` chia thư mục:
+  - `Infrastructure/`: factory, fixture, `DatabaseSqlFiles`, `ApplicationDatabaseSchema`, `TestEndpointsStartupFilter`.
+  - `Database/`: test migration, test ghi nhận mốc, test so schema, test đọc ghi, test an toàn DB test.
+  - `Api/`: test hợp đồng HTTP chung.
+- [x] `Pickory.UnitTests` chia thư mục theo project và thư mục của code được test, ví dụ `Shared/Persistence/`.
+- [x] Namespace khớp đường dẫn thư mục trong mọi project. `.editorconfig` bật `dotnet_style_namespace_match_folder` và đặt `IDE0130` ở mức `warning`. `Directory.Build.props` bật `EnforceCodeStyleInBuild`.
+- [x] Code dùng `using` thay cho tên đầy đủ lặp lại, ví dụ `StringValueGenerator`.
+- [x] Không đổi logic hoặc assertion của test. Diff test chỉ gồm đường dẫn, namespace và `using`.
+- [x] Mục Project Structure của `spec/SPEC.md` ghi cấu trúc trong một module và cấu trúc thư mục test.
+
+**Kiểm tra:** `dotnet build` không có warning. `dotnet test` có số test bằng hoặc lớn hơn trước task. `dotnet ef migrations has-pending-model-changes` sạch cho ba `DbContext`. `pnpm lint && pnpm typecheck && pnpm test` xanh.
+
+**Bằng chứng DN-01R (2026-10-05):**
+
+- `dotnet build`: thành công, không có warning hoặc error.
+- `dotnet test`: 63 test thành công, bằng số test trước task.
+- Phân nhóm .NET: 33 unit test, 27 integration test và ba architecture test.
+- `dotnet ef migrations has-pending-model-changes` báo không có thay đổi cho ba `DbContext`.
+- Ba file `*_PrismaBaseline.cs` không đổi.
+- Designer và snapshot chỉ đổi `using` và tên kiểu entity sang namespace `Entities`.
+- Test kiến trúc tắt `IDE0130` cho namespace `Contracts` giả lập. Namespace này cố ý khác thư mục để mô phỏng module khác.
+- `pnpm lint` và `pnpm typecheck`: thành công.
+- `pnpm test`: 95 test thành công, 11 tệp thành công.
+
+**Phụ thuộc:** DN-01 · **Quy mô:** M
+
 ## DN-02 đến DN-08
 
 Viết tiêu chí chi tiết khi bắt đầu từng task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.

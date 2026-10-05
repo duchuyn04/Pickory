@@ -1,11 +1,11 @@
 using Pickory.Api.Middleware;
-using Pickory.Modules.AiGateway.Persistence;
-using Pickory.Modules.Catalog.Persistence;
-using Pickory.Modules.Identity.Persistence;
+using Pickory.Modules.AiGateway;
+using Pickory.Modules.Catalog;
+using Pickory.Modules.Identity;
 using Pickory.Shared.Configuration;
-using Pickory.Shared.Extensions;
+using Pickory.Shared.DependencyInjection;
+using Pickory.Shared.Http;
 using Pickory.Shared.Json;
-using Pickory.Shared.Models;
 using Pickory.Shared.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -38,14 +38,11 @@ builder.Services.AddTransient<IStartupFilter, ExceptionHandlingStartupFilter>();
 // Đăng ký các dịch vụ nền tảng dùng chung gồm bộ điều phối sự kiện.
 builder.Services.AddSharedInfrastructure();
 
-// Đăng ký dữ liệu theo module. Không tự chạy migration khi ứng dụng khởi động.
+// Mỗi module tự đăng ký dữ liệu và dịch vụ. `Program.cs` không phụ thuộc vào phần bên trong module.
 var databaseConnectionString = PostgresConnectionString.Convert(config.DatabaseUrl);
-builder.Services.AddDbContext<IdentityDbContext>(options =>
-    IdentityDbContext.ConfigureOptions(options, databaseConnectionString));
-builder.Services.AddDbContext<AiGatewayDbContext>(options =>
-    AiGatewayDbContext.ConfigureOptions(options, databaseConnectionString));
-builder.Services.AddDbContext<CatalogDbContext>(options =>
-    CatalogDbContext.ConfigureOptions(options, databaseConnectionString));
+builder.Services.AddIdentityModule(databaseConnectionString);
+builder.Services.AddAiGatewayModule(databaseConnectionString);
+builder.Services.AddCatalogModule(databaseConnectionString);
 
 // Chuẩn hóa cấu hình JSON của Minimal API theo camelCase và ISO 8601 UTC.
 builder.Services.ConfigureHttpJsonOptions(options =>
@@ -57,6 +54,11 @@ var app = builder.Build();
 
 // Endpoint kiểm tra sức khỏe của dịch vụ phục vụ giám sát và kiểm thử.
 app.MapGet("/api/health", () => Results.Ok(new ApiResponse<object>(new { status = "ok" })));
+
+// Mỗi module tự gắn route của mình để `Program.cs` không cần biết danh sách endpoint.
+app.MapIdentityEndpoints();
+app.MapAiGatewayEndpoints();
+app.MapCatalogEndpoints();
 
 app.Run();
 

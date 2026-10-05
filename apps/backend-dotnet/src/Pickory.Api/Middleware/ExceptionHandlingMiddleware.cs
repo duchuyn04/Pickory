@@ -2,8 +2,8 @@ using System.Text.Json;
 using FluentValidation;
 using Microsoft.AspNetCore.Http.Features;
 using Pickory.Shared.Exceptions;
+using Pickory.Shared.Http;
 using Pickory.Shared.Json;
-using Pickory.Shared.Models;
 
 namespace Pickory.Api.Middleware;
 

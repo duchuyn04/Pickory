@@ -143,6 +143,49 @@ apps/
 
 Mỗi module là một project. Project module chỉ tham chiếu `Pickory.Shared` và project `Contracts` của module khác. Test kiến trúc chặn mọi tham chiếu khác.
 
+### Quy ước thư mục trong module
+
+Mọi project module dùng cùng một cây thư mục. Ví dụ dưới đây dùng module Identity.
+
+```
+Pickory.Modules.Identity/
+  IdentityModule.cs               → điểm đăng ký duy nhất của module
+  Features/
+    Login/                        → một tính năng
+      LoginEndpoint.cs
+      LoginRequest.cs
+      LoginRequestValidator.cs
+      LoginHandler.cs
+  Sessions/                       → code dùng chung trong module, đặt tên theo khái niệm
+  Entities/                       → một entity hoặc một enum trong một file
+    User.cs
+    UserKind.cs
+  Persistence/
+    IdentityDbContext.cs
+    IdentityDbContextFactory.cs   → factory thiết kế cho lệnh `dotnet ef`
+    Configurations/               → cấu hình của từng bảng
+      UserConfiguration.cs
+    Migrations/
+```
+
+- `<Module>Module.cs` ở gốc project module là điểm đăng ký duy nhất của module.
+- `<Module>Module.cs` có hàm `Add<Module>Module` và hàm `Map<Module>Endpoints`. `Program.cs` chỉ gọi hai hàm này.
+- `Features/<TínhNăng>/` chứa endpoint, request, validator và handler của một tính năng.
+- `Entities/` chứa entity và enum. Tên file trùng tên kiểu.
+- `Persistence/` chứa `DbContext`, factory thiết kế, `Configurations/` và `Migrations/`.
+- `Configurations/` có một lớp `IEntityTypeConfiguration<T>` cho mỗi bảng. `DbContext` nạp các lớp này bằng `ApplyConfigurationsFromAssembly`.
+- `DbContext` chỉ giữ `DbSet`, `ConfigureOptions`, quy ước kiểu và khai báo enum PostgreSQL.
+- Code dùng chung trong module nằm ở thư mục đặt theo tên khái niệm, ví dụ `Sessions/`.
+- Không tạo thư mục `Helpers/`, `Utils/`, `Common/` hoặc `Misc/`. Các tên này không cho người đọc biết nội dung của thư mục.
+- Namespace khớp đường dẫn thư mục. Build báo lỗi `IDE0130` khi namespace khác thư mục.
+
+Thư mục test theo quy ước sau:
+
+- `Pickory.UnitTests` theo đường dẫn của code được test, ví dụ `Shared/Persistence/`.
+- `Pickory.IntegrationTests/Infrastructure/` chứa factory, fixture và công cụ đọc schema.
+- `Pickory.IntegrationTests/Database/` chứa test migration, test ghi nhận mốc, test so schema và test đọc/ghi.
+- `Pickory.IntegrationTests/Api/` chứa test hợp đồng HTTP.
+
 Khi xong toàn bộ, đổi tên `apps/backend-dotnet` thành `apps/backend`. Xóa bản Node.
 
 ## Danh sách task

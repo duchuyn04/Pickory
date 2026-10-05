@@ -2,8 +2,11 @@ using System.Reflection;
 using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Identity;
+using Pickory.Modules.Identity.Persistence;
 using Xunit;
 
+// Namespace giả lập phải mang tên `Contracts` của module Identity. Tên này cố ý khác thư mục của project test.
+#pragma warning disable IDE0130
 namespace Pickory.Modules.Identity.Contracts
 {
     // Kiểu dữ liệu giả lập thuộc hợp đồng công khai của module Identity.
@@ -11,6 +14,7 @@ namespace Pickory.Modules.Identity.Contracts
     {
     }
 }
+#pragma warning restore IDE0130
 
 namespace Pickory.ArchitectureTests
 {
@@ -18,7 +22,7 @@ namespace Pickory.ArchitectureTests
     public class SampleViolatingClass
     {
         // Tham chiếu trực tiếp tới module Identity để tạo ra một vi phạm ranh giới mẫu.
-        public IdentityModule? DirectDependency { get; set; }
+        public IdentityDbContext? DirectDependency { get; set; }
     }
 
     // Lớp mẫu phụ thuộc vào hợp đồng công khai của module khác theo đúng thiết kế.

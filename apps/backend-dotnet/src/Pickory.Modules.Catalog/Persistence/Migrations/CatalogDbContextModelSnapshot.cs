@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Persistence;
 
 #nullable disable
@@ -25,7 +26,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "ProductStatus", new[] { "draft", "active", "hidden", "discontinued" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Brand", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Brand", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -68,7 +69,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.ToTable("brands", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Category", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Category", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -122,7 +123,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.ToTable("categories", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.ImageDeletionJob", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ImageDeletionJob", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -185,7 +186,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.ToTable("image_deletion_jobs", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.InventoryMovement", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.InventoryMovement", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -238,7 +239,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.ToTable("inventory_movements", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Product", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Product", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -343,7 +344,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.ToTable("products", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.ProductImage", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ProductImage", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -391,7 +392,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.ToTable("product_images", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.ProductSlugHistory", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ProductSlugHistory", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -428,7 +429,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.ToTable("product_slug_history", (string)null);
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Sku", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Sku", b =>
                 {
                     b.Property<string>("Id")
                         .ValueGeneratedOnAdd()
@@ -514,9 +515,9 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Category", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Category", b =>
                 {
-                    b.HasOne("Pickory.Modules.Catalog.Persistence.Category", "Parent")
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Category", "Parent")
                         .WithMany("Children")
                         .HasForeignKey("ParentId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -525,9 +526,9 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.Navigation("Parent");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.InventoryMovement", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.InventoryMovement", b =>
                 {
-                    b.HasOne("Pickory.Modules.Catalog.Persistence.Sku", "Sku")
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Sku", "Sku")
                         .WithMany("Movements")
                         .HasForeignKey("SkuId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -537,16 +538,16 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.Navigation("Sku");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Product", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Product", b =>
                 {
-                    b.HasOne("Pickory.Modules.Catalog.Persistence.Brand", "Brand")
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Brand", "Brand")
                         .WithMany("Products")
                         .HasForeignKey("BrandId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("products_brandId_fkey");
 
-                    b.HasOne("Pickory.Modules.Catalog.Persistence.Category", "Category")
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Category", "Category")
                         .WithMany("Products")
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -558,16 +559,16 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.Navigation("Category");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.ProductImage", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ProductImage", b =>
                 {
-                    b.HasOne("Pickory.Modules.Catalog.Persistence.Product", "Product")
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Product", "Product")
                         .WithMany("Images")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("product_images_productId_fkey");
 
-                    b.HasOne("Pickory.Modules.Catalog.Persistence.Sku", "Sku")
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Sku", "Sku")
                         .WithMany("Images")
                         .HasForeignKey("SkuId")
                         .OnDelete(DeleteBehavior.SetNull)
@@ -578,9 +579,9 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.Navigation("Sku");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.ProductSlugHistory", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ProductSlugHistory", b =>
                 {
-                    b.HasOne("Pickory.Modules.Catalog.Persistence.Product", "Product")
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Product", "Product")
                         .WithMany("SlugHistory")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -590,9 +591,9 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Sku", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Sku", b =>
                 {
-                    b.HasOne("Pickory.Modules.Catalog.Persistence.Product", "Product")
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Product", "Product")
                         .WithMany("Skus")
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -602,19 +603,19 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.Navigation("Product");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Brand", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Brand", b =>
                 {
                     b.Navigation("Products");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Category", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Category", b =>
                 {
                     b.Navigation("Children");
 
                     b.Navigation("Products");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Product", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Product", b =>
                 {
                     b.Navigation("Images");
 
@@ -623,7 +624,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                     b.Navigation("SlugHistory");
                 });
 
-            modelBuilder.Entity("Pickory.Modules.Catalog.Persistence.Sku", b =>
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Sku", b =>
                 {
                     b.Navigation("Images");
 

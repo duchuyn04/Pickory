@@ -73,8 +73,18 @@ apps/
     test/unit/features/<module-id>/ → test hook và logic UI, đối chiếu với src/features/
   backend-dotnet/         → ASP.NET Core 10 API
     Pickory.sln
-    src/                  → Pickory.Api, Pickory.Shared, Pickory.Modules.*
-    tests/                → UnitTests, IntegrationTests, ArchitectureTests
+    src/
+      Pickory.Api/        → khởi động app, middleware, gọi đăng ký của từng module
+      Pickory.Shared/     → Configuration/, DependencyInjection/, Events/, Exceptions/, Http/, Json/, Persistence/
+      Pickory.Modules.<Module>/
+        <Module>Module.cs → điểm đăng ký duy nhất của module
+        Features/<TínhNăng>/ → endpoint, request, validator, handler của một tính năng
+        Entities/         → một entity hoặc một enum trong một file
+        Persistence/      → DbContext, factory thiết kế, Configurations/, Migrations/
+    tests/
+      Pickory.UnitTests/  → theo đường dẫn code được test, ví dụ Shared/Persistence/
+      Pickory.IntegrationTests/ → Infrastructure/, Database/, Api/
+      Pickory.ArchitectureTests/ → kiểm tra ranh giới module
     db/reference-schema.sql → schema DB gốc của bản Node, dùng để đối chiếu migration
 packages/
   shared/                 → type và Zod schema dùng chung web/api
@@ -89,6 +99,8 @@ docs/adr/                 → Architecture Decision Records
 ```
 
 Test nằm ngoài `src/`; dưới `test/unit/` và `test/integration/`, giữ cấu trúc thư mục tương ứng với code được test. Import trực tiếp từ `src/`, không tạo bản sao hay re-export trung gian. Typecheck bao gồm cả `src/` và `test/`; API build chỉ biên dịch `src/`. Vitest tìm test trong các thư mục này, không tìm test đặt cạnh code nguồn.
+
+Backend .NET theo mục "Quy ước thư mục trong module" của `tasks/plan-dotnet.md`. Namespace khớp đường dẫn thư mục. Không tạo thư mục `Helpers/`, `Utils/`, `Common/` hoặc `Misc/`.
 
 **Quy tắc ranh giới module:** module khác chỉ được import từ `modules/<module-id>/index.ts`, không import thẳng `service.ts` hay `repository.ts` của module khác. Mỗi module chỉ ghi vào bảng của chính nó.
 
