@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import { Bold } from '@tiptap/extension-bold';
 import { Document } from '@tiptap/extension-document';
@@ -22,7 +22,7 @@ export interface DescriptionEditorProps {
   label?: string;
   // Callback cung cấp tham chiếu editor phục vụ kiểm thử đơn vị.
   onEditorReady?: (editor: Editor) => void;
-  // Callback thông báo lỗi xác thực schema cho thành phần cha xử lý.
+  // Báo lỗi xác thực tài liệu để thành phần cha chặn nút lưu hoặc hiển thị cảnh báo.
   onValidationError?: (message: string | null) => void;
 }
 
@@ -40,6 +40,8 @@ export function DescriptionEditor({
   // Lưu thông điệp lỗi khi tài liệu vi phạm ràng buộc schema Zod của CAT-13.
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Ghi nhớ tài liệu vừa phát qua onChange để tránh kích hoạt đồng bộ lặp lại.
+  const lastEmittedDocRef = useRef<DescriptionDoc | null>(null);
   // Trạng thái nhận tiêu điểm của ô soạn thảo để đổi màu viền khung ngoài.
   const [isFocused, setIsFocused] = useState(false);
   // Khởi tạo trình soạn thảo Tiptap với danh sách extension tối thiểu đã phê duyệt.
@@ -75,6 +77,8 @@ export function DescriptionEditor({
       const parseResult = descriptionSchema.safeParse(json);
 
       if (parseResult.success) {
+        // Lưu tham chiếu tài liệu hợp lệ vừa phát để bỏ qua lần đồng bộ kế tiếp.
+        lastEmittedDocRef.current = parseResult.data;
         // Xóa trạng thái lỗi khi nội dung hợp lệ trở lại.
         setValidationError(null);
         if (onValidationError) {
@@ -131,11 +135,27 @@ export function DescriptionEditor({
 
   // Đồng bộ lại nội dung khi prop value bên ngoài thay đổi.
   useEffect(() => {
-    if (editor && value) {
-      const currentJson = editor.getJSON();
-      if (JSON.stringify(currentJson) !== JSON.stringify(value)) {
-        editor.commands.setContent(value);
-      }
+    if (!editor || !value) {
+      return;
+    }
+
+    // Bỏ qua đồng bộ khi giá trị truyền vào chính là tài liệu editor vừa phát.
+    if (value === lastEmittedDocRef.current) {
+      return;
+    }
+
+    // Chuẩn hóa cấu trúc tài liệu qua schema trước khi đối chiếu tính tương đương.
+    const currentParsed = descriptionSchema.safeParse(editor.getJSON());
+    const incomingParsed = descriptionSchema.safeParse(value);
+
+    const isSameContent =
+      currentParsed.success &&
+      incomingParsed.success &&
+      JSON.stringify(currentParsed.data) === JSON.stringify(incomingParsed.data);
+
+    // Chỉ nạp nội dung khi tài liệu thực sự khác biệt từ nguồn bên ngoài.
+    if (!isSameContent) {
+      editor.commands.setContent(value);
     }
   }, [editor, value]);
 

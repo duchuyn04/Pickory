@@ -377,4 +377,44 @@ describe('descriptionToPlainText và plainTextToDescription', () => {
 
     expect(roundTripText).toBe(originalText);
   });
+
+  it('plainTextToDescription ném lỗi khi text có 20.001 ký tự vượt giới hạn', () => {
+    // Ngăn chặn tạo tài liệu vi phạm giới hạn độ dài ký tự tối đa.
+    const longText = 'a'.repeat(DESCRIPTION_MAX_TEXT_LENGTH + 1);
+
+    expect(() => plainTextToDescription(longText)).toThrow(
+      `Mô tả không được vượt quá ${DESCRIPTION_MAX_TEXT_LENGTH} ký tự text.`,
+    );
+  });
+
+  it('plainTextToDescription ném lỗi khi có từ 500 đoạn văn trở lên vượt giới hạn nút', () => {
+    // Ngăn chặn tạo tài liệu phình to số lượng nút vượt ngưỡng cho phép.
+    const manyParagraphs = Array.from({ length: 500 }, (_, index) => `Đoạn ${index + 1}`).join(
+      '\n\n',
+    );
+
+    expect(() => plainTextToDescription(manyParagraphs)).toThrow(
+      `Mô tả không được vượt quá ${DESCRIPTION_MAX_NODE_COUNT} nút.`,
+    );
+  });
+
+  it('plainTextToDescription trả tài liệu qua schema khi text đúng ngưỡng 20.000 ký tự', () => {
+    // Cho phép lưu trữ tài liệu chạm đúng giới hạn ký tự tối đa của hệ thống.
+    const thresholdText = 'a'.repeat(DESCRIPTION_MAX_TEXT_LENGTH);
+    const doc = plainTextToDescription(thresholdText);
+
+    const parsed = descriptionSchema.safeParse(doc);
+    expect(parsed.success).toBe(true);
+  });
+
+  it('plainTextToDescription trả tài liệu qua schema khi số đoạn văn nằm trong giới hạn nút', () => {
+    // Cho phép lưu trữ tài liệu có số nút nằm trong ngưỡng an toàn cho phép.
+    const validParagraphs = Array.from({ length: 100 }, (_, index) => `Đoạn ${index + 1}`).join(
+      '\n\n',
+    );
+    const doc = plainTextToDescription(validParagraphs);
+
+    const parsed = descriptionSchema.safeParse(doc);
+    expect(parsed.success).toBe(true);
+  });
 });

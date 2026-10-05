@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import React, { act, StrictMode } from 'react';
+import React, { act, StrictMode, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Editor } from '@tiptap/core';
@@ -685,5 +685,151 @@ describe('DescriptionEditor', () => {
 
     expect(buttons[5]?.tabIndex).toBe(0);
     expect(document.activeElement).toBe(buttons[5]);
+  });
+
+  it('khi dùng dạng controlled, gõ chữ trong đoạn có chữ đậm không gọi setContent và vị trí con trỏ giữ nguyên sau mỗi lần gõ', async () => {
+    // Ngăn chặn vòng lặp đồng bộ gây nhảy con trỏ và phát sinh giao dịch thừa.
+    const initialDoc: DescriptionDoc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Bắt đầu ' },
+            {
+              type: 'text',
+              text: 'chữ đậm',
+              marks: [{ type: 'bold' }],
+            },
+            { type: 'text', text: ' kết thúc.' },
+          ],
+        },
+      ],
+    };
+
+    let editorInstance: Editor | null = null;
+
+    function ControlledParent() {
+      const [docValue, setDocValue] = useState<DescriptionDoc>(initialDoc);
+      return (
+        <DescriptionEditor
+          value={docValue}
+          onChange={setDocValue}
+          onEditorReady={(editor) => {
+            editorInstance = editor;
+          }}
+        />
+      );
+    }
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <ControlledParent />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+
+    // Giám sát lệnh setContent gốc để chứng minh lệnh này không bị kích hoạt khi gõ.
+    const editorInternal = editor as unknown as {
+      commandManager: { rawCommands: { setContent: (doc: DescriptionDoc) => unknown } };
+    };
+    const setContentSpy = vi.spyOn(editorInternal.commandManager.rawCommands, 'setContent');
+
+    // Đặt vị trí con trỏ vào bên trong đoạn văn bản có định dạng chữ đậm.
+    await act(async () => {
+      editor.commands.setTextSelection(12);
+    });
+    expect(editor.state.selection.from).toBe(12);
+
+    // Gõ ký tự thứ nhất vào vùng chữ đậm để kích hoạt sự kiện thay đổi.
+    await act(async () => {
+      editor.commands.insertContent('a');
+    });
+
+    // Xác nhận setContent không bị gọi và con trỏ giữ đúng vị trí kế tiếp.
+    expect(setContentSpy).not.toHaveBeenCalled();
+    expect(editor.state.selection.from).toBe(13);
+    expect(editor.state.selection.to).toBe(13);
+
+    // Gõ ký tự thứ hai liên tiếp để đảm bảo tính ổn định sau nhiều thao tác.
+    await act(async () => {
+      editor.commands.insertContent('b');
+    });
+
+    // Xác nhận setContent vẫn không bị gọi và con trỏ tiếp tục dịch chuyển chuẩn xác.
+    expect(setContentSpy).not.toHaveBeenCalled();
+    expect(editor.state.selection.from).toBe(14);
+    expect(editor.state.selection.to).toBe(14);
+  });
+
+  it('khi đổi value từ bên ngoài thì editor cập nhật đúng nội dung mới', async () => {
+    // Đảm bảo trình soạn thảo nạp nội dung mới khi thành phần cha cập nhật dữ liệu.
+    const initialDoc: DescriptionDoc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'paragraph',
+          content: [{ type: 'text', text: 'Tài liệu ban đầu' }],
+        },
+      ],
+    };
+
+    const newExternalDoc: DescriptionDoc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: 'Tiêu đề mới từ bên ngoài' }],
+        },
+      ],
+    };
+
+    let editorInstance: Editor | null = null;
+    let setDocExternal: React.Dispatch<React.SetStateAction<DescriptionDoc>> = () => {};
+
+    function ExternalParent() {
+      const [docValue, setDocValue] = useState<DescriptionDoc>(initialDoc);
+      setDocExternal = setDocValue;
+      return (
+        <DescriptionEditor
+          value={docValue}
+          onChange={setDocValue}
+          onEditorReady={(editor) => {
+            editorInstance = editor;
+          }}
+        />
+      );
+    }
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <ExternalParent />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+
+    // Giám sát lệnh setContent khi có dữ liệu mới từ bên ngoài truyền vào.
+    const editorInternal = editor as unknown as {
+      commandManager: { rawCommands: { setContent: (doc: DescriptionDoc) => unknown } };
+    };
+    const setContentSpy = vi.spyOn(editorInternal.commandManager.rawCommands, 'setContent');
+
+    // Cập nhật trạng thái của thành phần cha với tài liệu mới hoàn toàn.
+    await act(async () => {
+      setDocExternal(newExternalDoc);
+    });
+
+    // Kiểm tra editor đã kích hoạt nạp lại nội dung mới và cấu trúc JSON đồng bộ.
+    expect(setContentSpy).toHaveBeenCalledWith(newExternalDoc);
+    expect(editor.getJSON()).toEqual(newExternalDoc);
   });
 });

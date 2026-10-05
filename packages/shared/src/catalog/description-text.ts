@@ -1,4 +1,4 @@
-import type { DescriptionDoc } from './description-schema';
+import { descriptionSchema, type DescriptionDoc } from './description-schema';
 
 /**
  * Trích xuất toàn bộ chuỗi text từ tài liệu rich text sang dạng văn bản thuần.
@@ -67,8 +67,18 @@ export function plainTextToDescription(text: string): DescriptionDoc {
     };
   }
 
-  return {
+  const doc: DescriptionDoc = {
     type: 'doc',
     content,
   };
+
+  // Xác thực tài liệu qua schema để bảo đảm tính toàn vẹn dữ liệu.
+  const parseResult = descriptionSchema.safeParse(doc);
+  if (!parseResult.success) {
+    // Ném lỗi chi tiết khi nội dung vượt quá giới hạn ký tự hoặc số lượng nút.
+    const errorMessage = parseResult.error.issues.map((issue) => issue.message).join('; ');
+    throw new Error(errorMessage);
+  }
+
+  return parseResult.data;
 }
