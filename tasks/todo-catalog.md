@@ -105,6 +105,9 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 - [ ] Mô tả có nút lạ (ví dụ `script`, `image`) hoặc vượt giới hạn trả 400 `DESCRIPTION_INVALID`, không có gì được lưu
 - [ ] Thêm giá trị tùy chọn sinh thêm SKU, SKU cũ giữ giá và tồn kho
 - [ ] Mã SKU trùng trả 409
+- [ ] Bỏ một giá trị tùy chọn thì SKU tương ứng bị tắt (`enabled = false`), không bị xóa, tồn kho và movement giữ nguyên (Decision 18)
+- [ ] Tên chỉ gồm ký hiệu cho ra slug rỗng thì dùng slug dự phòng `san-pham`, rồi thêm hậu tố số nếu trùng
+- [ ] Slug mới không trùng slug hiện tại của sản phẩm khác và không trùng `oldSlug` trong `product_slug_history`
 - [ ] Đổi giá 1 SKU tạo đúng 1 dòng audit `catalog.sku.price_change` có giá trước và sau
 - [ ] Đổi tên với slug mới lưu slug cũ vào `product_slug_history`
 - [ ] `onProductChanged` phát đúng 1 lần sau lưu thành công, 0 lần khi validate lỗi
@@ -149,6 +152,8 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 - [ ] Mỗi lần đổi trạng thái có đúng 1 dòng audit `catalog.product.status_change`
 - [ ] Xóa cứng sản phẩm có SKU từng có movement `order_reserve` trả 409 `PRODUCT_HAS_ORDERS`
 - [ ] Xóa cứng thành công thì tạo job xóa ảnh cho mọi ảnh của sản phẩm
+- [ ] Xóa cứng sản phẩm chỉ có movement `manual` hoặc `return` thành công; movement của sản phẩm bị xóa trong cùng transaction (Decision 18)
+- [ ] `checkPublishable` dùng `validatePrice` cho từng SKU bật (giá nguyên dương, `compareAtPrice` hợp lệ); mỗi lý do lỗi của SKU ghi mã SKU
 **Kiểm tra:** integration test
 **Phụ thuộc:** CAT-06 · **File:** `modules/catalog/services/product-status.ts`, `modules/catalog/routes/admin-products.ts` · **Quy mô:** S
 
@@ -158,6 +163,7 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 - [ ] 20 `reserve` đồng thời cho SKU còn 5 cái: đúng 5 thành công, tồn kho về 0, không âm
 - [ ] `reserve` thiếu 1 SKU thì không giữ SKU nào, trả `shortages` đúng số
 - [ ] Gọi `reserve` hoặc `release` 2 lần cùng `orderId` không đổi tồn kho lần thứ 2
+- [ ] `reserve` và `release` nhận `tx` của bên gọi kèm collector; `onStockChanged` không phát khi transaction của bên gọi rollback, phát sau khi bên gọi `flush()` (Decision 4)
 - [ ] `stock` của mọi SKU bằng tổng `delta` của movement sau mỗi file test
 - [ ] Điều chỉnh tay thiếu lý do trả 400; thành công tạo đúng 1 dòng audit `catalog.sku.stock_adjust`
 - [ ] Tồn kho đổi thì `minPrice` và `inStock` của sản phẩm cập nhật trong cùng transaction
