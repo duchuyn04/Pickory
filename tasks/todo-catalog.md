@@ -24,11 +24,11 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 ### CAT-02: Slug, tổ hợp biến thể, giá hiển thị và chuyển trạng thái
 **Mô tả:** Logic thuần trong `modules/catalog/domain/`. `toSlug(name)` bỏ dấu tiếng Việt. `buildVariantCombinations(options)` sinh tổ hợp tối đa 3 trục. `computeDisplayPrice(skus)` tính `minPrice` và `inStock`. `checkPublishable(product)` và `canTransition(from, to)` kiểm tra quy tắc trạng thái.
 **Tiêu chí nghiệm thu:**
-- [ ] `Laptop ASUS ROG Strix G16 Đen` thành `laptop-asus-rog-strix-g16-den`; ký tự đặc biệt và khoảng trắng liên tiếp gộp thành một `-`
-- [ ] 2 trục `128GB, 256GB` và `Đen, Trắng` sinh đúng 4 tổ hợp; 0 trục sinh 1 biến thể mặc định; 4 trục bị từ chối
-- [ ] `minPrice` là giá thấp nhất trong SKU bật và còn hàng; hết hàng toàn bộ thì lấy giá thấp nhất trong SKU bật; không có SKU bật thì `null`
-- [ ] Giá phải là số nguyên lớn hơn 0; `compareAtPrice` trống hoặc lớn hơn giá bán
-- [ ] `checkPublishable` báo đủ lý do: thiếu thông số bắt buộc, không có ảnh, không có SKU bật có giá, SKU bật thiếu cân nặng hoặc kích thước
+- [x] `Laptop ASUS ROG Strix G16 Đen` thành `laptop-asus-rog-strix-g16-den`; ký tự đặc biệt và khoảng trắng liên tiếp gộp thành một `-`
+- [x] 2 trục `128GB, 256GB` và `Đen, Trắng` sinh đúng 4 tổ hợp; 0 trục sinh 1 biến thể mặc định; 4 trục bị từ chối
+- [x] `minPrice` là giá thấp nhất trong SKU bật và còn hàng; hết hàng toàn bộ thì lấy giá thấp nhất trong SKU bật; không có SKU bật thì `null`
+- [x] Giá phải là số nguyên lớn hơn 0; `compareAtPrice` trống hoặc lớn hơn giá bán
+- [x] `checkPublishable` báo đủ lý do: thiếu thông số bắt buộc, không có ảnh, không có SKU bật có giá, SKU bật thiếu cân nặng hoặc kích thước
 **Kiểm tra:** unit test
 **Phụ thuộc:** CAT-01 · **File:** `modules/catalog/domain/{slug,variants,pricing,status}.ts` · **Quy mô:** M
 

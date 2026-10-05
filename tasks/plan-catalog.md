@@ -60,7 +60,7 @@ CAT-01 bộ thuộc tính + validate thông số (packages/shared)
 Chi tiết từng task ở `tasks/todo-catalog.md`.
 
 ### Phase 1: Nền tảng logic và dữ liệu
-- [x] CAT-01 · [ ] CAT-02 · [ ] CAT-03
+- [x] CAT-01 · [x] CAT-02 · [ ] CAT-03
 
 ### Checkpoint C1
 - [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch
