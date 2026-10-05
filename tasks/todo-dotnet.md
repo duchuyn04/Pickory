@@ -32,20 +32,27 @@ Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dot
 
 ## DN-01: Model EF Core và migration mốc
 
-**Mô tả:** Tạo model EF Core khớp đúng schema hiện tại của `identity`, `ai-gateway` và `catalog`. Tạo migration EF Core đầu tiên làm mốc. DB không đổi.
+**Mô tả:** Tạo model EF Core (Entity Framework Core) khớp schema của `identity`, `ai-gateway` và `catalog`. Tạo migration mốc cho DB trống. Giữ nguyên DB hiện có bằng lệnh ghi nhận mốc.
 
 **Tiêu chí nghiệm thu:**
 
 - [x] Mỗi module có `DbContext` riêng trong project của module, chỉ map bảng của module đó
-- [x] Đủ 20 model và 4 enum có trong `apps/backend/prisma/schema/*.prisma`: tên bảng, tên cột, kiểu, độ dài, khóa, unique, index, khóa ngoại và hành vi khi xóa khớp DB thật
+- [x] Đủ 20 model và bốn enum theo `apps/backend-dotnet/db/reference-schema.sql`.
+  - Tên bảng và tên cột khớp DB thật.
+  - Kiểu và độ dài khớp DB thật.
+  - Khóa, unique và index khớp DB thật.
+  - Khóa ngoại và hành vi khi xóa khớp DB thật.
 - [x] Enum PostgreSQL (`UserKind`, `EmailTokenPurpose`, `ProductStatus`, `InventoryMovementType`) map qua Npgsql, không lưu thành số
 - [x] Cột JSON map sang `jsonb`. Cột `TIMESTAMP(3)` không múi giờ map đúng kiểu, đọc ra giá trị UTC
 - [x] Hàm đổi `DATABASE_URL` dạng `postgresql://user:pass@host:port/db` sang chuỗi kết nối Npgsql, có unit test kể cả mật khẩu có ký tự đặc biệt
-- [ ] Trên DB trống, migration mốc tạo đủ schema: bảng, enum, index, khóa ngoại và extension `vector`, khớp `apps/backend-dotnet/db/reference-schema.sql`
-- [ ] Trên DB đã có schema (DB dev hiện tại), có lệnh ghi migration mốc là đã áp. Lệnh này không tạo lại bảng.
+- [x] Migration mốc tạo đủ schema trên DB trống theo `apps/backend-dotnet/db/reference-schema.sql`.
+  - Bảng và enum khớp schema gốc.
+  - Index và khóa ngoại khớp schema gốc.
+  - Extension `vector` tồn tại trong `public`.
+- [x] DB đã có schema dùng lệnh ghi nhận migration mốc. Lệnh không tạo lại bảng ứng dụng.
 - [x] Bảng lịch sử migration của EF Core nằm riêng, không đụng `_prisma_migrations`
-- [ ] DB test của integration test tự dựng schema bằng migration EF Core, không cần bản Node
-- [ ] Test so schema do migration EF Core tạo trên DB trống với `reference-schema.sql` (bỏ qua `_prisma_migrations`) và báo mọi khác biệt
+- [x] DB test của integration test tự dựng schema bằng migration EF Core, không cần bản Node.
+- [x] Test so schema migration với `reference-schema.sql`. Test bỏ qua `_prisma_migrations`. Test báo mọi khác biệt.
 - [x] Integration test đọc và ghi thử một bản ghi mỗi module qua EF Core
 - [x] Không port route hay logic nghiệp vụ nào ở task này
 
@@ -53,21 +60,51 @@ Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dot
 
 **Ghi chú 2026-10-05:** người dùng quyết định xóa bản Node trước khi port. Schema gốc nằm ở `reference-schema.sql`. Code Node xem bằng tag `node-backend-final`.
 
+**Ghi nhận schema hiện có:**
+
+Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down` xóa bảng ứng dụng.
+
+1. So schema DB đích với `apps/backend-dotnet/db/reference-schema.sql`.
+   Lệnh ghi nhận chỉ kiểm tra tên bảng, enum và extension.
+   Lệnh không kiểm tra mọi cột hoặc index.
+2. Đặt `DATABASE_URL` tới DB đã có schema đúng.
+3. Chạy `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/backend-dotnet/db/adopt-existing-schema.sql` trong Bash.
+   Dùng `$env:DATABASE_URL` thay cho `"$DATABASE_URL"` khi chạy PowerShell.
+4. Kiểm tra ba bảng lịch sử trong `ef_identity`, `ef_ai_gateway` và `ef_catalog`.
+   Mỗi bảng có một bản ghi `PrismaBaseline`.
+
+**Tạo schema trên DB trống:**
+
+1. Đặt `DATABASE_URL` tới DB trống.
+2. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.Identity --context IdentityDbContext`.
+3. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.AiGateway --context AiGatewayDbContext`.
+4. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.Catalog --context CatalogDbContext`.
+
 **Bằng chứng DN-01 (2026-10-05):**
 
-- `dotnet build Pickory.sln`: thành công, không có warning hoặc error.
-- `dotnet test Pickory.sln --no-build`: 52 test thành công, không có test bị bỏ qua.
-- Phân nhóm .NET: 33 unit test, 16 integration test và 3 architecture test.
-- Test schema dùng `TEST_DATABASE_URL` có đủ năm migration Node. Model khớp 20 bảng ứng dụng, bốn enum và các ràng buộc.
-- Test đọc/ghi kiểm tra toàn bộ bảng của ba module. Giao dịch rollback giữ dữ liệu có sẵn.
-- Migration `PrismaBaseline` của ba module áp dụng thành công trên bản sao schema DB dev.
-- `pg_dump --schema-only`: schema đầy đủ giống nhau trước, sau `Up` và sau `Down`.
-- Phép so tạo trước ba bảng lịch sử. Phép so chỉ bỏ khóa ngẫu nhiên của `\restrict` và `\unrestrict`.
-- Mã SHA-256 (Secure Hash Algorithm, 256 bit) của dump chuẩn hóa: `ec8e1e6bb378f87bbcfb69b4bdb89ec1a104d752e52393d82b6eb33825c60158`.
-- Chương trình thử đọc/ghi ba module xác nhận enum, `jsonb` và thời gian `2026-10-05T07:08:09.1230000Z`, `Kind=Utc`.
+- `pnpm dotnet:build`: thành công, không có warning hoặc error.
+- `pnpm dotnet:test --no-build`: 63 test thành công, không có test bị bỏ qua.
+- Phân nhóm .NET: 33 unit test, 27 integration test và ba architecture test.
+- Fixture reset DB test dưới khóa phiên PostgreSQL. Fixture dùng migration EF Core để dựng schema.
+- Test schema đối chiếu 20 bảng và bốn enum với `reference-schema.sql`.
+- Test schema kiểm tra thứ tự cột, giá trị mặc định và kiểu cột.
+- Test schema kiểm tra index, ràng buộc và hành vi khóa ngoại.
+- Test schema kiểm tra extension `vector` cùng mô tả metadata.
+- Test đọc/ghi kiểm tra toàn bộ bảng của ba module. Giao dịch rollback giữ dữ liệu thử khỏi các test khác.
+- Migration dùng `AlterDatabase` cho enum và extension. Npgsql tự nạp lại cache kiểu sau migration.
+- Lệnh EF Core tạo schema trên DB trống khớp dump của bản tham chiếu đã phục hồi.
+- Phép so bỏ `_prisma_migrations` và ba schema lịch sử EF Core.
+- Phép so chỉ chuẩn hóa xuống dòng cùng khóa ngẫu nhiên của `\restrict` và `\unrestrict`.
+- Mã SHA-256 (Secure Hash Algorithm, 256 bit) của dump: `ef11b74b39d5a0a0441103b58d5f35182c5572b090ea2cc6c1e8057b4fea55e3`.
+- Lệnh `Down` thật xóa 20 bảng, bốn enum và `vector` trên DB thử.
+- Lệnh `Up` sau `Down` khôi phục dump đúng bản tham chiếu.
+- Script ghi nhận chạy hai lần trên bản sao DB dev. Dump schema cùng dữ liệu không đổi ngoài lịch sử EF Core.
+- Lệnh EF Core sau ghi nhận báo không có migration cần áp dụng cho cả ba module.
+- Test ghi nhận từ chối thiếu bảng, sai enum hoặc thiếu `vector`.
+- Test khóa phiên từ chối tiến trình cạnh tranh trước bước reset DB.
 - `pnpm lint` và `pnpm typecheck`: thành công.
-- `pnpm test`: 472 test thành công, 4 test bị bỏ qua; 64 tệp thành công, 1 tệp bị bỏ qua.
-- Code Node, frontend và test cũ không đổi. Chương trình thử cùng DB bản sao đã được xóa.
+- `pnpm test`: 95 test thành công, 11 tệp thành công, không có test bị bỏ qua.
+- Ba DB thử thuộc DN-01 đã được xóa sau phép so. DB dev không bị thay đổi.
 
 **Phụ thuộc:** DN-00 · **Quy mô:** M
 

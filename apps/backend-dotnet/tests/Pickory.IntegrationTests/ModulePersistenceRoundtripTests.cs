@@ -9,6 +9,7 @@ using Xunit;
 
 namespace Pickory.IntegrationTests;
 
+[Collection(IntegrationDatabaseCollection.Name)]
 public sealed class ModulePersistenceRoundtripTests(PickoryWebApplicationFactory factory)
     : IClassFixture<PickoryWebApplicationFactory>
 {
@@ -18,11 +19,10 @@ public sealed class ModulePersistenceRoundtripTests(PickoryWebApplicationFactory
     [Fact]
     public async Task Identity_WritesAndFreshlyReadsEveryTableIncludingEnumsJsonAndNullableUtcDates()
     {
-        // DI phải chọn DB test đã có schema Prisma trước khi bắt đầu giao dịch ghi dữ liệu.
+        // Đăng ký dịch vụ phải chọn schema do Entity Framework Core tạo trước giao dịch ghi dữ liệu.
         await using var scope = factory.Services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
         DotnetSchemaIntegrationTests.AssertTestConnection(context);
-        await PrismaDatabaseSchema.RequireMigratedSchemaAsync(context);
         // Giao dịch giữ toàn bộ dữ liệu thử nghiệm để rollback khi assertion lỗi.
         await using var transaction = await context.Database.BeginTransactionAsync();
         using var before = JsonDocument.Parse("{\"name\":\"old\",\"enabled\":false}");
@@ -127,7 +127,6 @@ public sealed class ModulePersistenceRoundtripTests(PickoryWebApplicationFactory
         await using var scope = factory.Services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
         DotnetSchemaIntegrationTests.AssertTestConnection(context);
-        await PrismaDatabaseSchema.RequireMigratedSchemaAsync(context);
         // Giao dịch giữ toàn bộ dữ liệu thử nghiệm để rollback khi assertion lỗi.
         await using var transaction = await context.Database.BeginTransactionAsync();
         using var attributes = JsonDocument.Parse("[{\"name\":\"memory\",\"required\":true}]");
@@ -252,7 +251,6 @@ public sealed class ModulePersistenceRoundtripTests(PickoryWebApplicationFactory
         await using var scope = factory.Services.CreateAsyncScope();
         var context = scope.ServiceProvider.GetRequiredService<AiGatewayDbContext>();
         DotnetSchemaIntegrationTests.AssertTestConnection(context);
-        await PrismaDatabaseSchema.RequireMigratedSchemaAsync(context);
         // Giao dịch giữ toàn bộ dữ liệu thử nghiệm để rollback khi assertion lỗi.
         await using var transaction = await context.Database.BeginTransactionAsync();
         var uniqueSuffix = Guid.NewGuid().ToString("N");

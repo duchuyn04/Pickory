@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Pickory.IntegrationTests;
 
-internal static class PrismaDatabaseSchema
+internal static class ApplicationDatabaseSchema
 {
     internal static readonly string[] IdentityTables =
     [
@@ -26,38 +26,6 @@ internal static class PrismaDatabaseSchema
 
     internal static readonly string[] AiGatewayTables = ["ai_embedding_cache", "ai_settings", "ai_usage_logs"];
 
-    internal static async Task RequireMigratedSchemaAsync(DbContext context)
-    {
-        // Thiếu bảng phải báo điều kiện tiên quyết, không tự thay đổi schema do Prisma quản lý.
-        var actual = await ReadAsync(context);
-        var missing = IdentityTables.Concat(CatalogTables).Concat(AiGatewayTables)
-            .Where(table => !actual.ContainsKey($"table:public.{table}")).ToArray();
-        Assert.True(missing.Length == 0,
-            "TEST_DATABASE_URL must point to a database already migrated by Prisma through " +
-            "20261005090100_catalog_indexes. Missing public tables: " + string.Join(", ", missing) +
-            ". These tests never create or migrate the Prisma schema.");
-
-        // Lịch sử Prisma phân biệt schema đã migrate với schema được dựng thủ công hoặc còn thiếu migration.
-        var hasPrismaHistory = false;
-        await ReadRowsAsync(context, "SELECT to_regclass('public._prisma_migrations') IS NOT NULL",
-            reader => hasPrismaHistory = reader.GetBoolean(0));
-        Assert.True(hasPrismaHistory,
-            "TEST_DATABASE_URL must contain Prisma migration history. Run Prisma migrations on the test database first.");
-        var appliedMigrations = new HashSet<string>(StringComparer.Ordinal);
-        await ReadRowsAsync(context, """
-            SELECT migration_name FROM public._prisma_migrations
-            WHERE finished_at IS NOT NULL AND rolled_back_at IS NULL
-            """, reader => appliedMigrations.Add(reader.GetString(0)));
-        string[] requiredMigrations =
-        [
-            "20261004071944", "20261005080000_ai_gateway",
-            "20261005090000_catalog", "20261005090100_catalog_indexes"
-        ];
-        var missingMigrations = requiredMigrations.Where(name => !appliedMigrations.Contains(name)).ToArray();
-        Assert.True(missingMigrations.Length == 0,
-            "TEST_DATABASE_URL is not fully migrated by Prisma. Missing successful migrations: " +
-            string.Join(", ", missingMigrations) + ". No migrations are applied by these tests.");
-    }
 
     internal static Dictionary<string, string> ReadModel(IEnumerable<DbContext> contexts)
     {
@@ -135,32 +103,38 @@ internal static class PrismaDatabaseSchema
         return entries;
     }
 
-    internal static async Task<Dictionary<string, string>> ReadAsync(DbContext context)
+    internal static async Task<Dictionary<string, string>> ReadAsync(DbContext context, string schema = "public")
     {
         var entries = new Dictionary<string, string>(StringComparer.Ordinal);
-        // Các bảng Prisma thuộc `public`. Lịch sử EF nằm trong schema riêng của từng module.
+        // Lịch sử Entity Framework Core tách khỏi schema ứng dụng. Bản tham chiếu dùng schema riêng trong cùng giao dịch.
         await ReadRowsAsync(context, """
             SELECT n.nspname, c.relname
             FROM pg_catalog.pg_class c
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-            WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+            WHERE n.nspname = @schema AND c.relkind IN ('r', 'p')
               AND c.relname <> '_prisma_migrations'
             ORDER BY c.relname
-            """, reader => entries.Add($"table:{reader.GetString(0)}.{reader.GetString(1)}", ""));
+            """, reader => entries.Add($"table:public.{reader.GetString(1)}", ""), schema);
 
         // `format_type` giữ độ chính xác thời gian, phân biệt mảng, enum và `jsonb`.
         await ReadRowsAsync(context, """
             SELECT n.nspname, c.relname, a.attname, pg_catalog.format_type(a.atttypid, a.atttypmod),
-                   NOT a.attnotnull, pg_catalog.pg_get_expr(d.adbin, d.adrelid)
+                   NOT a.attnotnull, pg_catalog.pg_get_expr(d.adbin, d.adrelid), a.attnum
             FROM pg_catalog.pg_attribute a
             JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
             JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
             LEFT JOIN pg_catalog.pg_attrdef d ON d.adrelid = c.oid AND d.adnum = a.attnum
-            WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p')
+            WHERE n.nspname = @schema AND c.relkind IN ('r', 'p')
               AND c.relname <> '_prisma_migrations' AND a.attnum > 0 AND NOT a.attisdropped
             ORDER BY c.relname, a.attnum
-            """, reader => entries.Add($"column:{reader.GetString(0)}.{reader.GetString(1)}.{reader.GetString(2)}",
-                ColumnSignature(reader.GetString(3), reader.GetBoolean(4), reader.IsDBNull(5) ? null : reader.GetString(5))));
+            """, reader =>
+        {
+            var columnName = $"public.{reader.GetString(1)}.{reader.GetString(2)}";
+            entries.Add($"column:{columnName}",
+                ColumnSignature(Canonicalize(reader.GetString(3), schema), reader.GetBoolean(4),
+                    reader.IsDBNull(5) ? null : Canonicalize(reader.GetString(5), schema)));
+            entries.Add($"ordinal:{columnName}", reader.GetInt16(6).ToString(CultureInfo.InvariantCulture));
+        }, schema);
 
         // Thứ tự `indkey` phát hiện các cột bị đảo trong chỉ mục tổng hợp.
         await ReadRowsAsync(context, """
@@ -180,12 +154,24 @@ internal static class PrismaDatabaseSchema
             JOIN pg_catalog.pg_class i ON i.oid = ix.indexrelid
             JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace
             JOIN pg_catalog.pg_am am ON am.oid = i.relam
-            WHERE n.nspname = 'public' AND t.relname <> '_prisma_migrations'
+            WHERE n.nspname = @schema AND t.relname <> '_prisma_migrations'
             ORDER BY t.relname, i.relname
-            """, reader => entries.Add($"index:{reader.GetString(0)}.{reader.GetString(1)}.{reader.GetString(2)}",
+            """, reader => entries.Add($"index:public.{reader.GetString(1)}.{reader.GetString(2)}",
                 IndexSignature(reader.GetBoolean(3), reader.GetString(4), reader.GetFieldValue<string[]>(5),
-                    reader.GetFieldValue<bool[]>(6), reader.IsDBNull(7) ? null : reader.GetString(7),
-                    reader.GetFieldValue<string[]>(8))));
+                    reader.GetFieldValue<bool[]>(6), reader.IsDBNull(7) ? null : Canonicalize(reader.GetString(7), schema),
+                    reader.GetFieldValue<string[]>(8))), schema);
+
+        // Định nghĩa gốc giữ opclass và thứ tự `NULL` mà chữ ký model không biểu diễn.
+        await ReadRowsAsync(context, """
+            SELECT t.relname, i.relname, pg_get_indexdef(i.oid)
+            FROM pg_index ix
+            JOIN pg_class t ON t.oid = ix.indrelid
+            JOIN pg_class i ON i.oid = ix.indexrelid
+            JOIN pg_namespace n ON n.oid = t.relnamespace
+            WHERE n.nspname = @schema AND t.relname <> '_prisma_migrations'
+            ORDER BY t.relname, i.relname
+            """, reader => entries.Add($"definition:index:public.{reader.GetString(0)}.{reader.GetString(1)}",
+                Canonicalize(reader.GetString(2), schema)), schema);
 
         // So sánh tên, cột và hành vi ràng buộc để phát hiện sai lệch có cùng số lượng.
         await ReadRowsAsync(context, """
@@ -201,11 +187,11 @@ internal static class PrismaDatabaseSchema
             JOIN pg_catalog.pg_namespace n ON n.oid = t.relnamespace
             LEFT JOIN pg_catalog.pg_class pt ON pt.oid = con.confrelid
             LEFT JOIN pg_catalog.pg_namespace pn ON pn.oid = pt.relnamespace
-            WHERE n.nspname = 'public' AND t.relname <> '_prisma_migrations' AND con.contype IN ('p', 'u', 'f', 'c')
+            WHERE n.nspname = @schema AND t.relname <> '_prisma_migrations' AND con.contype IN ('p', 'u', 'f', 'c')
             ORDER BY t.relname, con.conname
             """, reader =>
         {
-            var constraintName = $"{reader.GetString(0)}.{reader.GetString(1)}.{reader.GetString(2)}";
+            var constraintName = $"public.{reader.GetString(1)}.{reader.GetString(2)}";
             var columns = string.Join(",", reader.GetFieldValue<string[]>(4));
             switch (reader.GetString(3))
             {
@@ -216,19 +202,16 @@ internal static class PrismaDatabaseSchema
                     entries.Add($"unique:{constraintName}", columns);
                     break;
                 case "f":
-                    // EF không biểu diễn `ON UPDATE`; kiểm tra trực tiếp hợp đồng `CASCADE` của migration Prisma.
-                    Assert.True(reader.GetString(9) == "c",
-                        $"Foreign key {constraintName}: Prisma requires ON UPDATE CASCADE, actual action is [{reader.GetString(9)}].");
                     entries.Add($"foreign:{constraintName}",
-                        $"{columns}->{reader.GetString(5)}.{reader.GetString(6)}" +
+                        $"{columns}->{(reader.GetString(5) == schema ? "public" : reader.GetString(5))}.{reader.GetString(6)}" +
                         $"({string.Join(",", reader.GetFieldValue<string[]>(7))})" +
-                        $";delete={reader.GetString(8)}");
+                        $";delete={reader.GetString(8)};update={reader.GetString(9)}");
                     break;
                 case "c":
                     entries.Add($"check:{constraintName}", NormalizeCheck(reader.GetString(10)));
                     break;
             }
-        });
+        }, schema);
 
         // `enumsortorder` quyết định thứ tự so sánh các nhãn enum trong PostgreSQL.
         await ReadRowsAsync(context, """
@@ -236,14 +219,41 @@ internal static class PrismaDatabaseSchema
             FROM pg_catalog.pg_type t
             JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
             JOIN pg_catalog.pg_enum e ON e.enumtypid = t.oid
-            WHERE n.nspname = 'public'
+            WHERE n.nspname = @schema
             GROUP BY n.nspname, t.typname ORDER BY t.typname
             """, reader =>
         {
             var labels = reader.GetFieldValue<string[]>(2);
-            entries.Add($"enum:{reader.GetString(0)}.{reader.GetString(1)}",
+            entries.Add($"enum:public.{reader.GetString(1)}",
                 string.Join(",", labels));
-        });
+        }, schema);
+        // Schema và mô tả extension thuộc hợp đồng dump, không suy ra từ model Entity Framework Core.
+        await ReadRowsAsync(context, """
+            SELECT e.extname, n.nspname, COALESCE(obj_description(e.oid, 'pg_extension'), '')
+            FROM pg_extension e JOIN pg_namespace n ON n.oid = e.extnamespace
+            WHERE e.extname <> 'plpgsql' ORDER BY e.extname
+            """, reader => entries.Add($"extension:{reader.GetString(0)}",
+                $"schema={reader.GetString(1)};comment={reader.GetString(2)}"), schema);
+        // Mô tả bảng, cột, kiểu và schema không được mất khi chuyển quyền sở hữu migration.
+        await ReadRowsAsync(context, """
+            SELECT 'schema:public', COALESCE(obj_description(n.oid, 'pg_namespace'), '')
+            FROM pg_namespace n WHERE n.nspname = @schema
+            UNION ALL
+            SELECT 'comment:table:public.' || c.relname, COALESCE(obj_description(c.oid, 'pg_class'), '')
+            FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            WHERE n.nspname = @schema AND c.relkind IN ('r', 'p') AND c.relname <> '_prisma_migrations'
+            UNION ALL
+            SELECT 'comment:column:public.' || c.relname || '.' || a.attname,
+                   COALESCE(col_description(c.oid, a.attnum), '')
+            FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+            JOIN pg_attribute a ON a.attrelid = c.oid
+            WHERE n.nspname = @schema AND c.relkind IN ('r', 'p') AND c.relname <> '_prisma_migrations'
+              AND a.attnum > 0 AND NOT a.attisdropped
+            UNION ALL
+            SELECT 'comment:enum:public.' || t.typname, COALESCE(obj_description(t.oid, 'pg_type'), '')
+            FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
+            WHERE n.nspname = @schema AND t.typtype = 'e'
+            """, reader => entries.Add(reader.GetString(0), reader.GetString(1)), schema);
         return entries;
     }
 
@@ -265,25 +275,33 @@ internal static class PrismaDatabaseSchema
             }
             if (expectedValue != actualValue)
             {
-                differences.Add($"Different {key}: EF=[{expectedValue}], PostgreSQL=[{actualValue}]");
+                differences.Add($"Different {key}: expected=[{expectedValue}], actual=[{actualValue}]");
             }
         }
-        Assert.True(differences.Count == 0, "EF/Prisma schema differences:\n" + string.Join("\n", differences));
+        Assert.True(differences.Count == 0, "Application schema differences:\n" + string.Join("\n", differences));
     }
 
-    private static async Task ReadRowsAsync(DbContext context, string sql, Action<DbDataReader> addRow)
+    private static async Task ReadRowsAsync(DbContext context, string sql, Action<DbDataReader> addRow, string schema)
     {
-        // Kết nối của context dùng DB test đã được tiêm, không chọn DB phát triển.
+        // Kết nối của context dùng DB test dưới khóa collection.
         await context.Database.OpenConnectionAsync();
         await using var command = context.Database.GetDbConnection().CreateCommand();
         command.CommandText = sql;
         command.Transaction = context.Database.CurrentTransaction?.GetDbTransaction();
+        var parameter = command.CreateParameter();
+        parameter.ParameterName = "schema";
+        parameter.Value = schema;
+        command.Parameters.Add(parameter);
         await using var reader = await command.ExecuteReaderAsync();
         while (await reader.ReadAsync())
         {
             addRow(reader);
         }
     }
+
+    private static string Canonicalize(string value, string schema)
+        => value.Replace($"\"{schema}\".", "", StringComparison.Ordinal)
+            .Replace($"{schema}.", "", StringComparison.Ordinal);
 
     private static string ColumnSignature(string storeType, bool nullable, string? defaultSql)
         => $"type={storeType.Replace("\"", "", StringComparison.Ordinal)};nullable={nullable};default={NormalizeDefault(defaultSql)}";

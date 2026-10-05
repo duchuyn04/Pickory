@@ -18,4 +18,9 @@
     <ProjectReference Include="..\..\src\Pickory.Modules.AiGateway\Pickory.Modules.AiGateway.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <None Include="..\..\db\reference-schema.sql" Link="db\reference-schema.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\db\adopt-existing-schema.sql" Link="db\adopt-existing-schema.sql" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

@@ -16,7 +16,7 @@ namespace Pickory.Modules.Identity.Persistence.Migrations
     [Migration("20261005125639_PrismaBaseline")]
     partial class PrismaBaseline
     {
-        // Giữ model đích đầy đủ dù migration mốc không tạo bảng ứng dụng.
+        // Giữ model đích để migration tiếp theo so sánh với schema của mốc đã tạo.
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618

@@ -20,6 +20,8 @@ namespace Pickory.Modules.AiGateway.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            // Giữ `vector` trong ảnh chụp để lần so model sau mốc không báo thiếu extension.
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "public", "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Pickory.Modules.AiGateway.Persistence.AiEmbeddingCache", b =>

@@ -15,7 +15,7 @@ namespace Pickory.Modules.AiGateway.Persistence.Migrations
     [Migration("20261005125642_PrismaBaseline")]
     partial class PrismaBaseline
     {
-        // Giữ model đích đầy đủ dù migration mốc không tạo bảng ứng dụng.
+        // Giữ model đích để migration tiếp theo so sánh với schema của mốc đã tạo.
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
@@ -23,6 +23,8 @@ namespace Pickory.Modules.AiGateway.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "10.0.12")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            // Giữ `vector` trong model đích để migration sau mốc nhận biết extension đã tồn tại.
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "public", "vector");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Pickory.Modules.AiGateway.Persistence.AiEmbeddingCache", b =>

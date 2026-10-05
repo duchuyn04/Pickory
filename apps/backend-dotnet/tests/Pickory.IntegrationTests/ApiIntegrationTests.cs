@@ -7,6 +7,7 @@ using Xunit;
 namespace Pickory.IntegrationTests;
 
 // Kiểm tra toàn bộ hợp đồng API và hành vi middleware qua WebApplicationFactory.
+[Collection(IntegrationDatabaseCollection.Name)]
 public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
 {
     private readonly HttpClient _client;

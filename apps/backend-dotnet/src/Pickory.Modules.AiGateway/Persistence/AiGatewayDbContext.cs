@@ -24,7 +24,10 @@ public sealed class AiGatewayDbContext(DbContextOptions<AiGatewayDbContext> opti
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Giữ kiểu số thực của Node để chi phí không bị đổi sang số nguyên hoặc số thập phân.
+        // Ghi extension vào model để migration sau mốc không coi `vector` là thành phần chưa được tạo.
+        modelBuilder.HasPostgresExtension(schema: "public", name: "vector");
+
+        // Giữ kiểu số thực theo `reference-schema.sql` để chi phí không bị đổi sang số nguyên hoặc số thập phân.
         modelBuilder.Entity<AiUsageLog>(entity =>
         {
             entity.ToTable("ai_usage_logs");
