@@ -1,5 +1,8 @@
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
+using Pickory.Modules.Identity.Actors;
+using Pickory.Modules.Identity.Features.GetMe;
 using Pickory.Modules.Identity.Persistence;
 
 namespace Pickory.Modules.Identity;
@@ -15,9 +18,15 @@ public static class IdentityModule
         return services;
     }
 
+    public static IApplicationBuilder UseIdentityActor(this IApplicationBuilder app)
+    {
+        // Mọi route cần actor, kể cả route của module khác. Middleware này phải đứng trước mọi route.
+        return app.UseMiddleware<ActorMiddleware>();
+    }
+
     public static IEndpointRouteBuilder MapIdentityEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        // Module chưa có route ở bước này. Task port tính năng gắn route của module tại đây.
+        GetMeEndpoint.Map(endpoints);
         return endpoints;
     }
 }

@@ -169,7 +169,10 @@ Pickory.Modules.Identity/
 ```
 
 - `<Module>Module.cs` ở gốc project module là điểm đăng ký duy nhất của module.
-- `<Module>Module.cs` có hàm `Add<Module>Module` và hàm `Map<Module>Endpoints`. `Program.cs` chỉ gọi hai hàm này.
+- `<Module>Module.cs` có hàm `Add<Module>Module` và hàm `Map<Module>Endpoints`.
+- Module có middleware chạy cho mọi request thêm hàm `Use<TênMiddleware>`, ví dụ `UseIdentityActor`.
+- `Program.cs` chỉ gọi các hàm công khai của `<Module>Module.cs`.
+- Project `Pickory.Modules.<Module>.Contracts` chứa kiểu mà module khác được dùng, ví dụ `Actor` của identity.
 - `Features/<TínhNăng>/` chứa endpoint, request, validator và handler của một tính năng.
 - `Entities/` chứa entity và enum. Tên file trùng tên kiểu.
 - `Persistence/` chứa `DbContext`, factory thiết kế, `Configurations/` và `Migrations/`.
@@ -196,7 +199,7 @@ Mỗi task phải qua build, test .NET và lint của repo trước khi commit.
 |---|---|---|
 | DN-00 | Dựng solution, `/api/health`, cấu hình, định dạng lỗi chung, log, hạ tầng test, test kiến trúc. Cập nhật mục Tech Stack của `SPEC.md`. | `dotnet build`, `dotnet test`, `/api/health` trả 200 |
 | DN-01 | Model EF Core cho cả 3 module và migration mốc | Migration mốc chạy trên DB hiện có, không đổi schema |
-| DN-02 | `identity`: actor middleware, cookie, phiên, kiểm tra `Origin` | Test hợp đồng cookie và phiên giữa hai backend |
+| DN-02 | `identity`: actor middleware, cookie, phiên, kiểm tra `Origin`, `GET /api/me` | Test hợp đồng cookie và phiên theo bản Node. Token băm SHA-256 khớp bản Node. |
 | DN-03 | `identity`: đăng ký, đăng nhập, Google OAuth, quên và đặt lại mật khẩu, tài khoản | Hash Argon2 cũ đăng nhập được |
 | DN-04 | `identity`: nhân viên, role, khách hàng, nhật ký thao tác | Ma trận quyền giống bản Node |
 | DN-05 | Chuyển route `identity` sang .NET qua Vite proxy | E2E Playwright của identity xanh. Chạy lại test thủ công identity. |

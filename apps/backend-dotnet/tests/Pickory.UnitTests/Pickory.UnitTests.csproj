@@ -10,6 +10,8 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Pickory.Shared\Pickory.Shared.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Api\Pickory.Api.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.Identity\Pickory.Modules.Identity.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.Identity.Contracts\Pickory.Modules.Identity.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Hosting;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Shared.Configuration;
 using Xunit;
@@ -40,7 +41,10 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
     public async Task PostHealth_SaiPhuongThucHttp_TraVeHttp404VaMaNotFound()
     {
         // Gửi yêu cầu POST tới endpoint vốn chỉ chấp nhận phương thức GET.
-        var response = await _client.PostAsync("/api/health", null);
+        // Request ghi cần `Origin` của web để qua bước chống CSRF, giống trình duyệt thật.
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/health");
+        request.Headers.Add("Origin", "http://localhost:5173");
+        var response = await _client.SendAsync(request);
 
         // Khẳng định mã trạng thái là 404 Not Found thay vì 405 rỗng.
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
@@ -69,6 +73,24 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
 
         Assert.Equal("NOT_FOUND", error.GetProperty("code").GetString());
         Assert.Equal("Không tìm thấy tài nguyên.", error.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    // Lỗi ném trong pipeline của app phải thành JSON ở Development. Trang lỗi dev từng trả HTML 500 thay cho JSON.
+    public async Task LoiTrongPipelineCuaApp_OMoiTruongDevelopment_TraJsonKhongTraTrangLoiDev()
+    {
+        var environment = (IHostEnvironment)_factory.Services.GetService(typeof(IHostEnvironment))!;
+        Assert.True(environment.IsDevelopment());
+
+        // Actor middleware nằm trong pipeline của app. Request ghi từ nguồn lạ làm middleware ném `AppException`.
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/health");
+        request.Headers.Add("Origin", "https://malicious-site.com");
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        Assert.Equal("application/json", response.Content.Headers.ContentType?.MediaType);
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.Equal("FORBIDDEN_ORIGIN", document.RootElement.GetProperty("error").GetProperty("code").GetString());
     }
 
     [Fact]

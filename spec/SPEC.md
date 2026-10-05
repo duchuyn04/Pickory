@@ -81,6 +81,7 @@ apps/
         Features/<TínhNăng>/ → endpoint, request, validator, handler của một tính năng
         Entities/         → một entity hoặc một enum trong một file
         Persistence/      → DbContext, factory thiết kế, Configurations/, Migrations/
+      Pickory.Modules.<Module>.Contracts/ → kiểu module khác được dùng, ví dụ Actor của identity
     tests/
       Pickory.UnitTests/  → theo đường dẫn code được test, ví dụ Shared/Persistence/
       Pickory.IntegrationTests/ → Infrastructure/, Database/, Api/

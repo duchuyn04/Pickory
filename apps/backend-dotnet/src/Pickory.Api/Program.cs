@@ -32,9 +32,6 @@ builder.WebHost.ConfigureKestrel(options =>
     options.Limits.MaxRequestBodySize = 1024 * 1024;
 });
 
-// Đăng ký bộ lọc khởi động gắn ExceptionHandlingMiddleware ở lớp ngoài cùng của pipeline.
-builder.Services.AddTransient<IStartupFilter, ExceptionHandlingStartupFilter>();
-
 // Đăng ký các dịch vụ nền tảng dùng chung gồm bộ điều phối sự kiện.
 builder.Services.AddSharedInfrastructure();
 
@@ -51,6 +48,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 var app = builder.Build();
+
+// Middleware lỗi đứng sau trang lỗi dev của môi trường Development. Lỗi từ middleware và route luôn thành JSON `{ error }` như bản Node.
+app.UseMiddleware<ExceptionHandlingMiddleware>();
+
+// Actor middleware kiểm tra nguồn và xác định người gửi. Middleware phải chạy trước mọi route, kể cả `/api/health`.
+app.UseIdentityActor();
 
 // Endpoint kiểm tra sức khỏe của dịch vụ phục vụ giám sát và kiểm thử.
 app.MapGet("/api/health", () => Results.Ok(new ApiResponse<object>(new { status = "ok" })));

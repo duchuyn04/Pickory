@@ -3,6 +3,7 @@ using FluentValidation.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
+using Pickory.Api.Middleware;
 using Pickory.Shared.Exceptions;
 using Pickory.Shared.Http;
 using Pickory.Shared.Json;
@@ -16,6 +17,9 @@ public class TestEndpointsStartupFilter : IStartupFilter
     {
         return app =>
         {
+            // Route kiểm thử nằm ngoài pipeline của app. Bộ lọc gắn cùng middleware lỗi để route kiểm thử trả JSON lỗi như route thật.
+            app.UseMiddleware<ExceptionHandlingMiddleware>();
+
             // Gắn middleware tiếp nhận các route kiểm thử đặc thù trước khi chuyển luồng tới endpoint chính.
             app.Use(async (context, nextMiddleware) =>
             {

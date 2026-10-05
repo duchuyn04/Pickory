@@ -161,6 +161,48 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 
 **Phụ thuộc:** DN-01 · **Quy mô:** M
 
-## DN-02 đến DN-08
+## DN-02: Actor, cookie, phiên và kiểm tra Origin của identity
+
+**Mô tả:** Port actor middleware của bản Node. Mã nguồn tham chiếu là `apps/backend/src/modules/identity/security/middleware.ts` tại tag `node-backend-final`. Middleware chạy trước mọi route và gắn actor cho request. Task này thêm route `GET /api/me`.
+
+**Tiêu chí nghiệm thu:**
+
+- [x] Project `Pickory.Modules.Identity.Contracts` chứa `Actor`, `ConsentState`, danh mục quyền và bộ lọc quyền. Module khác chỉ đọc actor qua project này.
+- [x] Request `POST`, `PUT`, `PATCH` hoặc `DELETE` có nguồn khác `WEB_ORIGIN` nhận 403 `FORBIDDEN_ORIGIN`. Request `GET` không qua bước kiểm tra này.
+- [x] Middleware dùng `Referer` khi thiếu `Origin`. Request ghi thiếu cả hai header nhận 403.
+- [x] Thông báo lỗi giống bản Node cho ba trường hợp: `Origin` sai định dạng, `Referer` sai định dạng, nguồn bị thiếu hoặc khác.
+- [x] Request chưa có `pk_anon` nhận cookie chứa UUID v4.
+  - Cookie có `HttpOnly`, `SameSite=Lax`, `Path=/` và thời hạn 1 năm.
+  - `Secure` chỉ bật ở môi trường production.
+- [x] Middleware băm token `pk_session` bằng SHA-256 dạng hex. Phiên do bản Node tạo vẫn đọc được.
+- [x] Phiên hợp lệ khi chưa hết hạn. Tài khoản bị khóa hoặc bị xóa không dùng được phiên.
+- [x] Phiên khách hàng còn dưới 7 ngày được gia hạn tới 30 ngày sau thời điểm request. API gửi lại `pk_session` với thời hạn 30 ngày. Phiên nhân viên không gia hạn.
+- [x] Middleware xóa phiên hết hạn khỏi DB. API xóa cookie `pk_session` khi phiên không dùng được.
+- [x] Quyền của actor là hợp quyền của mọi role. Role `admin` có mọi quyền trong danh mục. Middleware bỏ qua quyền không có trong danh mục.
+- [x] Consent lấy bản ghi mới nhất theo `userId` hoặc `anonymousId`. Khi không có bản ghi, mọi lựa chọn đều tắt.
+- [x] `GET /api/me` trả `anonymousId`, `userId`, `email`, `name`, `phone`, `kind`, `roles`, `permissions` và `consent` như bản Node.
+- [x] `RequireAuth` trả 401 `UNAUTHORIZED` cho khách. `RequireStaff` trả 403 `FORBIDDEN` cho khách hàng. `RequirePermission` yêu cầu đủ mọi quyền được liệt kê.
+- [x] Test API cũ gửi `POST /api/health` kèm `Origin` hợp lệ. Bản Node cũng trả 403 khi request ghi thiếu `Origin`.
+
+**Kiểm tra:** `dotnet build` không có warning. `dotnet test` xanh. `pnpm lint && pnpm typecheck && pnpm test` xanh.
+
+**Bằng chứng DN-02 (2026-10-05):**
+
+- `dotnet build`: thành công, không có warning hoặc error.
+- `dotnet test`: 132 test thành công. Trước task có 63 test.
+- Phân nhóm .NET: 73 unit test, 56 integration test và ba architecture test.
+- Test thử phá code bằng ba lỗi cố ý. Ba lỗi gồm bỏ kiểm tra nguồn, gia hạn phiên nhân viên và cho tài khoản bị khóa dùng phiên.
+- Test tích hợp báo 9 lỗi với ba lỗi cố ý. Code đã khôi phục sau phép thử.
+- `dotnet ef migrations has-pending-model-changes` báo không có thay đổi cho ba `DbContext`.
+- Task sửa một lỗi của DN-00. Trang lỗi dev từng chặn JSON lỗi của route ở môi trường Development.
+- `Program.cs` gắn `ExceptionHandlingMiddleware` trong pipeline của app. Route test gắn cùng middleware qua `TestEndpointsStartupFilter`.
+- Test tái hiện lỗi này báo 500 khi bỏ bản sửa. Test báo 403 JSON khi có bản sửa.
+- Test bộ lọc quyền trên route báo 5 lỗi khi bộ lọc không gọi `ActorAuthorization`.
+- `pnpm lint` và `pnpm typecheck`: thành công.
+- `pnpm test`: 95 test thành công.
+
+**Phụ thuộc:** DN-01R · **Quy mô:** M
+
+## DN-03 đến DN-08
 
 Viết tiêu chí chi tiết khi bắt đầu từng task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.
