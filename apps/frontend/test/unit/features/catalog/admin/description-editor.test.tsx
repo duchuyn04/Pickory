@@ -290,13 +290,30 @@ describe('DescriptionEditor', () => {
 
   it('thanh công cụ tuân thủ mẫu ARIA toolbar với roving tabindex và phím điều hướng', async () => {
     // Đảm bảo người dùng bàn phím duyệt tuần tự giữa các nút theo chuẩn WAI-ARIA Toolbar.
+    let editorInstance: Editor | null = null;
     await act(async () => {
       root.render(
         <StrictMode>
-          <DescriptionEditor />
+          <DescriptionEditor
+            onEditorReady={(editor) => {
+              editorInstance = editor;
+            }}
+          />
         </StrictMode>,
       );
     });
+
+    // Kích hoạt lịch sử thao tác để các nút hành động đều ở trạng thái sẵn sàng.
+    if (editorInstance) {
+      const editor = editorInstance as unknown as Editor;
+      await act(async () => {
+        const { closeHistory } = await import('@tiptap/pm/history');
+        editor.commands.insertContent(' bước một');
+        editor.view.dispatch(closeHistory(editor.state.tr));
+        editor.commands.insertContent(' bước hai');
+        editor.commands.undo();
+      });
+    }
 
     const buttons = Array.from(
       container.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button'),
@@ -418,11 +435,19 @@ describe('DescriptionEditor', () => {
     const editor = editorInstance as unknown as Editor;
     expect(editor.isEditable).toBe(true);
 
+    // Kích hoạt lịch sử thao tác để chứng minh trạng thái khi chưa khóa toàn bộ thanh công cụ.
+    await act(async () => {
+      const { closeHistory } = await import('@tiptap/pm/history');
+      editor.commands.insertContent(' bước một');
+      editor.view.dispatch(closeHistory(editor.state.tr));
+      editor.commands.insertContent(' bước hai');
+      editor.commands.undo();
+    });
+
     const buttonsBefore = Array.from(
       container.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button'),
     );
     expect(buttonsBefore.some((b) => b.disabled)).toBe(false);
-
     // Chuyển sang trạng thái disabled = true.
     await rerender(true);
     expect(editor.isEditable).toBe(false);
@@ -525,5 +550,140 @@ describe('DescriptionEditor', () => {
 
     const parseResult = descriptionSchema.safeParse(outputJson);
     expect(parseResult.success).toBe(true);
+  });
+
+  it('focus vào editor thì khung bao ngoài đổi viền sang màu brand, blur thì trở lại viền thường, và khi có lỗi thì viền đỏ chiếm ưu tiên', async () => {
+    // Đảm bảo hiển thị vòng nét tiêu điểm trực quan theo tiêu chuẩn tiếp cận WCAG 2.4.7.
+    let editorInstance: Editor | null = null;
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor
+            onEditorReady={(editor) => {
+              editorInstance = editor;
+            }}
+          />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+
+    const getWrapper = () =>
+      container.querySelector<HTMLDivElement>('[data-testid="description-editor-wrapper"]');
+    expect(getWrapper()).not.toBeNull();
+
+    // Kiểm tra trạng thái bình thường chưa nhận tiêu điểm.
+    expect(getWrapper()?.style.borderColor).toBe('var(--color-border)');
+
+    // Focus vào editor để kích hoạt viền màu thương hiệu.
+    await act(async () => {
+      editor.commands.focus();
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    expect(getWrapper()?.style.borderColor).toBe('var(--color-brand)');
+
+    // Blur khỏi editor để đưa viền về trạng thái thông thường.
+    await act(async () => {
+      editor.commands.blur();
+      await new Promise((r) => setTimeout(r, 20));
+    });
+
+    expect(getWrapper()?.style.borderColor).toBe('var(--color-border)');
+
+    // Khi có lỗi xác thực, viền màu đỏ cảnh báo phải có độ ưu tiên cao hơn viền focus.
+    const longText = 'x'.repeat(DESCRIPTION_MAX_TEXT_LENGTH + 5);
+    await act(async () => {
+      editor.commands.setContent(`<p>${longText}</p>`);
+      editor.commands.focus();
+    });
+
+    expect(getWrapper()?.style.borderColor).toBe('var(--color-danger)');
+  });
+
+  it('editor mới mở thì hai nút Hoàn tác và Làm lại bị tắt, gõ chữ thì Hoàn tác bật, hoàn tác xong thì Làm lại bật', async () => {
+    // Vô hiệu hóa nút thao tác lịch sử khi không có giao dịch phù hợp để thực thi.
+    let editorInstance: Editor | null = null;
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor
+            onEditorReady={(editor) => {
+              editorInstance = editor;
+            }}
+          />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+
+    const undoButton = container.querySelector<HTMLButtonElement>('button[aria-label="Hoàn tác"]');
+    const redoButton = container.querySelector<HTMLButtonElement>('button[aria-label="Làm lại"]');
+
+    expect(undoButton).not.toBeNull();
+    expect(redoButton).not.toBeNull();
+
+    // Editor mới mở chưa có lịch sử nên cả hai nút đều phải bị tắt.
+    expect(undoButton?.disabled).toBe(true);
+    expect(redoButton?.disabled).toBe(true);
+
+    // Chèn nội dung để tạo giao dịch mới trong lịch sử.
+    await act(async () => {
+      editor.commands.insertContent('Nội dung mới');
+    });
+
+    expect(undoButton?.disabled).toBe(false);
+    expect(redoButton?.disabled).toBe(true);
+
+    // Thực hiện hoàn tác để kích hoạt khả năng làm lại.
+    await act(async () => {
+      undoButton?.click();
+    });
+
+    expect(undoButton?.disabled).toBe(true);
+    expect(redoButton?.disabled).toBe(false);
+  });
+
+  it('khi có nút bị tắt thì tabIndex 0 vẫn vào được thanh công cụ ở nút bật đầu tiên và phím mũi tên bỏ qua nút bị tắt', async () => {
+    // Đảm bảo roving tabindex không bị mắc kẹt vào các nút đã bị vô hiệu hóa.
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor />
+        </StrictMode>,
+      );
+    });
+
+    const buttons = Array.from(
+      container.querySelectorAll<HTMLButtonElement>('[role="toolbar"] button'),
+    );
+
+    // Hai nút cuối cùng (Hoàn tác và Làm lại) đang bị tắt.
+    expect(buttons[6]?.disabled).toBe(true);
+    expect(buttons[7]?.disabled).toBe(true);
+
+    // Chuyển tiêu điểm tới nút bật cuối cùng (Nghiêng - index 5).
+    buttons[5]?.focus();
+    await act(async () => {
+      buttons[5]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    });
+
+    // Phím mũi tên phải phải bỏ qua nút 6 và 7 để quay vòng về nút bật đầu tiên (Đoạn văn - index 0).
+    expect(buttons[0]?.tabIndex).toBe(0);
+    expect(document.activeElement).toBe(buttons[0]);
+
+    // Phím mũi tên trái từ nút 0 phải bỏ qua nút 7 và 6 để quay vòng về nút 5.
+    await act(async () => {
+      buttons[0]?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true }));
+    });
+
+    expect(buttons[5]?.tabIndex).toBe(0);
+    expect(document.activeElement).toBe(buttons[5]);
   });
 });

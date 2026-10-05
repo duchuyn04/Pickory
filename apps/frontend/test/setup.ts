@@ -29,3 +29,14 @@ if (typeof Element !== 'undefined' && !Element.prototype.scrollIntoView) {
   // jsdom không có giao diện hiển thị nên cung cấp hàm rỗng chống lỗi.
   Element.prototype.scrollIntoView = () => {};
 }
+
+if (typeof globalThis !== 'undefined' && !globalThis.requestAnimationFrame) {
+  // Tiptap delayedFocus dùng requestAnimationFrame để trì hoãn việc focus vào DOM.
+  // jsdom thiếu API này nên giả lập bằng hàm hẹn giờ để kích hoạt sự kiện focus.
+  globalThis.requestAnimationFrame = (callback: FrameRequestCallback) => {
+    return setTimeout(callback, 0) as unknown as number;
+  };
+  globalThis.cancelAnimationFrame = (id: number) => {
+    clearTimeout(id);
+  };
+}

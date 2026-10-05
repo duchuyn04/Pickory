@@ -6,6 +6,74 @@ export interface DescriptionToolbarProps {
   disabled?: boolean;
 }
 
+// Cấu hình từng nút trên thanh công cụ để tránh lặp mã JSX.
+interface ToolbarItemConfig {
+  label: string;
+  isToggle: boolean;
+  execute: (editor: Editor) => void;
+  isActive: (editor: Editor) => boolean;
+  isDisabled: (editor: Editor, disabled: boolean) => boolean;
+}
+
+const TOOLBAR_ITEMS: ToolbarItemConfig[] = [
+  {
+    label: 'Đoạn văn',
+    isToggle: true,
+    execute: (editor) => editor.chain().focus().setParagraph().run(),
+    isActive: (editor) => editor.isActive('paragraph'),
+    isDisabled: (_editor, disabled) => disabled,
+  },
+  {
+    label: 'Tiêu đề 1',
+    isToggle: true,
+    execute: (editor) => editor.chain().focus().toggleHeading({ level: 1 }).run(),
+    isActive: (editor) => editor.isActive('heading', { level: 1 }),
+    isDisabled: (_editor, disabled) => disabled,
+  },
+  {
+    label: 'Tiêu đề 2',
+    isToggle: true,
+    execute: (editor) => editor.chain().focus().toggleHeading({ level: 2 }).run(),
+    isActive: (editor) => editor.isActive('heading', { level: 2 }),
+    isDisabled: (_editor, disabled) => disabled,
+  },
+  {
+    label: 'Tiêu đề 3',
+    isToggle: true,
+    execute: (editor) => editor.chain().focus().toggleHeading({ level: 3 }).run(),
+    isActive: (editor) => editor.isActive('heading', { level: 3 }),
+    isDisabled: (_editor, disabled) => disabled,
+  },
+  {
+    label: 'Đậm',
+    isToggle: true,
+    execute: (editor) => editor.chain().focus().toggleBold().run(),
+    isActive: (editor) => editor.isActive('bold'),
+    isDisabled: (_editor, disabled) => disabled,
+  },
+  {
+    label: 'Nghiêng',
+    isToggle: true,
+    execute: (editor) => editor.chain().focus().toggleItalic().run(),
+    isActive: (editor) => editor.isActive('italic'),
+    isDisabled: (_editor, disabled) => disabled,
+  },
+  {
+    label: 'Hoàn tác',
+    isToggle: false,
+    execute: (editor) => editor.chain().focus().undo().run(),
+    isActive: () => false,
+    isDisabled: (editor, disabled) => disabled || !editor.can().undo(),
+  },
+  {
+    label: 'Làm lại',
+    isToggle: false,
+    execute: (editor) => editor.chain().focus().redo().run(),
+    isActive: () => false,
+    isDisabled: (editor, disabled) => disabled || !editor.can().redo(),
+  },
+];
+
 export function DescriptionToolbar({ editor, disabled = false }: DescriptionToolbarProps) {
   // Theo dõi số phiên bản để cập nhật giao diện khi con trỏ di chuyển.
   const [, setRevision] = useState(0);
@@ -40,34 +108,73 @@ export function DescriptionToolbar({ editor, disabled = false }: DescriptionTool
     return null;
   }
 
-  const buttonCount = 8;
+  // Tìm vị trí nút bật tiếp theo theo chiều bước nhảy, bỏ qua nút bị tắt.
+  const getNextEnabledIndex = (startIndex: number, step: 1 | -1): number => {
+    const total = TOOLBAR_ITEMS.length;
+    for (let i = 1; i <= total; i += 1) {
+      const candidate = (startIndex + i * step + total * total) % total;
+      const item = TOOLBAR_ITEMS[candidate];
+      if (item && !item.isDisabled(editor, disabled)) {
+        return candidate;
+      }
+    }
+    return startIndex;
+  };
+
+  // Tìm vị trí nút bật đầu tiên trên thanh công cụ.
+  const getFirstEnabledIndex = (): number => {
+    return TOOLBAR_ITEMS.findIndex((item) => !item.isDisabled(editor, disabled));
+  };
+
+  // Tìm vị trí nút bật cuối cùng trên thanh công cụ.
+  const getLastEnabledIndex = (): number => {
+    for (let i = TOOLBAR_ITEMS.length - 1; i >= 0; i -= 1) {
+      const item = TOOLBAR_ITEMS[i];
+      if (item && !item.isDisabled(editor, disabled)) {
+        return i;
+      }
+    }
+    return -1;
+  };
+
+  // Xác định nút giữ tabIndex 0: chọn nút đang trỏ nếu bật, hoặc nút bật đầu tiên.
+  const firstEnabled = getFirstEnabledIndex();
+  const currentItem = TOOLBAR_ITEMS[focusedIndex];
+  const activeTabIndex =
+    focusedIndex !== -1 && currentItem && !currentItem.isDisabled(editor, disabled)
+      ? focusedIndex
+      : firstEnabled;
 
   // Điều hướng tiêu điểm giữa các nút bằng phím mũi tên theo chuẩn WAI-ARIA.
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
     let nextIndex: number;
     if (e.key === 'ArrowRight') {
       e.preventDefault();
-      nextIndex = (index + 1) % buttonCount;
+      nextIndex = getNextEnabledIndex(index, 1);
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
-      nextIndex = (index - 1 + buttonCount) % buttonCount;
+      nextIndex = getNextEnabledIndex(index, -1);
     } else if (e.key === 'Home') {
       e.preventDefault();
-      nextIndex = 0;
+      nextIndex = getFirstEnabledIndex();
     } else if (e.key === 'End') {
       e.preventDefault();
-      nextIndex = buttonCount - 1;
+      nextIndex = getLastEnabledIndex();
     } else {
       return;
     }
 
-    setFocusedIndex(nextIndex);
-    buttonRefs.current[nextIndex]?.focus();
+    if (nextIndex !== -1) {
+      setFocusedIndex(nextIndex);
+      buttonRefs.current[nextIndex]?.focus();
+    }
   };
 
   // Kiểu dáng cho nút định dạng có trạng thái bật và tắt.
-  const getFormatButtonStyle = (active: boolean): React.CSSProperties => {
-    const isButtonDisabled = disabled;
+  const getFormatButtonStyle = (
+    active: boolean,
+    isButtonDisabled: boolean,
+  ): React.CSSProperties => {
     return {
       padding: 'var(--space-1) var(--space-3)',
       borderRadius: 'var(--radius-control)',
@@ -84,8 +191,7 @@ export function DescriptionToolbar({ editor, disabled = false }: DescriptionTool
   };
 
   // Kiểu dáng cho nút hành động đơn lẻ không lưu trạng thái bật.
-  const getActionButtonStyle = (): React.CSSProperties => {
-    const isButtonDisabled = disabled;
+  const getActionButtonStyle = (isButtonDisabled: boolean): React.CSSProperties => {
     return {
       padding: 'var(--space-1) var(--space-3)',
       borderRadius: 'var(--radius-control)',
@@ -115,139 +221,35 @@ export function DescriptionToolbar({ editor, disabled = false }: DescriptionTool
         backgroundColor: 'var(--color-surface-muted)',
       }}
     >
-      <button
-        ref={(el) => {
-          buttonRefs.current[0] = el;
-        }}
-        type="button"
-        tabIndex={focusedIndex === 0 ? 0 : -1}
-        onFocus={() => setFocusedIndex(0)}
-        onKeyDown={(e) => handleKeyDown(e, 0)}
-        onClick={() => editor.chain().focus().setParagraph().run()}
-        disabled={disabled}
-        aria-pressed={editor.isActive('paragraph')}
-        aria-label="Đoạn văn"
-        style={getFormatButtonStyle(editor.isActive('paragraph'))}
-      >
-        Đoạn văn
-      </button>
+      {TOOLBAR_ITEMS.map((item, index) => {
+        const isItemActive = item.isActive(editor);
+        const isItemDisabled = item.isDisabled(editor, disabled);
+        const isCurrentActiveTab = index === activeTabIndex;
 
-      <button
-        ref={(el) => {
-          buttonRefs.current[1] = el;
-        }}
-        type="button"
-        tabIndex={focusedIndex === 1 ? 0 : -1}
-        onFocus={() => setFocusedIndex(1)}
-        onKeyDown={(e) => handleKeyDown(e, 1)}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 1 }).run()}
-        disabled={disabled}
-        aria-pressed={editor.isActive('heading', { level: 1 })}
-        aria-label="Tiêu đề 1"
-        style={getFormatButtonStyle(editor.isActive('heading', { level: 1 }))}
-      >
-        Tiêu đề 1
-      </button>
-
-      <button
-        ref={(el) => {
-          buttonRefs.current[2] = el;
-        }}
-        type="button"
-        tabIndex={focusedIndex === 2 ? 0 : -1}
-        onFocus={() => setFocusedIndex(2)}
-        onKeyDown={(e) => handleKeyDown(e, 2)}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 2 }).run()}
-        disabled={disabled}
-        aria-pressed={editor.isActive('heading', { level: 2 })}
-        aria-label="Tiêu đề 2"
-        style={getFormatButtonStyle(editor.isActive('heading', { level: 2 }))}
-      >
-        Tiêu đề 2
-      </button>
-
-      <button
-        ref={(el) => {
-          buttonRefs.current[3] = el;
-        }}
-        type="button"
-        tabIndex={focusedIndex === 3 ? 0 : -1}
-        onFocus={() => setFocusedIndex(3)}
-        onKeyDown={(e) => handleKeyDown(e, 3)}
-        onClick={() => editor.chain().focus().toggleHeading({ level: 3 }).run()}
-        disabled={disabled}
-        aria-pressed={editor.isActive('heading', { level: 3 })}
-        aria-label="Tiêu đề 3"
-        style={getFormatButtonStyle(editor.isActive('heading', { level: 3 }))}
-      >
-        Tiêu đề 3
-      </button>
-
-      <button
-        ref={(el) => {
-          buttonRefs.current[4] = el;
-        }}
-        type="button"
-        tabIndex={focusedIndex === 4 ? 0 : -1}
-        onFocus={() => setFocusedIndex(4)}
-        onKeyDown={(e) => handleKeyDown(e, 4)}
-        onClick={() => editor.chain().focus().toggleBold().run()}
-        disabled={disabled}
-        aria-pressed={editor.isActive('bold')}
-        aria-label="Đậm"
-        style={getFormatButtonStyle(editor.isActive('bold'))}
-      >
-        Đậm
-      </button>
-
-      <button
-        ref={(el) => {
-          buttonRefs.current[5] = el;
-        }}
-        type="button"
-        tabIndex={focusedIndex === 5 ? 0 : -1}
-        onFocus={() => setFocusedIndex(5)}
-        onKeyDown={(e) => handleKeyDown(e, 5)}
-        onClick={() => editor.chain().focus().toggleItalic().run()}
-        disabled={disabled}
-        aria-pressed={editor.isActive('italic')}
-        aria-label="Nghiêng"
-        style={getFormatButtonStyle(editor.isActive('italic'))}
-      >
-        Nghiêng
-      </button>
-
-      <button
-        ref={(el) => {
-          buttonRefs.current[6] = el;
-        }}
-        type="button"
-        tabIndex={focusedIndex === 6 ? 0 : -1}
-        onFocus={() => setFocusedIndex(6)}
-        onKeyDown={(e) => handleKeyDown(e, 6)}
-        onClick={() => editor.chain().focus().undo().run()}
-        disabled={disabled}
-        aria-label="Hoàn tác"
-        style={getActionButtonStyle()}
-      >
-        Hoàn tác
-      </button>
-
-      <button
-        ref={(el) => {
-          buttonRefs.current[7] = el;
-        }}
-        type="button"
-        tabIndex={focusedIndex === 7 ? 0 : -1}
-        onFocus={() => setFocusedIndex(7)}
-        onKeyDown={(e) => handleKeyDown(e, 7)}
-        onClick={() => editor.chain().focus().redo().run()}
-        disabled={disabled}
-        aria-label="Làm lại"
-        style={getActionButtonStyle()}
-      >
-        Làm lại
-      </button>
+        return (
+          <button
+            key={item.label}
+            ref={(el) => {
+              buttonRefs.current[index] = el;
+            }}
+            type="button"
+            tabIndex={isCurrentActiveTab ? 0 : -1}
+            onFocus={() => setFocusedIndex(index)}
+            onKeyDown={(e) => handleKeyDown(e, index)}
+            onClick={() => item.execute(editor)}
+            disabled={isItemDisabled}
+            aria-pressed={item.isToggle ? isItemActive : undefined}
+            aria-label={item.label}
+            style={
+              item.isToggle
+                ? getFormatButtonStyle(isItemActive, isItemDisabled)
+                : getActionButtonStyle(isItemDisabled)
+            }
+          >
+            {item.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

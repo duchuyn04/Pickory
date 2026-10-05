@@ -40,6 +40,8 @@ export function DescriptionEditor({
   // Lưu thông điệp lỗi khi tài liệu vi phạm ràng buộc schema Zod của CAT-13.
   const [validationError, setValidationError] = useState<string | null>(null);
 
+  // Trạng thái nhận tiêu điểm của ô soạn thảo để đổi màu viền khung ngoài.
+  const [isFocused, setIsFocused] = useState(false);
   // Khởi tạo trình soạn thảo Tiptap với danh sách extension tối thiểu đã phê duyệt.
   const editor = useEditor({
     extensions: [
@@ -98,6 +100,27 @@ export function DescriptionEditor({
       onEditorReady(editor);
     }
   }, [editor, onEditorReady]);
+  // Lắng nghe sự kiện focus và blur để cập nhật viền khung bao ngoài.
+  useEffect(() => {
+    if (!editor || editor.isDestroyed) {
+      return;
+    }
+    const handleFocus = () => {
+      setIsFocused(true);
+    };
+
+    const handleBlur = () => {
+      setIsFocused(false);
+    };
+
+    editor.on('focus', handleFocus);
+    editor.on('blur', handleBlur);
+
+    return () => {
+      editor.off('focus', handleFocus);
+      editor.off('blur', handleBlur);
+    };
+  }, [editor]);
 
   // Cập nhật trạng thái có thể chỉnh sửa của Tiptap khi prop disabled thay đổi.
   useEffect(() => {
@@ -135,15 +158,21 @@ export function DescriptionEditor({
   return (
     <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
       <div
+        data-testid="description-editor-wrapper"
         style={{
           width: '100%',
           maxWidth: '100%',
           boxSizing: 'border-box',
           overflow: 'hidden',
           borderRadius: 'var(--radius-control)',
-          border: validationError
-            ? '1px solid var(--color-danger)'
-            : '1px solid var(--color-border)',
+          borderWidth: '1px',
+          borderStyle: 'solid',
+          borderColor: validationError
+            ? 'var(--color-danger)'
+            : isFocused
+              ? 'var(--color-brand)'
+              : 'var(--color-border)',
+          boxShadow: !validationError && isFocused ? '0 0 0 1px var(--color-brand)' : undefined,
           backgroundColor: disabled ? 'var(--color-surface-muted)' : 'var(--color-surface)',
           fontFamily: 'var(--font-sans)',
         }}
