@@ -54,12 +54,12 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 ### CAT-13: Tài liệu mô tả: schema và trích text
 **Mô tả:** Schema Zod của tài liệu mô tả trong `packages/shared/src/catalog/`. Schema chỉ nhận nút `doc`, `paragraph`, `heading` (cấp 1 đến 3) và `text`. Nút `text` chỉ có mark `bold` hoặc `italic`. Thêm `descriptionToPlainText(doc)` và `plainTextToDescription(text)`. Backend và trình soạn thảo dùng chung schema.
 **Tiêu chí nghiệm thu:**
-- [ ] Tài liệu có đoạn văn, tiêu đề cấp 1, 2, 3, chữ đậm, chữ nghiêng, vừa đậm vừa nghiêng được nhận
-- [ ] Nút lạ (`script`, `image`, `bulletList`, `codeBlock`), mark lạ (`link`, `underline`), tiêu đề cấp 4, thuộc tính thừa đều bị từ chối
-- [ ] Tài liệu vượt 20.000 ký tự text hoặc 500 nút bị từ chối; giới hạn nằm ở một hằng số
-- [ ] Tài liệu rỗng (một đoạn văn không có text) được nhận
-- [ ] `descriptionToPlainText` giữ thứ tự, mỗi đoạn và tiêu đề cách nhau một dòng, bỏ mark
-- [ ] `plainTextToDescription` tách đoạn theo dòng trống; kết quả luôn qua schema; hai hàm đổi qua lại giữ nguyên text
+- [x] Tài liệu có đoạn văn, tiêu đề cấp 1, 2, 3, chữ đậm, chữ nghiêng, vừa đậm vừa nghiêng được nhận
+- [x] Nút lạ (`script`, `image`, `bulletList`, `codeBlock`), mark lạ (`link`, `underline`), tiêu đề cấp 4, thuộc tính thừa đều bị từ chối
+- [x] Tài liệu vượt 20.000 ký tự text hoặc 500 nút bị từ chối; giới hạn nằm ở một hằng số
+- [x] Tài liệu rỗng (một đoạn văn không có text) được nhận
+- [x] `descriptionToPlainText` giữ thứ tự, mỗi đoạn và tiêu đề cách nhau một dòng, bỏ mark
+- [x] `plainTextToDescription` tách đoạn theo dòng trống; kết quả luôn qua schema; hai hàm đổi qua lại giữ nguyên text
 **Kiểm tra:** unit test, gồm bộ ví dụ hợp lệ và không hợp lệ
 **Phụ thuộc:** CAT-01 · **File:** `packages/shared/src/catalog/{description-schema,description-text}.ts`, `packages/shared/src/index.ts` · **Quy mô:** S
 
