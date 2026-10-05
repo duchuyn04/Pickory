@@ -41,13 +41,17 @@ Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dot
 - [x] Enum PostgreSQL (`UserKind`, `EmailTokenPurpose`, `ProductStatus`, `InventoryMovementType`) map qua Npgsql, không lưu thành số
 - [x] Cột JSON map sang `jsonb`. Cột `TIMESTAMP(3)` không múi giờ map đúng kiểu, đọc ra giá trị UTC
 - [x] Hàm đổi `DATABASE_URL` dạng `postgresql://user:pass@host:port/db` sang chuỗi kết nối Npgsql, có unit test kể cả mật khẩu có ký tự đặc biệt
-- [x] Migration mốc của từng `DbContext` có `Up` và `Down` rỗng. Áp lên DB hiện có không đổi schema.
+- [ ] Trên DB trống, migration mốc tạo đủ schema: bảng, enum, index, khóa ngoại và extension `vector`, khớp `apps/backend-dotnet/db/reference-schema.sql`
+- [ ] Trên DB đã có schema (DB dev hiện tại), có lệnh ghi migration mốc là đã áp. Lệnh này không tạo lại bảng.
 - [x] Bảng lịch sử migration của EF Core nằm riêng, không đụng `_prisma_migrations`
-- [x] Integration test chạy trên DB test sau khi bản Node đã migrate: so schema EF Core với schema thật (bảng, cột, kiểu, index) và báo khác biệt
+- [ ] DB test của integration test tự dựng schema bằng migration EF Core, không cần bản Node
+- [ ] Test so schema do migration EF Core tạo trên DB trống với `reference-schema.sql` (bỏ qua `_prisma_migrations`) và báo mọi khác biệt
 - [x] Integration test đọc và ghi thử một bản ghi mỗi module qua EF Core
 - [x] Không port route hay logic nghiệp vụ nào ở task này
 
-**Kiểm tra:** `dotnet build`, `dotnet test`; chạy migration mốc trên DB dev bản sao rồi so `pg_dump --schema-only` trước và sau, hai bản phải giống nhau.
+**Kiểm tra:** `dotnet build`, `dotnet test`; chạy migration trên một DB trống rồi so `pg_dump --schema-only` với `reference-schema.sql`.
+
+**Ghi chú 2026-10-05:** người dùng quyết định xóa bản Node trước khi port. Schema gốc nằm ở `reference-schema.sql`. Code Node xem bằng tag `node-backend-final`.
 
 **Bằng chứng DN-01 (2026-10-05):**
 
