@@ -13,11 +13,11 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 ### CAT-01: Bộ thuộc tính và validate thông số
 **Mô tả:** Kiểu `AttributeDefinition` và hàm `validateSpecs(specs, attributes)` trong `packages/shared`. Hàm `resolveCategoryAttributes(parent, child)` gộp thuộc tính của danh mục cha và danh mục con. Backend và form admin dùng chung hai hàm này.
 **Tiêu chí nghiệm thu:**
-- [ ] Thiếu thuộc tính `required` trả lỗi có `key` của ô thiếu
-- [ ] Sai kiểu (`number`, `boolean`, `enum` ngoài `options`, `text` rỗng) trả lỗi theo từng `key`
-- [ ] Khóa không có trong bộ thuộc tính bị từ chối
-- [ ] Danh mục con có cả thuộc tính của cha; trùng `key` giữa cha và con bị báo lỗi định nghĩa
-- [ ] Hàm kiểm tra định nghĩa từ chối `enum` không có `options` và `key` sai mẫu `^[a-z][a-z0-9_]*$`
+- [x] Thiếu thuộc tính `required` trả lỗi có `key` của ô thiếu
+- [x] Sai kiểu (`number`, `boolean`, `enum` ngoài `options`, `text` rỗng) trả lỗi theo từng `key`
+- [x] Khóa không có trong bộ thuộc tính bị từ chối
+- [x] Danh mục con có cả thuộc tính của cha; trùng `key` giữa cha và con bị báo lỗi định nghĩa
+- [x] Hàm kiểm tra định nghĩa từ chối `enum` không có `options` và `key` sai mẫu `^[a-z][a-z0-9_]*$`
 **Kiểm tra:** unit test cho từng nhánh hợp lệ và không hợp lệ
 **Phụ thuộc:** không · **File:** `packages/shared/src/catalog/{attributes,validate-specs}.ts`, `packages/shared/src/index.ts` · **Quy mô:** S
 
