@@ -48,6 +48,7 @@ describe('quy tắc ranh giới module (ESLint)', () => {
         expect(violations).toEqual([]);
       }
     },
+    // Đặt timeout 15 giây vì kiểm tra toàn bộ fixture qua ESLint trên Windows chạy song song có thể mất hơn 5 giây.
     15000,
   );
 });

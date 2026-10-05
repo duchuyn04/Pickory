@@ -37,6 +37,8 @@ export function createEventCollector(): {
 
   return { collector, flush, discard };
 }
+
+// Tự mở transaction để chỉ phát sự kiện sau khi commit. Lỗi trong transaction bỏ toàn bộ sự kiện.
 export async function emitAfterCommit<T>(
   dbClient: PrismaClient,
   action: (tx: Prisma.TransactionClient, collector: TransactionEventCollector) => Promise<T>,
