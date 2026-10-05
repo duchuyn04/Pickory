@@ -14,10 +14,12 @@ Plan cũ của `identity` và `ai-gateway` vẫn ở `tasks/plan.md`, vì còn l
 
 ```
 CAT-01 bộ thuộc tính + validate thông số (packages/shared)
+ ├── CAT-13 tài liệu mô tả: schema, trích text (packages/shared) ──┐
  └── CAT-02 slug, tổ hợp biến thể, giá hiển thị, chuyển trạng thái (logic thuần)
       └── CAT-03 schema Prisma + migration + khung module + sự kiện
            ├── CAT-04 danh mục + thương hiệu ──────────────── UI-C4
-           │    └── CAT-05 tạo và sửa sản phẩm, biến thể ─── UI-C5
+           │    └── CAT-05 tạo và sửa sản phẩm, biến thể (cần CAT-13) ─── UI-C5 (cần UI-C8)
+           │         │                                              UI-C8 trình soạn thảo mô tả (cần CAT-13)
            │         ├── CAT-06 ảnh + Cloudinary ──────────── UI-C6
            │         │    └── CAT-07 đổi trạng thái, xóa cứng (cần ảnh để active)
            │         └── CAT-08 tồn kho + reserve/release ─── UI-C7
@@ -27,6 +29,8 @@ CAT-01 bộ thuộc tính + validate thông số (packages/shared)
            │                        └── CAT-12 dữ liệu seed 30 sản phẩm + đo p95
            └────────────────────────────────────────────────── E2E-C1
 ```
+
+`CAT-13` chỉ cần `CAT-01` nên làm song song với `CAT-02` và `CAT-03`. `CAT-05` cần `CAT-13` vì API kiểm tra mô tả bằng schema này. `UI-C5` cần `UI-C8` vì form dùng trình soạn thảo.
 
 `CAT-07` cần `CAT-06`, vì sản phẩm chỉ chuyển sang `active` khi có ít nhất 1 ảnh. `CAT-09` cần `CAT-08`, vì bộ lọc `inStock` đọc cột tính sẵn từ tồn kho.
 
@@ -49,6 +53,8 @@ CAT-01 bộ thuộc tính + validate thông số (packages/shared)
 15. **Mã lỗi nghiệp vụ.** Dùng `AppError` với mã cố định: `SPECS_INVALID`, `ATTRIBUTE_IN_USE`, `PRODUCT_NOT_PUBLISHABLE`, `PRODUCT_HAS_ORDERS`, `COMPARE_CATEGORY_MISMATCH`, `UNKNOWN_FILTER`. Message viết tiếng Việt.
 16. **Audit log.** Ghi `recordAudit` trong cùng transaction cho đổi giá (`catalog.sku.price_change`), đổi trạng thái (`catalog.product.status_change`) và điều chỉnh tồn kho (`catalog.sku.stock_adjust`). Mỗi thao tác đúng 1 dòng.
 
+17. **Mô tả chi tiết là tài liệu JSON, không phải Markdown hay HTML.** Ngày 2026-10-05 người dùng chọn trình soạn thảo trực quan. Trình soạn thảo dùng Tiptap, chỉ bật đoạn văn, tiêu đề 3 cấp, chữ đậm, chữ nghiêng. Schema Zod đặt ở `packages/shared/src/catalog/` làm whitelist. Backend và trình soạn thảo dùng chung schema này. Frontend đổi từng nút thành thẻ React, không dùng `dangerouslySetInnerHTML`. Tiêu đề cấp 1, 2, 3 hiện thành H2, H3, H4 vì trang đã có H1. Hàm `descriptionToPlainText` phục vụ `smart-search`. Ngày 2026-10-05 người dùng duyệt Tiptap cho Ask first. Builder chọn các extension tối thiểu và ghim phiên bản sau khi đối chiếu tài liệu chính thức.
+
 ## Task List
 
 Chi tiết từng task ở `tasks/todo-catalog.md`.
@@ -59,10 +65,9 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 ### Checkpoint C1
 - [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch
 - [ ] Migration chạy trên DB sạch, `CHECK (stock >= 0)` chặn giá trị âm
-- [ ] Review với người dùng: duyệt dependency Markdown (Open Question 1) trước UI-C2
 
 ### Phase 2: Back-office backend và UI
-- [ ] CAT-04 · [ ] UI-C4 · [ ] CAT-05 · [ ] UI-C5 · [ ] CAT-06 · [ ] UI-C6 · [ ] CAT-07 · [ ] CAT-08 · [ ] UI-C7
+- [ ] CAT-13 · [ ] UI-C8 · [ ] CAT-04 · [ ] UI-C4 · [ ] CAT-05 · [ ] UI-C5 · [ ] CAT-06 · [ ] UI-C6 · [ ] CAT-07 · [ ] CAT-08 · [ ] UI-C7
 
 ### Checkpoint C2
 - [ ] Admin tạo danh mục, sản phẩm 2 tùy chọn, tải ảnh, đăng bán trên `pnpm dev`
@@ -95,6 +100,7 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 | Thiếu thông số bắt buộc, sai kiểu, không có ảnh, SKU bật thiếu cân nặng và kích thước thì không `active` được | CAT-01, CAT-02, CAT-07 |
 | 20 request giữ hàng đồng thời không bán vượt tồn kho | CAT-08 |
 | `sales` xem được nháp nhưng sửa nhận 403 | CAT-05, ma trận quyền ở mọi task back-office |
+| Mô tả có tiêu đề 1 đến 3, chữ đậm, chữ nghiêng: soạn, lưu, hiện đúng; nút lạ bị API từ chối | CAT-13, UI-C8, CAT-05, UI-C2 |
 | Đổi slug thì link cũ trả 301 | CAT-05, CAT-10 |
 | Đổi giá, đổi trạng thái, điều chỉnh tồn kho có đúng 1 dòng audit | CAT-05, CAT-07, CAT-08 |
 | `onProductChanged` phát đúng 1 lần sau khi lưu thành công, không phát khi lỗi | CAT-03, CAT-05, CAT-07 |
@@ -107,11 +113,11 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 | Phase | Task | Quy mô |
 |---|---|---|
 | 1 | CAT-01, CAT-02, CAT-03 | S, S, M |
-| 2 | CAT-04 đến CAT-08, UI-C4 đến UI-C7 | 9 task, phần lớn M |
+| 2 | CAT-13, UI-C8, CAT-04 đến CAT-08, UI-C4 đến UI-C7 | 11 task, phần lớn M |
 | 3 | CAT-09 đến CAT-12, UI-C1 đến UI-C3 | 7 task, phần lớn M |
 | 4 | E2E-C1 | M |
 
-Tổng 20 task. Với một người, ước lượng 3 sprint 1 tuần: Sprint 1 là Phase 1 và nửa đầu Phase 2. Sprint 2 là phần còn lại của Phase 2 và CAT-09, CAT-10. Sprint 3 là phần còn lại của Phase 3 và Phase 4.
+Tổng 22 task. Với một người, ước lượng 3 sprint 1 tuần, có thể thêm vài ngày cho trình soạn thảo: Sprint 1 là Phase 1 và nửa đầu Phase 2. Sprint 2 là phần còn lại của Phase 2 và CAT-09, CAT-10. Sprint 3 là phần còn lại của Phase 3 và Phase 4.
 
 Nếu có hai người, người thứ hai làm UI ngay sau khi task backend tương ứng xong. Người thứ hai cũng có thể bắt đầu `shipping` sau Checkpoint C1, vì `shipping` chỉ phụ thuộc `identity`.
 
@@ -123,13 +129,15 @@ Nếu có hai người, người thứ hai làm UI ngay sau khi task backend tư
 | Hai đơn giữ cùng SKU gây bán vượt | High | UPDATE có điều kiện, sắp SKU theo `id`, `CHECK (stock >= 0)`, test 20 request đồng thời |
 | Code mới ghi thẳng cột `stock` | Med | Chỉ `applyStockMovement` được ghi; test bất biến tổng movement sau mỗi file test |
 | Chưa có tài khoản Cloudinary | Med | Provider giả ở dev và test; test chữ ký bằng secret giả; tải ảnh thật kiểm thủ công khi có khóa |
-| Markdown chứa script độc hại | High | Lưu Markdown, không lưu HTML; frontend lọc HTML bằng sanitizer; test với payload XSS |
+| Mô tả chứa nội dung độc hại (XSS) | High | Lưu JSON theo schema whitelist, không lưu HTML; frontend đổi nút thành thẻ React, không dùng `dangerouslySetInnerHTML`; ESLint chặn thuộc tính này; test với payload `script` và `onerror` |
+| Trình soạn thảo khó dùng với bàn phím và trình đọc màn hình | Med | Nút có nhãn và `aria-pressed`; test thao tác bằng bàn phím; kiểm thủ công bằng Playwright |
+| Dán nội dung từ web làm sai định dạng | Med | Trình soạn thảo bỏ mọi nút và mark ngoài danh sách khi dán; test dán HTML có link, ảnh, script |
 | Thẻ meta SEO chưa gắn được vì chưa chốt deploy | Low | Làm hàm và route có test; ghi bước gắn vào Open Question của `SPEC.md` |
 | Đổi bộ thuộc tính làm hỏng sản phẩm cũ | Med | Khóa `key` cố định; chặn xóa hoặc đổi `type` khi có sản phẩm dùng |
 
 ## Open Questions
 
-1. **Dependency cho Markdown (Ask first theo `SPEC.md`).** Trang sản phẩm phải render Markdown và lọc HTML. Đề xuất `marked` để render và `dompurify` để lọc, cả hai cho frontend. Phương án khác là `react-markdown` với `rehype-sanitize`. Cần duyệt trước UI-C2.
+1. ~~Dependency cho mô tả~~ Đã chốt ngày 2026-10-05: Tiptap, lưu JSON (Decision 17). Không dùng `marked` hay `dompurify`.
 2. **Tài khoản Cloudinary.** Cần `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` để kiểm thủ công tải ảnh thật. Không có khóa thì mọi test vẫn chạy bằng provider giả.
 3. **Ảnh cho dữ liệu seed.** Seed cần `publicId` của ảnh. Đề xuất: có tài khoản Cloudinary thì tải bộ ảnh mẫu một lần, không có thì dùng ảnh giữ chỗ của provider giả.
 4. **Nút thêm giỏ.** `commerce` chưa có. Đề xuất: UI-C2 hiện nút ở trạng thái tắt, kèm chú thích "Sắp có". `commerce` gắn chức năng sau.

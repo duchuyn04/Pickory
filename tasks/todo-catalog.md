@@ -46,11 +46,35 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 
 ### Checkpoint C1
 - [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` sạch
-- [ ] Review với người dùng: duyệt dependency Markdown (Open Question 1 của `plan-catalog.md`)
 
 ---
 
 ## Phase 2: Back-office backend và UI
+
+### CAT-13: Tài liệu mô tả: schema và trích text
+**Mô tả:** Schema Zod của tài liệu mô tả trong `packages/shared/src/catalog/`. Schema chỉ nhận nút `doc`, `paragraph`, `heading` (cấp 1 đến 3) và `text`. Nút `text` chỉ có mark `bold` hoặc `italic`. Thêm `descriptionToPlainText(doc)` và `plainTextToDescription(text)`. Backend và trình soạn thảo dùng chung schema.
+**Tiêu chí nghiệm thu:**
+- [ ] Tài liệu có đoạn văn, tiêu đề cấp 1, 2, 3, chữ đậm, chữ nghiêng, vừa đậm vừa nghiêng được nhận
+- [ ] Nút lạ (`script`, `image`, `bulletList`, `codeBlock`), mark lạ (`link`, `underline`), tiêu đề cấp 4, thuộc tính thừa đều bị từ chối
+- [ ] Tài liệu vượt 20.000 ký tự text hoặc 500 nút bị từ chối; giới hạn nằm ở một hằng số
+- [ ] Tài liệu rỗng (một đoạn văn không có text) được nhận
+- [ ] `descriptionToPlainText` giữ thứ tự, mỗi đoạn và tiêu đề cách nhau một dòng, bỏ mark
+- [ ] `plainTextToDescription` tách đoạn theo dòng trống; kết quả luôn qua schema; hai hàm đổi qua lại giữ nguyên text
+**Kiểm tra:** unit test, gồm bộ ví dụ hợp lệ và không hợp lệ
+**Phụ thuộc:** CAT-01 · **File:** `packages/shared/src/catalog/{description-schema,description-text}.ts`, `packages/shared/src/index.ts` · **Quy mô:** S
+
+### UI-C8: Trình soạn thảo mô tả
+**Mô tả:** Component `DescriptionEditor` dùng Tiptap. Chỉ bật đoạn văn, tiêu đề 3 cấp, chữ đậm, chữ nghiêng, hoàn tác và làm lại. Thanh công cụ có nhãn tiếng Việt: Đoạn văn, Tiêu đề 1, Tiêu đề 2, Tiêu đề 3, Đậm, Nghiêng. Kết quả luôn qua schema của CAT-13. Người dùng đã duyệt Tiptap ngày 2026-10-05. Builder chọn extension tối thiểu, ghim phiên bản sau khi đối chiếu tài liệu chính thức, và ghi lựa chọn vào ADR hoặc mục Kết quả của task.
+**Tiêu chí nghiệm thu:**
+- [ ] Bấm Tiêu đề 2 và Đậm cho ra tài liệu JSON đúng và qua schema
+- [ ] Nút trên thanh công cụ có `aria-pressed` theo định dạng tại vị trí con trỏ và có nhãn truy cập được
+- [ ] Dùng được hoàn toàn bằng bàn phím: phím tắt Ctrl+B, Ctrl+I, và di chuyển giữa các nút của thanh công cụ
+- [ ] Dán nội dung có link, ảnh, danh sách, `script` thì chỉ giữ text và định dạng trong danh sách bật
+- [ ] Trình soạn thảo mở được tài liệu đã lưu và lưu lại không đổi nội dung
+- [ ] Không cuộn ngang ở viewport 375 px; ô nhập có `role="textbox"` và nhãn
+- [ ] Không thêm extension ngoài danh sách bật; `pnpm-lock.yaml` chỉ thêm các package của Tiptap cần dùng
+**Kiểm tra:** test component với jsdom; Playwright trên `pnpm dev` cho thao tác bàn phím và dán
+**Phụ thuộc:** CAT-13 · **File:** `features/catalog/admin/{description-editor,description-toolbar}.tsx`, `apps/frontend/package.json`, `pnpm-lock.yaml` · **Quy mô:** M
 
 ### CAT-04: Danh mục và thương hiệu
 **Mô tả:** `POST/PATCH/DELETE /api/admin/categories[/:id]` và `/api/admin/brands[/:id]` (`products:write`). `GET /api/categories` trả cây kèm thuộc tính `filterable`. `GET /api/brands` công khai. Cây tối đa 2 cấp.
@@ -74,10 +98,11 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 **Phụ thuộc:** CAT-04, UI-05 · **File:** `features/catalog/admin/{categories-page,attribute-editor,brands-page}.tsx`, `app.tsx` · **Quy mô:** M
 
 ### CAT-05: Tạo và sửa sản phẩm, biến thể
-**Mô tả:** `POST/PATCH /api/admin/products[/:id]` (`products:write`), `GET /api/admin/products[/:id]` (`products:read`, mọi trạng thái, tìm theo tên hoặc mã SKU). Validate thông số theo danh mục lá. Sinh SKU từ tùy chọn, giữ SKU cũ khi tổ hợp không đổi. Sinh slug, lưu slug cũ vào lịch sử khi đổi. Ghi audit khi đổi giá. Phát `onProductChanged` sau commit.
+**Mô tả:** `POST/PATCH /api/admin/products[/:id]` (`products:write`), `GET /api/admin/products[/:id]` (`products:read`, mọi trạng thái, tìm theo tên hoặc mã SKU). Validate thông số theo danh mục lá. Validate mô tả bằng schema của CAT-13. Sinh SKU từ tùy chọn, giữ SKU cũ khi tổ hợp không đổi. Sinh slug, lưu slug cũ vào lịch sử khi đổi. Ghi audit khi đổi giá. Phát `onProductChanged` sau commit.
 **Tiêu chí nghiệm thu:**
 - [ ] Sản phẩm gắn vào danh mục không phải lá trả 400
 - [ ] Thông số sai trả 400 `SPECS_INVALID` kèm danh sách `key` lỗi, không có gì được lưu
+- [ ] Mô tả có nút lạ (ví dụ `script`, `image`) hoặc vượt giới hạn trả 400 `DESCRIPTION_INVALID`, không có gì được lưu
 - [ ] Thêm giá trị tùy chọn sinh thêm SKU, SKU cũ giữ giá và tồn kho
 - [ ] Mã SKU trùng trả 409
 - [ ] Đổi giá 1 SKU tạo đúng 1 dòng audit `catalog.sku.price_change` có giá trước và sau
@@ -85,17 +110,17 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 - [ ] `onProductChanged` phát đúng 1 lần sau lưu thành công, 0 lần khi validate lỗi
 - [ ] `sales` xem được sản phẩm `draft`, gọi `PATCH` nhận 403
 **Kiểm tra:** integration test
-**Phụ thuộc:** CAT-04 · **File:** `modules/catalog/services/products.ts`, `modules/catalog/data/product-repository.ts`, `modules/catalog/routes/admin-products.ts`, `modules/catalog/schemas.ts` · **Quy mô:** M
+**Phụ thuộc:** CAT-04, CAT-13 · **File:** `modules/catalog/services/products.ts`, `modules/catalog/data/product-repository.ts`, `modules/catalog/routes/admin-products.ts`, `modules/catalog/schemas.ts` · **Quy mô:** M
 
 ### UI-C5: Danh sách và form sản phẩm
-**Mô tả:** Danh sách lọc theo trạng thái, danh mục, sắp hết hàng. Form sản phẩm: ô thông số sinh theo danh mục, trình soạn tùy chọn, bảng biến thể sinh từ tổ hợp. Form dùng `validateSpecs` của `packages/shared` để báo lỗi trước khi gửi.
+**Mô tả:** Danh sách lọc theo trạng thái, danh mục, sắp hết hàng. Form sản phẩm: ô thông số sinh theo danh mục, trình soạn mô tả (UI-C8), trình soạn tùy chọn, bảng biến thể sinh từ tổ hợp. Form dùng `validateSpecs` của `packages/shared` để báo lỗi trước khi gửi.
 **Tiêu chí nghiệm thu:**
 - [ ] Đổi danh mục thì ô thông số đổi theo bộ thuộc tính của danh mục mới
 - [ ] Thêm 2 trục tùy chọn thì bảng biến thể hiện đủ tổ hợp để nhập giá, tồn kho, cân nặng, kích thước
 - [ ] Lỗi validate hiện ngay dưới ô sai, có nhãn truy cập được
 - [ ] `sales` mở form ở chế độ chỉ xem, không có nút lưu
 **Kiểm tra:** test component; Playwright trên `pnpm dev`
-**Phụ thuộc:** CAT-05, UI-C4 · **File:** `features/catalog/admin/{products-page,product-form,spec-fields,variant-table}.tsx`, `app.tsx` · **Quy mô:** M
+**Phụ thuộc:** CAT-05, UI-C4, UI-C8 · **File:** `features/catalog/admin/{products-page,product-form,spec-fields,variant-table}.tsx`, `app.tsx` · **Quy mô:** M
 
 ### CAT-06: Ảnh và Cloudinary
 **Mô tả:** `POST /api/admin/uploads/signature` (`products:write`) cấp chữ ký Cloudinary. API lưu `publicId`, alt, thứ tự, SKU gắn với ảnh. Bỏ ảnh thì ghi `image_deletion_jobs` trong cùng transaction. Worker xóa ảnh thử lại với backoff. Thiếu `CLOUDINARY_*` ở dev và test thì dùng provider giả; production thiếu khóa thì config lỗi.
@@ -189,14 +214,17 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 **Phụ thuộc:** CAT-09 · **File:** `modules/catalog/services/{product-detail,catalog-reader}.ts`, `modules/catalog/routes/public-catalog.ts`, `modules/catalog/index.ts` · **Quy mô:** M
 
 ### UI-C2: Trang sản phẩm
-**Mô tả:** Gallery ảnh đổi theo màu, chọn biến thể, giá và tồn kho theo biến thể, bảng thông số chia nhóm, mô tả Markdown đã lọc HTML, nút thêm vào so sánh. Nút thêm giỏ ở trạng thái tắt tới khi có `commerce`. Chừa vị trí cho khối gợi ý và tóm tắt review.
+**Mô tả:** Gallery ảnh đổi theo màu, chọn biến thể, giá và tồn kho theo biến thể, bảng thông số chia nhóm, mô tả chi tiết (đổi tài liệu JSON thành thẻ React), nút thêm vào so sánh. Nút thêm giỏ ở trạng thái tắt tới khi có `commerce`. Chừa vị trí cho khối gợi ý và tóm tắt review.
 **Tiêu chí nghiệm thu:**
 - [ ] Chọn biến thể khác thì giá, giá niêm yết, tồn kho và ảnh đổi đúng
-- [ ] Mô tả chứa `<script>` hoặc `onerror` không chạy script (test với payload XSS)
+- [ ] Tiêu đề cấp 1, 2, 3 của mô tả hiện thành thẻ H2, H3, H4; trang chỉ có đúng một H1
+- [ ] Chữ đậm và chữ nghiêng hiện đúng
+- [ ] Tài liệu chứa nút lạ không hiện nội dung của nút đó và không chạy script (test với payload `script` và `onerror`)
+- [ ] Quy tắc ESLint chặn `dangerouslySetInnerHTML` trong `features/catalog/`; fixture lỗi chứng minh quy tắc hoạt động
 - [ ] Sản phẩm `discontinued` hiện "Ngừng kinh doanh" và không cho chọn mua
 - [ ] Không cuộn ngang ở viewport 375 px
 **Kiểm tra:** test component; Playwright trên `pnpm dev`
-**Phụ thuộc:** CAT-10, UI-C1, Open Question 1 của `plan-catalog.md` · **File:** `features/catalog/{product-page,variant-picker,spec-table,product-gallery,markdown-view}.tsx` · **Quy mô:** M
+**Phụ thuộc:** CAT-10, UI-C1, CAT-13 · **File:** `features/catalog/{product-page,variant-picker,spec-table,product-gallery,description-view}.tsx`, `eslint.config.js` · **Quy mô:** M
 
 ### UI-C3: Trang so sánh
 **Mô tả:** Danh sách so sánh lưu ở `localStorage`, tối đa 4 sản phẩm cùng danh mục. Bảng thông số đặt cạnh nhau, đánh dấu dòng khác nhau.
@@ -222,6 +250,7 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 - [ ] Chạy seed 2 lần không tạo bản ghi trùng
 - [ ] Mọi sản phẩm `active` trong seed qua được `checkPublishable`
 - [ ] Mọi thay đổi tồn kho trong seed đi qua `applyStockMovement`
+- [ ] Mô tả của sản phẩm seed được tạo bằng `plainTextToDescription` và qua được schema mô tả
 - [ ] Script đo báo p95 của `GET /api/products` dưới 300 ms với 500 sản phẩm trên máy dev
 **Kiểm tra:** chạy seed trên DB sạch; chạy script đo và ghi kết quả vào task
 **Phụ thuộc:** CAT-10 · **File:** `modules/catalog/data/seed.ts`, `prisma/seed.ts`, `scripts/catalog-benchmark.ts` · **Quy mô:** M
@@ -235,12 +264,12 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 ## Phase 4: E2E
 
 ### E2E-C1: Luồng E2E của catalog
-**Mô tả:** Playwright trên DB `pickory_e2e`: admin tạo danh mục có bộ thuộc tính, tạo sản phẩm 2 tùy chọn, tải ảnh qua provider giả, đăng bán. Khách lọc thấy sản phẩm, chọn biến thể thấy đúng giá.
+**Mô tả:** Playwright trên DB `pickory_e2e`: admin tạo danh mục có bộ thuộc tính, tạo sản phẩm 2 tùy chọn, soạn mô tả có tiêu đề và chữ đậm, tải ảnh qua provider giả, đăng bán. Khách lọc thấy sản phẩm, chọn biến thể thấy đúng giá, mô tả hiện đúng định dạng.
 **Tiêu chí nghiệm thu:**
 - [ ] `pnpm test:e2e` chạy sạch cả luồng identity cũ và luồng catalog mới
 - [ ] Chạy lại lần hai vẫn PASS, không dựa vào dữ liệu lần trước
 **Kiểm tra:** `pnpm test:e2e` hai lần liên tiếp
-**Phụ thuộc:** UI-C1, UI-C2, UI-C5, UI-C6, CAT-07 · **File:** `e2e/catalog.spec.ts`, `apps/backend/scripts/e2e-start.ts` · **Quy mô:** S
+**Phụ thuộc:** UI-C1, UI-C2, UI-C5, UI-C6, UI-C8, CAT-07 · **File:** `e2e/catalog.spec.ts`, `apps/backend/scripts/e2e-start.ts` · **Quy mô:** S
 
 ---
 

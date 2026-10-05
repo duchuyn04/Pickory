@@ -104,7 +104,7 @@ Bộ lọc làm kết quả rỗng thì nới lỏng lần lượt: bỏ bộ l�
 
 ### Index embedding
 
-- Văn bản để embed, dựng từ dữ liệu `catalog`: tên, thương hiệu, đường dẫn danh mục, mô tả ngắn, thông số dạng "Nhãn: giá trị đơn vị", các tùy chọn, khoảng giá, mô tả chi tiết (đã bỏ Markdown, cắt còn tối đa 2.000 ký tự).
+- Văn bản để embed, dựng từ dữ liệu `catalog`: tên, thương hiệu, đường dẫn danh mục, mô tả ngắn, thông số dạng "Nhãn: giá trị đơn vị", các tùy chọn, khoảng giá, mô tả chi tiết (lấy text bằng `descriptionToPlainText` của `@pickory/shared`, cắt còn tối đa 2.000 ký tự).
 - Lưu `contentHash` của văn bản. Chỉ gọi embed lại khi hash đổi (đổi giá hay tồn kho không làm đổi hash, vì giá chỉ đưa vào dưới dạng khoảng làm tròn).
 - Nghe `onProductChanged`, đưa vào hàng đợi trong DB (`search_index_jobs`), job chạy mỗi 30 giây, gộp nhiều thay đổi của cùng sản phẩm thành 1 lần embed.
 - Sản phẩm chuyển `hidden` hoặc `discontinued` thì xóa embedding.

@@ -52,7 +52,7 @@ export type AttributeDefinition = {
 
 ### Sản phẩm và biến thể
 
-- **Sản phẩm**: tên, slug, thương hiệu, danh mục, mô tả ngắn, mô tả chi tiết (Markdown), thông số, số tháng bảo hành, trạng thái, ảnh.
+- **Sản phẩm**: tên, slug, thương hiệu, danh mục, mô tả ngắn, mô tả chi tiết (tài liệu JSON của trình soạn thảo), thông số, số tháng bảo hành, trạng thái, ảnh.
 - **Tùy chọn**: tối đa 3 trục, ví dụ `Dung lượng: 128GB, 256GB` và `Màu: Đen, Trắng`. Sản phẩm không có tùy chọn vẫn có đúng 1 biến thể mặc định.
 - **Biến thể (SKU)**: mã SKU duy nhất, tổ hợp giá trị tùy chọn, giá bán, giá niêm yết (để hiện giảm giá), tồn kho, ảnh riêng (tùy chọn), trạng thái bật/tắt.
 - **Cân nặng và kích thước đóng gói** của mỗi SKU (gram, cm). Bắt buộc với SKU đang bật, vì `shipping` dùng để tính phí vận chuyển. *(bổ sung khi tách module `shipping`)*
@@ -137,8 +137,16 @@ export { catalogPermissions } from './permissions';
 
 ### Mô tả sản phẩm
 
-- Lưu Markdown, render ra HTML ở frontend và lọc qua sanitizer (chỉ cho phép thẻ định dạng cơ bản, link, ảnh từ domain Cloudinary).
-- Không lưu HTML thô từ người nhập.
+Admin soạn mô tả chi tiết bằng trình soạn thảo trực quan. Backend lưu tài liệu JSON, không lưu HTML.
+
+- **Thư viện:** Tiptap (dựa trên ProseMirror). Người dùng duyệt ngày 2026-10-05. Chỉ cài các extension cần dùng.
+- **Chức năng bật:** đoạn văn, tiêu đề 3 cấp, chữ đậm, chữ nghiêng. Danh sách, link và ảnh trong mô tả chưa làm ở MVP.
+- **Schema (`packages/shared/src/catalog/description-schema.ts`):** Zod chỉ nhận các nút `doc`, `paragraph`, `heading` (cấp 1 đến 3) và `text`. Nút `text` chỉ có mark `bold` hoặc `italic`. Nút hoặc mark lạ, hoặc thuộc tính thừa, bị từ chối.
+- **Giới hạn:** tối đa 20.000 ký tự text và 500 nút mỗi mô tả. Con số này là mặc định, đổi ở một hằng số.
+- **Kiểm tra hai phía:** backend kiểm tra bằng schema mỗi lần lưu. Trình soạn thảo cũng kiểm tra bằng cùng schema, và bỏ nội dung dán vào nếu ngoài danh sách bật.
+- **Hiển thị:** frontend đổi từng nút thành thẻ React. Không dùng `dangerouslySetInnerHTML`. Quy tắc ESLint chặn thuộc tính này trong `features/catalog/`.
+- **Cấp tiêu đề:** trang sản phẩm đã có H1 là tên sản phẩm. Tiêu đề cấp 1, 2, 3 của trình soạn thảo hiện thành thẻ H2, H3, H4.
+- **Text thuần:** hàm `descriptionToPlainText(doc)` trong `packages/shared` lấy text từ tài liệu. `smart-search` dùng hàm này để tạo embedding. Hàm `plainTextToDescription(text)` đổi text thường thành tài liệu, mỗi dòng trống tách một đoạn văn, dùng cho dữ liệu seed.
 
 ## API
 
@@ -203,7 +211,7 @@ model Product {
   name           String
   slug           String        @unique
   shortDesc      String
-  descriptionMd  String
+  description    Json          // tài liệu của trình soạn thảo, xem mục Mô tả sản phẩm
   specs          Json          // { ram_gb: 16, cpu: 'Intel Core i7-13650HX', ... }
   options        Json          // [{ name: 'Dung lượng', values: ['512GB', '1TB'] }]
   warrantyMonths Int           @default(12)
@@ -244,13 +252,13 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 
 *Khách hàng* (`features/catalog/`)
 - Trang danh mục: lưới sản phẩm, bộ lọc sinh từ thuộc tính `filterable`, sắp xếp, phân trang. Trạng thái lọc nằm trên URL để chia sẻ được.
-- Trang sản phẩm: gallery ảnh (đổi theo màu), chọn biến thể, giá và tồn kho theo biến thể, bảng thông số chia nhóm, nút thêm giỏ (gọi `commerce`), nút thêm vào so sánh.
+- Trang sản phẩm: gallery ảnh (đổi theo màu), chọn biến thể, giá và tồn kho theo biến thể, bảng thông số chia nhóm, mô tả chi tiết, nút thêm giỏ (gọi `commerce`), nút thêm vào so sánh.
 - Trang so sánh: tối đa 4 sản phẩm, đánh dấu dòng thông số khác nhau.
 - Chừa sẵn vị trí cho khối của các module sau: gợi ý (`recommendations`), tóm tắt review (`personalized-content`).
 
 *Back-office* (`features/catalog/admin/`)
 - Danh sách sản phẩm có lọc trạng thái, danh mục, sắp hết hàng.
-- Form sản phẩm: ô thông số sinh động theo danh mục; bảng biến thể sinh từ tổ hợp tùy chọn; kéo thả sắp xếp ảnh.
+- Form sản phẩm: ô thông số sinh động theo danh mục; trình soạn thảo mô tả có thanh công cụ (tiêu đề 1, 2, 3, đậm, nghiêng); bảng biến thể sinh từ tổ hợp tùy chọn; kéo thả sắp xếp ảnh.
 - Quản lý danh mục kèm trình soạn bộ thuộc tính; quản lý thương hiệu.
 - Màn hình tồn kho: điều chỉnh có lý do, lịch sử movement.
 - Nút và menu ẩn hoặc hiện theo `useCan(...)`.
@@ -261,7 +269,7 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 
 ## Testing
 
-- Unit: validate thông số theo bộ thuộc tính (kể cả kế thừa từ danh mục cha); sinh tổ hợp biến thể; sinh slug bỏ dấu tiếng Việt; tính `minPrice` và `inStock`; quy tắc chuyển trạng thái.
+- Unit: validate thông số theo bộ thuộc tính (kể cả kế thừa từ danh mục cha); sinh tổ hợp biến thể; sinh slug bỏ dấu tiếng Việt; tính `minPrice` và `inStock`; quy tắc chuyển trạng thái; schema tài liệu mô tả (nhận nút hợp lệ, từ chối nút lạ, giới hạn kích thước) và `descriptionToPlainText`.
 - Integration:
   - Mọi endpoint ở bảng API, kèm 401/403 theo quyền.
   - Lọc kết hợp nhiều điều kiện và `facets` đúng số.
@@ -278,7 +286,7 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 
 - **Always:** validate thông số theo bộ thuộc tính trước khi lưu; ghi movement cho mọi thay đổi tồn kho; ghi audit log khi đổi giá, đổi trạng thái, điều chỉnh tồn kho.
 - **Ask first:** thêm kho thứ hai; thêm trục tùy chọn thứ 4; đổi cách tính giá hiển thị.
-- **Never:** sửa trực tiếp cột `stock` mà không có movement; cho tồn kho âm; lưu HTML thô từ người nhập; để Cloudinary API secret ra frontend.
+- **Never:** sửa trực tiếp cột `stock` mà không có movement; cho tồn kho âm; lưu HTML thô từ người nhập; dùng `dangerouslySetInnerHTML` cho nội dung do người nhập; để Cloudinary API secret ra frontend.
 
 ## Success Criteria
 
@@ -292,11 +300,14 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 - [ ] Mỗi lần đổi giá, đổi trạng thái hoặc điều chỉnh tồn kho có đúng 1 dòng audit log.
 - [ ] `onProductChanged` phát đúng 1 lần sau mỗi lần lưu thành công, không phát khi lưu lỗi.
 - [ ] `GET /api/products` có p95 dưới 300 ms với 500 sản phẩm trên máy dev.
+- [ ] Mô tả có tiêu đề cấp 1 đến 3, chữ đậm và chữ nghiêng: soạn được trong trình soạn thảo, lưu được, hiện đúng trên trang sản phẩm; tài liệu có nút lạ (ví dụ `script`) bị API từ chối.
 - [ ] Coverage `service.ts` ≥ 80%.
 
 ## Open Questions
 
 > Đã duyệt ngày 2026-10-03, áp dụng phương án mặc định cho cả 4 câu. SEO chọn hướng (b): server trả sẵn thẻ meta và Open Graph cho trang sản phẩm và danh mục.
+>
+> Ngày 2026-10-05: mô tả chi tiết đổi từ Markdown sang trình soạn thảo trực quan lưu JSON (Tiptap). Lý do: admin không cần học cú pháp, và whitelist nằm trong schema nên không cần bộ lọc HTML.
 
 1. **SEO cho trang sản phẩm.** React + Vite là SPA, nên Google và khi chia sẻ link lên Facebook, Zalo có thể không thấy tên, giá, ảnh sản phẩm. Cần chọn một trong ba hướng:
    - (a) Prerender trang sản phẩm và danh mục.
