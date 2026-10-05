@@ -1,0 +1,234 @@
+// @vitest-environment jsdom
+import React, { act, StrictMode } from 'react';
+import { createRoot, type Root } from 'react-dom/client';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Editor } from '@tiptap/core';
+import { descriptionSchema, type DescriptionDoc } from '@pickory/shared';
+import { DescriptionEditor } from '../../../../../src/features/catalog/admin/description-editor';
+
+let container: HTMLDivElement;
+let root: Root;
+
+beforeEach(() => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  container = document.createElement('div');
+  document.body.append(container);
+  root = createRoot(container);
+});
+
+afterEach(async () => {
+  await act(async () => root.unmount());
+  container.remove();
+  vi.unstubAllGlobals();
+});
+
+describe('DescriptionEditor', () => {
+  it('khởi tạo thanh công cụ có role toolbar và các nút type button có nhãn tiếng Việt', async () => {
+    // Đảm bảo cây hỗ trợ tiếp cận nhận diện đúng vai trò thanh công cụ chuẩn.
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor />
+        </StrictMode>,
+      );
+    });
+
+    const toolbar = container.querySelector('[role="toolbar"]');
+    expect(toolbar).not.toBeNull();
+    expect(toolbar?.getAttribute('aria-label')).toBeTruthy();
+
+    const buttons = toolbar?.querySelectorAll('button');
+    expect(buttons?.length).toBeGreaterThanOrEqual(6);
+
+    // Xác minh toàn bộ các nút đều ngăn chặn hành vi submit form mặc định.
+    buttons?.forEach((btn) => {
+      expect(btn.getAttribute('type')).toBe('button');
+    });
+
+    const buttonTexts = Array.from(buttons || []).map((btn) => btn.textContent?.trim());
+    expect(buttonTexts).toContain('Đoạn văn');
+    expect(buttonTexts).toContain('Tiêu đề 1');
+    expect(buttonTexts).toContain('Tiêu đề 2');
+    expect(buttonTexts).toContain('Tiêu đề 3');
+    expect(buttonTexts).toContain('Đậm');
+    expect(buttonTexts).toContain('Nghiêng');
+  });
+
+  it('ô nhập nội dung có role textbox và nhãn tiếp cận được', async () => {
+    // Cung cấp ngữ nghĩa chuẩn cho trình đọc màn hình điều hướng vào vùng soạn thảo.
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor label="Mô tả sản phẩm" />
+        </StrictMode>,
+      );
+    });
+
+    const textbox = container.querySelector('[role="textbox"]');
+    expect(textbox).not.toBeNull();
+    expect(textbox?.getAttribute('aria-label')).toBe('Mô tả sản phẩm');
+  });
+
+  it('bấm Tiêu đề 2 và Đậm cập nhật aria-pressed và cho ra JSON qua schema CAT-13', async () => {
+    // Chứng minh tương tác định dạng tạo ra tài liệu JSON chuẩn và cập nhật trạng thái nút.
+    let editorInstance: Editor | null = null;
+    let latestDoc: DescriptionDoc | null = null;
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor
+            onEditorReady={(editor) => {
+              editorInstance = editor;
+            }}
+            onChange={(doc) => {
+              latestDoc = doc;
+            }}
+          />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+    // Nhập nội dung ban đầu vào trình soạn thảo.
+    await act(async () => {
+      editor.commands.setContent('<p>Nội dung mẫu</p>');
+    });
+
+    // Chọn toàn bộ văn bản để áp dụng định dạng.
+    await act(async () => {
+      editor.commands.selectAll();
+    });
+
+    // Kích hoạt nút Tiêu đề 2 trên thanh công cụ.
+    const h2Button = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === 'Tiêu đề 2',
+    );
+    expect(h2Button).toBeDefined();
+
+    await act(async () => {
+      h2Button?.click();
+    });
+
+    expect(h2Button?.getAttribute('aria-pressed')).toBe('true');
+
+    // Kích hoạt nút Đậm trên thanh công cụ.
+    const boldButton = Array.from(container.querySelectorAll('button')).find(
+      (btn) => btn.textContent?.trim() === 'Đậm',
+    );
+    expect(boldButton).toBeDefined();
+
+    await act(async () => {
+      boldButton?.click();
+    });
+
+    expect(boldButton?.getAttribute('aria-pressed')).toBe('true');
+
+    // Trích xuất JSON và kiểm tra tính hợp lệ qua schema của CAT-13.
+    const json = editor.getJSON();
+    const parseResult = descriptionSchema.safeParse(json);
+    expect(parseResult.success).toBe(true);
+
+    if (parseResult.success) {
+      expect(parseResult.data.content?.[0]?.type).toBe('heading');
+    }
+
+    // Xác minh hàm onChange đã nhận được tài liệu JSON hợp lệ.
+    expect(latestDoc).not.toBeNull();
+  });
+
+  it('dán HTML có link, ảnh, danh sách, script chỉ giữ text và định dạng được bật, và qua schema', async () => {
+    // Kiểm tra cơ chế lọc sạch nội dung không cho phép để bảo đảm an toàn dữ liệu.
+    let editorInstance: Editor | null = null;
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor
+            onEditorReady={(editor) => {
+              editorInstance = editor;
+            }}
+          />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+
+    // Chèn chuỗi HTML chứa mã độc, thẻ ảnh, danh sách và liên kết lạ.
+    const maliciousHtml =
+      '<h2>Tiêu đề an toàn</h2>' +
+      '<p>Đoạn có <a href="https://malicious.com">liên kết</a> và <script>alert(1)</script> mã độc.</p>' +
+      '<img src="https://example.com/pic.png" alt="ảnh" />' +
+      '<ul><li>Mục một</li><li>Mục hai</li></ul>' +
+      '<p>Kết thúc bằng <b>chữ đậm</b> và <i>chữ nghiêng</i>.</p>';
+
+    await act(async () => {
+      // Mô phỏng thao tác dán HTML qua lệnh insertContent của Tiptap.
+      editor.commands.setContent('');
+      editor.commands.insertContent(maliciousHtml);
+    });
+
+    const json = editor.getJSON();
+
+    // Kết quả sau khi lọc phải thỏa mãn toàn bộ ràng buộc của schema CAT-13.
+    const parseResult = descriptionSchema.safeParse(json);
+    expect(parseResult.success).toBe(true);
+
+    // Xác nhận không còn nút ảnh, danh sách hay script trong tài liệu.
+    const nodeTypes = json?.content?.map((n: { type: string }) => n.type);
+    expect(nodeTypes).not.toContain('image');
+    expect(nodeTypes).not.toContain('bulletList');
+    expect(nodeTypes).not.toContain('orderedList');
+    expect(nodeTypes).not.toContain('script');
+  });
+
+  it('mở được tài liệu đã lưu và lưu lại không đổi nội dung', async () => {
+    // Bảo toàn dữ liệu gốc khi người dùng mở lại bản ghi đã lưu từ trước.
+    const savedDoc: DescriptionDoc = {
+      type: 'doc',
+      content: [
+        {
+          type: 'heading',
+          attrs: { level: 2 },
+          content: [{ type: 'text', text: 'Tiêu đề sản phẩm đã lưu' }],
+        },
+        {
+          type: 'paragraph',
+          content: [
+            { type: 'text', text: 'Đoạn văn có ' },
+            { type: 'text', text: 'chữ đậm', marks: [{ type: 'bold' }] },
+            { type: 'text', text: ' và chữ thường.' },
+          ],
+        },
+      ],
+    };
+
+    let editorInstance: Editor | null = null;
+
+    await act(async () => {
+      root.render(
+        <StrictMode>
+          <DescriptionEditor
+            value={savedDoc}
+            onEditorReady={(editor) => {
+              editorInstance = editor;
+            }}
+          />
+        </StrictMode>,
+      );
+    });
+
+    expect(editorInstance).not.toBeNull();
+    const editor = editorInstance as unknown as Editor;
+
+    // Kiểm tra cấu trúc JSON sau khi mở trùng khớp hoàn toàn với dữ liệu nạp vào.
+    const outputJson = editor.getJSON();
+    expect(outputJson).toEqual(savedDoc);
+
+    const parseResult = descriptionSchema.safeParse(outputJson);
+    expect(parseResult.success).toBe(true);
+  });
+});

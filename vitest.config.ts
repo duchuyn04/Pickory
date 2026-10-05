@@ -32,6 +32,8 @@ export default defineConfig({
             'packages/*/test/unit/**/*.test.{ts,tsx}',
             'tools/test/unit/**/*.test.ts',
           ],
+          // Nạp polyfill DOM cho môi trường jsdom phục vụ kiểm thử giao diện Tiptap.
+          setupFiles: ['apps/frontend/test/setup.ts'],
         },
       },
       {
