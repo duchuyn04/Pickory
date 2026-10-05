@@ -27,7 +27,7 @@ Phân quyền theo RBAC, chi tiết trong `SPEC-identity.md`.
 | Runtime | Node.js LTS hiện hành |
 | Package manager | pnpm workspaces (monorepo) |
 | Frontend | React + Vite, React Router, TanStack Query |
-| Backend | Express |
+| Backend | Express (giai đoạn chuyển đổi sang ASP.NET Core 10) |
 | Validation | Zod, schema dùng chung giữa frontend và backend |
 | Database | PostgreSQL + pgvector, Prisma ORM |
 | LLM | DeepSeek, tên model trong biến môi trường |
@@ -40,6 +40,8 @@ Phân quyền theo RBAC, chi tiết trong `SPEC-identity.md`.
 | Môi trường dev | Docker Compose cho PostgreSQL |
 
 Phiên bản cụ thể lấy bản ổn định mới nhất lúc khởi tạo và khóa trong `pnpm-lock.yaml`. Lý do chọn framework AI ghi tại `docs/adr/0001-ai-frameworks.md`.
+
+Giai đoạn chuyển đổi: hệ thống chuyển backend sang ASP.NET Core 10. Bản .NET mới đặt tại `apps/backend-dotnet`. Bản Node cũ được giữ tại `apps/backend` tới task DN-08.
 
 ## Commands
 
@@ -72,7 +74,7 @@ apps/
       hooks/              → hook của module
     src/shared/                 → component và tiện ích dùng chung
     test/unit/features/<module-id>/ → test hook và logic UI, đối chiếu với src/features/
-  backend/                → Express API, package @pickory/backend
+  backend/                → Express API, package @pickory/backend (giữ tới DN-08)
     src/modules/<module-id>/
       routes.ts           → khai báo route, chỉ parse request và gọi service
       service.ts          → logic nghiệp vụ
@@ -87,6 +89,10 @@ apps/
     test/integration/shared/              → test hạ tầng DB
     test/{setup,global-setup,env,db}.ts    → setup và helper test, không thuộc src/
     prisma/               → schema.prisma, migrations, seed
+  backend-dotnet/         → ASP.NET Core 10 API (giai đoạn chuyển đổi)
+    Pickory.sln
+    src/                  → Pickory.Api, Pickory.Shared, Pickory.Modules.*
+    tests/                → UnitTests, IntegrationTests, ArchitectureTests
 packages/
   shared/                 → type và Zod schema dùng chung web/api
     src/                  → code dùng chung
