@@ -4,6 +4,17 @@ import { logger } from './logger';
 export interface DomainEvents {
   UserLinkedEvent: { anonymousId: string; userId: string };
   UserDeletedEvent: { userId: string };
+  // Sự kiện phát khi sản phẩm thay đổi trạng thái hoặc thông tin.
+  ProductChangedEvent: {
+    productId: string;
+    change: 'created' | 'updated' | 'status' | 'deleted';
+  };
+  // Sự kiện phát khi số lượng tồn kho của SKU thay đổi.
+  StockChangedEvent: {
+    skuId: string;
+    stock: number;
+    previousStock: number;
+  };
 }
 
 // Hàm xử lý sự kiện, có thể bất đồng bộ.
@@ -16,11 +27,19 @@ type Handler<K extends keyof DomainEvents> = (payload: DomainEvents[K]) => void 
 export class EventBus {
   private readonly handlers = new Map<keyof DomainEvents, Handler<never>[]>();
 
-  // Đăng ký handler cho một sự kiện; payload được kiểm kiểu theo `DomainEvents`.
-  on<K extends keyof DomainEvents>(event: K, handler: Handler<K>): void {
+  // Đăng ký handler cho một sự kiện; trả về hàm gỡ bỏ handler.
+  on<K extends keyof DomainEvents>(event: K, handler: Handler<K>): () => void {
     const list = this.handlers.get(event) ?? [];
     list.push(handler as Handler<never>);
     this.handlers.set(event, list);
+    return () => this.off(event, handler);
+  }
+
+  // Hủy đăng ký handler để giải phóng bộ nhớ và cô lập môi trường test.
+  off<K extends keyof DomainEvents>(event: K, handler: Handler<K>): void {
+    const list = this.handlers.get(event) ?? [];
+    const filtered = list.filter((h) => h !== (handler as Handler<never>));
+    this.handlers.set(event, filtered);
   }
 
   // Phát sự kiện tới lần lượt từng handler. Handler lỗi chỉ bị log, không ném ra nơi phát

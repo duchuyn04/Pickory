@@ -35,15 +35,20 @@ describe('quy tắc ranh giới module (ESLint)', () => {
     expect(fixtures.some((f) => f.expected === 'none')).toBe(true);
   });
 
-  it.each(fixtures)('$name ($expected)', async ({ code, lintAs, expected }) => {
-    const [result] = await eslint.lintText(code, { filePath: `${REPO_ROOT}${lintAs}` });
-    // Chỉ xét rule ranh giới; các rule khác (unused var...) không liên quan tới file mẫu.
-    const violations = result?.messages.filter((m) => m.ruleId === 'no-restricted-imports') ?? [];
+  it.each(fixtures)(
+    '$name ($expected)',
+    async ({ code, lintAs, expected }) => {
+      const [result] = await eslint.lintText(code, { filePath: `${REPO_ROOT}${lintAs}` });
+      // Chỉ xét rule ranh giới; các rule khác (unused var...) không liên quan tới file mẫu.
+      const violations = result?.messages.filter((m) => m.ruleId === 'no-restricted-imports') ?? [];
 
-    if (expected === 'error') {
-      expect(violations).toHaveLength(1);
-    } else {
-      expect(violations).toEqual([]);
-    }
-  });
+      if (expected === 'error') {
+        expect(violations).toHaveLength(1);
+      } else {
+        expect(violations).toEqual([]);
+      }
+    },
+    // Đặt timeout 15 giây vì kiểm tra toàn bộ fixture qua ESLint trên Windows chạy song song có thể mất hơn 5 giây.
+    15000,
+  );
 });
