@@ -300,49 +300,52 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 
 ## Track B: ai-gateway
 
+Xác minh cục bộ đã chạy qua SDK HTTP mock, PostgreSQL và UI thật; Claude review qua Herdr và sửa findings. API provider thật còn bị chặn do thiếu `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_KEY`; giữ nguyên checkbox live chưa đạt. Chi tiết bằng chứng và giới hạn ngân sách postpaid: ADR 0002.
+
+
 ### AI-00: Spike xác minh DeepSeek và AI SDK
 **Mô tả:** Không viết code sản phẩm. Đối chiếu tài liệu chính thức DeepSeek và OpenAI, rồi chạy script thử (nằm ngoài `src/`, không commit key): id model, giới hạn context, JSON mode, tool calling, đơn giá. Với bản `ai` và `@ai-sdk/*` sẽ khóa: kiểm tra còn `generateText`, `streamText`, `embedMany`, cách làm structured output (`generateObject` hoặc API thay thế), cách chạy nhiều bước (`maxSteps` hoặc `stopWhen`), hook giữa các bước (`prepareStep`, `onStepFinish`).
 **Tiêu chí nghiệm thu:**
 - [ ] Ghi kết quả vào `docs/adr/0002-ai-gateway-provider-findings.md`, gồm tên API thật, điểm lệch so với spec, và quyết định "dùng hook của SDK" hay "gateway tự chạy từng bước"
-- [ ] Cập nhật `SPEC-ai-gateway.md` nếu có điểm lệch (id model, tên hàm)
-- [ ] Danh sách dependency xin duyệt khớp với bản thực tế
+- [x] Cập nhật `SPEC-ai-gateway.md` nếu có điểm lệch (id model, tên hàm)
+- [x] Danh sách dependency xin duyệt khớp với bản thực tế
 **Kiểm tra:** script chạy thật được 1 lần chat, 1 JSON, 1 tool call, 1 embed (cần API key do người dùng cung cấp)
 **Phụ thuộc:** T03, Open Questions 1 và 3 · **File:** `docs/adr/0002-*.md`, `spec/SPEC-ai-gateway.md` · **Quy mô:** S
 
 ### AI-01: redactPII
 **Mô tả:** `shared/privacy.ts` thay SĐT Việt Nam, email, số thẻ và số tài khoản ngân hàng bằng `[đã ẩn]`.
 **Tiêu chí nghiệm thu:**
-- [ ] `0912 345 678`, `+84 912345678`, `091.234.5678`, `a@b.vn` đều bị thay; số thẻ 16 chữ số và số tài khoản dài bị thay
-- [ ] Giá VND thường gặp (`25.990.000`, `25990000đ`, `5 triệu`) và mã model (`RTX 4070`, `SM-S918B`) không bị ẩn nhầm
-- [ ] Idempotent: chạy 2 lần cho cùng kết quả
+- [x] `0912 345 678`, `+84 912345678`, `091.234.5678`, `a@b.vn` đều bị thay; số thẻ 16 chữ số và số tài khoản dài bị thay
+- [x] Giá VND thường gặp (`25.990.000`, `25990000đ`, `5 triệu`) và mã model (`RTX 4070`, `SM-S918B`) không bị ẩn nhầm
+- [x] Idempotent: chạy 2 lần cho cùng kết quả
 **Kiểm tra:** unit với bộ ví dụ dương và âm (cả hai nhóm đều bắt buộc)
 **Phụ thuộc:** T02 · **File:** `apps/backend/src/shared/privacy.ts` (+ test) · **Quy mô:** S
 
 ### AI-02: Hợp đồng gateway, fake provider và usage log
 **Mô tả:** Kiểu public trong `ai-gateway/index.ts` (`AiFeature`, `CallContext`, `AiGateway`, `ToolDefinition`, 3 lớp lỗi), cổng `Provider`, `fake-provider.ts` (kết quả cố định, ghi lại request), bảng `ai_usage_logs`, `pricing.ts`, hàm tính chi phí, `chat()` đi qua `redactPII` rồi provider, ghi log theo Decision 8.
 **Tiêu chí nghiệm thu:**
-- [ ] Gọi `chat` bằng fake provider ghi đúng 1 dòng `ai_usage_logs`, không chứa nội dung prompt, `actorKeyHash` là hash
-- [ ] Fake provider nhận text đã qua `redactPII` (kiểm bằng request đã ghi)
-- [ ] Lời gọi lỗi và lời gọi bị chặn cũng có 1 dòng log (`status` `error`/`blocked`)
-- [ ] Không có API key thì dev chạy bằng fake provider
+- [x] Gọi `chat` bằng fake provider ghi đúng 1 dòng `ai_usage_logs`, không chứa nội dung prompt, `actorKeyHash` là hash
+- [x] Fake provider nhận text đã qua `redactPII` (kiểm bằng request đã ghi)
+- [x] Lời gọi lỗi và lời gọi bị chặn cũng có 1 dòng log (`status` `error`/`blocked`)
+- [x] Không có API key thì dev chạy bằng fake provider
 **Kiểm tra:** unit tính chi phí; integration ghi log vào PostgreSQL
 **Phụ thuộc:** AI-01, T03 · **File:** `modules/ai-gateway/{index,types,fake-provider,usage-log,pricing,service}.ts`, `prisma/schema/ai-gateway.prisma` · **Quy mô:** M
 
 ### AI-03: Timeout, retry và circuit breaker
 **Mô tả:** Bộ bọc độ tin cậy quanh provider: timeout (chat 30 s, token đầu stream 10 s, embed 15 s), retry tối đa 2 lần chỉ với 429, 5xx, lỗi mạng (backoff 500 ms rồi 1500 ms có jitter), circuit breaker theo provider (5 lỗi liên tiếp mở 60 giây, sau đó thử 1 request).
 **Tiêu chí nghiệm thu:**
-- [ ] 4xx khác 429 không retry; không bao giờ quá 3 lần gọi cho một bước
-- [ ] 5 lỗi liên tiếp rồi các lần gọi trong 60 giây ném `AiUnavailableError` dưới 50 ms và không phát sinh request ra ngoài
-- [ ] Sau 60 giây chỉ cho 1 request thử; thành công thì đóng mạch
+- [x] 4xx khác 429 không retry; không bao giờ quá 3 lần gọi cho một bước
+- [x] 5 lỗi liên tiếp rồi các lần gọi trong 60 giây ném `AiUnavailableError` dưới 50 ms và không phát sinh request ra ngoài
+- [x] Sau 60 giây chỉ cho 1 request thử; thành công thì đóng mạch
 **Kiểm tra:** unit với fake timer và provider giả lỗi theo kịch bản
 **Phụ thuộc:** AI-02 · **File:** `modules/ai-gateway/{reliability,circuit-breaker}.ts` (+ test) · **Quy mô:** M
 
 ### AI-04: Adapter DeepSeek (chat, stream) và cấu hình
 **Mô tả:** `providers/deepseek.ts` dùng Vercel AI SDK, `maxRetries: 0`, đọc `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` từ config, `chat` và `chatStream`, usage từ callback của SDK, lỗi ánh xạ sang lỗi nội bộ. Live contract test (1 lần chat).
 **Tiêu chí nghiệm thu:**
-- [ ] Đổi `LLM_MODEL` hoặc `LLM_BASE_URL` không cần sửa code (kiểm bằng test với HTTP mock)
-- [ ] Adapter test bằng HTTP mock: 200, 429, 500, timeout đều ánh xạ đúng và đi qua bộ retry của AI-03
-- [ ] API key không xuất hiện trong log hay lỗi trả ra
+- [x] Đổi `LLM_MODEL` hoặc `LLM_BASE_URL` không cần sửa code (kiểm bằng test với HTTP mock)
+- [x] Adapter test bằng HTTP mock: 200, 429, 500, timeout đều ánh xạ đúng và đi qua bộ retry của AI-03
+- [x] API key không xuất hiện trong log hay lỗi trả ra
 - [ ] Với `AI_LIVE_TESTS=1`: live test chat với DeepSeek thật pass
 **Kiểm tra:** `pnpm test`; chạy thêm `AI_LIVE_TESTS=1 pnpm --filter @pickory/backend test -- ai-gateway/providers`
 **Phụ thuộc:** AI-03, AI-00 · **File:** `modules/ai-gateway/providers/{deepseek,index}.ts`, `shared/config.ts` (+ test, `msw`) · **Quy mô:** M
@@ -350,18 +353,18 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 ### AI-05: Ngân sách và hạn mức
 **Mô tả:** Bảng `ai_settings` (ngân sách tháng, hạn mức chat), mặc định lấy từ biến môi trường. Tổng chi phí tháng tính từ log theo giờ `Asia/Ho_Chi_Minh`. Ngưỡng 80% cảnh báo, 100% chặn bậc thấp, 120% chặn hết (bảng bậc ở `plan.md` Decision 9). Hạn mức chat ngày theo người (50 và 15), áp cho `shopping-assistant.chat`, đếm trong bộ nhớ, phân biệt bằng tiền tố `actorKey`.
 **Tiêu chí nghiệm thu:**
-- [ ] Đạt 100% ngân sách thì `personalized-content.*` ném `AiBudgetExceededError` còn `shopping-assistant.chat` vẫn chạy; đạt 120% thì chat cũng dừng
-- [ ] Khách vãng lai gửi tin thứ 16 trong ngày bị `AiBudgetExceededError` (thông báo dễ hiểu); người đã đăng nhập chặn ở tin 51; sang ngày mới theo giờ VN thì đếm lại
-- [ ] Lời gọi bị chặn ghi 1 dòng log `blocked`, không gọi provider
-- [ ] `actorKey` sai định dạng bị báo lỗi lập trình
+- [x] Đạt 100% ngân sách thì `personalized-content.*` ném `AiBudgetExceededError` còn `shopping-assistant.chat` vẫn chạy; đạt 120% thì chat cũng dừng
+- [x] Khách vãng lai gửi tin thứ 16 trong ngày bị `AiBudgetExceededError` (thông báo dễ hiểu); người đã đăng nhập chặn ở tin 51; sang ngày mới theo giờ VN thì đếm lại
+- [x] Lời gọi bị chặn ghi 1 dòng log `blocked`, không gọi provider
+- [x] `actorKey` sai định dạng bị báo lỗi lập trình
 **Kiểm tra:** unit ngưỡng và biên giờ VN (23:59 và 00:00); integration với log trong DB
 **Phụ thuộc:** AI-04 · **File:** `modules/ai-gateway/{budget,rate-limit,settings}.ts`, `prisma/schema/ai-gateway.prisma` (+ test) · **Quy mô:** M
 
 ### AI-06: chatJson
 **Mô tả:** `chatJson<T>` bật JSON mode của provider, parse và validate bằng Zod, sai schema thì thử lại 1 lần kèm thông báo lỗi validate, vẫn sai thì ném `AiInvalidOutputError`. Live test.
 **Tiêu chí nghiệm thu:**
-- [ ] Trả object đúng schema; sai schema lần đầu rồi đúng lần hai thì thành công
-- [ ] Sai hai lần thì `AiInvalidOutputError` sau đúng 2 lần gọi, mỗi lần 1 dòng log
+- [x] Trả object đúng schema; sai schema lần đầu rồi đúng lần hai thì thành công
+- [x] Sai hai lần thì `AiInvalidOutputError` sau đúng 2 lần gọi, mỗi lần 1 dòng log
 - [ ] Với `AI_LIVE_TESTS=1`: live test `chatJson` pass
 **Kiểm tra:** unit với fake provider theo kịch bản; live test
 **Phụ thuộc:** AI-05, AI-00 · **File:** `modules/ai-gateway/{service,chat-json}.ts`, `providers/deepseek.ts` (+ test) · **Quy mô:** S
@@ -369,10 +372,10 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 ### AI-07: Vòng lặp tool nhiều bước
 **Mô tả:** `ToolDefinition` của Pickory thành tool của SDK, `maxSteps`, mỗi bước qua kiểm tra ngân sách, `redactPII` (cả kết quả tool trả về trước khi đưa lại cho LLM) và ghi log, theo quyết định ở AI-00 (hook SDK hoặc gateway tự chạy từng bước). Live test tool calling.
 **Tiêu chí nghiệm thu:**
-- [ ] Vòng lặp 3 bước ghi đúng 3 dòng `ai_usage_logs` và dừng ở `maxSteps` dù model còn muốn gọi tool
-- [ ] Ngân sách chạm ngưỡng giữa chừng thì bước kế tiếp bị chặn và vòng lặp kết thúc bằng `AiBudgetExceededError`
-- [ ] Kết quả tool chứa SĐT hoặc email được ẩn trước khi gửi cho LLM (kiểm bằng request đã ghi)
-- [ ] Tool ném lỗi thì lỗi được đưa lại cho LLM dạng thông báo, không làm sập vòng lặp
+- [x] Vòng lặp 3 bước ghi đúng 3 dòng `ai_usage_logs` và dừng ở `maxSteps` dù model còn muốn gọi tool
+- [x] Ngân sách chạm ngưỡng giữa chừng thì bước kế tiếp bị chặn và vòng lặp kết thúc bằng `AiBudgetExceededError`
+- [x] Kết quả tool chứa SĐT hoặc email được ẩn trước khi gửi cho LLM (kiểm bằng request đã ghi)
+- [x] Tool ném lỗi thì lỗi được đưa lại cho LLM dạng thông báo, không làm sập vòng lặp
 - [ ] Với `AI_LIVE_TESTS=1`: live test tool calling pass
 **Kiểm tra:** unit với fake provider có kịch bản nhiều bước; live test
 **Phụ thuộc:** AI-05, AI-00 · **File:** `modules/ai-gateway/{tool-loop,service}.ts`, `providers/deepseek.ts` (+ test) · **Quy mô:** M
@@ -380,8 +383,8 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 ### AI-08: Embed, cache và adapter OpenAI
 **Mô tả:** `providers/openai-embedding.ts` (`embedMany`, `text-embedding-3-small`), bảng `ai_embedding_cache` (`Float[]`, key SHA-256 của `model + "\0" + text đã redact`), `embed(texts)` chỉ gọi provider cho text chưa có cache, giữ đúng thứ tự kết quả. Live test.
 **Tiêu chí nghiệm thu:**
-- [ ] Gọi `embed` 2 lần cùng text chỉ phát sinh 1 request tới provider; mảng trộn text cũ và mới chỉ gửi text mới, kết quả đúng thứ tự
-- [ ] Mỗi lời gọi `embed` có đúng 1 dòng log; trúng cache toàn bộ thì `costUsd = 0`
+- [x] Gọi `embed` 2 lần cùng text chỉ phát sinh 1 request tới provider; mảng trộn text cũ và mới chỉ gửi text mới, kết quả đúng thứ tự
+- [x] Mỗi lời gọi `embed` có đúng 1 dòng log; trúng cache toàn bộ thì `costUsd = 0`
 - [ ] Vector có 1536 chiều (kiểm bằng live test)
 - [ ] Với `AI_LIVE_TESTS=1`: live test embed pass
 **Kiểm tra:** integration cache trong PostgreSQL; unit thứ tự kết quả
@@ -390,10 +393,10 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 ### AI-09: API back-office AI và giao diện cấu hình
 **Mô tả:** `GET /api/admin/ai/usage` (`ai-usage:read`), `GET /api/admin/ai/settings` (`ai-usage:read`), `PUT /api/admin/ai/settings` (`ai-settings:manage`, ghi audit), `getUsageSummary(range)` (chi phí theo ngày và feature, tỉ lệ lỗi, p95 độ trễ), `aiPermissions`. Trang nhỏ trong back-office để xem chi phí và sửa ngân sách.
 **Tiêu chí nghiệm thu:**
-- [ ] `PUT` sửa ngân sách có hiệu lực ở lần gọi kế tiếp và tạo đúng 1 dòng audit
-- [ ] `sales` gọi `PUT` nhận 403, gọi `GET usage` được; thêm các endpoint vào test ma trận quyền
-- [ ] `getUsageSummary` đúng số liệu trên dữ liệu log mẫu (gồm p95)
-- [ ] Giá trị âm hoặc không hợp lệ bị 400
+- [x] `PUT` sửa ngân sách có hiệu lực ở lần gọi kế tiếp và tạo đúng 1 dòng audit
+- [x] `sales` gọi `PUT` nhận 403, gọi `GET usage` được; thêm các endpoint vào test ma trận quyền
+- [x] `getUsageSummary` đúng số liệu trên dữ liệu log mẫu (gồm p95)
+- [x] Giá trị âm hoặc không hợp lệ bị 400
 **Kiểm tra:** integration; thủ công trang cấu hình bằng admin dev
 **Phụ thuộc:** AI-05, ID-04 · **File:** `modules/ai-gateway/{routes,usage-summary,index}.ts`, `apps/frontend/src/features/ai-gateway/admin/ai-settings-page.tsx` (+ test) · **Quy mô:** M
 
@@ -404,10 +407,34 @@ Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` tr�
 ### E2E-01: Playwright và hai luồng E2E của identity
 **Mô tả:** Cài Playwright, DB và seed cho E2E, đọc link từ file outbox dev. Luồng 1: khách đăng ký, đăng xuất, đăng nhập. Luồng 2: admin mời nhân viên `sales`, nhân viên đặt mật khẩu, đăng nhập.
 **Tiêu chí nghiệm thu:**
-- [ ] `pnpm test:e2e` chạy sạch cả hai luồng
-- [ ] Luồng 2 xác nhận nhân viên `sales` không thấy các mục menu ngoài quyền của mình. Phần "thấy menu đơn hàng" hoãn tới khi `commerce` và `admin-console` có (ghi trong Traceability)
-**Kiểm tra:** `pnpm test:e2e`
-**Phụ thuộc:** UI-01, UI-02, UI-07, ID-12 · **File:** `e2e/{auth,staff-invite}.spec.ts`, `playwright.config.ts` · **Quy mô:** M
+- [x] `pnpm test:e2e` chạy sạch cả hai luồng
+- [x] Luồng 2 xác nhận nhân viên `sales` không thấy các mục menu ngoài quyền của mình. Phần "thấy menu đơn hàng" hoãn tới khi `commerce` và `admin-console` có (ghi trong Traceability)
+- [x] Chạy lại toàn bộ E2E lần hai với cùng email vẫn PASS, không dùng dữ liệu còn từ lần trước
+- [x] DB `pickory_e2e` riêng; migrate, reset và seed trước khi API báo ready; không tái sử dụng API dev
+- [x] Locator dùng `getByRole`/`getByLabel`, chờ điều kiện thay vì sleep cố định; mật khẩu fixture sinh ở runtime, outbox/report bị gitignore
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` PASS
+**Kiểm tra:** `pnpm test:e2e`: lần 1 có 2 PASS (18.8s), lần 2 có 2 PASS (13.3s). Suite Vitest có 361 PASS, 4 live test SKIP như trước task này. Số user và fingerprint bảng `users` của DB dev không đổi qua lần chạy E2E thứ hai. Đã xem ảnh profile customer và menu sales trong `test-results/`. Build còn cảnh báo chunk frontend 668.23 kB và runner có cảnh báo `NO_COLOR`/`FORCE_COLOR` từ môi trường terminal.
+**Phụ thuộc:** UI-01, UI-02, UI-07, ID-12 · **File:** `e2e/{auth,staff-invite}.spec.ts`, `e2e/{environment,outbox}.ts`, `playwright.config.ts`, `tsconfig.e2e.json`, `apps/backend/scripts/e2e-start.ts`, script/dependency root, compiler backend và proxy Vite · **Quy mô:** M
+
+### SEC-01: Rà soát dependency qua Prisma
+**Trạng thái:** Chưa hoàn tất.
+**Hạn rà soát:** 2026-10-12 hoặc trước release, tùy mốc nào đến trước.
+**Mô tả:** Audit hiện có 2 High và 1 Moderate qua chuỗi dependency của Prisma.
+**Đánh giá hiện tại:**
+- [deepmerge-ts](https://github.com/advisories/GHSA-ggr8-5vv4-36mx) cần đồ thị object tự tham chiếu. Cấu hình Prisma là object tĩnh từ repo. Cấu hình không nhận đồ thị object từ request.
+- [Rò thông tin kết nối](https://github.com/advisories/GHSA-3f6p-5ww8-9rcr) của `mysql2` cần kết nối MySQL.
+- [Giải nén không giới hạn](https://github.com/advisories/GHSA-rgwj-5xj2-c3m3) của `mysql2` cần kết nối MySQL.
+- Backend dùng PostgreSQL qua adapter `PrismaPg`. E2E dùng cùng adapter.
+- [INFERENCE] Chưa thấy đường khai thác ba cảnh báo trong luồng E2E hiện tại.
+**Tiêu chí nghiệm thu:**
+- [ ] Rà soát ba advisory trước hạn.
+- [ ] Ghi nhận đường khai thác hoặc lý do chưa thấy đường khai thác.
+- [ ] Chốt biện pháp cho dependency trước release.
+**Phạm vi hiện tại:** Không nâng dependency trong lần sửa E2E-01 này. Không thêm override.
+**Cách rà soát:**
+1. Chạy `pnpm audit`.
+2. Đối chiếu điều kiện khai thác của từng advisory với cấu hình Prisma.
+3. Ghi lại đánh giá trong SEC-01.
 
 ---
 

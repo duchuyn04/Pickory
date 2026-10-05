@@ -57,8 +57,30 @@ const configSchema = z
       .default(false),
     // Bắt buộc, không có mặc định: thiếu thì app không khởi động.
     DATABASE_URL: z.string().url(),
+    // Không chọn model chat ngầm định vì ID model phải được người vận hành xác nhận.
+    LLM_MODEL: z.string().default(''),
+    LLM_BASE_URL: z.string().url().default('https://api.deepseek.com'),
+    LLM_API_KEY: z.string().default(''),
+    EMBEDDING_API_KEY: z.string().default(''),
+    EMBEDDING_MODEL: z.string().min(1).default('text-embedding-3-small'),
+    // Biến môi trường chỉ cấp giá trị khởi tạo, thay đổi sau đó được lưu trong DB.
+    AI_MONTHLY_BUDGET_USD: z.coerce.number().finite().nonnegative().default(30),
+    AI_CHAT_DAILY_LIMIT_USER: z.coerce.number().int().positive().default(50),
+    AI_CHAT_DAILY_LIMIT_ANON: z.coerce.number().int().positive().default(15),
+    AI_LIVE_TESTS: z
+      .enum(['0', '1'])
+      .default('0')
+      .transform((value) => value === '1'),
   })
   .superRefine((data, ctx) => {
+    // Có khóa nhưng thiếu model phải dừng cấu hình thay vì gửi request với ID rỗng.
+    if (data.LLM_API_KEY && !data.LLM_MODEL.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'LLM_MODEL bắt buộc khi có LLM_API_KEY.',
+        path: ['LLM_MODEL'],
+      });
+    }
     if (data.NODE_ENV === 'production') {
       if (!data.GOOGLE_CLIENT_ID || data.GOOGLE_CLIENT_ID.startsWith('mock_')) {
         ctx.addIssue({

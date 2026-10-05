@@ -1,3 +1,4 @@
+import { AiSettingsPage } from './features/ai-gateway/admin/ai-settings-page';
 import { Outlet, Route, Routes } from 'react-router-dom';
 import { AccountPage } from './features/identity/customer/account-page';
 import { AdminDashboardPage } from './features/identity/admin/dashboard-page';
@@ -72,7 +73,7 @@ export function App() {
             path="conversations"
             element={<AdminPlaceholderPage title="Chăm sóc khách hàng" />}
           />
-          <Route path="ai" element={<AdminPlaceholderPage title="Cấu hình AI" />} />
+          <Route path="ai" element={<AiSettingsPage />} />
         </Route>
       </Routes>
       <ConsentBanner />

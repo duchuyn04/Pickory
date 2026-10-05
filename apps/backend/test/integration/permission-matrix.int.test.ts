@@ -92,6 +92,21 @@ export const BACKOFFICE_ENDPOINTS: EndpointPermissionRow[] = [
     path: '/api/admin/customers/dummy-id/unlock',
     requiredPermissions: ['customers:manage'],
   },
+  {
+    method: 'get',
+    path: '/api/admin/ai/usage',
+    requiredPermissions: ['ai-usage:read'],
+  },
+  {
+    method: 'get',
+    path: '/api/admin/ai/settings',
+    requiredPermissions: ['ai-usage:read'],
+  },
+  {
+    method: 'put',
+    path: '/api/admin/ai/settings',
+    requiredPermissions: ['ai-settings:manage'],
+  },
 ];
 
 describe('ID-04: Khung test ma trận quyền back-office', () => {
