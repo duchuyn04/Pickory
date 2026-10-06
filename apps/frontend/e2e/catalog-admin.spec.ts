@@ -27,11 +27,40 @@ async function expectAtMostTextLines(target: Locator, maxLines: number) {
   expect(lineCount).toBeLessThanOrEqual(maxLines);
 }
 
+// Ở màn hẹp, menu quản trị thu vào nút "Menu". Mở menu trước khi bấm mục trong menu.
+async function openAdminMenuIfCollapsed(page: Page) {
+  const menuToggle = page.getByRole('button', { name: 'Menu', exact: true });
+  const logoutButton = page.getByRole('button', { name: 'Đăng xuất', exact: true });
+  // Chờ khung quản trị hiện xong. Ngay sau đăng nhập, trang có thể chưa có nút nào.
+  await expect(menuToggle.or(logoutButton).first()).toBeVisible();
+  if (!(await menuToggle.isVisible())) return;
+  if ((await menuToggle.getAttribute('aria-expanded')) === 'true') return;
+  await menuToggle.click();
+}
+
+// Đi tới một trang quản trị qua menu, ở cả bố cục rộng và bố cục hẹp.
+async function goToAdminPage(page: Page, menuLabel: string) {
+  await openAdminMenuIfCollapsed(page);
+  await page.getByRole('link', { name: menuLabel, exact: true }).click();
+}
+
+// Đọc padding và viền của khối bao danh sách. Ở màn hẹp, khối bao không được có cả hai.
+async function readListWrapperBox(page: Page) {
+  return page.locator('.catalog-admin-list').evaluate((element) => {
+    const style = getComputedStyle(element);
+    // Làm tròn độ dày viền. Màn hình Windows scale 125% làm Chromium trả `0.8px` cho viền `1px`.
+    const roundedBorderLeftWidth = Math.round(Number.parseFloat(style.borderLeftWidth));
+    return { paddingLeft: style.paddingLeft, borderLeftWidth: `${roundedBorderLeftWidth}px` };
+  });
+}
+
 test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hiệu', async ({ page }, testInfo) => {
   test.setTimeout(90000);
   // Ghi nhận nhật ký console và lỗi trang để kiểm tra không có lỗi hoặc cảnh báo nào.
   const consoleIssues: string[] = [];
   page.on('console', (msg) => {
+    // Bỏ qua lỗi tải `favicon.ico`. Chromium có giao diện tự gọi tệp này, còn ứng dụng chưa có favicon.
+    if (msg.location().url.endsWith('/favicon.ico')) return;
     if (msg.type() === 'error' || msg.type() === 'warning') {
       consoleIssues.push(`[${msg.type()}] ${msg.text()}`);
     }
@@ -55,7 +84,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
 
   await test.step('Tạo danh mục gốc và danh mục con có thuộc tính enum', async () => {
     // Điều hướng vào trang quản lý danh mục qua menu thanh bên.
-    await page.getByRole('link', { name: 'Danh mục', exact: true }).click();
+    await goToAdminPage(page, 'Danh mục');
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin/categories`);
 
     // Tạo danh mục gốc đầu tiên.
@@ -89,7 +118,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
 
   await test.step('Tạo thương hiệu mới bằng giao diện quản trị', async () => {
     // Chuyển sang màn hình quản lý thương hiệu qua menu.
-    await page.getByRole('link', { name: 'Thương hiệu', exact: true }).click();
+    await goToAdminPage(page, 'Thương hiệu');
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin/brands`);
 
     // Mở hộp thoại và tạo thương hiệu mới.
@@ -154,7 +183,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     expect(productResponse.status()).toBe(201);
 
     // Quay lại màn hình danh mục để thử xóa thuộc tính đang được sử dụng.
-    await page.getByRole('link', { name: 'Danh mục', exact: true }).click();
+    await goToAdminPage(page, 'Danh mục');
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin/categories`);
     await expect(page.getByText('Điện thoại E2E')).toBeVisible();
 
@@ -179,7 +208,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     await expect(dialog).toBeHidden();
 
     // Chuyển sang màn hình thương hiệu và thử xóa thương hiệu VinSmart E2E đang có sản phẩm.
-    await page.getByRole('link', { name: 'Thương hiệu', exact: true }).click();
+    await goToAdminPage(page, 'Thương hiệu');
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin/brands`);
     await expect(page.getByText('VinSmart E2E')).toBeVisible();
 
@@ -192,7 +221,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     await expect(brandAlert).toContainText('Thương hiệu đang có sản phẩm, không thể xóa.');
 
     // Chụp giao diện danh mục và hộp thoại ở chế độ admin trên thiết bị di động (375px).
-    await page.getByRole('link', { name: 'Danh mục', exact: true }).click();
+    await goToAdminPage(page, 'Danh mục');
     await page.setViewportSize({ width: 375, height: 812 });
     await expect(
       page.getByRole('button', { name: 'Sửa Điện thoại E2E', exact: true }),
@@ -249,7 +278,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     await expect(dialog).toBeHidden();
 
     // Chụp màn hình thương hiệu ở chế độ admin trên thiết bị di động (375px).
-    await page.getByRole('link', { name: 'Thương hiệu', exact: true }).click();
+    await goToAdminPage(page, 'Thương hiệu');
     await expect(page.getByRole('button', { name: 'Sửa VinSmart E2E', exact: true })).toBeVisible();
     await expectNoHorizontalPageOverflow(page);
     await expectAtMostTextLines(page.getByRole('heading', { level: 1 }), 2);
@@ -265,7 +294,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
 
   await test.step('Mời tài khoản sales riêng và kiểm tra phân quyền xem danh sách', async () => {
     // Mời một tài khoản nhân viên bán hàng mới qua màn hình quản lý nhân viên.
-    await page.getByRole('link', { name: 'Nhân viên', exact: true }).click();
+    await goToAdminPage(page, 'Nhân viên');
     await page.getByRole('button', { name: '+ Mời nhân viên', exact: true }).click();
     const invitationDialog = page.getByRole('dialog', {
       name: 'Mời nhân viên mới',
@@ -279,7 +308,10 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     await expect(invitationDialog).toBeHidden();
 
     // Đăng xuất phiên quản trị viên.
+    await openAdminMenuIfCollapsed(page);
     await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
+    // Chờ đăng xuất xong. Điều hướng sớm cắt ngang yêu cầu và phiên admin còn sống.
+    await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin/login`);
 
     // Mở liên kết thiết lập mật khẩu từ hòm thư nội bộ.
     const setupLink = await readPasswordSetupLink(salesEmail);
@@ -299,7 +331,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
 
     // Sales xem được danh mục nhưng không có quyền tạo, sửa, xóa.
-    await page.getByRole('link', { name: 'Danh mục', exact: true }).click();
+    await goToAdminPage(page, 'Danh mục');
     await expect(page.getByText('Điện thoại E2E')).toBeVisible();
     await expect(page.getByRole('button', { name: '+ Thêm danh mục gốc' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Thêm con/ })).toHaveCount(0);
@@ -307,7 +339,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     await expect(page.getByRole('button', { name: /Xóa/ })).toHaveCount(0);
 
     // Sales xem được thương hiệu nhưng không có các nút thao tác chỉnh sửa.
-    await page.getByRole('link', { name: 'Thương hiệu', exact: true }).click();
+    await goToAdminPage(page, 'Thương hiệu');
     await expect(page.getByText('VinSmart E2E')).toBeVisible();
     await expect(page.getByRole('button', { name: '+ Thêm thương hiệu' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Sửa/ })).toHaveCount(0);
@@ -316,8 +348,11 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
 
   await test.step('Chụp ảnh màn hình ở độ phân giải 1280 và 375', async () => {
     // Chụp trang danh mục ở chế độ máy tính để bàn (1280px).
-    await page.getByRole('link', { name: 'Danh mục', exact: true }).click();
+    await goToAdminPage(page, 'Danh mục');
     await page.setViewportSize({ width: 1280, height: 800 });
+    // Màn rộng giữ khung bao danh sách như cũ.
+    await expect(page.getByTestId('category-child-card').first()).toBeVisible();
+    expect(await readListWrapperBox(page)).toEqual({ paddingLeft: '16px', borderLeftWidth: '1px' });
     await page.screenshot({
       path: testInfo.outputPath('categories-desktop.png'),
       fullPage: true,
@@ -325,6 +360,13 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
 
     // Chụp trang danh mục ở chế độ thiết bị di động (375px).
     await page.setViewportSize({ width: 375, height: 812 });
+    // Khối bao danh sách và menu trái cùng ép thẻ con còn khoảng 100px. Thẻ cần ít nhất 250px.
+    const childCategoryCard = page.getByTestId('category-child-card').first();
+    await expect(childCategoryCard).toBeVisible();
+    const childCardBox = await childCategoryCard.boundingBox();
+    expect(childCardBox?.width ?? 0).toBeGreaterThanOrEqual(250);
+    // Menu đã thu gọn thì thẻ con vẫn đạt 250px dù khối bao còn viền. Kiểm tra trực tiếp khối bao.
+    expect(await readListWrapperBox(page)).toEqual({ paddingLeft: '0px', borderLeftWidth: '0px' });
     await page.screenshot({
       path: testInfo.outputPath('categories-mobile.png'),
       fullPage: true,
@@ -332,7 +374,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
 
     // Chụp trang thương hiệu ở chế độ máy tính để bàn (1280px).
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.getByRole('link', { name: 'Thương hiệu', exact: true }).click();
+    await goToAdminPage(page, 'Thương hiệu');
     await page.screenshot({
       path: testInfo.outputPath('brands-desktop.png'),
       fullPage: true,

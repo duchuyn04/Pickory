@@ -24,8 +24,8 @@ export function AdminDashboardPage() {
         }}
       >
         <p style={{ margin: 0, color: 'var(--color-ink-muted)', fontSize: 'var(--text-sm)' }}>
-          Đây là bảng điều khiển back-office tối thiểu của Pickory. Hãy chọn menu bên trái theo
-          quyền được cấp.
+          Đây là bảng điều khiển back-office tối thiểu của Pickory. Hãy chọn một trang trong menu
+          theo quyền được cấp.
         </p>
       </div>
     </div>

@@ -4,6 +4,7 @@ import { apiRequest } from '../../../shared/api';
 import { useCan } from '../../identity/hooks/use-actor';
 import { AdminFormDialog } from './admin-form-dialog';
 import { toCatalogErrorMessage } from './catalog-errors';
+import './catalog-admin.css';
 
 // Dữ liệu phản hồi thương hiệu sản phẩm từ API.
 export interface BrandItem {
@@ -228,14 +229,7 @@ export function BrandsPage() {
 
       {/* Bảng danh sách thương hiệu */}
       {!isLoading && !isError && (
-        <div
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-card)',
-            padding: 'var(--space-4)',
-          }}
-        >
+        <div className="catalog-admin-list">
           {brands.length === 0 ? (
             <div
               style={{

@@ -10,6 +10,7 @@ import { useCan } from '../../identity/hooks/use-actor';
 import { AdminFormDialog } from './admin-form-dialog';
 import { AttributeEditor } from './attribute-editor';
 import { toCatalogErrorMessage } from './catalog-errors';
+import './catalog-admin.css';
 
 // Bản ghi danh mục trả về từ API quản trị bao gồm đầy đủ thuộc tính riêng.
 export interface CategoryItem {
@@ -320,11 +321,8 @@ export function CategoriesPage() {
       {/* Cây danh mục hai cấp */}
       {!isLoading && !isError && (
         <div
+          className="catalog-admin-list"
           style={{
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-card)',
-            padding: 'var(--space-4)',
             display: 'flex',
             flexDirection: 'column',
             gap: 'var(--space-4)',
@@ -449,6 +447,7 @@ export function CategoriesPage() {
                       {children.map((child) => (
                         <div
                           key={child.id}
+                          data-testid="category-child-card"
                           style={{
                             padding: 'var(--space-2) var(--space-3)',
                             border: '1px solid var(--color-border)',

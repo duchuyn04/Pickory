@@ -1,7 +1,9 @@
 import { useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
 import { checkPermission, useActor } from '../hooks/use-actor';
+import './admin-layout.css';
 
 interface NavItem {
   label: string;
@@ -31,6 +33,8 @@ export function AdminLayout() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const location = useLocation();
+  // Menu chỉ thu gọn ở màn hẹp. CSS hiện menu trái ở màn rộng, không phụ thuộc state này.
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   // Chưa biết ai đang đăng nhập thì chưa chuyển hướng, nếu không nhân viên đã đăng nhập bị đẩy ra trang login oan.
   if (isLoading) {
@@ -66,88 +70,85 @@ export function AdminLayout() {
   });
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', fontFamily: 'var(--font-sans)' }}>
-      {/* Sidebar */}
-      <aside
-        style={{
-          width: 250,
-          backgroundColor: 'var(--color-surface)',
-          borderRight: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
-        <div
-          style={{
-            padding: 'var(--space-5)',
-            borderBottom: '1px solid var(--color-border)',
-          }}
-        >
-          <div style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-brand)' }}>
-            Pickory Admin
+    <div className="admin-shell">
+      <aside className="admin-sidebar">
+        <div className="admin-sidebar-header">
+          <div>
+            <div
+              style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--color-brand)' }}
+            >
+              Pickory Admin
+            </div>
+            <div
+              style={{
+                fontSize: 'var(--text-xs)',
+                color: 'var(--color-ink-muted)',
+                marginTop: 'var(--space-1)',
+              }}
+            >
+              Role: {actor.roles.join(', ') || 'Staff'}
+            </div>
           </div>
-          <div
-            style={{
-              fontSize: 'var(--text-xs)',
-              color: 'var(--color-ink-muted)',
-              marginTop: 'var(--space-1)',
-            }}
-          >
-            Role: {actor.roles.join(', ') || 'Staff'}
-          </div>
-        </div>
-
-        <nav style={{ flex: 1, padding: 'var(--space-3) 0' }}>
-          {visibleNavItems.map((item) => {
-            const isActive = location.pathname === item.path;
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                style={{
-                  display: 'block',
-                  padding: 'var(--space-3) var(--space-5)',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: isActive ? 600 : 400,
-                  color: isActive ? 'var(--color-brand)' : 'var(--color-ink)',
-                  backgroundColor: isActive ? 'var(--color-brand-soft)' : 'transparent',
-                  textDecoration: 'none',
-                }}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div style={{ padding: 'var(--space-4)', borderTop: '1px solid var(--color-border)' }}>
+          {/* `aria-expanded` và `aria-controls` báo cho trình đọc màn hình trạng thái của danh sách menu. */}
           <button
             type="button"
-            onClick={handleLogout}
-            style={{
-              width: '100%',
-              padding: 'var(--space-2) var(--space-3)',
-              backgroundColor: 'transparent',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-control)',
-              color: 'var(--color-ink)',
-              fontSize: 'var(--text-sm)',
-              cursor: 'pointer',
-            }}
+            className="admin-menu-toggle"
+            aria-expanded={isMenuOpen}
+            aria-controls="admin-sidebar-menu"
+            onClick={() => setIsMenuOpen((wasOpen) => !wasOpen)}
           >
-            Đăng xuất
+            Menu
           </button>
+        </div>
+
+        <div id="admin-sidebar-menu" className="admin-sidebar-menu" data-open={isMenuOpen}>
+          <nav className="admin-sidebar-nav">
+            {visibleNavItems.map((item) => {
+              const isActive = location.pathname === item.path;
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
+                  className="admin-nav-link"
+                  // Đóng menu sau khi chọn trang. Ở màn hẹp, menu đang mở đẩy nội dung của trang mới xuống dưới.
+                  onClick={() => setIsMenuOpen(false)}
+                  style={{
+                    display: 'block',
+                    fontSize: 'var(--text-sm)',
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? 'var(--color-brand)' : 'var(--color-ink)',
+                    backgroundColor: isActive ? 'var(--color-brand-soft)' : 'transparent',
+                    textDecoration: 'none',
+                  }}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div style={{ padding: 'var(--space-4)', borderTop: '1px solid var(--color-border)' }}>
+            <button
+              type="button"
+              onClick={handleLogout}
+              style={{
+                width: '100%',
+                padding: 'var(--space-2) var(--space-3)',
+                backgroundColor: 'transparent',
+                border: '1px solid var(--color-border)',
+                borderRadius: 'var(--radius-control)',
+                color: 'var(--color-ink)',
+                fontSize: 'var(--text-sm)',
+                cursor: 'pointer',
+              }}
+            >
+              Đăng xuất
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main
-        style={{
-          flex: 1,
-          backgroundColor: 'var(--color-surface-muted)',
-          padding: 'var(--space-6)',
-        }}
-      >
+      <main className="admin-main">
         <Outlet />
       </main>
     </div>

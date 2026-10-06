@@ -1,0 +1,21 @@
+/*
+ * Khối bao danh sách của trang danh mục và trang thương hiệu.
+ * Inline style không viết được @media, nên viền và padding của khối nằm ở file này.
+ */
+.catalog-admin-list {
+  padding: var(--space-4);
+  background-color: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+}
+
+/* Cùng breakpoint với `admin-layout.css`. */
+@media (max-width: 767px) {
+  /* Mỗi thẻ đã có viền riêng. Bỏ viền và padding của khối bao để thẻ con còn đủ chiều rộng. */
+  .catalog-admin-list {
+    padding: 0;
+    background-color: transparent;
+    border: none;
+    border-radius: 0;
+  }
+}
