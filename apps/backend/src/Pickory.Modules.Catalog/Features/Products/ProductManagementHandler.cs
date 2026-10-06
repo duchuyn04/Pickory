@@ -30,11 +30,11 @@ public sealed class ProductManagementHandler(
     private const long ProductWriteLockKey = 578524097137070906;
 
     public async Task<PagedResponse<ProductResponse>> GetListAsync(
-        PageQuery page, string? search, CancellationToken cancellationToken)
+        ProductListQuery query, CancellationToken cancellationToken)
     {
         // Nhân viên cần xem mọi trạng thái, kể cả sản phẩm chưa đăng bán.
         var products = database.Products.AsNoTracking();
-        var term = search?.Trim();
+        var term = query.Search?.Trim();
         if (!string.IsNullOrEmpty(term))
         {
             // So sánh không phân biệt hoa thường. Ký tự `%` và `_` giữ nghĩa ký tự thường.
@@ -43,13 +43,34 @@ public sealed class ProductManagementHandler(
                 || product.Skus.Any(sku => sku.Code.ToLower().Contains(lowerTerm)));
         }
 
+        // Lọc danh mục bao gồm cả các sản phẩm thuộc danh mục con trực thuộc.
+        var categoryId = query.CategoryId?.Trim();
+        if (!string.IsNullOrEmpty(categoryId))
+        {
+            products = products.Where(product => product.CategoryId == categoryId
+                || (product.Category != null && product.Category.ParentId == categoryId));
+        }
+
+        // Lọc trạng thái chính xác theo giá trị hợp lệ được truyền từ tham số.
+        if (query.Status.HasValue)
+        {
+            products = products.Where(product => product.Status == query.Status.Value);
+        }
+
+        // Lọc sản phẩm có ít nhất một biến thể đang bật và tồn kho dưới hoặc bằng ngưỡng.
+        if (query.LowStock)
+        {
+            products = products.Where(product => product.Skus.Any(sku =>
+                sku.Enabled && sku.Stock <= CatalogInventoryDefaults.LowStockThreshold));
+        }
+
         // Đếm cùng bộ lọc để giao diện không hiển thị trang ngoài tập kết quả.
         var total = await products.CountAsync(cancellationToken);
         // Thứ tự phụ theo định danh giữ phân trang ổn định khi thời điểm tạo trùng nhau.
         var items = await products.Include(product => product.Skus)
             .OrderByDescending(product => product.CreatedAt).ThenBy(product => product.Id)
-            .Skip(page.Skip).Take(page.Limit).ToListAsync(cancellationToken);
-        return new PagedResponse<ProductResponse>(items.Select(ToResponse).ToList(), total, page.Page, page.Limit);
+            .Skip(query.Page.Skip).Take(query.Page.Limit).ToListAsync(cancellationToken);
+        return new PagedResponse<ProductResponse>(items.Select(ToResponse).ToList(), total, query.Page.Page, query.Page.Limit);
     }
 
     public async Task<ProductResponse> GetAsync(string id, CancellationToken cancellationToken)

@@ -1,0 +1,211 @@
+.product-page,
+.product-form {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  max-width: 100%;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+.product-page-heading,
+.product-list-heading,
+.product-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+.product-page-heading h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+}
+.product-page-heading p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-ink-muted);
+}
+.product-section {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  padding: var(--space-4);
+  min-width: 0;
+}
+.product-section h2 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+.product-section p {
+  color: var(--color-ink-muted);
+}
+.product-fields,
+.product-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
+}
+.product-filters {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: end;
+}
+.product-field {
+  display: grid;
+  align-content: start;
+  gap: var(--space-2);
+  min-width: 0;
+}
+.product-field-wide {
+  grid-column: 1 / -1;
+}
+.product-field label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+.product-field input,
+.product-field select,
+.product-field textarea,
+.product-table input {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+}
+.product-field textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+.product-field [aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+.product-error,
+.product-alert {
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+.product-alert {
+  background: var(--color-surface);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+}
+.product-option {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: end;
+  margin-block: var(--space-3);
+}
+.product-option .product-field {
+  flex: 1 1 180px;
+}
+.product-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+}
+.product-check input {
+  width: auto;
+}
+.product-button-primary,
+.product-button-secondary,
+.product-pagination button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-control);
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.product-button-primary {
+  border: 1px solid var(--color-brand);
+  background: var(--color-brand);
+  color: var(--color-surface);
+}
+.product-button-secondary,
+.product-pagination button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+.product-button-primary:disabled,
+.product-pagination button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+/* Bảng rộng nằm trong khung riêng để viewport hẹp không cuộn ngang cả trang. */
+.product-table-scroll {
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+.product-table {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: var(--text-sm);
+}
+.product-table th,
+.product-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  vertical-align: middle;
+}
+.product-table th {
+  font-weight: 600;
+}
+.product-table input[type='number'] {
+  min-width: 96px;
+}
+.product-table input:not([type='checkbox']) {
+  min-width: 110px;
+}
+/* Giữ tổ hợp trên một dòng để nhãn biến thể không bị tách thành nhiều dòng ở màn 1280 px. */
+.product-form .product-table th[scope='row'] {
+  white-space: nowrap;
+  min-width: 150px;
+}
+/* Giữ mã SKU dài đọc đủ trong 260 px, ưu tiên tồn kho và trạng thái trước cột đóng gói. */
+.product-form .product-table input[name^='variant-code-'] {
+  min-width: 260px;
+}
+/* Thu hẹp ô số ít dùng để bảng vẫn có vùng cuộn riêng trên màn hẹp. */
+.product-form .product-table input[type='number'] {
+  min-width: 80px;
+}
+.product-form .product-table input[name^='variant-price-'] {
+  min-width: 100px;
+}
+.product-form .product-table input[aria-invalid='true'] {
+  border-color: var(--color-danger);
+}
+.product-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  justify-content: flex-end;
+  align-items: center;
+  padding-top: var(--space-4);
+}
+@media (max-width: 767px) {
+  /* Một cột cho bộ lọc và form giữ nhãn, ô nhập trong bề ngang 375 px. */
+  .product-fields,
+  .product-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .product-section {
+    padding: var(--space-3);
+  }
+  .product-page-heading h1 {
+    font-size: var(--text-lg);
+  }
+}

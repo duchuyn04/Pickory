@@ -3244,6 +3244,187 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
     }
 
     [Fact]
+    // Lọc theo trạng thái nháp chỉ trả về sản phẩm nháp và bảo toàn tổng số lượng.
+    public async Task GetProducts_FilterDraftStatus_ReturnsOnlyDraftProductsAndExactTotal()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var category = await CreateCategoryInDbAsync($"Danh Mục {suffix}", null, []);
+        var brand = await CreateBrandInDbAsync($"Thương Hiệu {suffix}");
+
+        // Tạo sản phẩm với các trạng thái khác nhau để kiểm tra độ chính xác của bộ lọc.
+        var prodDraft = await SeedProductInDbAsync(category.Id, brand.Id, $"Sản Phẩm Nháp {suffix}",
+            [new SkuSeed($"DFT-{suffix}", new Dictionary<string, string>(), 100000, 10, true)], status: ProductStatus.Draft);
+        var prodActive = await SeedProductInDbAsync(category.Id, brand.Id, $"Sản Phẩm Bán {suffix}",
+            [new SkuSeed($"ACT-{suffix}", new Dictionary<string, string>(), 100000, 10, true)], status: ProductStatus.Active);
+        _createdProductIds.AddRange([prodDraft.Id, prodActive.Id]);
+
+        // Gửi yêu cầu lọc danh sách theo trạng thái nháp kết hợp từ khóa phân biệt.
+        var request = ActorHttp.CreateRequest(HttpMethod.Get, $"/api/admin/products?status=draft&search={suffix}", _adminCookie);
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var data = json.RootElement.GetProperty("data");
+        Assert.Equal(1, data.GetProperty("total").GetInt32());
+
+        var items = data.GetProperty("items").EnumerateArray().ToList();
+        Assert.Single(items);
+        Assert.Equal(prodDraft.Id, items[0].GetProperty("id").GetString());
+    }
+
+    [Theory]
+    [InlineData("khong_hop_le")]
+    [InlineData("draft,hidden")]
+    [InlineData("draft&status=active")]
+    [InlineData("1")]
+    // Từ chối danh sách và số vì API chỉ cho lọc đúng một trạng thái sản phẩm.
+    public async Task GetProducts_InvalidStatus_Returns400ValidationError(string statusQuery)
+    {
+        // Gửi cả giá trị lạ, nhiều trạng thái và số để tránh lọc sai sản phẩm.
+        var request = ActorHttp.CreateRequest(HttpMethod.Get, $"/api/admin/products?status={statusQuery}", _adminCookie);
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var error = json.RootElement.GetProperty("error");
+        Assert.Equal("VALIDATION_ERROR", error.GetProperty("code").GetString());
+    }
+
+    [Fact]
+    // Lọc theo danh mục gốc phải bao gồm sản phẩm của toàn bộ danh mục con trực thuộc.
+    public async Task GetProducts_FilterRootCategory_IncludesDescendants()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var rootCategory = await CreateCategoryInDbAsync($"Gốc {suffix}", null, []);
+        var childCategory = await CreateCategoryInDbAsync($"Con {suffix}", rootCategory.Id, []);
+        var otherCategory = await CreateCategoryInDbAsync($"Khác {suffix}", null, []);
+        var brand = await CreateBrandInDbAsync($"Thương Hiệu {suffix}");
+
+        // Tạo sản phẩm thuộc danh mục con và sản phẩm thuộc danh mục khác để đối chiếu.
+        var prodChild = await SeedProductInDbAsync(childCategory.Id, brand.Id, $"Sản Phẩm Con {suffix}",
+            [new SkuSeed($"CHD-{suffix}", new Dictionary<string, string>(), 100000, 10, true)]);
+        var prodOther = await SeedProductInDbAsync(otherCategory.Id, brand.Id, $"Sản Phẩm Khác {suffix}",
+            [new SkuSeed($"OTH-{suffix}", new Dictionary<string, string>(), 100000, 10, true)]);
+        _createdProductIds.AddRange([prodChild.Id, prodOther.Id]);
+
+        // Gửi yêu cầu lọc danh sách theo mã định danh danh mục gốc.
+        var request = ActorHttp.CreateRequest(HttpMethod.Get, $"/api/admin/products?categoryId={rootCategory.Id}&search={suffix}", _adminCookie);
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var data = json.RootElement.GetProperty("data");
+        Assert.Equal(1, data.GetProperty("total").GetInt32());
+
+        var items = data.GetProperty("items").EnumerateArray().ToList();
+        Assert.Single(items);
+        Assert.Equal(prodChild.Id, items[0].GetProperty("id").GetString());
+    }
+
+    [Fact]
+    // Lọc sắp hết hàng chỉ nhận biến thể bật có tồn kho từ năm trở xuống.
+    public async Task GetProducts_FilterLowStock_AppliesThresholdAndExcludesDisabledZero()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var category = await CreateCategoryInDbAsync($"Danh Mục {suffix}", null, []);
+        var brand = await CreateBrandInDbAsync($"Thương Hiệu {suffix}");
+
+        // Tạo biến thể bị tắt có tồn kho bằng không nhằm kiểm tra loại trừ.
+        var prodDisabledZero = await SeedProductInDbAsync(category.Id, brand.Id, $"Tắt Tồn Không {suffix}",
+            [new SkuSeed($"DIS0-{suffix}", new Dictionary<string, string>(), 100000, 0, false)]);
+        // Tạo biến thể bật có tồn kho bằng năm để kiểm tra ngưỡng cận trên.
+        var prodStockFive = await SeedProductInDbAsync(category.Id, brand.Id, $"Bật Tồn Năm {suffix}",
+            [new SkuSeed($"STK5-{suffix}", new Dictionary<string, string>(), 100000, 5, true)]);
+        // Tạo biến thể bật có tồn kho bằng sáu để kiểm tra điều kiện vượt ngưỡng.
+        var prodStockSix = await SeedProductInDbAsync(category.Id, brand.Id, $"Bật Tồn Sáu {suffix}",
+            [new SkuSeed($"STK6-{suffix}", new Dictionary<string, string>(), 100000, 6, true)]);
+        // Tạo biến thể bật có tồn kho bằng bốn để kiểm tra trường hợp nằm dưới ngưỡng.
+        var prodStockFour = await SeedProductInDbAsync(category.Id, brand.Id, $"Bật Tồn Bốn {suffix}",
+            [new SkuSeed($"STK4-{suffix}", new Dictionary<string, string>(), 100000, 4, true)]);
+        // Một biến thể bật ít hàng đủ để cả sản phẩm xuất hiện dù biến thể khác còn nhiều.
+        var prodMixedStock = await SeedProductInDbAsync(category.Id, brand.Id, $"Tồn Kho Lẫn {suffix}",
+        [
+            new SkuSeed($"MIX-LOW-{suffix}", new Dictionary<string, string> { ["Màu"] = "Đỏ" }, 100000, 3, true),
+            new SkuSeed($"MIX-HIGH-{suffix}", new Dictionary<string, string> { ["Màu"] = "Xanh" }, 100000, 20, true)
+        ]);
+        // Biến thể tắt ít hàng không được làm sản phẩm có biến thể bật còn nhiều xuất hiện.
+        var prodMixedDisabled = await SeedProductInDbAsync(category.Id, brand.Id, $"Tắt Lẫn {suffix}",
+        [
+            new SkuSeed($"OFF-LOW-{suffix}", new Dictionary<string, string> { ["Màu"] = "Đỏ" }, 100000, 0, false),
+            new SkuSeed($"ON-HIGH-{suffix}", new Dictionary<string, string> { ["Màu"] = "Xanh" }, 100000, 20, true)
+        ]);
+        _createdProductIds.AddRange([prodDisabledZero.Id, prodStockFive.Id, prodStockSix.Id, prodStockFour.Id, prodMixedStock.Id, prodMixedDisabled.Id]);
+
+        // Gửi yêu cầu lọc danh sách sản phẩm sắp hết hàng theo tham số lowStock.
+        var request = ActorHttp.CreateRequest(HttpMethod.Get, $"/api/admin/products?lowStock=true&search={suffix}", _adminCookie);
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var data = json.RootElement.GetProperty("data");
+        Assert.Equal(3, data.GetProperty("total").GetInt32());
+
+        var itemIds = data.GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetString()).ToHashSet();
+        Assert.Contains(prodStockFive.Id, itemIds);
+        Assert.Contains(prodStockFour.Id, itemIds);
+        Assert.Contains(prodMixedStock.Id, itemIds);
+        Assert.DoesNotContain(prodMixedDisabled.Id, itemIds);
+        Assert.DoesNotContain(prodDisabledZero.Id, itemIds);
+        Assert.DoesNotContain(prodStockSix.Id, itemIds);
+    }
+
+    [Fact]
+    // Sai kiểu boolean phải báo lỗi thay vì âm thầm bỏ bộ lọc tồn kho.
+    public async Task GetProducts_InvalidLowStock_Returns400ValidationError()
+    {
+        var request = ActorHttp.CreateRequest(HttpMethod.Get, "/api/admin/products?lowStock=abc", _adminCookie);
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        Assert.Equal("VALIDATION_ERROR", json.RootElement.GetProperty("error").GetProperty("code").GetString());
+    }
+
+    [Fact]
+    // Kết hợp tìm kiếm, danh mục, trạng thái và tồn kho tác động đồng thời lên tổng số và danh sách.
+    public async Task GetProducts_CombinedFilters_FiltersTotalAndItemsPreservingPagination()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var targetCategory = await CreateCategoryInDbAsync($"Mục Đích {suffix}", null, []);
+        var otherCategory = await CreateCategoryInDbAsync($"Mục Khác {suffix}", null, []);
+        var brand = await CreateBrandInDbAsync($"Thương Hiệu {suffix}");
+
+        // Tạo sản phẩm thỏa mãn toàn bộ bốn điều kiện lọc kết hợp.
+        var matchedProduct = await SeedProductInDbAsync(targetCategory.Id, brand.Id, $"Trùng Khớp {suffix}",
+            [new SkuSeed($"MATCH-{suffix}", new Dictionary<string, string>(), 100000, 3, true)], status: ProductStatus.Draft);
+        // Tạo sản phẩm sai trạng thái để kiểm tra tính độc lập của bộ lọc.
+        var wrongStatusProduct = await SeedProductInDbAsync(targetCategory.Id, brand.Id, $"Sai Trạng Thái {suffix}",
+            [new SkuSeed($"WST-{suffix}", new Dictionary<string, string>(), 100000, 3, true)], status: ProductStatus.Active);
+        // Tạo sản phẩm sai danh mục để kiểm tra tính độc lập của bộ lọc.
+        var wrongCategoryProduct = await SeedProductInDbAsync(otherCategory.Id, brand.Id, $"Sai Danh Mục {suffix}",
+            [new SkuSeed($"WCT-{suffix}", new Dictionary<string, string>(), 100000, 3, true)], status: ProductStatus.Draft);
+        // Tạo sản phẩm sai mức tồn kho để kiểm tra tính độc lập của bộ lọc.
+        var excessStockProduct = await SeedProductInDbAsync(targetCategory.Id, brand.Id, $"Dư Tồn Kho {suffix}",
+            [new SkuSeed($"EXC-{suffix}", new Dictionary<string, string>(), 100000, 10, true)], status: ProductStatus.Draft);
+        _createdProductIds.AddRange([matchedProduct.Id, wrongStatusProduct.Id, wrongCategoryProduct.Id, excessStockProduct.Id]);
+
+        // Gửi yêu cầu kết hợp bốn bộ lọc cùng tham số phân trang.
+        var uri = $"/api/admin/products?search={suffix}&categoryId={targetCategory.Id}&status=draft&lowStock=true&page=1&limit=10";
+        var request = ActorHttp.CreateRequest(HttpMethod.Get, uri, _adminCookie);
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var data = json.RootElement.GetProperty("data");
+        Assert.Equal(1, data.GetProperty("total").GetInt32());
+
+        var items = data.GetProperty("items").EnumerateArray().ToList();
+        Assert.Single(items);
+        Assert.Equal(matchedProduct.Id, items[0].GetProperty("id").GetString());
+    }
+
+    [Fact]
     // Cập nhật sản phẩm thành công phát đúng một sự kiện loại cập nhật.
     public async Task UpdateProduct_Success_EmitsExactlyOneUpdatedEvent()
     {

@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { AiSettingsPage } from './features/ai-gateway/admin/ai-settings-page';
 import { BrandsPage } from './features/catalog/admin/brands-page';
 import { CategoriesPage } from './features/catalog/admin/categories-page';
@@ -19,6 +20,17 @@ import { ResetPasswordPage } from './features/identity/customer/reset-password-p
 import { VerifyEmailPage } from './features/identity/customer/verify-email-page';
 import { HealthPage } from './shared/health-page';
 import { Header } from './shared/header';
+// Tách trình soạn mô tả khỏi bundle trang khách, chỉ tải khi nhân viên mở trang sản phẩm.
+const ProductsPage = lazy(() =>
+  import('./features/catalog/admin/products-page').then((module) => ({
+    default: module.ProductsPage,
+  })),
+);
+const ProductFormPage = lazy(() =>
+  import('./features/catalog/admin/product-form').then((module) => ({
+    default: module.ProductFormPage,
+  })),
+);
 
 function CustomerLayout() {
   // Header thuộc layout để trang chủ và mọi luồng tài khoản cùng phản ánh phiên hiện tại.
@@ -70,7 +82,30 @@ export function App() {
           <Route path="customers" element={<CustomersPage />} />
           <Route path="audit-logs" element={<AuditLogPage />} />
           <Route path="orders" element={<AdminPlaceholderPage title="Quản lý đơn hàng" />} />
-          <Route path="products" element={<AdminPlaceholderPage title="Quản lý sản phẩm" />} />
+          <Route
+            path="products"
+            element={
+              <Suspense fallback={<p role="status">Đang tải sản phẩm...</p>}>
+                <ProductsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="products/new"
+            element={
+              <Suspense fallback={<p role="status">Đang tải biểu mẫu...</p>}>
+                <ProductFormPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="products/:id"
+            element={
+              <Suspense fallback={<p role="status">Đang tải biểu mẫu...</p>}>
+                <ProductFormPage />
+              </Suspense>
+            }
+          />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="brands" element={<BrandsPage />} />
           <Route

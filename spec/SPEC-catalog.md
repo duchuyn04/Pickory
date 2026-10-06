@@ -181,7 +181,7 @@ sort=newest|price_asc|price_desc                     page=1  pageSize=24 (tối 
 
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
-| GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, tìm theo tên hoặc SKU |
+| GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, tìm theo tên hoặc SKU. Lọc bằng `status`, `categoryId` (gồm danh mục con), `lowStock=true` (SKU bật có `stock <= 5`). |
 | GET | `/api/admin/products/:id` | `products:read` | Chi tiết để sửa |
 | POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể |
 | POST | `/api/admin/products/:id/status` | `products:write` | Đổi trạng thái |

@@ -68,13 +68,10 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 **Tiêu chí nghiệm thu:**
 - [x] Bấm Tiêu đề 2 và Đậm cho ra tài liệu JSON đúng và qua schema
 - [x] Nút trên thanh công cụ có `aria-pressed` theo định dạng tại vị trí con trỏ và có nhãn truy cập được
-- [ ] Dùng được hoàn toàn bằng bàn phím: phím tắt Ctrl+B, Ctrl+I, và di chuyển giữa các nút của thanh công cụ
-  (di chuyển giữa các nút đã kiểm trong jsdom; phím tắt Ctrl+B và Ctrl+I kiểm ở UI-C5)
-- [ ] Dán nội dung có link, ảnh, danh sách, `script` thì chỉ giữ text và định dạng trong danh sách bật
-  (kiểm bằng insertContent trong jsdom; dán bằng clipboard thật kiểm ở UI-C5)
+- [x] Dùng được hoàn toàn bằng bàn phím: phím tắt Ctrl+B, Ctrl+I, và di chuyển giữa các nút của thanh công cụ
+- [x] Dán nội dung có link, ảnh, danh sách, `script` thì chỉ giữ text và định dạng trong danh sách bật
 - [x] Trình soạn thảo mở được tài liệu đã lưu và lưu lại không đổi nội dung
-- [ ] Không cuộn ngang ở viewport 375 px; ô nhập có `role="textbox"` và nhãn
-  (ô nhập đã có role="textbox", aria-multiline và nhãn ở jsdom; cuộn ngang ở 375 px kiểm ở UI-C5)
+- [x] Không cuộn ngang ở viewport 375 px; ô nhập có `role="textbox"` và nhãn
 - [x] Không thêm extension ngoài danh sách bật; `pnpm-lock.yaml` chỉ thêm các package của Tiptap cần dùng
 **Kiểm tra:** test component với jsdom; Playwright trên `pnpm dev` cho thao tác bàn phím và dán
 **Phụ thuộc:** CAT-13 · **File:** `features/catalog/admin/{description-editor,description-toolbar}.tsx`, `apps/frontend/package.json`, `pnpm-lock.yaml` · **Quy mô:** M
@@ -192,13 +189,37 @@ Các số đo đóng gói (`weightGrams`, `lengthCm`, `widthCm`, `heightCm`) kh�
 ### UI-C5: Danh sách và form sản phẩm
 **Mô tả:** Danh sách lọc theo trạng thái, danh mục, sắp hết hàng. Form sản phẩm: ô thông số sinh theo danh mục, trình soạn mô tả (UI-C8), trình soạn tùy chọn, bảng biến thể sinh từ tổ hợp. Form dùng `validateSpecs` của `packages/shared` để báo lỗi trước khi gửi.
 **Tiêu chí nghiệm thu:**
-- [ ] Đổi danh mục thì ô thông số đổi theo bộ thuộc tính của danh mục mới
-- [ ] Thêm 2 trục tùy chọn thì bảng biến thể hiện đủ tổ hợp để nhập giá, tồn kho, cân nặng, kích thước
-- [ ] Lỗi validate hiện ngay dưới ô sai, có nhãn truy cập được
-- [ ] `sales` mở form ở chế độ chỉ xem, không có nút lưu
-- [ ] Trang admin sản phẩm tải theo kiểu lazy (`React.lazy`), để Tiptap không nằm trong bundle chính của trang khách; ghi kích thước bundle chính trước và sau
+- [x] Đổi danh mục thì ô thông số đổi theo bộ thuộc tính của danh mục mới
+- [x] Thêm 2 trục tùy chọn thì bảng biến thể hiện đủ tổ hợp để nhập giá, cân nặng, kích thước; tồn kho hiện chỉ đọc
+- [x] Lỗi validate hiện ngay dưới ô sai, có nhãn truy cập được
+- [x] `sales` mở form ở chế độ chỉ xem, không có nút lưu
+- [x] Trang admin sản phẩm tải theo kiểu lazy (`React.lazy`), để Tiptap không nằm trong bundle chính của trang khách; ghi kích thước bundle chính trước và sau
 **Kiểm tra:** test component; Playwright trên `pnpm dev`
 **Phụ thuộc:** CAT-05, UI-C4, UI-C8 · **File:** `features/catalog/admin/{products-page,product-form,spec-fields,variant-table}.tsx`, `app.tsx` · **Quy mô:** M
+**Quyết định (2026-10-06):**
+- Tồn kho trong bảng biến thể chỉ đọc. CAT-05 từ chối `stock` trong `POST` và `PATCH`. UI-C7 cập nhật tồn kho với lý do và nhật ký.
+- Sắp hết hàng gồm sản phẩm có SKU đang bật với `stock <= 5`, kể cả 0. Backend và frontend cùng dùng ngưỡng 5.
+
+**File (.NET và frontend):**
+- `apps/backend/src/Pickory.Modules.Catalog/Features/Products/{ProductManagementHandler,ProductModels,ProductsEndpoints}.cs`
+- `apps/backend/src/Pickory.Modules.Catalog/Products/CatalogInventoryDefaults.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Api/Catalog/ProductManagementTests.cs`
+- `apps/frontend/src/features/catalog/admin/{product-form,product-options-editor,products-page,spec-fields,variant-table}.tsx`
+- `apps/frontend/src/features/catalog/admin/product-logic.ts`, `apps/frontend/src/features/catalog/admin/products.css`
+- `apps/frontend/src/shared/catalog/inventory.ts`, `apps/frontend/src/app.tsx`, `apps/frontend/src/shared/api.ts`
+- `apps/frontend/e2e/catalog-products.spec.ts`, `apps/frontend/test/unit/features/catalog/product-logic.test.ts`
+- `apps/frontend/test/unit/features/catalog/admin/product-form.test.tsx`
+
+**Bằng chứng (2026-10-06):** Playwright có giao diện và chế độ ẩn đều đạt 5/5. Vitest đạt 169/169.
+Backend đạt 3 test kiến trúc, 359 test đơn vị và 543 test tích hợp; 4 test tích hợp bỏ qua.
+Build backend có 0 cảnh báo và 0 lỗi. Năm đột biến ở vòng sửa này đều bị test phát hiện. Script kiểm tra comment báo 0 vi phạm.
+
+Đo kích thước bundle bằng lệnh `env -u NODE_ENV pnpm exec vite build` trong `apps/frontend`.
+Mốc trước khi tách lazy trên `HEAD`: bundle chính `index-*.js` là 443.14 kB (gzip 115.03 kB).
+Mốc sau khi tách lazy: bundle chính `index-*.js` là 444.71 kB (gzip 115.56 kB).
+Bundle form sản phẩm `product-form-*.js` là 432.02 kB (gzip 130.40 kB), nằm ngoài bundle chính.
+Bundle trang danh sách `products-page-*.js` là 4.42 kB (gzip 1.56 kB).
+Bundle chính không chứa chuỗi `@tiptap` hoặc `prosemirror`.
 
 ### CAT-06: Ảnh và Cloudinary
 **Mô tả:** `POST /api/admin/uploads/signature` (`products:write`) cấp chữ ký Cloudinary. API lưu `publicId`, alt, thứ tự, SKU gắn với ảnh. Bỏ ảnh thì ghi `image_deletion_jobs` trong cùng transaction. Worker xóa ảnh thử lại với backoff. Thiếu `CLOUDINARY_*` ở dev và test thì dùng provider giả; production thiếu khóa thì config lỗi.
