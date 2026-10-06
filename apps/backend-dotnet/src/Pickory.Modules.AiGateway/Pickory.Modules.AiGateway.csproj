@@ -6,15 +6,19 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.Extensions.AI.OpenAI" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="OpenAI" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Pickory.Shared\Pickory.Shared.csproj" />
+    <ProjectReference Include="..\Pickory.Modules.AiGateway.Contracts\Pickory.Modules.AiGateway.Contracts.csproj" />
+    <ProjectReference Include="..\Pickory.Modules.Identity.Contracts\Pickory.Modules.Identity.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

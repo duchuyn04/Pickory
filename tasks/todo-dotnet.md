@@ -386,6 +386,91 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 
 **Phụ thuộc:** DN-05 · **Quy mô:** M
 
-## DN-06 đến DN-08
+## DN-06: Port `ai-gateway`
+
+Nguồn: `apps/backend/src/modules/ai-gateway/` trên nhánh `main` (khoảng 2.900 dòng). Bản Node có 111 test unit và integration (tính cả 4 trường hợp của một `it.each`), cộng 4 test với API thật.
+
+Hiện chưa có module nào gọi gateway. DN-06 port thư viện gateway và 3 route quản trị.
+
+**Quyết định đã chốt (2026-10-06):**
+
+- Audit của cấu hình AI đi qua một interface trong `Identity.Contracts`. Interface nhận transaction đang mở, nên cấu hình và audit cùng commit.
+- Adapter dùng `Microsoft.Extensions.AI` trên OpenAI SDK. Bước 7 kiểm tra sớm tùy chọn tắt chế độ thinking của DeepSeek. Nếu SDK không gửi được tùy chọn này, báo người dùng trước khi đổi sang `HttpClient`.
+- Tạo project `Pickory.Modules.AiGateway.Contracts` trong DN-06. Module khác chỉ được tham chiếu project `*.Contracts`.
+
+**Tiêu chí nghiệm thu:**
+
+- [x] Project `Pickory.Modules.AiGateway.Contracts` chứa `IAiGateway`, `ChatRequest`, `CallContext`, `AiFeature` và 3 lỗi AI. Test kiến trúc xanh.
+- [x] Mỗi test unit và integration của bản Node có test .NET tương ứng. Bảng đối chiếu nằm trong mục "Bằng chứng".
+- [x] `GET /api/admin/ai/usage`, `GET /api/admin/ai/settings` và `PUT /api/admin/ai/settings` trả cùng JSON, mã lỗi và quyền như bản Node.
+- [x] Sửa cấu hình AI ghi đúng 1 dòng audit trong cùng giao dịch.
+- [x] EF Core không còn cảnh báo khóa của `AiSetting`. `dotnet ef migrations has-pending-model-changes` không báo thay đổi.
+- [x] Trang `/admin/ai` chạy với backend .NET. Admin lưu được cấu hình. Nhân viên sales nhận 403 khi lưu.
+- [x] 4 test với API thật chỉ chạy khi `AI_LIVE_TESTS=1`.
+- [x] `dotnet build` có 0 warning. `dotnet test` xanh. Trong `apps/frontend`, `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm test:e2e` xanh.
+
+**Thứ tự làm (mỗi bước viết test trước):**
+
+1. Contracts, lỗi AI, `PiiRedactor` trong `Pickory.Shared`, bảng giá, biến môi trường AI trong `AppConfig`.
+2. Ghi usage log, đọc và sửa cấu hình, kiểm tra ngân sách, hạn mức chat theo ngày.
+3. Circuit breaker và lớp retry, timeout. Test dùng `FakeTimeProvider`.
+4. `ChatAsync`, vòng lặp tool, `ChatJsonAsync`. Test dùng provider giả.
+5. `ChatStreamAsync` với timeout token đầu, timeout idle, timeout phía người đọc.
+6. Cache embedding và gộp lời gọi trùng (single-flight).
+7. Adapter DeepSeek và OpenAI embedding. Test dùng `HttpMessageHandler` giả cho 200, 429, 500 và timeout.
+8. Route quản trị, báo cáo usage, đăng ký module, sửa cảnh báo khóa `AiSetting`.
+9. Kiểm tra trang `/admin/ai` trên trình duyệt. Chạy toàn bộ kiểm tra.
+
+**Bằng chứng (2026-10-06):**
+
+- `dotnet build` có 0 warning. `dotnet test` xanh 513 test: 3 kiến trúc, 243 unit, 267 integration. 4 test với API thật được bỏ qua khi thiếu `AI_LIVE_TESTS=1`.
+- Trong `apps/frontend`: `pnpm lint` và `pnpm typecheck` thành công, `pnpm test` xanh 76 test, `pnpm test:e2e` xanh 2 luồng.
+- Script kiểm tra comment báo 0 vi phạm.
+- Mỗi test viết sau code đều qua phép thử đột biến: 51 đột biến hợp lệ ở 8 bước, 49 đột biến bị test bắt. Hai đột biến còn lại tương đương với code gốc (khoảng mở mạch cho probe, lệnh hủy lặp lại khi timeout).
+- `dotnet ef migrations has-pending-model-changes` cho `AiGatewayDbContext` báo không có thay đổi.
+- Trang `/admin/ai` chạy với API .NET (Playwright, Chromium):
+  - Admin đổi ngân sách thành 45 và lưu. `PUT` trả 200, tải lại trang vẫn thấy 45.
+  - Nhân viên sales thấy ô ngân sách bị khóa và không có nút lưu. `PUT` trả 403, `GET /api/admin/ai/usage` trả 200.
+  - Console không có lỗi ngoài `favicon.ico` 404 có sẵn từ trước. Log API không có `Error` hay `Warning`.
+  - Ảnh: `.playwright-mcp/dn06/admin-ai-saved.png`, `.playwright-mcp/dn06/admin-ai-sales.png`.
+  - Dọn dữ liệu: xóa 2 tài khoản tạm `dn06-20261006-*`, 2 dòng audit của chúng và thư trong outbox. Cấu hình AI trả về 30, 50, 15 với `updatedAt` gốc.
+
+**Bảng đối chiếu test Node sang .NET:**
+
+| File test Node | Số test | Test .NET |
+|---|---|---|
+| `pricing.test.ts` | 5 | `ModelPricingCatalogTests` |
+| `rate-limit.test.ts` | 5 | `ChatRateLimiterTests` |
+| `budget.test.ts` | 7 | `BudgetGuardTests` |
+| `circuit-breaker.test.ts` | 3 | `CircuitBreakerTests` |
+| `reliability.test.ts` | 5 | `ProviderReliabilityTests`, `ProviderReliabilityStreamTests` |
+| `gateway-core.test.ts` | 6 | `GatewayCoreTests` |
+| `tool-loop.test.ts` | 5 | `ToolLoopTests`, `ChatStreamTests` |
+| `chat-json.test.ts` | 3 | `ChatJsonTests` |
+| `embedding-cache.test.ts` | 4 | `EmbeddingCacheTests` |
+| `gateway-regressions.test.ts` | 21 | `GatewayCoreTests`, `ChatStreamTests`, `EmbeddingCacheTests`, `ProviderReliabilityStreamTests`, `UsageLogWriterTests` |
+| `usage-summary.test.ts` | 10 | `NearestRankPercentileTests`, `UsageSummaryReaderTests` |
+| `providers/deepseek.test.ts` | 10 | `DeepSeekChatProviderTests` |
+| `providers/openai-embedding.test.ts` | 8 | `OpenAiEmbeddingProviderTests` |
+| `providers/error-mapper.test.ts` | 8 | `ProviderErrorMapperTests`, mã HTTP kiểm tra qua `DeepSeekChatProviderTests` và `OpenAiEmbeddingProviderTests` |
+| `settings.int.test.ts` | 3 | `AiSettingsStoreTests` |
+| `gateway.int.test.ts` | 4 | `GatewayCoreTests`, `EmbeddingCacheTests` |
+| `ai-admin.int.test.ts` | 4 | `AiAdminApiTests` |
+| `providers/live.int.test.ts` | 4 | `LiveProviderTests` |
+
+**Khác biệt đã biết:**
+
+- Schema Zod của `chatJson` và tham số tool đổi thành kiểu C# kèm validator FluentValidation tùy chọn. JSON Schema gửi provider sinh từ kiểu C#.
+- Ba lỗi AI có tên `AiUnavailableException`, `AiBudgetExceededException`, `AiInvalidOutputException`. Mã lỗi và mã HTTP giữ nguyên bản Node.
+- Bản Node đổi lỗi cấu hình có tên riêng của AI SDK thành `PROVIDER_HTTP_400`. Bản .NET không có các tên lỗi đó, nên lỗi cấu hình thành lỗi không thử lại và không có mã HTTP.
+- Thông báo `VALIDATION_ERROR` của `PUT /api/admin/ai/settings` viết bằng tiếng Việt, không giống chữ của Zod. Mã lỗi và mã HTTP giữ nguyên.
+- `max_tokens` và tùy chọn tắt chế độ thinking gửi qua `ChatCompletionOptions.Patch`. API này của OpenAI SDK còn ở dạng thử nghiệm (`SCME0001`).
+- Cột `ai_settings.id` giữ mặc định `'singleton'` của schema Prisma. Gateway bỏ qua đúng cảnh báo `ModelValidationKeyDefaultValueWarning` thay vì đổi schema DB.
+- `.env` chưa có khóa DeepSeek và OpenAI thật, nên 4 test với API thật chưa chạy, giống bản Node.
+- `IAiGateway` chưa có hàm đọc báo cáo usage cho `admin-console`. Hàm này thêm khi làm module đó.
+
+**Phụ thuộc:** DN-05B · **Quy mô:** L
+
+## DN-07 đến DN-08
 
 Viết tiêu chí chi tiết khi bắt đầu từng task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.

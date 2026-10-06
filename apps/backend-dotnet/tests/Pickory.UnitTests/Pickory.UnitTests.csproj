@@ -5,6 +5,7 @@
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="Coverlet.collector" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
   </ItemGroup>
 
   <ItemGroup>
@@ -12,6 +13,8 @@
     <ProjectReference Include="..\..\src\Pickory.Api\Pickory.Api.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Modules.Identity\Pickory.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Modules.Identity.Contracts\Pickory.Modules.Identity.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.AiGateway\Pickory.Modules.AiGateway.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.AiGateway.Contracts\Pickory.Modules.AiGateway.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

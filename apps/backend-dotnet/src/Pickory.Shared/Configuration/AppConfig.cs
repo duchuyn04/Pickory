@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Extensions.Configuration;
 
 namespace Pickory.Shared.Configuration;
@@ -24,6 +25,27 @@ public record AppConfig
     public string GoogleClientId { get; init; } = "mock_google_client_id";
 
     public string GoogleClientSecret { get; init; } = "mock_google_client_secret";
+
+    // Không có model chat mặc định. Người vận hành phải xác nhận ID model trước khi dùng khóa thật.
+    public string LlmModel { get; init; } = string.Empty;
+
+    public string LlmBaseUrl { get; init; } = "https://api.deepseek.com";
+
+    public string LlmApiKey { get; init; } = string.Empty;
+
+    public string EmbeddingApiKey { get; init; } = string.Empty;
+
+    public string EmbeddingModel { get; init; } = "text-embedding-3-small";
+
+    // Ba giá trị sau chỉ khởi tạo bảng `ai_settings`. Thay đổi sau đó lưu trong DB.
+    public double AiMonthlyBudgetUsd { get; init; } = 30;
+
+    public int AiChatDailyLimitUser { get; init; } = 50;
+
+    public int AiChatDailyLimitAnon { get; init; } = 15;
+
+    // Bật test gọi API AI thật. Test thường không gọi provider thật để không tốn tiền.
+    public bool AiLiveTests { get; init; }
 
     // Đọc và kiểm tra tính hợp lệ của toàn bộ biến môi trường khi khởi động.
     public static AppConfig Load(IConfiguration configuration)
@@ -108,6 +130,27 @@ public record AppConfig
         var googleClientId = configuration["GOOGLE_CLIENT_ID"];
         var googleClientSecret = configuration["GOOGLE_CLIENT_SECRET"];
 
+        var llmBaseUrl = configuration["LLM_BASE_URL"];
+        if (string.IsNullOrWhiteSpace(llmBaseUrl))
+        {
+            llmBaseUrl = "https://api.deepseek.com";
+        }
+        else if (!IsValidAbsoluteUrl(llmBaseUrl))
+        {
+            // API không gửi khóa provider tới địa chỉ không hợp lệ.
+            throw new InvalidOperationException("Biến môi trường LLM_BASE_URL phải là một URL tuyệt đối hợp lệ.");
+        }
+
+        var llmApiKey = configuration["LLM_API_KEY"] ?? string.Empty;
+        var llmModel = (configuration["LLM_MODEL"] ?? string.Empty).Trim();
+        // Có khóa mà thiếu model thì dừng khởi động. Thông báo không chứa khóa để khóa không lọt vào log.
+        if (!string.IsNullOrEmpty(llmApiKey) && llmModel.Length == 0)
+        {
+            throw new InvalidOperationException("LLM_MODEL bắt buộc khi có LLM_API_KEY.");
+        }
+
+        var embeddingModel = configuration["EMBEDDING_MODEL"];
+
         return new AppConfig
         {
             Port = port,
@@ -117,7 +160,70 @@ public record AppConfig
             TrustProxy = trustProxy,
             GoogleClientId = string.IsNullOrWhiteSpace(googleClientId) ? "mock_google_client_id" : googleClientId,
             GoogleClientSecret = string.IsNullOrWhiteSpace(googleClientSecret) ? "mock_google_client_secret" : googleClientSecret,
+            LlmModel = llmModel,
+            LlmBaseUrl = llmBaseUrl,
+            LlmApiKey = llmApiKey,
+            EmbeddingApiKey = configuration["EMBEDDING_API_KEY"] ?? string.Empty,
+            EmbeddingModel = string.IsNullOrWhiteSpace(embeddingModel) ? "text-embedding-3-small" : embeddingModel,
+            AiMonthlyBudgetUsd = ReadNonNegativeNumber(configuration, "AI_MONTHLY_BUDGET_USD", 30),
+            AiChatDailyLimitUser = ReadPositiveInteger(configuration, "AI_CHAT_DAILY_LIMIT_USER", 50),
+            AiChatDailyLimitAnon = ReadPositiveInteger(configuration, "AI_CHAT_DAILY_LIMIT_ANON", 15),
+            AiLiveTests = ReadLiveTestsFlag(configuration),
         };
+    }
+
+    private static double ReadNonNegativeNumber(IConfiguration configuration, string key, double defaultValue)
+    {
+        var rawValue = configuration[key];
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return defaultValue;
+        }
+
+        // Ngân sách âm hoặc vô hạn làm phép chia tỉ lệ ngân sách sai, nên API dừng khởi động.
+        var isValid = double.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
+            && double.IsFinite(value)
+            && value >= 0;
+        if (!isValid)
+        {
+            throw new InvalidOperationException($"Biến môi trường {key} phải là số hữu hạn không âm.");
+        }
+
+        return value;
+    }
+
+    private static int ReadPositiveInteger(IConfiguration configuration, string key, int defaultValue)
+    {
+        var rawValue = configuration[key];
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return defaultValue;
+        }
+
+        // Hạn mức là số lượt chat. Giá trị lẻ hoặc bằng 0 không có nghĩa, nên API dừng khởi động.
+        if (!int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) || value <= 0)
+        {
+            throw new InvalidOperationException($"Biến môi trường {key} phải là số nguyên dương.");
+        }
+
+        return value;
+    }
+
+    private static bool ReadLiveTestsFlag(IConfiguration configuration)
+    {
+        var rawValue = configuration["AI_LIVE_TESTS"];
+        if (string.IsNullOrWhiteSpace(rawValue) || rawValue == "0")
+        {
+            return false;
+        }
+
+        // Chỉ nhận `1`, giống bản Node. Giá trị như `true` bị từ chối để không bật test tốn tiền do gõ nhầm.
+        if (rawValue == "1")
+        {
+            return true;
+        }
+
+        throw new InvalidOperationException("Biến môi trường AI_LIVE_TESTS chỉ nhận giá trị 0 hoặc 1.");
     }
 
     private static bool IsValidAbsoluteUrl(string url)

@@ -7,7 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
 using Pickory.Modules.Identity.Actors;
+using Pickory.Modules.Identity.Audit;
 using Pickory.Modules.Identity.Consent;
+using Pickory.Modules.Identity.Contracts.Audit;
 using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Identity.Emails;
 using Pickory.Modules.Identity.Features.AdminAuditLogs;
@@ -65,6 +67,8 @@ public static class IdentityModule
         services.AddScoped<StaffManagementHandler>();
         services.AddScoped<CustomerManagementHandler>();
         services.AddScoped<AuditLogReadHandler>();
+        // Module khác ghi nhật ký thao tác qua contract này. Writer không giữ trạng thái, nên dùng chung một instance.
+        services.AddSingleton<IAuditLogWriter, TransactionalAuditLogWriter>();
         // Cảnh báo quyền lạ trong DB mỗi lần API khởi động, giống `server.ts` của bản Node.
         services.AddHostedService<StoredPermissionCheck>();
         // Gộp consent của mã ẩn danh vào tài khoản mỗi khi khách đăng ký hoặc đăng nhập.

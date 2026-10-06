@@ -1,4 +1,6 @@
+using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Shared.Persistence;
 
@@ -19,14 +21,22 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     public static void ConfigureOptions(DbContextOptionsBuilder options, string connectionString)
     {
         // Tách lịch sử khỏi Prisma. Npgsql phải dùng kiểu enum hiện có, không dùng số nguyên.
-        options.UseNpgsql(connectionString, postgres =>
-        {
-            postgres.MigrationsHistoryTable("__EFMigrationsHistory", "ef_identity");
-            postgres.MapEnum<UserKind>("UserKind");
-            postgres.MapEnum<EmailTokenPurpose>("EmailTokenPurpose");
-            // Phiên kèm role và quyền đọc bằng một truy vấn join, giống bản Node. Khai báo rõ để EF Core không cảnh báo mỗi lần dịch truy vấn.
-            postgres.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
-        });
+        options.UseNpgsql(connectionString, ConfigureNpgsql);
+    }
+
+    // Module khác ghi nhật ký trên kết nối đang mở của module đó. Context dùng chung kết nối và transaction.
+    public static void ConfigureOptions(DbContextOptionsBuilder options, DbConnection connection)
+    {
+        options.UseNpgsql(connection, ConfigureNpgsql);
+    }
+
+    private static void ConfigureNpgsql(NpgsqlDbContextOptionsBuilder postgres)
+    {
+        postgres.MigrationsHistoryTable("__EFMigrationsHistory", "ef_identity");
+        postgres.MapEnum<UserKind>("UserKind");
+        postgres.MapEnum<EmailTokenPurpose>("EmailTokenPurpose");
+        // Phiên kèm role và quyền đọc bằng một truy vấn join, giống bản Node. Khai báo rõ để EF Core không cảnh báo mỗi lần dịch truy vấn.
+        postgres.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

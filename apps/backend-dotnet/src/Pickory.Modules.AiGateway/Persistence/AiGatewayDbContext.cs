@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Pickory.Modules.AiGateway.Entities;
 using Pickory.Shared.Persistence;
 
@@ -15,6 +16,9 @@ public sealed class AiGatewayDbContext(DbContextOptions<AiGatewayDbContext> opti
         // Tách lịch sử của module khỏi schema ứng dụng để Prisma không bị thay đổi.
         options.UseNpgsql(connectionString, postgres =>
             postgres.MigrationsHistoryTable("__EFMigrationsHistory", "ef_ai_gateway"));
+        // Cột `ai_settings.id` giữ mặc định `'singleton'` của schema Prisma, vì bỏ mặc định sẽ đổi DB thật.
+        // Ứng dụng luôn ghi id tường minh, nên cảnh báo về mặc định của khóa không áp dụng cho bảng này.
+        options.ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.ModelValidationKeyDefaultValueWarning));
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
