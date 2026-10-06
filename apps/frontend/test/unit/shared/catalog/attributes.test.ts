@@ -4,7 +4,7 @@ import {
   validateAttributeDefinition,
   validateAttributeDefinitions,
   type AttributeDefinition,
-} from '../../../src/catalog/attributes';
+} from '../../../../src/shared/catalog/attributes';
 
 describe('catalog attributes', () => {
   const baseRamAttribute: AttributeDefinition = {

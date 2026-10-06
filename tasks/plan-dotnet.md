@@ -203,6 +203,7 @@ Mỗi task phải qua build, test .NET và lint của repo trước khi commit.
 | DN-03 | `identity`: đăng ký, đăng nhập, Google OAuth, quên và đặt lại mật khẩu, tài khoản | Hash Argon2 cũ đăng nhập được |
 | DN-04 | `identity`: nhân viên, role, khách hàng, nhật ký thao tác | Ma trận quyền giống bản Node |
 | DN-05 | Chuyển route `identity` sang .NET qua Vite proxy | E2E Playwright của identity xanh. Chạy lại test thủ công identity. |
+| DN-05B | Đưa Node vào riêng `apps/frontend`. Gốc repo không còn `package.json`. | Lint, test, build và E2E của frontend xanh. Build và test .NET xanh. |
 | DN-06 | Port `ai-gateway` | Test của module xanh trên bản .NET |
 | DN-07 | Port `catalog` (CAT-01 đến CAT-03, CAT-13) | Test của module xanh trên bản .NET |
 | DN-08 | Xóa bản Node, Prisma, quy tắc ESLint backend. Đổi tên thư mục. Cập nhật `SPEC.md`, `CLAUDE.md`, `AGENTS.md`. | `pnpm lint`, build và test .NET, E2E đều xanh |

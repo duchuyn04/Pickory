@@ -38,12 +38,13 @@ Ngày chạy lần 4: 2026-10-06 · Commit/branch: `3e77662` trên feat/dotnet-b
 ## Hướng dẫn thực thi
 
 1. **Môi trường**
-   - Chạy `pnpm dotnet:seed` với DB dev (`pickory`).
-   - Chạy `pnpm dev`. Lệnh này mở web ở cổng 5173 và API .NET ở cổng 3000.
+   - Chạy `dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:seed` ở gốc repo với DB dev (`pickory`).
+   - Chạy `dotnet run --project apps/backend-dotnet/src/Pickory.Api` ở gốc repo. Lệnh này mở API .NET ở cổng 3000.
+   - Chạy `pnpm dev` trong `apps/frontend`. Lệnh này mở web ở cổng 5173.
    - Nếu port 3000 bị Windows giữ, chạy API ở port khác và proxy tạm. Không sửa cấu hình đã commit.
 2. **Dữ liệu test**
    - Mọi email dùng dạng `mt-<runId>-<tên>@pickory.test`, mọi mã role dùng tiền tố `mt-`.
-   - Tạo admin test bằng `pnpm dotnet:admin-create -- --email mt-<runId>-admin@pickory.test --password <mật khẩu mạnh>`.
+   - Tạo admin test bằng `dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:create-admin --email mt-<runId>-admin@pickory.test --password <mật khẩu mạnh>`.
    - Không khóa, sửa hay xóa dữ liệu có sẵn không thuộc lần chạy này.
 3. **Email**: đọc link xác thực, đặt lại mật khẩu, lời mời từ thư mục `apps/backend-dotnet/src/Pickory.Api/.dev-outbox` (`metadata.token` hoặc link trong `text`).
    `dotnet run` chạy API trong thư mục của project `Pickory.Api`. API ghi thư vào `.dev-outbox` của thư mục đó.

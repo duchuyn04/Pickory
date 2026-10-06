@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const environmentFile = new URL('../.env', import.meta.url);
+const environmentFile = new URL('../../../.env', import.meta.url);
 // Đọc credential từ môi trường hiện tại, không lưu trong Git.
 if (existsSync(environmentFile)) process.loadEnvFile(environmentFile);
 
@@ -42,6 +42,6 @@ export const e2eEnvironment = {
   salesEmail: 'e2e-identity-sales@pickory.local',
   accountPassword: process.env.E2E_ACCOUNT_PASSWORD,
   outboxDirectory: fileURLToPath(
-    new URL('../apps/backend-dotnet/.dev-outbox/e2e-identity/', import.meta.url),
+    new URL('../../backend-dotnet/.dev-outbox/e2e-identity/', import.meta.url),
   ),
 };

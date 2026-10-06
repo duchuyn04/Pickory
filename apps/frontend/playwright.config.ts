@@ -21,7 +21,7 @@ export default defineConfig({
     {
       name: 'E2E API',
       // Lệnh `e2e:start` dựng lại DB `pickory_e2e`, tạo admin fixture rồi mới mở cổng API.
-      command: 'dotnet run --project apps/backend-dotnet/src/Pickory.Api -- e2e:start',
+      command: 'dotnet run --project ../backend-dotnet/src/Pickory.Api -- e2e:start',
       url: `${e2eEnvironment.apiOrigin}/api/health`,
       // Không tái sử dụng API đang chạy vì API đó có thể dùng DB dev.
       reuseExistingServer: false,
@@ -45,8 +45,7 @@ export default defineConfig({
     },
     {
       name: 'E2E Web',
-      command:
-        'pnpm --filter @pickory/frontend exec vite --host 127.0.0.1 --port 4173 --strictPort',
+      command: 'pnpm exec vite --host 127.0.0.1 --port 4173 --strictPort',
       url: e2eEnvironment.webOrigin,
       // Dùng strictPort để browser không đi vào web server khác.
       reuseExistingServer: false,

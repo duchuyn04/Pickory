@@ -3,7 +3,7 @@ using Xunit;
 
 namespace Pickory.UnitTests.Shared.Configuration;
 
-// `pnpm dev` cần đọc `.env` ở gốc repo, giống `shared/load-env.ts` của bản Node.
+// `dotnet run` ở máy dev cần đọc `.env` ở gốc repo, giống `shared/load-env.ts` của bản Node.
 public sealed class DotEnvFileTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), $"pickory-dotenv-{Guid.NewGuid():N}");
@@ -47,12 +47,12 @@ public sealed class DotEnvFileTests : IDisposable
     }
 
     [Fact]
-    // Tìm `.env` ở thư mục gốc repo từ thư mục build sâu bên dưới. Gốc repo có file `pnpm-workspace.yaml`.
-    public void FindRepoEnvFile_WalksUpToWorkspaceRoot()
+    // Tìm `.env` ở thư mục gốc repo từ thư mục build sâu bên dưới. Gốc repo có file `.env.example`.
+    public void FindRepoEnvFile_WalksUpToRepoRoot()
     {
         var buildDirectory = Path.Combine(_root, "apps", "backend-dotnet", "src", "Pickory.Api", "bin", "Debug");
         Directory.CreateDirectory(buildDirectory);
-        File.WriteAllText(Path.Combine(_root, "pnpm-workspace.yaml"), "packages: []");
+        File.WriteAllText(Path.Combine(_root, ".env.example"), "PORT=3000");
         File.WriteAllText(Path.Combine(_root, ".env"), "PORT=3000");
 
         Assert.Equal(Path.Combine(_root, ".env"), DotEnvFile.FindRepoEnvFile(buildDirectory));
@@ -63,7 +63,7 @@ public sealed class DotEnvFileTests : IDisposable
     public void FindRepoEnvFile_ReturnsNullWithoutEnvFile()
     {
         Directory.CreateDirectory(_root);
-        File.WriteAllText(Path.Combine(_root, "pnpm-workspace.yaml"), "packages: []");
+        File.WriteAllText(Path.Combine(_root, ".env.example"), "PORT=3000");
 
         Assert.Null(DotEnvFile.FindRepoEnvFile(_root));
     }

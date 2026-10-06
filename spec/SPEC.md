@@ -25,7 +25,7 @@ Phân quyền theo RBAC, chi tiết trong `SPEC-identity.md`.
 |---|---|
 | Ngôn ngữ | TypeScript (strict) cho frontend, C# cho backend |
 | Runtime | Node.js LTS cho frontend và tooling, .NET 10 cho backend |
-| Package manager | pnpm workspaces (monorepo) |
+| Package manager | pnpm cho frontend (`apps/frontend`), NuGet cho backend |
 | Frontend | React + Vite, React Router, TanStack Query |
 | Backend | ASP.NET Core 10, Minimal API, modular monolith |
 | Validation | Zod ở frontend, FluentValidation ở backend |
@@ -39,40 +39,52 @@ Phân quyền theo RBAC, chi tiết trong `SPEC-identity.md`.
 | Lint/format | ESLint + Prettier |
 | Môi trường dev | Docker Compose cho PostgreSQL |
 
-Phiên bản cụ thể lấy bản ổn định mới nhất lúc khởi tạo và khóa trong `pnpm-lock.yaml`. Lý do chọn framework AI ghi tại `docs/adr/0001-ai-frameworks.md`.
+Phiên bản cụ thể lấy bản ổn định mới nhất lúc khởi tạo. Frontend khóa phiên bản trong `apps/frontend/pnpm-lock.yaml`, backend khóa trong `apps/backend-dotnet/Directory.Packages.props`. Lý do chọn framework AI ghi tại `docs/adr/0001-ai-frameworks.md`.
 
 Giai đoạn chuyển đổi: backend chuyển sang ASP.NET Core 10 tại `apps/backend-dotnet`. Ngày 2026-10-05 người dùng quyết định xóa bản Node trước khi port xong. Các module chưa port (DN-02 đến DN-07) chưa có API. Code bản Node cũ xem bằng tag `node-backend-final`. Hàng AI SDK và RAG tooling ở bảng trên là lựa chọn của bản Node, sẽ cập nhật khi port `ai-gateway`.
 
 ## Commands
 
+Chạy ở gốc repo:
+
+```bash
+docker compose up -d db                                    # chạy PostgreSQL + pgvector
+dotnet build apps/backend-dotnet/Pickory.sln               # build backend .NET
+dotnet test apps/backend-dotnet/Pickory.sln                # test backend (unit, integration, kiến trúc)
+dotnet run --project apps/backend-dotnet/src/Pickory.Api   # chạy API ở cổng 3000
+dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:seed          # tạo role mặc định cho DB trong DATABASE_URL
+dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:create-admin  # tạo admin đầu tiên; truyền --email, --password hoặc ADMIN_EMAIL, ADMIN_PASSWORD
+```
+
+Chạy trong `apps/frontend`:
+
 ```bash
 pnpm install                      # cài dependency
-docker compose up -d db           # chạy PostgreSQL + pgvector
-pnpm dev                          # chạy web (5173) và API .NET (3000) cùng lúc
-pnpm dotnet:build                 # build backend .NET
-pnpm dotnet:test                  # test backend .NET (unit, integration, kiến trúc)
-pnpm dotnet:seed                  # tạo role mặc định cho DB trong DATABASE_URL
-pnpm dotnet:admin-create          # tạo admin đầu tiên; truyền --email, --password hoặc ADMIN_EMAIL, ADMIN_PASSWORD
-pnpm test                         # test TypeScript của frontend, shared và tools (Vitest)
+pnpm dev                          # chạy web ở cổng 5173; Vite chuyển `/api` sang API ở cổng 3000
+pnpm test                         # test TypeScript của frontend (Vitest)
 pnpm test -- --coverage           # kèm báo cáo coverage
-pnpm test:e2e                     # Playwright
-pnpm lint                         # ESLint
-pnpm typecheck                    # tsc --noEmit cho mọi package
-pnpm build                        # build frontend và packages
+pnpm test:e2e                     # Playwright; tự chạy API .NET với DB `pickory_e2e`
+pnpm lint                         # ESLint và Prettier
+pnpm typecheck                    # tsc --noEmit cho code web và test E2E
+pnpm build                        # build frontend
 ```
+
+Khi dev, mở hai terminal: một terminal chạy API bằng `dotnet run`, một terminal chạy `pnpm dev` trong `apps/frontend`.
 
 ## Project Structure
 
 ```
 apps/
-  frontend/               → React app (Vite), package @pickory/frontend
+  frontend/               → React app (Vite), package @pickory/frontend, mọi cấu hình Node của repo
     src/features/<module-id>/   → trang, component, hook của từng module
       customer/           → trang dành cho khách (module lớn)
       admin/              → trang back-office (module lớn)
       components/         → component dùng trong nhiều trang của module
       hooks/              → hook của module
     src/shared/                 → component và tiện ích dùng chung
+    src/shared/catalog/         → kiểu thuộc tính và Zod schema mô tả sản phẩm
     test/unit/features/<module-id>/ → test hook và logic UI, đối chiếu với src/features/
+    e2e/                        → Playwright test, cấu hình ở playwright.config.ts
   backend-dotnet/         → ASP.NET Core 10 API
     Pickory.sln
     src/
@@ -89,14 +101,6 @@ apps/
       Pickory.IntegrationTests/ → Infrastructure/, Database/, Api/
       Pickory.ArchitectureTests/ → kiểm tra ranh giới module
     db/reference-schema.sql → schema DB gốc của bản Node, dùng để đối chiếu migration
-packages/
-  shared/                 → type và Zod schema dùng chung web/api
-    src/                  → code dùng chung
-    test/unit/            → *.test.ts
-tools/
-  test/unit/              → test quy tắc tooling
-  lint-fixtures/          → file mẫu cho ESLint
-e2e/                      → Playwright test
 spec/                     → CAPABILITY-MAP.md, SPEC.md (file này), SPEC-<module-id>.md
 docs/adr/                 → Architecture Decision Records
 ```
@@ -105,7 +109,7 @@ Test nằm ngoài `src/`; dưới `test/unit/` và `test/integration/`, giữ c�
 
 Backend .NET theo mục "Quy ước thư mục trong module" của `tasks/plan-dotnet.md`. Namespace khớp đường dẫn thư mục. Không tạo thư mục `Helpers/`, `Utils/`, `Common/` hoặc `Misc/`.
 
-**Quy tắc ranh giới module:** module khác chỉ được import từ `modules/<module-id>/index.ts`, không import thẳng `service.ts` hay `repository.ts` của module khác. Mỗi module chỉ ghi vào bảng của chính nó.
+**Quy tắc ranh giới module:** module backend chỉ được tham chiếu `Pickory.Shared` và project `*.Contracts` của module khác. `Pickory.ArchitectureTests` kiểm tra quy tắc này. Mỗi module chỉ ghi vào bảng của chính nó.
 
 ## Code Style
 
@@ -164,7 +168,7 @@ export class AppError extends Error {
 ## Boundaries
 
 **Always:**
-- Chạy `pnpm lint && pnpm typecheck && pnpm test` trước khi commit.
+- Chạy `dotnet test` cho backend. Chạy `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend` trước khi commit.
 - Validate mọi input bên ngoài bằng Zod.
 - Gọi AI qua `ai-gateway`, không gọi SDK provider trực tiếp từ module khác.
 - Xác thực webhook SePay trước khi xử lý, và xử lý idempotent.

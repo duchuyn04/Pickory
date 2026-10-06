@@ -3,11 +3,11 @@ import {
   DESCRIPTION_MAX_NODE_COUNT,
   DESCRIPTION_MAX_TEXT_LENGTH,
   descriptionSchema,
-} from '../../../src/catalog/description-schema';
+} from '../../../../src/shared/catalog/description-schema';
 import {
   descriptionToPlainText,
   plainTextToDescription,
-} from '../../../src/catalog/description-text';
+} from '../../../../src/shared/catalog/description-text';
 
 describe('descriptionSchema', () => {
   it('chấp nhận tài liệu hợp lệ gồm đoạn văn, tiêu đề cấp 1 đến 3, chữ đậm và chữ nghiêng', () => {

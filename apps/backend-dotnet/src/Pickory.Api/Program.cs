@@ -20,7 +20,7 @@ builder.Logging.AddJsonConsole(options =>
     options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
 });
 
-// API đọc `.env` ở gốc repo với độ ưu tiên thấp nhất, vì `pnpm dev` không đặt biến môi trường.
+// API đọc `.env` ở gốc repo với độ ưu tiên thấp nhất, vì `dotnet run` ở máy dev không đặt biến môi trường.
 // Test tích hợp tắt bước này để cấu hình dev không lọt vào test.
 if (builder.Configuration["PICKORY_SKIP_DOTENV"] != "true")
 {

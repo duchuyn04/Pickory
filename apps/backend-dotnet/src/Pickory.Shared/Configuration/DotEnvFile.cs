@@ -6,8 +6,8 @@ namespace Pickory.Shared.Configuration;
 // Đọc file `.env` ở gốc repo cho môi trường dev, giống `shared/load-env.ts` của bản Node.
 public static class DotEnvFile
 {
-    // Gốc repo là thư mục có file này. API tìm `.env` ở cùng thư mục.
-    private const string WorkspaceMarkerFile = "pnpm-workspace.yaml";
+    // Gốc repo là thư mục có file này. Người dev sao chép file này thành `.env` ở cùng thư mục.
+    private const string RepoRootMarkerFile = ".env.example";
 
     // Thêm giá trị của `.env` với độ ưu tiên thấp nhất. Biến môi trường có sẵn trong CI, production hoặc test luôn thắng.
     public static void AddAsLowestPriority(IConfigurationBuilder configuration, string startDirectory)
@@ -27,7 +27,7 @@ public static class DotEnvFile
     {
         for (var directory = new DirectoryInfo(startDirectory); directory is not null; directory = directory.Parent)
         {
-            if (!File.Exists(Path.Combine(directory.FullName, WorkspaceMarkerFile)))
+            if (!File.Exists(Path.Combine(directory.FullName, RepoRootMarkerFile)))
             {
                 continue;
             }

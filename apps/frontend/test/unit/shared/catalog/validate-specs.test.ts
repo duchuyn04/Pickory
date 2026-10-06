@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { AttributeDefinition } from '../../../src/catalog/attributes';
-import { validateSpecs } from '../../../src/catalog/validate-specs';
+import type { AttributeDefinition } from '../../../../src/shared/catalog/attributes';
+import { validateSpecs } from '../../../../src/shared/catalog/validate-specs';
 
 describe('validateSpecs', () => {
   const definitions: AttributeDefinition[] = [

@@ -8,7 +8,7 @@ import { Paragraph } from '@tiptap/extension-paragraph';
 import { Text } from '@tiptap/extension-text';
 import { UndoRedo } from '@tiptap/extensions';
 import { EditorContent, useEditor } from '@tiptap/react';
-import { descriptionSchema, type DescriptionDoc } from '@pickory/shared';
+import { descriptionSchema, type DescriptionDoc } from '../../../shared/catalog/description-schema';
 import { DescriptionToolbar } from './description-toolbar';
 
 export interface DescriptionEditorProps {

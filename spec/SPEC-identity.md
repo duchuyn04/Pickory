@@ -160,7 +160,7 @@ ordersRouter.patch(
 
 ### Tài khoản nhân viên
 
-- Admin đầu tiên được tạo bằng lệnh `pnpm admin:create`.
+- Admin đầu tiên được tạo bằng lệnh `identity:create-admin` của API .NET.
 - Người có `staff:manage` mời nhân viên: nhập email, tên, chọn role. Hệ thống gửi link đặt mật khẩu (hạn 72 giờ, dùng 1 lần).
 - Nhân viên đăng nhập bằng email + mật khẩu tại `/admin/login`, không dùng Google.
 - Khóa nhân viên: không xóa bản ghi, đặt `lockedAt`, xóa mọi phiên. Lịch sử thao tác vẫn giữ tên người đó.

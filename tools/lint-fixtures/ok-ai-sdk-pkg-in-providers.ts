@@ -1,3 +1,0 @@
-// @lint-as apps/backend/src/modules/ai-gateway/providers/openai.ts
-// @expect none
-import { openai } from '@ai-sdk/openai';

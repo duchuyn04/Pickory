@@ -355,6 +355,37 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 
 **Phụ thuộc:** DN-04 · **Quy mô:** M
 
+## DN-05B: Đưa Node vào riêng `apps/frontend`
+
+**Mô tả:** Repo chỉ còn frontend React + Vite và backend .NET Web API. Gốc repo không còn `package.json`. Node chỉ còn trong `apps/frontend`, vì Vite và Playwright cần Node.
+
+**Quyết định đã chốt (2026-10-06):**
+
+- Chuyển `e2e/` và `playwright.config.ts` vào `apps/frontend`. Code test giữ nguyên.
+- Chạy dev bằng hai lệnh riêng: `dotnet run` cho API, `pnpm dev` trong `apps/frontend` cho web.
+- Giữ nguyên `prototype/`.
+
+**Tiêu chí nghiệm thu:**
+
+- [x] Gốc repo không còn `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml` và `node_modules`.
+- [x] Code của `packages/shared` nằm trong `apps/frontend/src/shared`. Test của code đó chạy trong frontend.
+- [x] Xóa `eslint.boundaries.js`, `tools/lint-fixtures/` và test của các file mẫu đó.
+- [x] Cấu hình ESLint, Prettier, Vitest và TypeScript nằm trong `apps/frontend`.
+- [x] `DotEnvFile` nhận diện gốc repo bằng `.env.example`. Test cập nhật theo mốc mới.
+- [x] Trong `apps/frontend`, các lệnh sau chạy xanh: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`, `pnpm test:e2e`.
+- [x] `dotnet build` có 0 warning. `dotnet test` xanh.
+- [x] `spec/SPEC.md`, `spec/SPEC-identity.md`, `spec/SPEC-catalog.md` và hướng dẫn test thủ công ghi lệnh và đường dẫn mới.
+
+**Bằng chứng (2026-10-06):**
+
+- Gốc repo không còn `package.json`, `pnpm-workspace.yaml`, `pnpm-lock.yaml`, `node_modules`, `packages/` và `tools/`.
+- Trong `apps/frontend`: `pnpm lint`, `pnpm typecheck` và `pnpm build` thành công. `pnpm test` xanh 76 test. `pnpm test:e2e` xanh 2 luồng.
+- Số test Vitest giảm từ 95 xuống 76, vì test luật ranh giới của backend Node đã bị xóa (19 test).
+- `dotnet build` có 0 warning. `dotnet test` xanh 343 test. Script kiểm tra comment báo 0 vi phạm.
+- Lock mới đổi 2 gói trong khoảng phiên bản cho phép: `eslint` 10.11.0 thành 10.12.0, `jsdom` 30.1.1 thành 30.1.2.
+
+**Phụ thuộc:** DN-05 · **Quy mô:** M
+
 ## DN-06 đến DN-08
 
 Viết tiêu chí chi tiết khi bắt đầu từng task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.

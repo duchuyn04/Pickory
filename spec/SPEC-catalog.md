@@ -34,7 +34,7 @@ Quản lý và hiển thị sản phẩm điện tử: danh mục, thương hi�
 - Mỗi danh mục có danh sách **thuộc tính thông số**. Danh mục con kế thừa thuộc tính của danh mục cha và thêm của riêng nó.
 
 ```ts
-// packages/shared/src/catalog/attributes.ts
+// apps/frontend/src/shared/catalog/attributes.ts
 export type AttributeDefinition = {
   key: string;                 // 'ram_gb', khóa cố định, không đổi sau khi đã có dữ liệu
   label: string;               // 'RAM'
@@ -141,12 +141,12 @@ Admin soạn mô tả chi tiết bằng trình soạn thảo trực quan. Backen
 
 - **Thư viện:** Tiptap (dựa trên ProseMirror). Người dùng duyệt ngày 2026-10-05. Chỉ cài các extension cần dùng.
 - **Chức năng bật:** đoạn văn, tiêu đề 3 cấp, chữ đậm, chữ nghiêng. Danh sách, link và ảnh trong mô tả chưa làm ở MVP.
-- **Schema (`packages/shared/src/catalog/description-schema.ts`):** Zod chỉ nhận các nút `doc`, `paragraph`, `heading` (cấp 1 đến 3) và `text`. Nút `text` chỉ có mark `bold` hoặc `italic`. Nút hoặc mark lạ, hoặc thuộc tính thừa, bị từ chối.
+- **Schema (`apps/frontend/src/shared/catalog/description-schema.ts`):** Zod chỉ nhận các nút `doc`, `paragraph`, `heading` (cấp 1 đến 3) và `text`. Nút `text` chỉ có mark `bold` hoặc `italic`. Nút hoặc mark lạ, hoặc thuộc tính thừa, bị từ chối.
 - **Giới hạn:** tối đa 20.000 ký tự text và 500 nút mỗi mô tả. Con số này là mặc định, đổi ở một hằng số.
 - **Kiểm tra hai phía:** backend kiểm tra bằng schema mỗi lần lưu. Trình soạn thảo cũng kiểm tra bằng cùng schema, và bỏ nội dung dán vào nếu ngoài danh sách bật.
 - **Hiển thị:** frontend đổi từng nút thành thẻ React. Không dùng `dangerouslySetInnerHTML`. Quy tắc ESLint chặn thuộc tính này trong `features/catalog/`.
 - **Cấp tiêu đề:** trang sản phẩm đã có H1 là tên sản phẩm. Tiêu đề cấp 1, 2, 3 của trình soạn thảo hiện thành thẻ H2, H3, H4.
-- **Text thuần:** hàm `descriptionToPlainText(doc)` trong `packages/shared` lấy text từ tài liệu. `smart-search` dùng hàm này để tạo embedding. Hàm `plainTextToDescription(text)` đổi text thường thành tài liệu, mỗi dòng trống tách một đoạn văn, dùng cho dữ liệu seed.
+- **Text thuần:** hàm `descriptionToPlainText(doc)` trong `apps/frontend/src/shared/catalog/description-text.ts` lấy text từ tài liệu. `smart-search` dùng hàm này để tạo embedding. Hàm `plainTextToDescription(text)` đổi text thường thành tài liệu, mỗi dòng trống tách một đoạn văn, dùng cho dữ liệu seed.
 
 ## API
 

@@ -7,7 +7,7 @@ import {
   DESCRIPTION_MAX_TEXT_LENGTH,
   descriptionSchema,
   type DescriptionDoc,
-} from '@pickory/shared';
+} from '../../../../../src/shared/catalog/description-schema';
 import { DescriptionEditor } from '../../../../../src/features/catalog/admin/description-editor';
 
 let container: HTMLDivElement;
