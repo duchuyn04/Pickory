@@ -3,6 +3,7 @@ using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Passwords;
 using Pickory.Modules.Identity.Roles;
+using Pickory.Modules.Identity.Tokens;
 
 namespace Pickory.IntegrationTests.Api.Identity;
 
@@ -57,5 +58,37 @@ internal static class IdentityTestData
         identity.Users.Add(user);
         await identity.SaveChangesAsync();
         return user;
+    }
+
+    // Tạo role riêng cho một test. Mã có GUID nên không trùng ràng buộc mã role duy nhất.
+    public static async Task<Role> CreateRoleAsync(IntegrationDatabaseFixture database, IReadOnlyList<string> permissions, string? code = null)
+    {
+        await using var identity = database.CreateIdentityContext();
+        var role = new Role { Code = code ?? $"test-role-{Guid.NewGuid():N}", Name = "Role thử" };
+        foreach (var permission in permissions)
+        {
+            role.Permissions.Add(new RolePermission { Permission = permission });
+        }
+
+        identity.Roles.Add(role);
+        await identity.SaveChangesAsync();
+        return role;
+    }
+
+    // Tạo phiên trực tiếp trong DB. Test quản trị đăng nhập bằng nhân viên có quyền cụ thể mà không qua route đăng nhập.
+    public static async Task<string> CreateSessionAsync(IntegrationDatabaseFixture database, string userId)
+    {
+        var rawToken = SecureTokens.GenerateToken();
+        await using var identity = database.CreateIdentityContext();
+        identity.Sessions.Add(new Session { TokenHash = SecureTokens.HashToken(rawToken), UserId = userId, ExpiresAt = DateTime.UtcNow.AddHours(12) });
+        await identity.SaveChangesAsync();
+        return rawToken;
+    }
+
+    // Tạo nhân viên giữ role cho trước và trả token phiên của nhân viên đó.
+    public static async Task<(User User, string SessionToken)> CreateStaffSessionAsync(IntegrationDatabaseFixture database, string roleCode, string prefix = "staff")
+    {
+        var user = await CreateUserAsync(database, NewEmail(prefix), UserKind.Staff, roleCode, emailVerified: true);
+        return (user, await CreateSessionAsync(database, user.Id));
     }
 }

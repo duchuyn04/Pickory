@@ -263,6 +263,62 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 
 **Phụ thuộc:** DN-02 · **Quy mô:** L
 
-## DN-04 đến DN-08
+## DN-04: Nhân viên, role, khách hàng và nhật ký thao tác
+
+**Mô tả:** Port route quản trị của identity theo bản Node tại tag `node-backend-final`. Mã nguồn tham chiếu nằm trong `routes/admin-*.ts`, `services/staff.ts`, `services/roles.ts`, `services/customers.ts` và `data/audit.ts`. Test tích hợp của bản Node là đặc tả hành vi. Mỗi phần viết test đỏ trước khi viết code.
+
+**Tiêu chí nghiệm thu:**
+
+- [x] `AuditRecorder` ghi nhật ký trong giao dịch của thao tác chính. Giao dịch bị hủy thì không còn dòng nhật ký nào.
+- [x] `AuditRecorder` thay giá trị của trường nhạy cảm bằng `[REDACTED]`. Trường nhạy cảm có tên chứa `password`, `token`, `secret`, `apikey`, `cvv`, `cardnumber` hoặc `hash`.
+- [x] `GET /api/admin/permissions` trả danh mục 28 quyền với `group`, `name` và `description` như bản Node.
+- [x] `GET /api/admin/roles` cho người có `roles:manage` hoặc `staff:manage`. Mỗi role có quyền đã sắp xếp và `userCount`.
+- [x] `POST`, `PATCH` và `DELETE` cho role giữ quy tắc của bản Node:
+  - Mã role chỉ có chữ thường, số, gạch dưới và gạch nối.
+  - Role hệ thống không sửa hoặc xóa được. Role đang có người giữ không xóa được.
+  - Người không phải admin không cấp được quyền mình không có. Người đó cũng không sửa được role mình đang giữ.
+- [x] `GET /api/admin/staff` trả danh sách nhân viên không có hash mật khẩu.
+- [x] `POST /api/admin/staff/invitations` tạo nhân viên chưa có mật khẩu và gửi link mời hạn 72 giờ. Nhân viên đặt mật khẩu qua `POST /api/auth/reset-password`.
+- [x] Mời, gán role, khóa và mở khóa nhân viên chặn leo thang quyền:
+  - Chỉ admin mới mời, gán, khóa hoặc mở khóa admin.
+  - Người không phải admin chỉ quản lý nhân viên có quyền nằm trong quyền của mình.
+  - Không ai tự sửa role hoặc tự khóa chính mình.
+- [x] API không cho khóa hoặc gỡ role admin của admin cuối cùng còn hoạt động. Thao tác chạy trong giao dịch `Serializable`, và xung đột trả 409 `CONFLICT`.
+- [x] Khóa nhân viên hoặc gỡ hết role xóa mọi phiên của nhân viên đó. Khóa lại nhân viên đã bị khóa không ghi thêm nhật ký.
+- [x] `GET /api/admin/customers` tìm theo email, tên hoặc số điện thoại và phân trang. `GET /api/admin/customers/:id` trả 404 cho id của nhân viên.
+- [x] Khóa khách xóa mọi phiên của khách. Mở khóa cho khách đăng nhập lại.
+- [x] `GET /api/admin/audit-logs` lọc theo người thực hiện, hành động, đối tượng và khoảng thời gian. Mỗi dòng có `actorEmail` và `actorName`.
+- [x] API ghi cảnh báo vào log khi khởi động nếu DB có quyền không còn trong danh mục.
+- [x] Lệnh `dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:seed` tạo role mặc định cho DB dev.
+- [x] Lệnh `identity:create-admin` tạo admin đầu tiên, giống `scripts/admin-create.ts` của bản Node.
+
+**Kiểm tra:** `dotnet build` không có warning. `dotnet test` xanh. `pnpm lint && pnpm typecheck && pnpm test` xanh. Script kiểm tra comment không thấy vi phạm.
+
+**Bằng chứng DN-04 (2026-10-06):**
+
+- `dotnet build`: thành công, không có warning hoặc error.
+- `dotnet test`: 327 test thành công. Trước task có 255 test.
+- Phân nhóm .NET: 123 unit test, 201 integration test và ba architecture test.
+- Mỗi phần có test đỏ trước khi viết code. Test port từ test tích hợp của bản Node làm đặc tả.
+- Test hai admin cuối cùng gỡ quyền admin của nhau cùng lúc:
+  - Với giao dịch `Serializable`, test xanh 3 trên 3 lần chạy.
+  - Với giao dịch `ReadCommitted`, test đỏ 3 trên 3 lần chạy vì cả hai admin mất quyền.
+- Test thử phá code báo lỗi ở bốn quy tắc: chặn leo thang quyền, phạm vi quyền khi khóa nhân viên, làm sạch nhật ký và lọc khách.
+- Lệnh `identity:seed` và `identity:create-admin` chạy đúng trên DB test, gồm cả trường hợp chạy lại và mật khẩu ngắn.
+- `package.json` có `pnpm dotnet:seed` và `pnpm dotnet:admin-create`. Mục Commands của `spec/SPEC.md` ghi hai lệnh này.
+- Script kiểm tra comment không thấy vi phạm mục 1 và mục 5 của `CLAUDE.md` trong file C# đã đổi.
+- Comment theo bước của mục 4 được rà thủ công trên mọi file C# đã đổi.
+- `dotnet ef migrations has-pending-model-changes` báo không có thay đổi cho ba `DbContext`.
+- `pnpm lint` và `pnpm typecheck`: thành công.
+- `pnpm test`: 95 test thành công.
+
+**Khác biệt đã biết với bản Node:**
+
+- Người gọi thiếu nhiều quyền nhận thông báo nêu quyền thiếu đầu tiên theo thứ tự chữ cái. Bản Node nêu quyền theo thứ tự dòng trong DB, nên kết quả không cố định.
+- Tham số phân trang sai nhận thông báo tiếng Việt. Bản Node trả thông báo tiếng Anh mặc định của Zod.
+
+**Phụ thuộc:** DN-03 · **Quy mô:** L
+
+## DN-05 đến DN-08
 
 Viết tiêu chí chi tiết khi bắt đầu từng task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.

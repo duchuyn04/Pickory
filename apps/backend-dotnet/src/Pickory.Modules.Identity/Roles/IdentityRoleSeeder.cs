@@ -33,9 +33,9 @@ public static class IdentityRoleSeeder
                     role.Permissions.Add(new RolePermission { Permission = permission });
                 }
             }
-        }
 
-        // Lưu mọi role trong một lần. Seed lỗi giữa chừng không để lại role thiếu quyền.
-        await database.SaveChangesAsync(cancellationToken);
+            // Lưu từng role giống bản Node. Mỗi role có `createdAt` riêng, nên danh sách role giữ thứ tự tạo ổn định.
+            await database.SaveChangesAsync(cancellationToken);
+        }
     }
 }

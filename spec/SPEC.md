@@ -51,6 +51,8 @@ docker compose up -d db           # chạy PostgreSQL + pgvector
 pnpm dev                          # chạy web (5173) và API .NET (3000) cùng lúc
 pnpm dotnet:build                 # build backend .NET
 pnpm dotnet:test                  # test backend .NET (unit, integration, kiến trúc)
+pnpm dotnet:seed                  # tạo role mặc định cho DB trong DATABASE_URL
+pnpm dotnet:admin-create          # tạo admin đầu tiên; truyền --email, --password hoặc ADMIN_EMAIL, ADMIN_PASSWORD
 pnpm test                         # test TypeScript của frontend, shared và tools (Vitest)
 pnpm test -- --coverage           # kèm báo cáo coverage
 pnpm test:e2e                     # Playwright

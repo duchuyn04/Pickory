@@ -11,6 +11,8 @@ public static class EmailTokenIssuer
     public static readonly TimeSpan VerifyLifetime = TimeSpan.FromHours(24);
     // Link đặt lại mật khẩu có hạn 30 phút. Link lọt vào tay người khác chỉ dùng được trong thời gian ngắn.
     public static readonly TimeSpan ResetLifetime = TimeSpan.FromMinutes(30);
+    // Link mời nhân viên có hạn 72 giờ theo spec. Người được mời có thể chưa mở thư ngay.
+    public static readonly TimeSpan InviteLifetime = TimeSpan.FromHours(72);
 
     public static string Add(IdentityDbContext database, string userId, EmailTokenPurpose purpose, TimeSpan lifetime, DateTime now)
     {

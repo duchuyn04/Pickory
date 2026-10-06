@@ -19,7 +19,9 @@
     "test:watch": "vitest",
     "dotnet:build": "dotnet build apps/backend-dotnet/Pickory.sln",
     "dotnet:test": "dotnet test apps/backend-dotnet/Pickory.sln",
-    "dotnet:dev": "dotnet run --project apps/backend-dotnet/src/Pickory.Api"
+    "dotnet:dev": "dotnet run --project apps/backend-dotnet/src/Pickory.Api",
+    "dotnet:seed": "dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:seed",
+    "dotnet:admin-create": "dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:create-admin"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

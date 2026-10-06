@@ -9,6 +9,10 @@ using Pickory.Modules.Identity.Actors;
 using Pickory.Modules.Identity.Consent;
 using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Identity.Emails;
+using Pickory.Modules.Identity.Features.AdminAuditLogs;
+using Pickory.Modules.Identity.Features.AdminCustomers;
+using Pickory.Modules.Identity.Features.AdminRoles;
+using Pickory.Modules.Identity.Features.AdminStaff;
 using Pickory.Modules.Identity.Features.ChangePassword;
 using Pickory.Modules.Identity.Features.DeleteAccount;
 using Pickory.Modules.Identity.Features.ForgotPassword;
@@ -23,6 +27,7 @@ using Pickory.Modules.Identity.Features.UpdateProfile;
 using Pickory.Modules.Identity.Features.VerifyEmail;
 using Pickory.Modules.Identity.GoogleOAuth;
 using Pickory.Modules.Identity.Persistence;
+using Pickory.Modules.Identity.Setup;
 using Pickory.Modules.Identity.Throttling;
 using Pickory.Shared.Events;
 
@@ -55,11 +60,28 @@ public static class IdentityModule
         services.AddScoped<UpdateProfileHandler>();
         services.AddScoped<ChangePasswordHandler>();
         services.AddScoped<DeleteAccountHandler>();
+        services.AddScoped<RoleManagementHandler>();
+        services.AddScoped<StaffManagementHandler>();
+        services.AddScoped<CustomerManagementHandler>();
+        services.AddScoped<AuditLogReadHandler>();
+        // Cảnh báo quyền lạ trong DB mỗi lần API khởi động, giống `server.ts` của bản Node.
+        services.AddHostedService<StoredPermissionCheck>();
         // Gộp consent của mã ẩn danh vào tài khoản mỗi khi khách đăng ký hoặc đăng nhập.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, ConsentLinkHandler>();
         // `HttpClient` do factory quản lý. Kết nối tới Google được dùng lại và không cạn socket.
         services.AddHttpClient<IGoogleOAuthClient, GoogleOAuthClient>();
         return services;
+    }
+
+    // Lệnh quản trị của identity, ví dụ `identity:seed`. Lệnh chạy xong thì thoát, không mở web API.
+    public static bool IsIdentityCommand(IReadOnlyList<string> args)
+    {
+        return IdentityCommandLine.IsCommand(args);
+    }
+
+    public static Task<int> RunIdentityCommandAsync(IReadOnlyList<string> args, IServiceProvider services)
+    {
+        return IdentityCommandLine.RunAsync(args, services);
     }
 
     public static IApplicationBuilder UseIdentityActor(this IApplicationBuilder app)
@@ -84,6 +106,10 @@ public static class IdentityModule
         UpdateProfileEndpoint.Map(endpoints);
         ChangePasswordEndpoint.Map(endpoints);
         DeleteAccountEndpoint.Map(endpoints);
+        AdminRolesEndpoints.Map(endpoints);
+        AdminStaffEndpoints.Map(endpoints);
+        AdminCustomersEndpoints.Map(endpoints);
+        AdminAuditLogsEndpoints.Map(endpoints);
         return endpoints;
     }
 

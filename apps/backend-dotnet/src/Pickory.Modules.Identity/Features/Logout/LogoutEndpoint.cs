@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Identity.Sessions;
 using Pickory.Modules.Identity.Tokens;
+using Pickory.Modules.Identity.Users;
 using Pickory.Shared.Http;
 
 namespace Pickory.Modules.Identity.Features.Logout;
@@ -30,6 +31,6 @@ public static class LogoutEndpoint
 
         // Xóa cookie cả khi DB không có phiên. Trình duyệt ngừng gửi token không còn dùng được.
         SessionCookies.DeleteSessionCookie(context.Response);
-        return Results.Ok(new ApiResponse<LogoutResponse>(new LogoutResponse(Success: true)));
+        return Results.Ok(new ApiResponse<SuccessResponse>(new SuccessResponse(Success: true)));
     }
 }

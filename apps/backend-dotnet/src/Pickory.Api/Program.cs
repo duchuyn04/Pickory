@@ -49,6 +49,12 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 
 var app = builder.Build();
 
+// Lệnh như `identity:seed` dùng cùng cấu hình DB với API. Lệnh chạy xong thì thoát, không mở cổng mạng.
+if (IdentityModule.IsIdentityCommand(args))
+{
+    return await IdentityModule.RunIdentityCommandAsync(args, app.Services);
+}
+
 // Đọc IP thật của client sau proxy trước mọi middleware khác. Giới hạn tần suất của identity đếm theo IP này.
 var forwardedHeadersOptions = TrustProxyOptions.Create(config.TrustProxy);
 if (forwardedHeadersOptions is not null)
@@ -71,6 +77,7 @@ app.MapAiGatewayEndpoints();
 app.MapCatalogEndpoints();
 
 app.Run();
+return 0;
 
 // Cho phép WebApplicationFactory truy cập entry point của ứng dụng trong kiểm thử.
 public partial class Program
