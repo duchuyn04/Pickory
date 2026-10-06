@@ -50,7 +50,7 @@ public sealed class DotEnvFileTests : IDisposable
     // Tìm `.env` ở thư mục gốc repo từ thư mục build sâu bên dưới. Gốc repo có file `.env.example`.
     public void FindRepoEnvFile_WalksUpToRepoRoot()
     {
-        var buildDirectory = Path.Combine(_root, "apps", "backend-dotnet", "src", "Pickory.Api", "bin", "Debug");
+        var buildDirectory = Path.Combine(_root, "apps", "backend", "src", "Pickory.Api", "bin", "Debug");
         Directory.CreateDirectory(buildDirectory);
         File.WriteAllText(Path.Combine(_root, ".env.example"), "PORT=3000");
         File.WriteAllText(Path.Combine(_root, ".env"), "PORT=3000");

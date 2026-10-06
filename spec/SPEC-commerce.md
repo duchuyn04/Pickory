@@ -156,6 +156,8 @@ Khách có tài khoản lưu tối đa 10 địa chỉ, chọn 1 địa chỉ m�
 
 ### Interface public
 
+Đường dẫn và mã TypeScript dưới đây thuộc bản Node. Module này sẽ viết bằng .NET.
+
 ```ts
 // apps/backend/src/modules/commerce/index.ts
 export const commerceReader: {

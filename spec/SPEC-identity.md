@@ -101,6 +101,8 @@ Danh mục này mở rộng khi viết spec các module sau. Thêm quyền mới
 - Đổi quyền của role có hiệu lực ngay từ request tiếp theo, không cần đăng nhập lại.
 ### Actor
 
+Khối code dưới đây là interface của bản Node. Kiểu `Actor` của bản .NET nằm tại `Pickory.Modules.Identity.Contracts/Actors/Actor.cs`.
+
 Mọi request đều có `req.actor`, do middleware gắn vào:
 
 ```ts

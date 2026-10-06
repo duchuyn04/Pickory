@@ -21,7 +21,7 @@ export default defineConfig({
     {
       name: 'E2E API',
       // Lệnh `e2e:start` dựng lại DB `pickory_e2e`, tạo admin fixture rồi mới mở cổng API.
-      command: 'dotnet run --project ../backend-dotnet/src/Pickory.Api -- e2e:start',
+      command: 'dotnet run --project ../backend/src/Pickory.Api -- e2e:start',
       url: `${e2eEnvironment.apiOrigin}/api/health`,
       // Không tái sử dụng API đang chạy vì API đó có thể dùng DB dev.
       reuseExistingServer: false,

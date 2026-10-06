@@ -88,6 +88,8 @@ export type AttributeDefinition = {
 
 **Interface giữ hàng cho `commerce`:**
 
+Khối code dưới đây là interface của bản Node. Bản .NET chưa có, sẽ thêm vào project `Pickory.Modules.Catalog.Contracts` ở các task catalog sau.
+
 ```ts
 // apps/backend/src/modules/catalog/index.ts
 export const stock: {
@@ -107,6 +109,8 @@ export type ReserveResult =
 - Hàng đã giao không cần bước riêng: khi đã giữ thì tồn kho đã trừ. Đổi trả hàng nhập lại bằng điều chỉnh tay (loại `return`).
 
 ### Interface đọc cho các module khác
+
+Khối code dưới đây là interface của bản Node. Bản .NET chưa có, sẽ thêm vào project `Pickory.Modules.Catalog.Contracts` ở các task catalog sau.
 
 ```ts
 export const catalogReader: {

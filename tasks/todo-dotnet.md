@@ -37,7 +37,7 @@ Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dot
 **Tiêu chí nghiệm thu:**
 
 - [x] Mỗi module có `DbContext` riêng trong project của module, chỉ map bảng của module đó
-- [x] Đủ 20 model và bốn enum theo `apps/backend-dotnet/db/reference-schema.sql`.
+- [x] Đủ 20 model và bốn enum theo `apps/backend/db/reference-schema.sql`.
   - Tên bảng và tên cột khớp DB thật.
   - Kiểu và độ dài khớp DB thật.
   - Khóa, unique và index khớp DB thật.
@@ -45,7 +45,7 @@ Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dot
 - [x] Enum PostgreSQL (`UserKind`, `EmailTokenPurpose`, `ProductStatus`, `InventoryMovementType`) map qua Npgsql, không lưu thành số
 - [x] Cột JSON map sang `jsonb`. Cột `TIMESTAMP(3)` không múi giờ map đúng kiểu, đọc ra giá trị UTC
 - [x] Hàm đổi `DATABASE_URL` dạng `postgresql://user:pass@host:port/db` sang chuỗi kết nối Npgsql, có unit test kể cả mật khẩu có ký tự đặc biệt
-- [x] Migration mốc tạo đủ schema trên DB trống theo `apps/backend-dotnet/db/reference-schema.sql`.
+- [x] Migration mốc tạo đủ schema trên DB trống theo `apps/backend/db/reference-schema.sql`.
   - Bảng và enum khớp schema gốc.
   - Index và khóa ngoại khớp schema gốc.
   - Extension `vector` tồn tại trong `public`.
@@ -64,11 +64,11 @@ Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dot
 
 Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down` xóa bảng ứng dụng.
 
-1. So schema DB đích với `apps/backend-dotnet/db/reference-schema.sql`.
+1. So schema DB đích với `apps/backend/db/reference-schema.sql`.
    Lệnh ghi nhận chỉ kiểm tra tên bảng, enum và extension.
    Lệnh không kiểm tra mọi cột hoặc index.
 2. Đặt `DATABASE_URL` tới DB đã có schema đúng.
-3. Chạy `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/backend-dotnet/db/adopt-existing-schema.sql` trong Bash.
+3. Chạy `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/backend/db/adopt-existing-schema.sql` trong Bash.
    Dùng `$env:DATABASE_URL` thay cho `"$DATABASE_URL"` khi chạy PowerShell.
 4. Kiểm tra ba bảng lịch sử trong `ef_identity`, `ef_ai_gateway` và `ef_catalog`.
    Mỗi bảng có một bản ghi `PrismaBaseline`.
@@ -78,9 +78,9 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 1. Chạy `dotnet tool restore` tại gốc repo.
    Manifest `.config/dotnet-tools.json` ghim `dotnet-ef` 10.0.12 để công cụ khớp phiên bản EF Core.
 2. Đặt `DATABASE_URL` tới DB trống.
-3. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.Identity --context IdentityDbContext`.
-4. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.AiGateway --context AiGatewayDbContext`.
-5. Chạy `dotnet ef database update --project apps/backend-dotnet/src/Pickory.Modules.Catalog --context CatalogDbContext`.
+3. Chạy `dotnet ef database update --project apps/backend/src/Pickory.Modules.Identity --context IdentityDbContext`.
+4. Chạy `dotnet ef database update --project apps/backend/src/Pickory.Modules.AiGateway --context AiGatewayDbContext`.
+5. Chạy `dotnet ef database update --project apps/backend/src/Pickory.Modules.Catalog --context CatalogDbContext`.
 
 **Bằng chứng DN-01 (2026-10-05):**
 
@@ -289,7 +289,7 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 - [x] Khóa khách xóa mọi phiên của khách. Mở khóa cho khách đăng nhập lại.
 - [x] `GET /api/admin/audit-logs` lọc theo người thực hiện, hành động, đối tượng và khoảng thời gian. Mỗi dòng có `actorEmail` và `actorName`.
 - [x] API ghi cảnh báo vào log khi khởi động nếu DB có quyền không còn trong danh mục.
-- [x] Lệnh `dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:seed` tạo role mặc định cho DB dev.
+- [x] Lệnh `dotnet run --project apps/backend/src/Pickory.Api -- identity:seed` tạo role mặc định cho DB dev.
 - [x] Lệnh `identity:create-admin` tạo admin đầu tiên, giống `scripts/admin-create.ts` của bản Node.
 
 **Kiểm tra:** `dotnet build` không có warning. `dotnet test` xanh. `pnpm lint && pnpm typecheck && pnpm test` xanh. Script kiểm tra comment không thấy vi phạm.
@@ -530,6 +530,40 @@ Hiện chưa có module nào gọi gateway. DN-06 port thư viện gateway và 3
 
 **Phụ thuộc:** DN-06 · **Quy mô:** M
 
-## DN-08
+## DN-08: Dọn phần còn sót của bản Node, đổi tên thư mục và cập nhật tài liệu
 
-Viết tiêu chí chi tiết khi bắt đầu task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.
+**Mô tả:** Đổi tên `apps/backend-dotnet` thành `apps/backend`. Xóa các file build cũ `bin/` và `obj/`. Sửa toàn bộ tham chiếu đường dẫn cũ trong code, cấu hình, spec và tài liệu kiểm thử. Cập nhật các file đặc tả module để phản ánh dự án .NET và giữ nguyên mốc lịch sử.
+
+**Tiêu chí nghiệm thu:**
+
+- [x] Tắt build server bằng `dotnet build-server shutdown`.
+- [x] Đổi tên `apps/backend-dotnet` thành `apps/backend` bằng lệnh `git mv`.
+- [x] Xóa các thư mục `bin/` và `obj/` dưới `apps/backend` để loại bỏ đường dẫn tuyệt đối cũ.
+- [x] Sửa mọi tham chiếu `backend-dotnet` thành `apps/backend` trong code, cấu hình, spec và tài liệu.
+- [x] Giữ nguyên các tài liệu ADR trong thư mục `docs/adr/`.
+- [x] Cập nhật `spec/SPEC-identity.md`, `spec/SPEC-ai-gateway.md` và `spec/SPEC-catalog.md` trỏ tới project Contracts và `PiiRedactor`.
+- [x] Thêm ghi chú trước khối mã TypeScript ở các spec module đã port để đối chiếu sang project Contracts tương ứng.
+- [x] Thêm ghi chú trước khối mã TypeScript ở các spec module chưa port để xác định mã thuộc bản Node.
+- [x] Cập nhật đường dẫn thư mục outbox trong `docs/testing/identity-manual-test-cases.md` thành `apps/backend/src/Pickory.Api/.dev-outbox`.
+- [x] Giữ nguyên các kịch bản kiểm thử thủ công và các dòng ghi nhận lịch sử chạy trước đây.
+- [x] Kiểm tra `CLAUDE.md`, `AGENTS.md` và `apps/frontend/eslint.config.js` để bảo đảm không còn cấu hình Node backend cũ.
+- [x] Viết lại Code Style, Testing Strategy và Boundaries trong `spec/SPEC.md` theo kiến trúc và công cụ thật của .NET.
+- [x] `dotnet build apps/backend/Pickory.sln` đạt 0 cảnh báo và 0 lỗi.
+- [x] `dotnet test apps/backend/Pickory.sln` vượt qua toàn bộ kiểm thử.
+- [x] Trong `apps/frontend`, `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm test:e2e` vượt qua toàn bộ kiểm thử.
+- [x] Chạy API .NET trong tiến trình riêng.
+- [x] Kiểm tra route health trả về mã trạng thái 200.
+- [x] Toàn bộ file sửa đổi không chứa ký tự em dash hoặc en dash.
+
+**Bằng chứng (2026-10-06):**
+
+- `dotnet build apps/backend/Pickory.sln` thành công, đạt 0 cảnh báo và 0 lỗi.
+- `dotnet test apps/backend/Pickory.sln` chạy xanh 637 test trên 3 project (3 kiến trúc, 359 unit, 275 integration).
+- Trong `apps/frontend`: `pnpm lint` và `pnpm typecheck` thành công, `pnpm test` xanh 112 test, `pnpm test:e2e` xanh 2 luồng.
+- API .NET khởi động cổng 3000 và route `/api/health` trả HTTP 200 với `{"data":{"status":"ok"}}`.
+- Toàn bộ file sửa đổi không chứa ký tự em dash hoặc en dash.
+- Các kết quả `backend-dotnet` còn lại chỉ nằm trong các câu ghi nhận lịch sử có chủ đích.
+- Viết lại Code Style, Testing Strategy và Boundaries trong `spec/SPEC.md` bằng ví dụ C# thật và công cụ xUnit.
+- Rà soát `spec/SPEC.md` không còn tham chiếu tới Express, Prisma, Supertest hay Zod ở backend.
+
+**Phụ thuộc:** DN-07 · **Quy mô:** S

@@ -39,21 +39,21 @@ Phân quyền theo RBAC, chi tiết trong `SPEC-identity.md`.
 | Lint/format | ESLint + Prettier |
 | Môi trường dev | Docker Compose cho PostgreSQL |
 
-Phiên bản cụ thể lấy bản ổn định mới nhất lúc khởi tạo. Frontend khóa phiên bản trong `apps/frontend/pnpm-lock.yaml`, backend khóa trong `apps/backend-dotnet/Directory.Packages.props`. Lý do chọn framework AI ghi tại `docs/adr/0001-ai-frameworks.md`.
+Phiên bản cụ thể lấy bản ổn định mới nhất lúc khởi tạo. Frontend khóa phiên bản trong `apps/frontend/pnpm-lock.yaml`, backend khóa trong `apps/backend/Directory.Packages.props`. Lý do chọn framework AI ghi tại `docs/adr/0001-ai-frameworks.md`.
 
-Giai đoạn chuyển đổi: backend chuyển sang ASP.NET Core 10 tại `apps/backend-dotnet`. Ngày 2026-10-05 người dùng quyết định xóa bản Node trước khi port xong. Module `catalog` mới có logic nền và sự kiện (DN-07), chưa có API. Các task từ CAT-04 trở đi viết thẳng bằng .NET. Code bản Node cũ xem bằng tag `node-backend-final`. Hàng RAG tooling ở bảng trên là lựa chọn của bản Node, sẽ cập nhật khi làm `knowledge-base`.
+Backend dùng ASP.NET Core 10 tại `apps/backend`. Ngày 2026-10-05 người dùng quyết định xóa bản Node trước khi port xong. Module `catalog` mới có logic nền và sự kiện (DN-07), chưa có API. Các task từ CAT-04 trở đi viết thẳng bằng .NET. Code bản Node cũ xem bằng tag `node-backend-final`. Hàng RAG tooling ở bảng trên là lựa chọn của bản Node, sẽ cập nhật khi làm `knowledge-base`.
 
 ## Commands
 
 Chạy ở gốc repo:
 
 ```bash
-docker compose up -d db                                    # chạy PostgreSQL + pgvector
-dotnet build apps/backend-dotnet/Pickory.sln               # build backend .NET
-dotnet test apps/backend-dotnet/Pickory.sln                # test backend (unit, integration, kiến trúc)
-dotnet run --project apps/backend-dotnet/src/Pickory.Api   # chạy API ở cổng 3000
-dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:seed          # tạo role mặc định cho DB trong DATABASE_URL
-dotnet run --project apps/backend-dotnet/src/Pickory.Api -- identity:create-admin  # tạo admin đầu tiên; truyền --email, --password hoặc ADMIN_EMAIL, ADMIN_PASSWORD
+docker compose up -d db                                                       # chạy PostgreSQL + pgvector
+dotnet build apps/backend/Pickory.sln                                         # build backend .NET
+dotnet test apps/backend/Pickory.sln                                          # test backend (unit, integration, kiến trúc)
+dotnet run --project apps/backend/src/Pickory.Api                             # chạy API ở cổng 3000
+dotnet run --project apps/backend/src/Pickory.Api -- identity:seed            # tạo role mặc định cho DB trong DATABASE_URL
+dotnet run --project apps/backend/src/Pickory.Api -- identity:create-admin    # tạo admin đầu tiên; truyền --email, --password hoặc ADMIN_EMAIL, ADMIN_PASSWORD
 ```
 
 Chạy trong `apps/frontend`:
@@ -85,7 +85,7 @@ apps/
     src/shared/catalog/         → kiểu thuộc tính và Zod schema mô tả sản phẩm
     test/unit/features/<module-id>/ → test hook và logic UI, đối chiếu với src/features/
     e2e/                        → Playwright test, cấu hình ở playwright.config.ts
-  backend-dotnet/         → ASP.NET Core 10 API
+  backend/                → ASP.NET Core 10 API
     Pickory.sln
     src/
       Pickory.Api/        → khởi động app, middleware, gọi đăng ký của từng module
@@ -105,7 +105,7 @@ spec/                     → CAPABILITY-MAP.md, SPEC.md (file này), SPEC-<modu
 docs/adr/                 → Architecture Decision Records
 ```
 
-Test nằm ngoài `src/`; dưới `test/unit/` và `test/integration/`, giữ cấu trúc thư mục tương ứng với code được test. Import trực tiếp từ `src/`, không tạo bản sao hay re-export trung gian. Typecheck bao gồm cả `src/` và `test/`; API build chỉ biên dịch `src/`. Vitest tìm test trong các thư mục này, không tìm test đặt cạnh code nguồn.
+Frontend đặt unit test trong `apps/frontend/test/unit/` và chạy bằng Vitest. Code test import trực tiếp từ `src/`, không tạo re-export trung gian. E2E test nằm trong `apps/frontend/e2e/` và chạy bằng Playwright. Backend đặt toàn bộ test trong `apps/backend/tests/` với ba project test: `Pickory.UnitTests`, `Pickory.IntegrationTests` và `Pickory.ArchitectureTests`.
 
 Backend .NET theo mục "Quy ước thư mục trong module" của `tasks/plan-dotnet.md`. Namespace khớp đường dẫn thư mục. Không tạo thư mục `Helpers/`, `Utils/`, `Common/` hoặc `Misc/`.
 
@@ -113,72 +113,86 @@ Backend .NET theo mục "Quy ước thư mục trong module" của `tasks/plan-d
 
 ## Code Style
 
-Các ví dụ backend trong mục này là code bản Node cũ. Viết lại bằng C# khi port xong (DN-08).
+```csharp
+// apps/backend/src/Pickory.Modules.Identity/Features/AdminRoles/AdminRolesEndpoints.cs
+endpoints.MapPost("/api/admin/roles", CreateRoleAsync)
+    .RequirePermission(Permissions.RolesManage);
 
-```ts
-// apps/backend/src/modules/catalog/routes.ts
-import { Router } from 'express';
-import { requirePermission } from '../identity';
-import { createProductSchema } from './schemas';
-import * as productService from './service';
-
-export const catalogRouter = Router();
-
-catalogRouter.post('/admin/products', requirePermission('products:write'), async (req, res) => {
-  const input = createProductSchema.parse(req.body); // ZodError → middleware trả 400
-  const product = await productService.createProduct(input, req.actor);
-  res.status(201).json({ data: product });
-});
-```
-
-```ts
-// apps/backend/src/shared/errors.ts
-export class AppError extends Error {
-  constructor(
-    public readonly code: string,      // 'PRODUCT_NOT_FOUND'
-    public readonly status: number,    // 404
-    message: string,
-  ) {
-    super(message);
-  }
+private static async Task<IResult> CreateRoleAsync(
+    HttpContext context,
+    CreateRoleRequest? request,
+    IValidator<CreateRoleRequest> validator,
+    RoleManagementHandler handler)
+{
+    // Kiểm tra body trước mọi bước khác. Dữ liệu sai nhận lỗi `VALIDATION_ERROR` và không chạm DB.
+    var validRequest = await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
+    // Handler nhận actor để chặn người gọi cấp quyền vượt quá quyền của chính họ.
+    var role = await handler.CreateAsync(context.GetActor(), validRequest, context.RequestAborted);
+    // Trả 201 vì route vừa tạo role mới, giống bản Node.
+    return Results.Json(new ApiResponse<RoleResponse>(role), statusCode: StatusCodes.Status201Created);
 }
 ```
 
-- File và thư mục: `kebab-case`. Biến, hàm: `camelCase`. Type, class: `PascalCase`. Hằng số: `UPPER_SNAKE_CASE`.
-- Bảng database: `snake_case` số nhiều, map qua `@@map` trong Prisma.
+```csharp
+// apps/backend/src/Pickory.Shared/Exceptions/AppException.cs
+namespace Pickory.Shared.Exceptions;
+
+// Định nghĩa lớp ngoại lệ nghiệp vụ để mang mã lỗi máy đọc được và thông điệp tiếng Việt.
+public class AppException : Exception
+{
+    // Lưu mã lỗi định danh để client phân loại và hiển thị tương ứng.
+    public string Code { get; }
+
+    // Lưu mã trạng thái HTTP để middleware trả đúng mã phản hồi mong muốn.
+    public int StatusCode { get; }
+
+    public AppException(string code, int statusCode, string message)
+        : base(message)
+    {
+        Code = code;
+        StatusCode = statusCode;
+    }
+}
+```
+
+- Quy ước đặt tên frontend: file và thư mục dùng `kebab-case`, biến và hàm dùng `camelCase`, type và component dùng `PascalCase`.
+- Quy ước đặt tên backend .NET: file và type dùng `PascalCase`, một type mỗi file, namespace khớp đường dẫn thư mục. Hằng số dùng `PascalCase`.
+- Bảng database dùng `snake_case` số nhiều. EF Core map tên bảng trong thư mục `Persistence/Configurations/`.
 - Response thành công: `{ data }`. Response lỗi: `{ error: { code, message } }`, `message` bằng tiếng Việt để hiển thị được cho người dùng.
-- Mọi input từ bên ngoài (body, query, params, webhook) đều validate bằng Zod trước khi dùng.
-- Tiền lưu dạng số nguyên VND (`Int`), không dùng số thực.
+- Mọi input từ bên ngoài đều validate trước khi dùng: frontend dùng Zod, backend dùng FluentValidation (`AbstractValidator`).
+- Tiền lưu dạng số nguyên VND (`int`), không dùng số thực.
 - Thời gian lưu UTC, hiển thị theo `Asia/Ho_Chi_Minh`.
-- Không dùng `any`. Không để `console.log` trong code commit, dùng logger chung.
+- Ở frontend, không dùng `any` và không để `console.log` trong code commit. Backend dùng `ILogger` xuất JSON.
 
 ## Testing Strategy
 
 | Cấp | Công cụ | Dùng cho | Vị trí |
 |---|---|---|---|
-| Unit | Vitest | Logic thuần trong service, hàm tiện ích, parse/validate | `<app hoặc package>/test/unit/**/*.test.{ts,tsx}`; tooling trong `tools/test/unit/` |
-| Integration | Vitest + Supertest + PostgreSQL thật (DB test riêng) | API endpoint, truy vấn Prisma, webhook | `<app hoặc package>/test/integration/**/*.int.test.{ts,tsx}` |
-| E2E | Playwright | Luồng quan trọng: đăng ký, tìm kiếm, thêm giỏ, checkout, chat | `e2e/` |
-| AI contract | Vitest, gọi API thật | Kiểm tra provider thật vẫn trả đúng định dạng | chỉ chạy khi `AI_LIVE_TESTS=1` |
+| Unit frontend | Vitest | Logic UI, hook, tiện ích và schema dùng chung | `apps/frontend/test/unit/` |
+| Unit backend | xUnit | Logic nghiệp vụ, định nghĩa thuộc tính, định dạng và tính toán | `apps/backend/tests/Pickory.UnitTests/` |
+| Integration | xUnit + `WebApplicationFactory` + PostgreSQL thật qua `TEST_DATABASE_URL` | Hợp đồng HTTP, truy vấn EF Core, ràng buộc DB, webhook | `apps/backend/tests/Pickory.IntegrationTests/` |
+| Kiến trúc | xUnit + `NetArchTest.Rules` | Kiểm tra ranh giới phụ thuộc giữa các module | `apps/backend/tests/Pickory.ArchitectureTests/` |
+| E2E | Playwright | Luồng quan trọng: đăng ký, mời nhân viên, tìm kiếm, thêm giỏ, checkout, chat | `apps/frontend/e2e/` |
+| AI contract | xUnit (`[LiveAiFact]`) | Kiểm tra provider AI thật trả đúng định dạng khi `AI_LIVE_TESTS=1` | `apps/backend/tests/Pickory.IntegrationTests/` |
 
-- Test thường không bao giờ gọi API AI hay SePay thật. Dùng fake provider của `ai-gateway` và payload webhook mẫu.
-- Coverage tối thiểu 80% dòng cho `service.ts` của mỗi module. Không đặt ngưỡng cho UI component.
-- Bug fix phải có test tái hiện lỗi trước khi sửa.
+- Test tự động thông thường không bao giờ gọi API AI hay SePay thật. Test dùng fake provider hoặc test double trong bộ nhớ.
+- Dự án không cài đặt ngưỡng coverage bắt buộc cho backend và frontend.
+- Mỗi bản sửa lỗi phải có test tái hiện lỗi trước khi sửa code.
 
 ## Boundaries
 
 **Always:**
 - Chạy `dotnet test` cho backend. Chạy `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend` trước khi commit.
-- Validate mọi input bên ngoài bằng Zod.
+- Validate mọi input bên ngoài bằng Zod ở frontend và FluentValidation ở backend.
 - Gọi AI qua `ai-gateway`, không gọi SDK provider trực tiếp từ module khác.
 - Xác thực webhook SePay trước khi xử lý, và xử lý idempotent.
-- Bảo vệ mọi endpoint back-office bằng `requirePermission`, và ghi `recordAudit` cho thao tác thay đổi dữ liệu của nhân viên.
+- Bảo vệ mọi endpoint back-office bằng `RequirePermission`. Ghi nhật ký bằng `IAuditLogWriter` khi nhân viên đổi dữ liệu.
 - Cập nhật spec trước khi đổi hành vi đã ghi trong spec.
 
 **Ask first:**
 - Thêm dependency mới.
 - Đổi schema database của module đã có dữ liệu thật.
-- Đổi interface public (`index.ts`) của một module.
+- Đổi interface public hoặc project Contracts của một module.
 - Thêm quyền mới vào danh mục quyền, hoặc đổi quyền mặc định của role tạo sẵn.
 - Đổi provider AI, model, hoặc gửi thêm loại dữ liệu người dùng sang API AI.
 - Thay đổi CI/CD hoặc cấu hình deploy.

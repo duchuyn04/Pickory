@@ -65,7 +65,7 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
         while (directory is not null)
         {
             if (File.Exists(Path.Combine(directory.FullName, "CLAUDE.md")) &&
-                Directory.Exists(Path.Combine(directory.FullName, "apps", "backend-dotnet")))
+                Directory.Exists(Path.Combine(directory.FullName, "apps", "backend")))
             {
                 return directory.FullName;
             }

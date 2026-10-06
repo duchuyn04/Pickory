@@ -15,7 +15,7 @@ Bản .NET phải giữ đúng hợp đồng API của bản Node. Hợp đồng
 3. Chuyển từng module và giữ nguyên API. Xong module nào thì tắt bản Node của module đó.
 4. Code tổ chức theo modular monolith. Mỗi module chỉ gọi module khác qua interface công khai.
 5. Nhánh `feat/catalog` đã merge vào `main`. Bản Node của `catalog` là bản tham chiếu khi port.
-6. Ngày 2026-10-05 người dùng quyết định xóa bản Node ngay sau DN-00, trước khi port. Code Node xem bằng tag `node-backend-final`. Schema DB gốc lưu ở `apps/backend-dotnet/db/reference-schema.sql`. Mục "Cách chạy song song khi chuyển" không còn áp dụng.
+6. Ngày 2026-10-05 người dùng quyết định xóa bản Node ngay sau DN-00, trước khi port. Code Node xem bằng tag `node-backend-final`. Schema DB gốc lưu ở `apps/backend/db/reference-schema.sql`. Mục "Cách chạy song song khi chuyển" không còn áp dụng.
 
 ## Bảng thay thế công nghệ
 
@@ -69,7 +69,7 @@ Entity Framework Core (EF Core) dùng ba `DbContext` độc lập trong project 
 
 Mỗi schema lịch sử có bảng `__EFMigrationsHistory`.
 
-`Up` của ba migration `PrismaBaseline` tạo schema theo `apps/backend-dotnet/db/reference-schema.sql`:
+`Up` của ba migration `PrismaBaseline` tạo schema theo `apps/backend/db/reference-schema.sql`:
 
 - 20 bảng ứng dụng.
 - Bốn enum PostgreSQL.
@@ -78,11 +78,11 @@ Mỗi schema lịch sử có bảng `__EFMigrationsHistory`.
 
 `Down` xóa các đối tượng ứng dụng thuộc module theo thứ tự phụ thuộc.
 
-DB đã có schema dùng `apps/backend-dotnet/db/adopt-existing-schema.sql` để ghi nhận mốc.
+DB đã có schema dùng `apps/backend/db/adopt-existing-schema.sql` để ghi nhận mốc.
 
 DB trống dùng `dotnet ef database update` theo thứ tự `Identity`, `AiGateway`, `Catalog`.
 
-Model giữ tên cột camelCase theo `apps/backend-dotnet/db/reference-schema.sql`.
+Model giữ tên cột camelCase theo `apps/backend/db/reference-schema.sql`.
 Model không thêm index khóa ngoại ngoài bản tham chiếu này.
 
 - Enum dùng `MapEnum` của Npgsql. `PgName` giữ nhãn DB. `HasPostgresEnum` giữ thứ tự nhãn như `reference-schema.sql`.
@@ -127,7 +127,7 @@ Việc này chỉ đổi `apps/frontend/vite.config.ts`, không đổi code giao
 
 ```
 apps/
-  backend-dotnet/
+  backend/
     Pickory.sln
     src/
       Pickory.Api/                → khởi động app, cấu hình, gắn route của các module
