@@ -1,6 +1,7 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -71,6 +72,14 @@ public static class IdentityModule
         // `HttpClient` do factory quản lý. Kết nối tới Google được dùng lại và không cạn socket.
         services.AddHttpClient<IGoogleOAuthClient, GoogleOAuthClient>();
         return services;
+    }
+
+    // Dựng hoặc cập nhật schema của module bằng migration EF Core.
+    // API không tự chạy migration khi khởi động, nên chỉ lệnh chuẩn bị DB gọi hàm này.
+    public static async Task MigrateIdentityDatabaseAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        await using var scope = services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<IdentityDbContext>().Database.MigrateAsync(cancellationToken);
     }
 
     // Lệnh quản trị của identity, ví dụ `identity:seed`. Lệnh chạy xong thì thoát, không mở web API.

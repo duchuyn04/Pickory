@@ -109,6 +109,14 @@ public class ExceptionHandlingMiddleware
                 "VALIDATION_ERROR",
                 message);
         }
+        catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
+        {
+            // Client đã đóng kết nối, nên không còn ai nhận phản hồi. Ghi mức `Debug` vì đây không phải lỗi của API.
+            _logger.LogDebug(
+                "Client hủy yêu cầu {Method} {Path} trước khi API trả lời.",
+                context.Request.Method,
+                context.Request.Path);
+        }
         catch (Exception exception)
         {
             if (context.Response.HasStarted)

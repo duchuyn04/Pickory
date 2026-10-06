@@ -24,6 +24,8 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
             postgres.MigrationsHistoryTable("__EFMigrationsHistory", "ef_identity");
             postgres.MapEnum<UserKind>("UserKind");
             postgres.MapEnum<EmailTokenPurpose>("EmailTokenPurpose");
+            // Phiên kèm role và quyền đọc bằng một truy vấn join, giống bản Node. Khai báo rõ để EF Core không cảnh báo mỗi lần dịch truy vấn.
+            postgres.UseQuerySplittingBehavior(QuerySplittingBehavior.SingleQuery);
         });
     }
 
@@ -35,7 +37,7 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
-        // Giữ thứ tự nhãn PostgreSQL vì phép so sánh enum dùng thứ tự khai báo, không dùng thứ tự chữ cái.
+        // Giữ thứ tự nhãn PostgreSQL. Phép so sánh enum dùng thứ tự khai báo, không dùng thứ tự chữ cái.
         modelBuilder.HasPostgresEnum("UserKind", ["customer", "staff"]);
         modelBuilder.HasPostgresEnum("EmailTokenPurpose", ["verify", "reset", "invite"]);
 

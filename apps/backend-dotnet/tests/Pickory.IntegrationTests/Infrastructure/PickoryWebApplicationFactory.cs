@@ -82,6 +82,8 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             throw new InvalidOperationException("The integration database collection must initialize before the web application factory starts.");
         }
         builder.UseSetting("DATABASE_URL", database.DatabaseUrl);
+        // Test không đọc `.env` dev. Giá trị như `TRUST_PROXY` của máy dev không làm đổi kết quả test.
+        builder.UseSetting("PICKORY_SKIP_DOTENV", "true");
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             // URL đã được kiểm tra thuộc fixture duy nhất của toàn collection.

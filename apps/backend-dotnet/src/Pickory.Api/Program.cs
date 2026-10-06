@@ -1,3 +1,4 @@
+using Pickory.Api.E2e;
 using Pickory.Api.Middleware;
 using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
@@ -19,12 +20,20 @@ builder.Logging.AddJsonConsole(options =>
     options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
 });
 
+// API đọc `.env` ở gốc repo với độ ưu tiên thấp nhất, vì `pnpm dev` không đặt biến môi trường.
+// Test tích hợp tắt bước này để cấu hình dev không lọt vào test.
+if (builder.Configuration["PICKORY_SKIP_DOTENV"] != "true")
+{
+    DotEnvFile.AddAsLowestPriority(builder.Configuration, AppContext.BaseDirectory);
+}
+
 // Nạp cấu hình từ biến môi trường và dừng ứng dụng nếu thiếu cấu hình bắt buộc.
 var config = AppConfig.Load(builder.Configuration);
 builder.Services.AddSingleton(config);
 
-// Thiết lập cổng mạng lắng nghe trên mọi giao diện mạng để chạy được trong container.
-builder.WebHost.UseUrls($"http://0.0.0.0:{config.Port}");
+// Container cần nghe trên mọi giao diện mạng. API E2E chỉ nghe trên loopback để máy khác không truy cập được.
+var listenAddress = E2eStartup.IsCommand(args) ? "127.0.0.1" : "0.0.0.0";
+builder.WebHost.UseUrls($"http://{listenAddress}:{config.Port}");
 
 // Giới hạn kích thước payload tối đa 1 MB cho toàn bộ máy chủ web.
 builder.WebHost.ConfigureKestrel(options =>
@@ -53,6 +62,12 @@ var app = builder.Build();
 if (IdentityModule.IsIdentityCommand(args))
 {
     return await IdentityModule.RunIdentityCommandAsync(args, app.Services);
+}
+
+// Lệnh `e2e:start` dựng lại DB E2E rồi chạy API như bình thường. Playwright chỉ thấy API sẵn sàng sau bước chuẩn bị.
+if (E2eStartup.IsCommand(args))
+{
+    await E2eStartup.PrepareAsync(app.Services, app.Configuration, CancellationToken.None);
 }
 
 // Đọc IP thật của client sau proxy trước mọi middleware khác. Giới hạn tần suất của identity đếm theo IP này.

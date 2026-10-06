@@ -20,21 +20,23 @@ export default defineConfig({
   webServer: [
     {
       name: 'E2E API',
-      // Bản Node đã xóa. Bản .NET chưa có script seed admin cho E2E, việc này làm ở DN-05.
-      command: 'dotnet run --project apps/backend-dotnet/src/Pickory.Api',
+      // Lệnh `e2e:start` dựng lại DB `pickory_e2e`, tạo admin fixture rồi mới mở cổng API.
+      command: 'dotnet run --project apps/backend-dotnet/src/Pickory.Api -- e2e:start',
       url: `${e2eEnvironment.apiOrigin}/api/health`,
       // Không tái sử dụng API đang chạy vì API đó có thể dùng DB dev.
       reuseExistingServer: false,
       timeout: 120000,
       stdout: 'pipe',
       env: {
-        NODE_ENV: 'development',
+        ASPNETCORE_ENVIRONMENT: 'Development',
         PORT: '3101',
         WEB_ORIGIN: e2eEnvironment.webOrigin,
         DATABASE_URL: e2eEnvironment.databaseUrl,
         E2E_DATABASE_URL: e2eEnvironment.databaseUrl,
         E2E_ADMIN_EMAIL: e2eEnvironment.adminEmail,
         E2E_ADMIN_PASSWORD: e2eEnvironment.adminPassword,
+        // Tách thư của suite khỏi outbox dev. Spec đọc link mời từ thư mục này.
+        DEV_OUTBOX_DIR: e2eEnvironment.outboxDirectory,
         // Xóa khóa AI để luồng identity không gọi provider thật.
         LLM_API_KEY: '',
         LLM_MODEL: '',

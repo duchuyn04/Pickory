@@ -319,6 +319,42 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 
 **Phụ thuộc:** DN-03 · **Quy mô:** L
 
-## DN-05 đến DN-08
+## DN-05: Chạy identity trên backend .NET và kiểm chứng bằng E2E
+
+**Mô tả:** Frontend gọi route identity của backend .NET qua Vite proxy. Bản Node đã xóa, nên `scripts/e2e-start.ts` cũng không còn. Task này thay script đó bằng lệnh `e2e:start` của API .NET, rồi chạy lại E2E và test thủ công của identity.
+
+**Tiêu chí nghiệm thu:**
+
+- [x] `pnpm dev` chạy web và API .NET. Vite proxy chuyển `/api` sang API .NET ở cổng 3000.
+- [x] Lệnh `e2e:start` chuẩn bị DB E2E trước khi API nhận request:
+  - Lệnh chỉ chạy khi DB có tên `pickory_e2e` và `E2E_DATABASE_URL` trùng `DATABASE_URL`.
+  - Lệnh tạo DB nếu chưa có, dựng lại schema bằng migration EF Core, rồi tạo role mặc định và admin fixture.
+  - Lệnh chỉ xóa thư của tài khoản E2E trong thư mục outbox riêng của suite.
+- [x] Mỗi module có hàm migration công khai. Lệnh `e2e:start` không tham chiếu `DbContext` của module.
+- [x] `playwright.config.ts` dùng `e2e:start`. `e2e/environment.ts` đọc thư mời từ outbox của backend .NET.
+- [x] `pnpm test:e2e` chạy xanh hai luồng identity: khách đăng ký, đăng xuất, đăng nhập lại; admin mời sales, sales đặt mật khẩu và chỉ thấy menu trong quyền.
+- [x] `docs/testing/identity-manual-test-cases.md` dùng lệnh .NET thay cho lệnh Node đã xóa.
+- [x] Lần chạy thứ 4 của 100 case thủ công dùng backend .NET. Mỗi case có trạng thái và bằng chứng theo mục 2 của `CLAUDE.md`.
+- [x] Mọi case FAILED của lần chạy thứ 4 được báo cho người dùng kèm nguyên nhân. Không sửa kịch bản để biến case FAILED thành PASS.
+
+**Kiểm tra:** `dotnet build` không có warning. `dotnet test` xanh. `pnpm lint && pnpm typecheck && pnpm test && pnpm test:e2e` xanh. Script kiểm tra comment không thấy vi phạm.
+
+**Bằng chứng (2026-10-06):**
+
+- `dotnet build` có 0 warning. `dotnet test` xanh 343 test: 139 unit, 201 integration, 3 kiến trúc.
+- `pnpm lint`, `pnpm typecheck` xanh. `pnpm test` xanh 95 test. `pnpm test:e2e` xanh 2 luồng.
+- Script kiểm tra comment báo 0 vi phạm.
+- Lần chạy 4 (`20261006-486d9l`) có 96 PASS, 1 FAILED, 3 UNKNOWN. Chi tiết nằm trong `docs/testing/identity-manual-test-cases.md`.
+- MT-ID-072 FAILED: 4 dòng audit `ai_settings.update` ngày 2026-10-04 chỉ hiện UUID. Người thực hiện các dòng này đã bị xóa cứng khỏi `users` trước lần chạy. Case chưa quy định cách hiển thị người thực hiện đã bị xóa.
+- MT-ID-025, MT-ID-074, MT-ID-075 UNKNOWN: DB dev có 2 admin hoạt động, và môi trường không có OAuth client Google thật.
+
+**Lỗi tìm thấy và đã sửa:**
+
+- API ghi log mức `Error` khi client đóng kết nối giữa request. `ExceptionHandlingMiddleware` giờ ghi mức `Debug` cho trường hợp này. Test tái hiện lỗi đỏ trước khi sửa.
+- Hướng dẫn chạy ghi sai thư mục outbox. `dotnet run` chạy API trong thư mục project, nên thư nằm ở `apps/backend-dotnet/src/Pickory.Api/.dev-outbox`.
+
+**Phụ thuộc:** DN-04 · **Quy mô:** M
+
+## DN-06 đến DN-08
 
 Viết tiêu chí chi tiết khi bắt đầu từng task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.

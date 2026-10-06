@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Routing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.Modules.AiGateway.Persistence;
 
@@ -13,6 +14,14 @@ public static class AiGatewayModule
         services.AddDbContext<AiGatewayDbContext>(options =>
             AiGatewayDbContext.ConfigureOptions(options, databaseConnectionString));
         return services;
+    }
+
+    // Dựng hoặc cập nhật schema của module bằng migration EF Core.
+    // API không tự chạy migration khi khởi động, nên chỉ lệnh chuẩn bị DB gọi hàm này.
+    public static async Task MigrateAiGatewayDatabaseAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        await using var scope = services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<AiGatewayDbContext>().Database.MigrateAsync(cancellationToken);
     }
 
     public static IEndpointRouteBuilder MapAiGatewayEndpoints(this IEndpointRouteBuilder endpoints)
