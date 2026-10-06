@@ -122,20 +122,54 @@ Cách hiểu thêm: Đổi tên danh mục hoặc thương hiệu giữ nguyên 
 ### CAT-05: Tạo và sửa sản phẩm, biến thể
 **Mô tả:** `POST/PATCH /api/admin/products[/:id]` (`products:write`), `GET /api/admin/products[/:id]` (`products:read`, mọi trạng thái, tìm theo tên hoặc mã SKU). Validate thông số theo danh mục lá. Validate mô tả bằng schema của CAT-13. Sinh SKU từ tùy chọn, giữ SKU cũ khi tổ hợp không đổi. Sinh slug, lưu slug cũ vào lịch sử khi đổi. Ghi audit khi đổi giá. Phát `onProductChanged` sau commit.
 **Tiêu chí nghiệm thu:**
-- [ ] Sản phẩm gắn vào danh mục không phải lá trả 400
-- [ ] Thông số sai trả 400 `SPECS_INVALID` kèm danh sách `key` lỗi, không có gì được lưu
-- [ ] Mô tả có nút lạ (ví dụ `script`, `image`) hoặc vượt giới hạn trả 400 `DESCRIPTION_INVALID`, không có gì được lưu
-- [ ] Thêm giá trị tùy chọn sinh thêm SKU, SKU cũ giữ giá và tồn kho
-- [ ] Mã SKU trùng trả 409
-- [ ] Bỏ một giá trị tùy chọn thì SKU tương ứng bị tắt (`enabled = false`), không bị xóa, tồn kho và movement giữ nguyên (Decision 18)
-- [ ] Tên chỉ gồm ký hiệu cho ra slug rỗng thì dùng slug dự phòng `san-pham`, rồi thêm hậu tố số nếu trùng
-- [ ] Slug mới không trùng slug hiện tại của sản phẩm khác và không trùng `oldSlug` trong `product_slug_history`
-- [ ] Đổi giá 1 SKU tạo đúng 1 dòng audit `catalog.sku.price_change` có giá trước và sau
-- [ ] Đổi tên với slug mới lưu slug cũ vào `product_slug_history`
-- [ ] `onProductChanged` phát đúng 1 lần sau lưu thành công, 0 lần khi validate lỗi
-- [ ] `sales` xem được sản phẩm `draft`, gọi `PATCH` nhận 403
+- [x] Sản phẩm gắn vào danh mục không phải lá trả 400
+  Cách hiểu: Danh mục lá không có danh mục con. Danh mục có con nhận 400 `CATEGORY_NOT_LEAF`. Danh mục không tồn tại nhận 400 `INVALID_CATEGORY`. Thương hiệu không tồn tại nhận 400 `INVALID_BRAND`.
+- [x] Thông số sai trả 400 `SPECS_INVALID` kèm danh sách `key` lỗi, không có gì được lưu
+  Cách hiểu: Trường `specs` được thẩm định theo danh mục lá qua `SpecValidator`. Lỗi sai định dạng hoặc thiếu trường bắt buộc làm API trả 400 `SPECS_INVALID`. Danh sách lỗi chi tiết nằm trong mảng `details` với `key` và `message`. Khi xảy ra lỗi này, toàn bộ thay đổi bị hủy và không ghi cơ sở dữ liệu.
+- [x] Mô tả có nút lạ (ví dụ `script`, `image`) hoặc vượt giới hạn trả 400 `DESCRIPTION_INVALID`, không có gì được lưu
+  Cách hiểu: Tài liệu `description` được thẩm định qua `DescriptionSchema.Validate`. Nút lạ hoặc tài liệu vượt giới hạn trả 400 `DESCRIPTION_INVALID`. Khi thẩm định thất bại, transaction hoàn nguyên và cơ sở dữ liệu giữ nguyên.
+- [x] Thêm giá trị tùy chọn sinh thêm SKU, SKU cũ giữ giá và tồn kho
+  Cách hiểu: Hệ thống hỗ trợ tối đa 3 trục tùy chọn và 100 tổ hợp biến thể. Tập `variants` phải khớp đúng tích Descartes từ `VariantCombinations.Build(options)`. Sản phẩm không tùy chọn có đúng 1 biến thể với `optionValues` rỗng. Tổ hợp mới tạo SKU với `stock = 0`.
+
+  SKU cũ giữ `Id` và `Stock`. Mã `Code` chỉ đổi khi request gửi mã mới. Giá và kích thước cập nhật theo request. Giá cũ giữ nguyên khi request không đổi giá.
+- [x] Mã SKU trùng trả 409
+  Cách hiểu: Khi quản trị viên nhập mã `code` bị trùng SKU khác, API trả 409 `SKU_CODE_ALREADY_EXISTS`. Khi bỏ trống `code`, hệ thống tự sinh mã từ slug và giá trị tùy chọn. Nếu mã tự sinh bị trùng, hệ thống tự động gắn hậu tố số tăng dần.
+- [x] Bỏ một giá trị tùy chọn thì SKU tương ứng bị tắt (`enabled = false`), không bị xóa, tồn kho và movement giữ nguyên (Decision 18)
+  Cách hiểu: Khi bỏ bớt giá trị tùy chọn, các SKU không còn trong danh sách mới nhận `enabled = false`. Dữ liệu SKU và lịch sử `InventoryMovement` cũ vẫn được lưu giữ. Khi thêm lại giá trị đã bỏ, SKU cũ được bật lại và giữ nguyên `Id`, `Code`, `Stock`.
+- [x] Tên chỉ gồm ký hiệu cho ra slug rỗng thì dùng slug dự phòng `san-pham`, rồi thêm hậu tố số nếu trùng
+  Cách hiểu: Khi `SlugGenerator.ToSlug` trả về chuỗi rỗng do tên chỉ chứa ký hiệu, handler dùng slug dự phòng `san-pham`. Nếu slug `san-pham` đã tồn tại, hệ thống bổ sung hậu tố số tự tăng.
+- [x] Slug mới không trùng slug hiện tại của sản phẩm khác và không trùng `oldSlug` trong `product_slug_history`
+  Cách hiểu: Slug mới không được trùng với slug hiện tại hoặc `oldSlug` của sản phẩm khác. Nếu slug mới trùng `oldSlug` của chính sản phẩm này thì cho phép và xóa dòng lịch sử cũ.
+- [x] Đổi giá 1 SKU tạo đúng 1 dòng audit `catalog.sku.price_change` có giá trước và sau
+  Cách hiểu: Khi giá bán `price` của một SKU thay đổi trong `PATCH`, hệ thống ghi đúng 1 dòng nhật ký `catalog.sku.price_change`. Nhật ký ghi nhận cả giá trước và giá sau trong cùng transaction qua `IAuditLogWriter`. Tạo mới sản phẩm hoặc chỉ đổi `compareAtPrice` thì không ghi nhật ký giá.
+- [x] Đổi tên với slug mới lưu slug cũ vào `product_slug_history`
+  Cách hiểu: Khi cập nhật tên sản phẩm làm thay đổi slug, slug cũ được lưu vào bảng `product_slug_history`. Nếu tên mới không làm thay đổi slug thì hệ thống không lưu thêm bản ghi lịch sử.
+- [x] `onProductChanged` phát đúng 1 lần sau lưu thành công, 0 lần khi validate lỗi
+  Cách hiểu: Sự kiện `ProductChangedEvent` được phát đúng 1 lần sau khi transaction commit thành công. Hành động phát ra là `Created` cho `POST` và `Updated` cho `PATCH`. Bất kỳ lỗi thẩm định hoặc lỗi transaction nào đều phát 0 sự kiện.
+- [x] `sales` xem được sản phẩm `draft`, gọi `PATCH` nhận 403
+  Cách hiểu: Người dùng có quyền `products:read` như vai trò `sales` xem được danh sách và chi tiết sản phẩm `draft`. Khi người dùng thiếu `products:write` gọi `POST` hoặc `PATCH`, API trả mã lỗi 403 Forbidden.
+
+Cách hiểu thêm: Sản phẩm mới luôn có trạng thái `draft`. SKU mới có `stock = 0`. API từ chối trường `status` hoặc `stock` trong `POST` và `PATCH` với 400 `VALIDATION_ERROR`.
+
+`PATCH` đổi `options` mà không gửi `variants` bị từ chối nếu tập tổ hợp hiện tại không khớp tùy chọn mới. SKU cũ giữ mã khi request không gửi `code` mới. API tính lại `MinPrice` và `InStock` sau mỗi lần lưu.
+
+Các số đo đóng gói (`weightGrams`, `lengthCm`, `widthCm`, `heightCm`) không bắt buộc khi lưu nháp sản phẩm. Nếu yêu cầu gửi số đo, giá trị phải lớn hơn 0. Tiêu chí kiểm tra bắt buộc đủ số đo đối với biến thể đang bật được thực hiện khi đăng bán sản phẩm trong CAT-07.
+
+`ProductWriteLockKey` là khóa advisory dùng chung cho transaction ghi sản phẩm. Khóa tuần tự hóa `POST` và `PATCH`, tránh cấp trùng slug hoặc tổ hợp SKU khi ghi đồng thời. Cách này giảm khả năng ghi song song, nhưng không đổi schema hoặc thêm retry.
 **Kiểm tra:** integration test
 **Phụ thuộc:** CAT-04, CAT-13 · **File:** `modules/catalog/services/products.ts`, `modules/catalog/data/product-repository.ts`, `modules/catalog/routes/admin-products.ts`, `modules/catalog/schemas.ts` · **Quy mô:** M
+**File (.NET):** `apps/backend/src/Pickory.Modules.Catalog/Features/Products/{ProductModels.cs, ProductValidators.cs, ProductManagementHandler.cs, ProductsEndpoints.cs}`, `apps/backend/src/Pickory.Modules.Catalog/CatalogModule.cs`, `apps/backend/tests/Pickory.IntegrationTests/Api/PermissionMatrixTests.cs`, `apps/backend/tests/Pickory.IntegrationTests/Infrastructure/PickoryWebApplicationFactory.cs`, `apps/backend/tests/Pickory.IntegrationTests/Api/Catalog/ProductManagementTests.cs`
+
+**Bằng chứng (2026-10-06):**
+
+- `dotnet build apps/backend/Pickory.sln` thành công, đạt 0 cảnh báo và 0 lỗi.
+- `dotnet test apps/backend/Pickory.sln` chạy xanh 889 test trên 3 project (3 kiến trúc, 359 unit, 527 integration). Có 4 test gọi AI thật được bỏ qua.
+- Thêm 4 endpoint sản phẩm vào `PermissionMatrixTests.cs`, đạt 140 test (5 theory x 28 endpoint) cho toàn bộ các route back-office.
+- Bộ test integration gồm 79 test sản phẩm và biến thể trong `ProductManagementTests.cs` đều vượt qua.
+- Phép thử đột biến: 41/41 đột biến bị test bắt trên toàn bộ các điểm kiểm tra.
+- Smoke test qua HTTP thật trên cổng 3095: POST 201, PATCH 200, sales GET 200, list 200, sales PATCH 403, mô tả độc hại 400 `DESCRIPTION_INVALID`, tồn kho 0, lưu lịch sử slug và audit giá đầy đủ.
+- Không sửa frontend nên không chạy lại test frontend.
+- Script kiểm tra comment báo 0 vi phạm. Toàn bộ file không chứa ký tự em dash hoặc en dash.
 
 ### UI-C5: Danh sách và form sản phẩm
 **Mô tả:** Danh sách lọc theo trạng thái, danh mục, sắp hết hàng. Form sản phẩm: ô thông số sinh theo danh mục, trình soạn mô tả (UI-C8), trình soạn tùy chọn, bảng biến thể sinh từ tổ hợp. Form dùng `validateSpecs` của `packages/shared` để báo lỗi trước khi gửi.

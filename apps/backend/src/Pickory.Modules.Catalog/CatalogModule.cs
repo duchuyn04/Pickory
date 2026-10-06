@@ -5,6 +5,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Pickory.Modules.Catalog.Features.Brands;
 using Pickory.Modules.Catalog.Features.Categories;
+using Pickory.Modules.Catalog.Features.Products;
 using Pickory.Modules.Catalog.Persistence;
 
 namespace Pickory.Modules.Catalog;
@@ -17,11 +18,12 @@ public static class CatalogModule
         // Dùng cùng tùy chọn với migration để ứng dụng đọc đúng enum và lịch sử. Ứng dụng không tự chạy migration khi khởi động.
         services.AddDbContext<CatalogDbContext>(options =>
             CatalogDbContext.ConfigureOptions(options, databaseConnectionString));
-        // Đăng ký đồng hồ thời gian hệ thống và dịch vụ quản lý danh mục, thương hiệu.
+        // Đăng ký đồng hồ thời gian hệ thống và các dịch vụ quản lý danh mục, thương hiệu, sản phẩm.
         services.TryAddSingleton(TimeProvider.System);
         services.AddValidatorsFromAssemblyContaining<CreateCategoryRequestValidator>();
         services.AddScoped<CategoryManagementHandler>();
         services.AddScoped<BrandManagementHandler>();
+        services.AddScoped<ProductManagementHandler>();
         return services;
     }
 
@@ -37,6 +39,7 @@ public static class CatalogModule
     {
         CategoriesEndpoints.Map(endpoints);
         BrandsEndpoints.Map(endpoints);
+        ProductsEndpoints.Map(endpoints);
         return endpoints;
     }
 }

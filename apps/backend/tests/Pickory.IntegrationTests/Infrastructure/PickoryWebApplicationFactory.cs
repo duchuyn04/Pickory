@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Pickory.Modules.Identity.Contracts.Events;
+using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Identity.Emails;
 using Pickory.Modules.Identity.GoogleOAuth;
 using Pickory.Shared.Events;
@@ -112,10 +113,11 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             // Trỏ `IGoogleOAuthClient` về cùng một instance. Thông tin test đặt là thông tin API nhận.
             services.AddSingleton<IGoogleOAuthClient>(provider => provider.GetRequiredService<FakeGoogleOAuthClient>());
 
-            // Ghi lại sự kiện của identity để test kiểm tra số lần phát.
+            // Ghi lại sự kiện của identity và catalog để test kiểm tra số lần phát.
             services.AddSingleton<RecordedDomainEvents>();
             services.AddSingleton<IDomainEventHandler<UserLinkedEvent>, RecordingDomainEventHandler<UserLinkedEvent>>();
             services.AddSingleton<IDomainEventHandler<UserDeletedEvent>, RecordingDomainEventHandler<UserDeletedEvent>>();
+            services.AddSingleton<IDomainEventHandler<ProductChangedEvent>, RecordingDomainEventHandler<ProductChangedEvent>>();
         });
     }
 
