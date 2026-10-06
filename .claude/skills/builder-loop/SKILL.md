@@ -27,7 +27,7 @@ Bạn là reviewer và người điều phối. Builder là agent `omp` chạy t
    - Ghi chỗ tiêu chí còn viết theo bản Node. Backend hiện là .NET tại `apps/backend`.
 4. Viết file giao việc `<task>-handoff.md`, gồm:
    - luật bắt buộc: `CLAUDE.md` mục 1 đến 6, không em dash hay en dash, không `/// <summary>`, không commit, không push, không `git add -A`, `git add .` hay `git add -u`;
-   - đường dẫn cấm stage hoặc xóa: `.agents/`, `skills-lock.json`, `docs/research/`, file `.docx` và `.pdf`, `.claude/settings*.json` (cấm cả đọc);
+   - đường dẫn cấm stage hoặc xóa: `docs/research/`, file `.docx` và `.pdf`, `.claude/settings*.json` (cấm cả đọc);
    - các bước theo thứ tự, mỗi bước có kết quả kiểm tra được;
    - mục "Agent skills" chép từ phần cùng tên bên dưới;
    - yêu cầu TDD, và phép thử đột biến cho test xanh ngay lần đầu;
