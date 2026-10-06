@@ -471,6 +471,65 @@ Hiện chưa có module nào gọi gateway. DN-06 port thư viện gateway và 3
 
 **Phụ thuộc:** DN-05B · **Quy mô:** L
 
-## DN-07 đến DN-08
+## DN-07: Port `catalog` (CAT-01 đến CAT-03, CAT-13)
 
-Viết tiêu chí chi tiết khi bắt đầu từng task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.
+**Mô tả:** DN-01 đã có entity, cấu hình EF Core và migration của catalog. DN-07 port phần logic thuần, sự kiện và ràng buộc DB của 4 task CAT-01, CAT-02, CAT-03 và CAT-13. Bản Node có 89 test cho phạm vi này.
+
+**Tiêu chí nghiệm thu:**
+
+- [x] Project `Pickory.Modules.Catalog.Contracts` chứa `ProductChangedEvent` và `StockChangedEvent`. Test kiến trúc xanh.
+- [x] Bộ thuộc tính: kiểm tra định nghĩa, gộp thuộc tính cha và con, validate thông số theo từng `key`.
+- [x] Logic thuần: `slug`, tổ hợp biến thể tối đa 3 trục, giá hiển thị, kiểm tra giá, điều kiện đăng bán và bảng chuyển trạng thái.
+- [x] Schema tài liệu mô tả, `descriptionToPlainText` và `plainTextToDescription` cho kết quả giống bản Node, kể cả giới hạn 20.000 ký tự và 500 nút.
+- [x] Sự kiện của catalog chỉ phát sau khi transaction commit, và phát đúng một lần.
+- [x] DB từ chối `stock` âm, movement trùng `orderId`, `skuId`, `type`, và xóa sản phẩm còn movement.
+- [x] Frontend và backend chạy chung bộ dữ liệu mẫu JSON trong `spec/fixtures/catalog/` cho schema mô tả và validate thông số.
+- [x] Mỗi test của bản Node trong phạm vi này có test .NET tương ứng.
+- [x] `dotnet build` có 0 warning. `dotnet test` xanh. Trong `apps/frontend`, `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm test:e2e` xanh.
+
+**Thứ tự làm (mỗi bước viết test trước):**
+
+1. Project Contracts, sự kiện và danh sách quyền của catalog.
+2. Bộ thuộc tính và validate thông số, kèm bộ dữ liệu mẫu JSON dùng chung.
+3. Slug, biến thể, giá và trạng thái.
+4. Schema tài liệu mô tả và hai hàm chuyển đổi text, kèm bộ dữ liệu mẫu JSON dùng chung.
+5. Bộ gom sự kiện và transaction phát sự kiện sau commit. Test ràng buộc DB.
+6. Test của frontend đọc bộ dữ liệu mẫu JSON. Chạy toàn bộ kiểm tra.
+
+**Bằng chứng (2026-10-06):**
+
+- `dotnet build` có 0 warning. `dotnet test` xanh 637 test: 3 kiến trúc, 359 unit, 275 integration. 4 test với API AI thật được bỏ qua như ở DN-06.
+- Trong `apps/frontend`: `pnpm lint` và `pnpm typecheck` thành công, `pnpm test` xanh 112 test, `pnpm test:e2e` xanh 2 luồng.
+- Bộ dữ liệu mẫu dùng chung có 13 trường hợp validate thông số và 23 trường hợp schema mô tả. Zod ở frontend và code C# cho cùng kết quả trên cả 36 trường hợp.
+- Phép thử đột biến: 20/20 đột biến bị test bắt, gồm bộ thuộc tính, validate thông số, slug, biến thể, giá, trạng thái, schema mô tả và sự kiện.
+- Script kiểm tra comment báo 0 vi phạm.
+
+**Bảng đối chiếu test Node sang .NET:**
+
+| File test Node | Số test | Test .NET |
+|---|---|---|
+| `packages/shared/.../attributes.test.ts` | 10 | `AttributeDefinitionRulesTests` |
+| `packages/shared/.../validate-specs.test.ts` | 11 | `SpecValidatorTests` (bộ dữ liệu mẫu dùng chung) |
+| `packages/shared/.../description.test.ts` | 19 | `DescriptionSchemaTests` (bộ dữ liệu mẫu dùng chung), `DescriptionTextTests` |
+| `domain/slug.test.ts` | 5 | `SlugGeneratorTests` |
+| `domain/variants.test.ts` | 8 | `VariantCombinationsTests` |
+| `domain/pricing.test.ts` | 10 | `ProductPricingTests` |
+| `domain/status.test.ts` | 14 | `ProductPublishingTests` |
+| `events.test.ts` | 3 | `CatalogEventCollectorTests`, `CatalogTransactionTests` |
+| `permissions.test.ts` | 1 | `CatalogPermissionsTests` |
+| `events.int.test.ts` | 3 | `CatalogTransactionTests` |
+| `schema-constraints.int.test.ts` | 5 | `CatalogConstraintTests` |
+
+**Khác biệt đã biết:**
+
+- Lỗi định nghĩa thuộc tính và lỗi trục tùy chọn là `AppException` mã `INVALID_CATEGORY_ATTRIBUTES` và `INVALID_PRODUCT_OPTIONS` (400). Bản Node ném `Error` thường.
+- Module khác nghe sự kiện catalog bằng `IDomainEventHandler<ProductChangedEvent>` và `IDomainEventHandler<StockChangedEvent>`, thay cho `onProductChanged` và `onStockChanged`.
+- `CheckPublishable` nhận số ảnh thay cho danh sách ảnh, vì luật chỉ cần biết sản phẩm có ảnh hay không.
+- Thông báo lỗi cấu trúc của schema mô tả viết bằng tiếng Việt, khác chữ của Zod. Hai thông báo về giới hạn ký tự và số nút giữ nguyên bản Node.
+- Code của `packages/shared` nằm ở frontend từ DN-05B. Backend có bản C# riêng, và bộ dữ liệu mẫu trong `spec/fixtures/catalog/` giữ hai bản không lệch nhau.
+
+**Phụ thuộc:** DN-06 · **Quy mô:** M
+
+## DN-08
+
+Viết tiêu chí chi tiết khi bắt đầu task. Danh sách task ở mục "Danh sách task" của `tasks/plan-dotnet.md`.

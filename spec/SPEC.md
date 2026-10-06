@@ -41,7 +41,7 @@ Phân quyền theo RBAC, chi tiết trong `SPEC-identity.md`.
 
 Phiên bản cụ thể lấy bản ổn định mới nhất lúc khởi tạo. Frontend khóa phiên bản trong `apps/frontend/pnpm-lock.yaml`, backend khóa trong `apps/backend-dotnet/Directory.Packages.props`. Lý do chọn framework AI ghi tại `docs/adr/0001-ai-frameworks.md`.
 
-Giai đoạn chuyển đổi: backend chuyển sang ASP.NET Core 10 tại `apps/backend-dotnet`. Ngày 2026-10-05 người dùng quyết định xóa bản Node trước khi port xong. Module `catalog` chưa port (DN-07) nên chưa có API. Code bản Node cũ xem bằng tag `node-backend-final`. Hàng RAG tooling ở bảng trên là lựa chọn của bản Node, sẽ cập nhật khi làm `knowledge-base`.
+Giai đoạn chuyển đổi: backend chuyển sang ASP.NET Core 10 tại `apps/backend-dotnet`. Ngày 2026-10-05 người dùng quyết định xóa bản Node trước khi port xong. Module `catalog` mới có logic nền và sự kiện (DN-07), chưa có API. Các task từ CAT-04 trở đi viết thẳng bằng .NET. Code bản Node cũ xem bằng tag `node-backend-final`. Hàng RAG tooling ở bảng trên là lựa chọn của bản Node, sẽ cập nhật khi làm `knowledge-base`.
 
 ## Commands
 
