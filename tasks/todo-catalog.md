@@ -82,15 +82,34 @@ Mọi task back-office thêm endpoint mới vào `apps/backend/test/integration/
 ### CAT-04: Danh mục và thương hiệu
 **Mô tả:** `POST/PATCH/DELETE /api/admin/categories[/:id]` và `/api/admin/brands[/:id]` (`products:write`). `GET /api/categories` trả cây kèm thuộc tính `filterable`. `GET /api/brands` công khai. Cây tối đa 2 cấp.
 **Tiêu chí nghiệm thu:**
-- [ ] Tạo danh mục cấp 3 trả 400
-- [ ] Thêm thuộc tính không bắt buộc và sửa `label` khi đã có sản phẩm thì thành công
-- [ ] Xóa thuộc tính hoặc đổi `type` khi có sản phẩm dùng trả 409 `ATTRIBUTE_IN_USE`
-- [ ] Đổi `key` của thuộc tính đã có bị từ chối
-- [ ] Xóa danh mục còn danh mục con hoặc còn sản phẩm bị từ chối; xóa thương hiệu còn sản phẩm bị từ chối
-- [ ] `sales` gọi `GET` được, gọi `POST` nhận 403; endpoint mới có trong ma trận quyền
+- [x] Tạo danh mục cấp 3 trả 400
+  Cách hiểu: Danh mục gốc có `parentId` là null (cấp 1). Danh mục con có `parentId` trỏ tới cấp 1 (cấp 2). Khi tạo hoặc sửa mà `parentId` trỏ tới danh mục cấp 2 thì API trả 400 `CATEGORY_LEVEL_EXCEEDED`.
+- [x] Thêm thuộc tính không bắt buộc và sửa `label` khi đã có sản phẩm thì thành công
+  Cách hiểu: Khi danh mục đã có sản phẩm, chỉ cho phép thêm thuộc tính có `required=false`. Cho phép sửa `label`, `group`, `unit` và thêm giá trị `enum`. Không được đổi `required` sang `true` hoặc bỏ giá trị `enum` đang dùng.
+- [x] Xóa thuộc tính hoặc đổi `type` khi có sản phẩm dùng trả 409 `ATTRIBUTE_IN_USE`
+  Cách hiểu: Thuộc tính có sản phẩm dùng khi sản phẩm trong danh mục hoặc danh mục con chứa `key` đó trong `specs`. Khi xóa thuộc tính hoặc đổi `type` của thuộc tính đang dùng thì trả 409 `ATTRIBUTE_IN_USE`. Bỏ option `enum` đang dùng cũng trả 409.
+- [x] Đổi `key` của thuộc tính đã có bị từ chối
+  Cách hiểu: Xóa thuộc tính không có sản phẩm dùng được phép thành công. Đổi khóa của thuộc tính đang dùng bị coi là xóa khóa cũ và trả 409 `ATTRIBUTE_IN_USE`.
+- [x] Xóa danh mục còn danh mục con hoặc còn sản phẩm bị từ chối; xóa thương hiệu còn sản phẩm bị từ chối
+  Cách hiểu: Xóa danh mục còn danh mục con trả 400 `CATEGORY_HAS_CHILDREN`. Xóa danh mục còn sản phẩm trả 400 `CATEGORY_HAS_PRODUCTS`. Xóa thương hiệu còn sản phẩm trả 400 `BRAND_HAS_PRODUCTS`. Quy tắc lá: không tạo con dưới danh mục có sản phẩm. Không chuyển danh mục có sản phẩm hoặc chuyển dưới cha có sản phẩm.
+- [x] `sales` gọi `GET` được, gọi `POST` nhận 403; endpoint mới có trong ma trận quyền
+  Cách hiểu: Các route `GET /api/categories` và `GET /api/brands` là công khai. Các route `POST`, `PATCH`, `DELETE` back-office yêu cầu quyền `products:write`. Nhân viên role `sales` chỉ có `products:read` nên nhận 403 khi gọi ghi.
+
+Cách hiểu thêm: Đổi tên danh mục hoặc thương hiệu giữ nguyên slug ban đầu vì bộ lọc URL dùng slug.
 **Kiểm tra:** integration test
 **Phụ thuộc:** CAT-03 · **File:** `modules/catalog/services/{categories,brands}.ts`, `modules/catalog/routes/{admin-categories,public-catalog}.ts`, `modules/catalog/schemas.ts` · **Quy mô:** M
+**File (.NET):** `apps/backend/src/Pickory.Modules.Catalog/Features/Categories/{CategoryModels.cs, CategoryValidators.cs, CategoryManagementHandler.cs, CategoriesEndpoints.cs}`, `apps/backend/src/Pickory.Modules.Catalog/Features/Brands/{BrandModels.cs, BrandValidators.cs, BrandManagementHandler.cs, BrandsEndpoints.cs}`, `apps/backend/tests/Pickory.IntegrationTests/Api/PermissionMatrixTests.cs`, `apps/backend/tests/Pickory.IntegrationTests/Api/Catalog/{CategoryManagementTests.cs, BrandManagementTests.cs}`
 
+**Bằng chứng (2026-10-06):**
+
+- `dotnet build apps/backend/Pickory.sln` thành công, đạt 0 cảnh báo và 0 lỗi.
+- `dotnet test apps/backend/Pickory.sln` chạy xanh 790 test trên 3 project (3 kiến trúc, 359 unit, 428 integration). Có 4 test gọi AI thật được bỏ qua.
+- Port thành công ma trận quyền sang `PermissionMatrixTests.cs`, đạt 120 test (5 theory x 24 endpoint) cho các route back-office.
+- Bộ test integration gồm 24 test danh mục và 9 test thương hiệu đều vượt qua.
+- Phép thử đột biến: 8/8 đột biến bị test bắt trên toàn bộ các điểm kiểm tra.
+- Trong `apps/frontend`: `pnpm lint`, `pnpm typecheck`, `pnpm test` và `pnpm test:e2e` đều xanh.
+- Route công khai `GET /api/categories` và `GET /api/brands` trả mã 200 khi chạy API thật.
+- Script kiểm tra comment báo 0 vi phạm. Toàn bộ file không chứa ký tự em dash hoặc en dash.
 ### UI-C4: Màn danh mục và thương hiệu
 **Mô tả:** Back-office quản lý cây danh mục, trình soạn bộ thuộc tính, quản lý thương hiệu. Ẩn nút sửa khi thiếu `products:write`.
 **Tiêu chí nghiệm thu:**

@@ -1,6 +1,10 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Pickory.Modules.Catalog.Features.Brands;
+using Pickory.Modules.Catalog.Features.Categories;
 using Pickory.Modules.Catalog.Persistence;
 
 namespace Pickory.Modules.Catalog;
@@ -13,6 +17,11 @@ public static class CatalogModule
         // Dùng cùng tùy chọn với migration để ứng dụng đọc đúng enum và lịch sử. Ứng dụng không tự chạy migration khi khởi động.
         services.AddDbContext<CatalogDbContext>(options =>
             CatalogDbContext.ConfigureOptions(options, databaseConnectionString));
+        // Đăng ký đồng hồ thời gian hệ thống và dịch vụ quản lý danh mục, thương hiệu.
+        services.TryAddSingleton(TimeProvider.System);
+        services.AddValidatorsFromAssemblyContaining<CreateCategoryRequestValidator>();
+        services.AddScoped<CategoryManagementHandler>();
+        services.AddScoped<BrandManagementHandler>();
         return services;
     }
 
@@ -26,7 +35,8 @@ public static class CatalogModule
 
     public static IEndpointRouteBuilder MapCatalogEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        // Module chưa có route ở bước này. Task port tính năng gắn route của module tại đây.
+        CategoriesEndpoints.Map(endpoints);
+        BrandsEndpoints.Map(endpoints);
         return endpoints;
     }
 }
