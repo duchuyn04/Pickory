@@ -186,6 +186,7 @@ sort=newest|price_asc|price_desc                     page=1  pageSize=24 (tối 
 | POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể |
 | POST | `/api/admin/products/:id/status` | `products:write` | Đổi trạng thái |
 | DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng (chỉ khi chưa từng có đơn) |
+| GET | `/api/admin/categories` | `products:read` | Danh sách phẳng, mỗi danh mục kèm đủ thuộc tính riêng |
 | POST · PATCH · DELETE | `/api/admin/categories[/:id]` | `products:write` | Quản lý danh mục và bộ thuộc tính |
 | POST · PATCH · DELETE | `/api/admin/brands[/:id]` | `products:write` | Quản lý thương hiệu |
 | POST | `/api/admin/uploads/signature` | `products:write` | Chữ ký tải ảnh lên Cloudinary |

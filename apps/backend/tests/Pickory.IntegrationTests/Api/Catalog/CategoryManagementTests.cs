@@ -8,6 +8,7 @@ using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Catalog.Attributes;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Identity.Roles;
+using Pickory.Modules.Identity.Entities;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Api.Catalog;
@@ -641,6 +642,62 @@ public sealed class CategoryManagementTests : IClassFixture<PickoryWebApplicatio
         Assert.Contains(logs, log => log.Action == "catalog.category.create");
         Assert.Contains(logs, log => log.Action == "catalog.category.update");
         Assert.Contains(logs, log => log.Action == "catalog.category.delete");
+    }
+
+    [Fact]
+    // Quản trị viên và nhân viên bán hàng xem được danh sách phẳng mọi danh mục kèm thuộc tính riêng.
+    public async Task GetAdminCategories_Sales_ReturnsFlatListWithOwnNonFilterableAttributes()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var rootB = await CreateCategoryInDbAsync($"B Gốc Admin {suffix}", null,
+        [
+            new AttributeDefinition { Key = "origin", Label = "Xuất xứ", Group = "Chung", Type = "text", Required = false, Filterable = true },
+            new AttributeDefinition { Key = "internal_sku_note", Label = "Ghi chú nội bộ", Group = "Chung", Type = "text", Required = false, Filterable = false }
+        ]);
+
+        var rootA = await CreateCategoryInDbAsync($"A Gốc Admin {suffix}", null, []);
+
+        var child = await CreateCategoryInDbAsync($"Con Admin {suffix}", rootB.Id,
+        [
+            new AttributeDefinition { Key = "warranty_type", Label = "Loại bảo hành", Group = "Bảo hành", Type = "text", Required = false, Filterable = false }
+        ]);
+        var salesReq = ActorHttp.CreateRequest(HttpMethod.Get, "/api/admin/categories", cookieHeader: _salesCookie);
+        var salesRes = await _client.SendAsync(salesReq);
+
+        Assert.Equal(HttpStatusCode.OK, salesRes.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(salesRes);
+        var items = json.RootElement.GetProperty("data").EnumerateArray().ToList();
+
+        var rootItem = items.First(item => item.GetProperty("id").GetString() == rootB.Id);
+        var rootAttrs = rootItem.GetProperty("attributes").EnumerateArray().ToList();
+        // Thuộc tính không lọc (filterable = false) vẫn được giữ lại đầy đủ.
+        Assert.Contains(rootAttrs, attr => attr.GetProperty("key").GetString() == "internal_sku_note" && !attr.GetProperty("filterable").GetBoolean());
+
+        // Kiểm tra thứ tự sắp xếp theo Position rồi đến Name tăng dần.
+        var indexA = items.FindIndex(item => item.GetProperty("id").GetString() == rootA.Id);
+        var indexB = items.FindIndex(item => item.GetProperty("id").GetString() == rootB.Id);
+        Assert.True(indexA < indexB);
+        var childItem = items.First(item => item.GetProperty("id").GetString() == child.Id);
+        var childAttrs = childItem.GetProperty("attributes").EnumerateArray().ToList();
+        // Danh mục con chỉ giữ thuộc tính riêng, không gộp thuộc tính của danh mục cha.
+        Assert.Single(childAttrs);
+        Assert.Equal("warranty_type", childAttrs[0].GetProperty("key").GetString());
+        Assert.False(childAttrs[0].GetProperty("filterable").GetBoolean());
+    }
+
+    [Fact]
+    // Khách vãng lai nhận 401 và khách hàng nhận 403 khi gọi route quản trị danh mục.
+    public async Task GetAdminCategories_UnauthorizedAndForbidden_ReturnsExpectedStatus()
+    {
+        var guestReq = ActorHttp.CreateRequest(HttpMethod.Get, "/api/admin/categories", cookieHeader: null);
+        var guestRes = await _client.SendAsync(guestReq);
+        Assert.Equal(HttpStatusCode.Unauthorized, guestRes.StatusCode);
+
+        var customer = await IdentityTestData.CreateUserAsync(_database, $"cust-{Guid.NewGuid():N}@pickory.local", UserKind.Customer, DefaultRoles.CustomerCode, emailVerified: true);
+        var customerToken = await IdentityTestData.CreateSessionAsync(_database, customer.Id);
+        var customerReq = ActorHttp.CreateRequest(HttpMethod.Get, "/api/admin/categories", cookieHeader: $"pk_session={customerToken}");
+        var customerRes = await _client.SendAsync(customerReq);
+        Assert.Equal(HttpStatusCode.Forbidden, customerRes.StatusCode);
     }
 
     private async Task<Category> CreateCategoryInDbAsync(string name, string? parentId, IReadOnlyList<AttributeDefinition> attributes)

@@ -109,6 +109,75 @@ describe('catalog attributes', () => {
     });
   });
 
+  describe('field và index của lỗi', () => {
+    it('mỗi loại lỗi của một dòng có đúng field và index', () => {
+      const brokenAttributes: AttributeDefinition[] = [
+        baseRamAttribute,
+        {
+          key: 'Sai',
+          label: ' ',
+          group: '',
+          type: 'date' as unknown as AttributeDefinition['type'],
+          required: false,
+          filterable: false,
+        },
+        { ...baseColorAttribute, options: [] },
+      ];
+
+      const result = validateAttributeDefinitions(brokenAttributes);
+      const fieldsWithIndex = result.errors.map((err) => [err.index, err.field]);
+
+      // Form gắn lỗi vào ô theo cặp index và field, nên mỗi lỗi phải mang đủ hai trường.
+      expect(fieldsWithIndex).toEqual([
+        [1, 'key'],
+        [1, 'label'],
+        [1, 'group'],
+        [1, 'type'],
+        [2, 'options'],
+      ]);
+    });
+
+    it('lỗi trùng khóa mang field key và index của dòng lặp', () => {
+      const result = validateAttributeDefinitions([baseRamAttribute, baseRamAttribute]);
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.field).toBe('key');
+      expect(result.errors[0]?.index).toBe(1);
+    });
+
+    it('validateAttributeDefinition gọi riêng không có index', () => {
+      const result = validateAttributeDefinition({ ...baseRamAttribute, label: '' });
+      expect(result.errors[0]?.field).toBe('label');
+      expect(result.errors[0]?.index).toBeUndefined();
+    });
+  });
+
+  describe('dừng ở lỗi option đầu tiên như backend', () => {
+    it('nhiều option rỗng chỉ sinh một lỗi', () => {
+      const result = validateAttributeDefinition({ ...baseColorAttribute, options: ['', ''] });
+      // `AttributeDefinitionRules.cs` trả về ngay ở lỗi option đầu tiên. Form phải cùng luật.
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.message).toContain('không được để trống');
+    });
+
+    it('nhiều option trùng chỉ sinh một lỗi', () => {
+      const result = validateAttributeDefinition({
+        ...baseColorAttribute,
+        options: ['Đen', 'Đen', 'Bạc', 'Bạc'],
+      });
+      expect(result.errors).toHaveLength(1);
+      expect(result.errors[0]?.message).toContain('"Đen"');
+    });
+
+    it('hai khóa rỗng sinh thêm lỗi trùng khóa như backend', () => {
+      const emptyKeyAttribute = { ...baseRamAttribute, key: '' };
+      const result = validateAttributeDefinitions([emptyKeyAttribute, emptyKeyAttribute]);
+      const keyErrorsOfSecondRow = result.errors.filter(
+        (err) => err.index === 1 && err.field === 'key',
+      );
+      expect(keyErrorsOfSecondRow).toHaveLength(2);
+    });
+  });
+
   describe('validateAttributeDefinitions', () => {
     it('từ chối danh sách chứa trùng khóa', () => {
       const result = validateAttributeDefinitions([

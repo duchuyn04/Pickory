@@ -16,6 +16,9 @@ export interface AttributeDefinition {
 // Cấu trúc lỗi khi định nghĩa thuộc tính không hợp lệ.
 export interface AttributeDefinitionError {
   key?: string;
+  // Form gắn lỗi vào ô theo `field` và `index`. Form không dò chữ trong `message`.
+  field?: 'key' | 'label' | 'group' | 'type' | 'options';
+  index?: number;
   message: string;
 }
 
@@ -38,6 +41,7 @@ const ATTRIBUTE_KEY_PATTERN = /^[a-z][a-z0-9_]*$/;
 // Kiểm tra tính hợp lệ của một định nghĩa thuộc tính đơn lẻ.
 export function validateAttributeDefinition(
   attribute: AttributeDefinition,
+  index?: number,
 ): AttributeDefinitionValidationResult {
   const errors: AttributeDefinitionError[] = [];
 
@@ -45,6 +49,8 @@ export function validateAttributeDefinition(
   if (!attribute.key || !ATTRIBUTE_KEY_PATTERN.test(attribute.key)) {
     errors.push({
       key: attribute.key,
+      field: 'key',
+      index,
       message: `Khóa thuộc tính "${attribute.key}" không đúng định dạng ^[a-z][a-z0-9_]*$.`,
     });
   }
@@ -53,6 +59,8 @@ export function validateAttributeDefinition(
   if (!attribute.label || attribute.label.trim().length === 0) {
     errors.push({
       key: attribute.key,
+      field: 'label',
+      index,
       message: 'Nhãn thuộc tính không được để trống.',
     });
   }
@@ -61,6 +69,8 @@ export function validateAttributeDefinition(
   if (!attribute.group || attribute.group.trim().length === 0) {
     errors.push({
       key: attribute.key,
+      field: 'group',
+      index,
       message: 'Nhóm thuộc tính không được để trống.',
     });
   }
@@ -68,6 +78,8 @@ export function validateAttributeDefinition(
   if (!ALLOWED_ATTRIBUTE_TYPES.has(attribute.type)) {
     errors.push({
       key: attribute.key,
+      field: 'type',
+      index,
       message: `Kiểu thuộc tính "${String(attribute.type)}" không hợp lệ, chỉ nhận text, number, enum hoặc boolean.`,
     });
   }
@@ -77,6 +89,8 @@ export function validateAttributeDefinition(
     if (!attribute.options || attribute.options.length === 0) {
       errors.push({
         key: attribute.key,
+        field: 'options',
+        index,
         message: `Thuộc tính "${attribute.key}" kiểu enum bắt buộc phải có danh sách options.`,
       });
     } else {
@@ -86,6 +100,8 @@ export function validateAttributeDefinition(
         if (typeof opt !== 'string' || opt.trim().length === 0) {
           errors.push({
             key: attribute.key,
+            field: 'options',
+            index,
             message: `Tùy chọn của thuộc tính "${attribute.key}" không được để trống.`,
           });
           break;
@@ -96,6 +112,8 @@ export function validateAttributeDefinition(
         if (seenOptions.has(trimmedOption)) {
           errors.push({
             key: attribute.key,
+            field: 'options',
+            index,
             message: `Tùy chọn "${trimmedOption}" của thuộc tính "${attribute.key}" bị lặp lại.`,
           });
           break;
@@ -117,9 +135,9 @@ export function validateAttributeDefinitions(
   const errors: AttributeDefinitionError[] = [];
   const seenKeys = new Set<string>();
 
-  for (const attribute of attributes) {
-    // Kiểm tra từng thuộc tính theo quy chuẩn chung.
-    const singleResult = validateAttributeDefinition(attribute);
+  for (const [attributeIndex, attribute] of attributes.entries()) {
+    // Truyền chỉ số dòng để form gắn lỗi vào đúng ô của dòng đó.
+    const singleResult = validateAttributeDefinition(attribute, attributeIndex);
     if (!singleResult.valid) {
       errors.push(...singleResult.errors);
     }
@@ -128,6 +146,8 @@ export function validateAttributeDefinitions(
     if (seenKeys.has(attribute.key)) {
       errors.push({
         key: attribute.key,
+        field: 'key',
+        index: attributeIndex,
         message: `Khóa thuộc tính "${attribute.key}" bị lặp lại trong danh sách.`,
       });
     } else {

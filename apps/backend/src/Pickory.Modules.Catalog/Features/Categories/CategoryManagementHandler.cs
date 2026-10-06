@@ -73,6 +73,21 @@ public sealed class CategoryManagementHandler(
         return result;
     }
 
+    // Trả danh sách phẳng toàn bộ danh mục kèm thuộc tính riêng để trang quản trị biên tập.
+    public async Task<IReadOnlyList<CategoryResponse>> GetListAsync(CancellationToken cancellationToken)
+    {
+        // Danh mục sắp theo vị trí hiển thị và tên, không lọc hay gộp thuộc tính với cha.
+        var categories = await database.Categories
+            .AsNoTracking()
+            .OrderBy(category => category.Position)
+            .ThenBy(category => category.Name)
+            .ToListAsync(cancellationToken);
+
+        return categories
+            .Select(category => ToResponse(category, DeserializeAttributes(category.Attributes)))
+            .ToList();
+    }
+
     // Tạo mới một danh mục sản phẩm và lưu vết nhật ký quản trị.
     public async Task<CategoryResponse> CreateAsync(
         Actor actor,

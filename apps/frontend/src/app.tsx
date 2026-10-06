@@ -1,4 +1,6 @@
 import { AiSettingsPage } from './features/ai-gateway/admin/ai-settings-page';
+import { BrandsPage } from './features/catalog/admin/brands-page';
+import { CategoriesPage } from './features/catalog/admin/categories-page';
 import { Outlet, Route, Routes } from 'react-router-dom';
 import { AccountPage } from './features/identity/customer/account-page';
 import { AdminDashboardPage } from './features/identity/admin/dashboard-page';
@@ -69,6 +71,8 @@ export function App() {
           <Route path="audit-logs" element={<AuditLogPage />} />
           <Route path="orders" element={<AdminPlaceholderPage title="Quản lý đơn hàng" />} />
           <Route path="products" element={<AdminPlaceholderPage title="Quản lý sản phẩm" />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="brands" element={<BrandsPage />} />
           <Route
             path="conversations"
             element={<AdminPlaceholderPage title="Chăm sóc khách hàng" />}

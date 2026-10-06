@@ -113,11 +113,29 @@ Cách hiểu thêm: Đổi tên danh mục hoặc thương hiệu giữ nguyên 
 ### UI-C4: Màn danh mục và thương hiệu
 **Mô tả:** Back-office quản lý cây danh mục, trình soạn bộ thuộc tính, quản lý thương hiệu. Ẩn nút sửa khi thiếu `products:write`.
 **Tiêu chí nghiệm thu:**
-- [ ] Tạo danh mục con, thêm thuộc tính `enum` có `options`, lưu thành công
-- [ ] Lỗi `ATTRIBUTE_IN_USE` hiện thông báo tiếng Việt có `role="alert"`
-- [ ] `sales` thấy danh sách, không thấy nút tạo, sửa, xóa
+- [x] Tạo danh mục con, thêm thuộc tính `enum` có `options`, lưu thành công
+- [x] Lỗi `ATTRIBUTE_IN_USE` hiện thông báo tiếng Việt có `role="alert"`
+- [x] `sales` thấy danh sách, không thấy nút tạo, sửa, xóa
 **Kiểm tra:** test component; Playwright trên `pnpm dev`
 **Phụ thuộc:** CAT-04, UI-05 · **File:** `features/catalog/admin/{categories-page,attribute-editor,brands-page}.tsx`, `app.tsx` · **Quy mô:** M
+
+Quyết định (2026-10-06):
+Route công khai `GET /api/categories` chỉ trả thuộc tính `filterable` và tự gộp thuộc tính cha vào con, nên không phù hợp cho màn hình quản trị chỉnh sửa danh mục. Hệ thống bổ sung route `GET /api/admin/categories` (`products:read`) trả danh sách phẳng toàn bộ danh mục kèm đầy đủ thuộc tính riêng của từng danh mục.
+
+**File (.NET và frontend):** `apps/backend/src/Pickory.Modules.Catalog/Features/Categories/{CategoriesEndpoints.cs, CategoryManagementHandler.cs}`, `apps/backend/tests/Pickory.IntegrationTests/Api/Catalog/CategoryManagementTests.cs`, `apps/backend/tests/Pickory.IntegrationTests/Api/PermissionMatrixTests.cs`, `apps/frontend/src/features/catalog/admin/{categories-page.tsx, attribute-editor.tsx, brands-page.tsx, admin-form-dialog.tsx, attribute-helpers.ts, catalog-errors.ts}`, `apps/frontend/src/shared/catalog/attributes.ts`, `apps/frontend/src/app.tsx`, `apps/frontend/src/features/identity/admin/admin-layout.tsx`, `apps/frontend/test/unit/features/catalog/admin/{attribute-editor.test.tsx, attribute-helpers.test.ts}`, `apps/frontend/test/unit/shared/catalog/attributes.test.ts`, `apps/frontend/e2e/{staff-invite.spec.ts, environment.ts, outbox.ts, catalog-admin.spec.ts}`
+
+**Bằng chứng (2026-10-06):**
+
+- `dotnet build apps/backend/Pickory.sln` báo 0 cảnh báo và 0 lỗi.
+- `dotnet test apps/backend/Pickory.sln` xanh 896 test trên 3 project: 3 kiến trúc, 359 unit, 534 integration.
+- `dotnet test` bỏ qua 4 test gọi AI thật. Review lượt 2 không đổi backend, nên số liệu backend lấy từ lượt 1.
+- `PermissionMatrixTests.cs` có thêm route `GET /api/admin/categories` với quyền `products:read`.
+- Trong `apps/frontend`, `pnpm lint` và `pnpm typecheck` xanh.
+- `pnpm test` xanh 13 file và 132 test.
+- `pnpm test:e2e` xanh 3 test Playwright. Spec `catalog-admin.spec.ts` ghi 0 lỗi và 0 cảnh báo console.
+- Spec chụp 7 ảnh ở 1280px và 375px. Ở 375px, spec kiểm tra trang và hộp thoại không tràn ngang.
+- Phép thử đột biến: 11/11 đột biến bị test bắt.
+- Script kiểm tra comment báo 0 vi phạm. File đã đổi không có em dash hay en dash.
 
 ### CAT-05: Tạo và sửa sản phẩm, biến thể
 **Mô tả:** `POST/PATCH /api/admin/products[/:id]` (`products:write`), `GET /api/admin/products[/:id]` (`products:read`, mọi trạng thái, tìm theo tên hoặc mã SKU). Validate thông số theo danh mục lá. Validate mô tả bằng schema của CAT-13. Sinh SKU từ tùy chọn, giữ SKU cũ khi tổ hợp không đổi. Sinh slug, lưu slug cũ vào lịch sử khi đổi. Ghi audit khi đổi giá. Phát `onProductChanged` sau commit.

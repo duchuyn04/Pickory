@@ -63,6 +63,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "GET", "/api/admin/ai/usage", [Permissions.AiUsageRead] },
         { "GET", "/api/admin/ai/settings", [Permissions.AiUsageRead] },
         { "PUT", "/api/admin/ai/settings", [Permissions.AiSettingsManage] },
+        { "GET", "/api/admin/categories", [Permissions.ProductsRead] },
         { "POST", "/api/admin/categories", [Permissions.ProductsWrite] },
         { "PATCH", "/api/admin/categories/dummy-id", [Permissions.ProductsWrite] },
         { "DELETE", "/api/admin/categories/dummy-id", [Permissions.ProductsWrite] },

@@ -15,6 +15,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Tổng quan', path: '/admin' },
   { label: 'Đơn hàng', path: '/admin/orders', requiredPermission: 'orders:read' },
   { label: 'Sản phẩm', path: '/admin/products', requiredPermission: 'products:read' },
+  { label: 'Danh mục', path: '/admin/categories', requiredPermission: 'products:read' },
+  { label: 'Thương hiệu', path: '/admin/brands', requiredPermission: 'products:read' },
   { label: 'Khách hàng', path: '/admin/customers', requiredPermission: 'customers:read' },
   { label: 'CSKH', path: '/admin/conversations', requiredPermission: 'conversations:read' },
   { label: 'Nhân viên', path: '/admin/staff', requiredPermission: 'staff:read' },

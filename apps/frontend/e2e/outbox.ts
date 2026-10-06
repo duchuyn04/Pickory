@@ -9,7 +9,9 @@ export async function readPasswordSetupLink(recipient: string) {
   await expect
     .poll(
       async () => {
-        const entries = await readdir(e2eEnvironment.outboxDirectory, { withFileTypes: true });
+        const rawEntries = await readdir(e2eEnvironment.outboxDirectory, { withFileTypes: true });
+        // Sắp xếp theo tên giảm dần để luôn đọc thư mới nhất theo tiền tố thời gian.
+        const entries = rawEntries.sort((a, b) => b.name.localeCompare(a.name));
         for (const entry of entries) {
           // Bỏ qua symlink để không đọc file ngoài outbox.
           if (!entry.isFile() || !entry.name.endsWith('.json')) continue;

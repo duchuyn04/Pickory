@@ -15,6 +15,8 @@ public static class CategoriesEndpoints
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/api/categories", GetCategoriesAsync);
+        endpoints.MapGet("/api/admin/categories", GetAdminCategoriesAsync)
+            .RequirePermission(Permissions.ProductsRead);
         endpoints.MapPost("/api/admin/categories", CreateCategoryAsync)
             .RequirePermission(Permissions.ProductsWrite);
         endpoints.MapPatch("/api/admin/categories/{id}", UpdateCategoryAsync)
@@ -30,6 +32,15 @@ public static class CategoriesEndpoints
         // Trả cây danh mục hai cấp công khai cho người dùng và khách vãng lai.
         var tree = await handler.GetTreeAsync(cancellationToken);
         return Results.Ok(new ApiResponse<IReadOnlyList<CategoryTreeResponse>>(tree));
+    }
+
+    private static async Task<IResult> GetAdminCategoriesAsync(
+        CategoryManagementHandler handler,
+        CancellationToken cancellationToken)
+    {
+        // Trả danh sách phẳng toàn bộ danh mục kèm thuộc tính riêng để trang quản trị hiển thị và sửa.
+        var categories = await handler.GetListAsync(cancellationToken);
+        return Results.Ok(new ApiResponse<IReadOnlyList<CategoryResponse>>(categories));
     }
 
     private static async Task<IResult> CreateCategoryAsync(

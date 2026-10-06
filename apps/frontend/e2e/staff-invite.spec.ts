@@ -49,7 +49,14 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
     const navigation = page.getByRole('navigation');
     // Kiểm tra menu hiện có. Hoãn yêu cầu thấy Đơn hàng tới commerce/admin-console.
-    for (const label of ['Tổng quan', 'Sản phẩm', 'Khách hàng', 'Cấu hình AI']) {
+    for (const label of [
+      'Tổng quan',
+      'Sản phẩm',
+      'Danh mục',
+      'Thương hiệu',
+      'Khách hàng',
+      'Cấu hình AI',
+    ]) {
       await expect(navigation.getByRole('link', { name: label, exact: true })).toBeVisible();
     }
     // Sales không có các quyền này trong policy mặc định.
@@ -57,7 +64,15 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
       await expect(navigation.getByRole('link', { name: label, exact: true })).toHaveCount(0);
     }
     // Allowlist độc lập với NAV_ITEMS để bắt cả menu trái quyền được thêm sau này.
-    const allowedLabels = ['Tổng quan', 'Đơn hàng', 'Sản phẩm', 'Khách hàng', 'Cấu hình AI'];
+    const allowedLabels = [
+      'Tổng quan',
+      'Đơn hàng',
+      'Sản phẩm',
+      'Danh mục',
+      'Thương hiệu',
+      'Khách hàng',
+      'Cấu hình AI',
+    ];
     for (const label of await navigation.getByRole('link').allTextContents()) {
       expect(allowedLabels).toContain(label);
     }
