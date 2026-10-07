@@ -22,7 +22,7 @@ public sealed class ProductPublishingTests
         },
     ];
 
-    private static readonly SkuPublishableInput ValidSku = new(Enabled: true, Price: 20_000_000, WeightGrams: 2000, LengthCm: 35, WidthCm: 25, HeightCm: 2);
+    private static readonly SkuPublishableInput ValidSku = new(Code: "LAP-01", Enabled: true, Price: 20_000_000, CompareAtPrice: null, WeightGrams: 2000, LengthCm: 35, WidthCm: 25, HeightCm: 2);
 
     private static ProductPublishableInput ValidProduct(
         JsonNode? specs = null,
@@ -83,7 +83,7 @@ public sealed class ProductPublishingTests
         var result = ProductPublishing.CheckPublishable(ValidProduct(skus: [ValidSku with { Price = 0 }]));
 
         Assert.False(result.Publishable);
-        Assert.Contains(result.Reasons, reason => reason.Contains("giá"));
+        Assert.Contains(result.Reasons, reason => reason.Contains("Giá bán"));
     }
 
     [Fact]
@@ -97,6 +97,76 @@ public sealed class ProductPublishingTests
         Assert.Contains(missingWeight.Reasons, reason => reason.Contains("cân nặng"));
         Assert.False(zeroLength.Publishable);
         Assert.Contains(zeroLength.Reasons, reason => reason.Contains("kích thước"));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-5)]
+    // Giá không dương làm `ValidatePrice` từ chối, và lý do ghi mã SKU để admin tìm đúng biến thể.
+    public void CheckPublishable_RejectsNonPositivePriceWithSkuCode(int price)
+    {
+        var result = ProductPublishing.CheckPublishable(ValidProduct(skus: [ValidSku with { Price = price }]));
+
+        Assert.False(result.Publishable);
+        Assert.Contains(result.Reasons, reason => reason.StartsWith("SKU LAP-01:") && reason.Contains("Giá bán"));
+    }
+
+    [Fact]
+    // Giá niêm yết không cao hơn giá bán làm `ValidatePrice` từ chối.
+    public void CheckPublishable_RejectsCompareAtPriceNotAbovePrice()
+    {
+        var result = ProductPublishing.CheckPublishable(ValidProduct(skus: [ValidSku with { CompareAtPrice = 20_000_000 }]));
+
+        Assert.False(result.Publishable);
+        Assert.Contains(result.Reasons, reason => reason.StartsWith("SKU LAP-01:") && reason.Contains("Giá niêm yết"));
+    }
+
+    [Fact]
+    public void CheckPublishable_AcceptsCompareAtPriceAbovePrice()
+    {
+        var result = ProductPublishing.CheckPublishable(ValidProduct(skus: [ValidSku with { CompareAtPrice = 25_000_000 }]));
+
+        Assert.True(result.Publishable);
+    }
+
+    [Fact]
+    // Lý do thiếu cân nặng hoặc kích thước ghi mã SKU đúng với biến thể bị thiếu.
+    public void CheckPublishable_ShippingReasonNamesTheSkuCode()
+    {
+        var result = ProductPublishing.CheckPublishable(ValidProduct(skus:
+        [
+            ValidSku,
+            ValidSku with { Code = "LAP-02", WeightGrams = null },
+        ]));
+
+        var reason = Assert.Single(result.Reasons);
+        Assert.Equal("SKU LAP-02: thiếu cân nặng hoặc kích thước đóng gói.", reason);
+    }
+
+    [Fact]
+    // Mỗi SKU lỗi có lý do riêng, nên hai SKU lỗi giá cho hai lý do mang hai mã khác nhau.
+    public void CheckPublishable_ReportsEachInvalidSkuSeparately()
+    {
+        var result = ProductPublishing.CheckPublishable(ValidProduct(skus:
+        [
+            ValidSku with { Code = "A-1", Price = 0 },
+            ValidSku with { Code = "B-2", Price = 0 },
+        ]));
+
+        Assert.Contains(result.Reasons, reason => reason.StartsWith("SKU A-1:"));
+        Assert.Contains(result.Reasons, reason => reason.StartsWith("SKU B-2:"));
+    }
+
+    [Fact]
+    // SKU đang tắt không bán cho khách, nên giá và kích thước sai của nó không chặn đăng bán.
+    public void CheckPublishable_IgnoresDisabledSkuPriceAndDimensions()
+    {
+        var brokenDisabledSku = new SkuPublishableInput("OFF-1", Enabled: false, Price: 0, CompareAtPrice: 1,
+            WeightGrams: null, LengthCm: null, WidthCm: null, HeightCm: null);
+
+        var result = ProductPublishing.CheckPublishable(ValidProduct(skus: [ValidSku, brokenDisabledSku]));
+
+        Assert.True(result.Publishable);
     }
 
     [Fact]

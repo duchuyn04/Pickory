@@ -279,14 +279,29 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### CAT-07: Đổi trạng thái và xóa cứng
 **Mô tả:** `POST /api/admin/products/:id/status` và `DELETE /api/admin/products/:id` (`products:write`). Dùng `checkPublishable` và `canTransition` của CAT-02. Ghi audit và phát `onProductChanged` với `change: 'status'` hoặc `'deleted'`.
 **Tiêu chí nghiệm thu:**
-- [ ] Chuyển `active` khi thiếu ảnh, thiếu thông số bắt buộc hoặc SKU bật thiếu cân nặng, kích thước trả 422 `PRODUCT_NOT_PUBLISHABLE` kèm danh sách lý do
-- [ ] Mỗi lần đổi trạng thái có đúng 1 dòng audit `catalog.product.status_change`
-- [ ] Xóa cứng sản phẩm có SKU từng có movement `order_reserve` trả 409 `PRODUCT_HAS_ORDERS`
-- [ ] Xóa cứng thành công thì tạo job xóa ảnh cho mọi ảnh của sản phẩm
-- [ ] Xóa cứng sản phẩm chỉ có movement `manual` hoặc `return` thành công; movement của sản phẩm bị xóa trong cùng transaction (Decision 18)
-- [ ] `checkPublishable` dùng `validatePrice` cho từng SKU bật (giá nguyên dương, `compareAtPrice` hợp lệ); mỗi lý do lỗi của SKU ghi mã SKU
+- [x] Chuyển `active` khi thiếu ảnh, thiếu thông số bắt buộc hoặc SKU bật thiếu cân nặng, kích thước trả 422 `PRODUCT_NOT_PUBLISHABLE` kèm danh sách lý do
+- [x] Mỗi lần đổi trạng thái có đúng 1 dòng audit `catalog.product.status_change`
+- [x] Xóa cứng sản phẩm có SKU từng có movement `order_reserve` trả 409 `PRODUCT_HAS_ORDERS`
+- [x] Xóa cứng thành công thì tạo job xóa ảnh cho mọi ảnh của sản phẩm
+- [x] Xóa cứng sản phẩm chỉ có movement `manual` hoặc `return` thành công; movement của sản phẩm bị xóa trong cùng transaction (Decision 18)
+- [x] `checkPublishable` dùng `validatePrice` cho từng SKU bật (giá nguyên dương, `compareAtPrice` hợp lệ); mỗi lý do lỗi của SKU ghi mã SKU
 **Kiểm tra:** integration test
 **Phụ thuộc:** CAT-06 · **File:** `modules/catalog/services/product-status.ts`, `modules/catalog/routes/admin-products.ts` · **Quy mô:** S
+**File (.NET):** `apps/backend/src/Pickory.Modules.Catalog/Products/{ProductPublishing,SkuPublishableInput}.cs`, `apps/backend/src/Pickory.Modules.Catalog/Features/Products/{ProductModels,ProductValidators,ProductManagementHandler,ProductImageSync,ProductsEndpoints}.cs`, `apps/backend/tests/Pickory.UnitTests/Modules/Catalog/Products/ProductPublishingTests.cs`, `apps/backend/tests/Pickory.IntegrationTests/Api/Catalog/ProductStatusTests.cs`, `apps/backend/tests/Pickory.IntegrationTests/Api/PermissionMatrixTests.cs`, `spec/SPEC-catalog.md`
+
+**Quyết định (2026-10-08):**
+- Chuyển trạng thái mà `CanTransition` từ chối (ví dụ `active` về `draft`) trả 409 `INVALID_STATUS_TRANSITION`.
+- Chuyển sang đúng trạng thái hiện tại trả 200, không ghi audit và không phát sự kiện, vì không có thay đổi.
+- `PRODUCT_NOT_PUBLISHABLE` trả danh sách lý do trong `details` của lỗi, cùng dạng với `SPECS_INVALID`.
+
+**Bằng chứng (2026-10-08):**
+- `dotnet build apps/backend/Pickory.sln` đạt 0 cảnh báo và 0 lỗi.
+- `dotnet test apps/backend/Pickory.sln` xanh: kiến trúc 3/3, unit 398/398, tích hợp 606 đạt và 4 bỏ qua (test gọi AI thật).
+- Unit: `ProductPublishingTests.cs` có 28 test, gồm 7 test mới cho `ValidatePrice` và mã SKU trong lý do.
+- Tích hợp: `ProductStatusTests.cs` có 24 test cho đổi trạng thái và xóa cứng. Ma trận quyền có thêm 2 endpoint, đạt 160 test.
+- Phép thử đột biến: 13/13 đột biến bị test bắt (bỏ kiểm ảnh, bỏ kiểm `order_reserve`, bỏ job xóa ảnh, audit hai lần, phát sự kiện hai lần, bỏ mã SKU, bỏ khóa ghi, bỏ bảng chuyển trạng thái, bỏ nhánh cùng trạng thái, bỏ xóa movement, kiểm giá SKU tắt, bỏ `compareAtPrice`, bỏ sự kiện `Deleted`). Lần thử đầu của nhánh cùng trạng thái lỗi biên dịch, nên đổi cách đột biến rồi chạy lại.
+- Test khóa ghi giữ khóa ở kết nối riêng và chờ 1,5 giây. Mốc chờ chỉ ảnh hưởng độ nhạy, không làm test đỏ giả.
+- Script kiểm tra comment báo 0 vi phạm. Các file đã đổi không chứa em dash hoặc en dash.
 
 ### CAT-08: Tồn kho, giữ hàng và trả hàng
 **Mô tả:** `applyStockMovement(tx, movement)` là hàm duy nhất đổi `stock`. `POST /api/admin/skus/:id/adjust-stock` (`inventory:write`, bắt buộc lý do). `GET /api/admin/skus/:id/movements` và `GET /api/admin/inventory/low-stock` (`products:read`). `stock.reserve` và `stock.release` cho `commerce`. Phát `onStockChanged` sau commit.

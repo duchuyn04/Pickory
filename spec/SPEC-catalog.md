@@ -192,8 +192,8 @@ sort=newest|price_asc|price_desc                     page=1  pageSize=24 (tối 
 | GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, tìm theo tên hoặc SKU. Lọc bằng `status`, `categoryId` (gồm danh mục con), `lowStock=true` (SKU bật có `stock <= 5`). |
 | GET | `/api/admin/products/:id` | `products:read` | Chi tiết để sửa |
 | POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể, ảnh (`images`) |
-| POST | `/api/admin/products/:id/status` | `products:write` | Đổi trạng thái |
-| DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng (chỉ khi chưa từng có đơn) |
+| POST | `/api/admin/products/:id/status` | `products:write` | Đổi trạng thái. Body `{ "status": "draft" \| "active" \| "hidden" \| "discontinued" }`. Lỗi: 400 `VALIDATION_ERROR`, 404 `PRODUCT_NOT_FOUND`, 409 `INVALID_STATUS_TRANSITION`, 422 `PRODUCT_NOT_PUBLISHABLE` (danh sách lý do trong `details`). Đổi sang đúng trạng thái hiện tại trả 200, không ghi audit. |
+| DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng (chỉ khi chưa từng có đơn). Trả 204. Lỗi: 404 `PRODUCT_NOT_FOUND`, 409 `PRODUCT_HAS_ORDERS`. |
 | GET | `/api/admin/categories` | `products:read` | Danh sách phẳng, mỗi danh mục kèm đủ thuộc tính riêng |
 | POST · PATCH · DELETE | `/api/admin/categories[/:id]` | `products:write` | Quản lý danh mục và bộ thuộc tính |
 | POST · PATCH · DELETE | `/api/admin/brands[/:id]` | `products:write` | Quản lý thương hiệu |

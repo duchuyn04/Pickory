@@ -110,6 +110,15 @@ public sealed class ProductImageSync(CatalogDbContext database, IImageStorage im
         }
     }
 
+    // Hàm chạy trong transaction xóa sản phẩm. Mỗi ảnh có đúng một job, để ảnh không nằm mồ côi trên Cloudinary.
+    public void ScheduleDeletionOfAllImages(Product product, DateTime now)
+    {
+        foreach (var image in product.Images)
+        {
+            database.ImageDeletionJobs.Add(NewDeletionJob(image.PublicId, now));
+        }
+    }
+
     private static ImageDeletionJob NewDeletionJob(string publicId, DateTime now) => new()
     {
         Id = Guid.NewGuid().ToString("N"),

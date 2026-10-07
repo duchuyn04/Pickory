@@ -21,6 +21,37 @@ public sealed class ProductSpecsException : AppException
     }
 }
 
+// Ngoại lệ phản ánh sản phẩm chưa đủ điều kiện đăng bán. `Reasons` liệt kê mọi điều kiện chưa đạt.
+public sealed class ProductNotPublishableException : AppException
+{
+    public IReadOnlyList<string> Reasons { get; }
+
+    public ProductNotPublishableException(IReadOnlyList<string> reasons)
+        : base("PRODUCT_NOT_PUBLISHABLE", 422, "Sản phẩm chưa đủ điều kiện để đăng bán.")
+    {
+        Reasons = reasons;
+    }
+}
+
+// Yêu cầu đổi trạng thái sản phẩm. `Status` là tên trạng thái viết thường, ví dụ `active`.
+public sealed record ChangeProductStatusRequest(string? Status);
+
+// Tên trạng thái trong API. Chỉ nhận chữ thường để giá trị số của enum không lọt vào.
+public static class ProductStatusNames
+{
+    public static bool TryParse(string? name, out ProductStatus status)
+    {
+        switch (name)
+        {
+            case "draft": status = ProductStatus.Draft; return true;
+            case "active": status = ProductStatus.Active; return true;
+            case "hidden": status = ProductStatus.Hidden; return true;
+            case "discontinued": status = ProductStatus.Discontinued; return true;
+            default: status = default; return false;
+        }
+    }
+}
+
 // Bộ lọc danh sách sản phẩm quản trị phục vụ tìm kiếm, phân loại và cảnh báo tồn kho.
 public sealed record ProductListQuery(
     PageQuery Page,

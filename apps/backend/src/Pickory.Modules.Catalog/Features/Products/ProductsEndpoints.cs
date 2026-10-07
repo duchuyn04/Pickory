@@ -28,6 +28,12 @@ public static class ProductsEndpoints
         // Quyền ghi sản phẩm bảo vệ thông tin giá và thông số kỹ thuật khỏi can thiệp trái phép.
         endpoints.MapPatch("/api/admin/products/{id}", UpdateProductAsync)
             .RequirePermission(Permissions.ProductsWrite);
+        // Đổi trạng thái là thao tác ghi, nên dùng chung quyền ghi sản phẩm.
+        endpoints.MapPost("/api/admin/products/{id}/status", ChangeProductStatusAsync)
+            .RequirePermission(Permissions.ProductsWrite);
+        // Xóa cứng làm mất dữ liệu bán hàng, nên chỉ nhân viên có quyền ghi sản phẩm được gọi.
+        endpoints.MapDelete("/api/admin/products/{id}", DeleteProductAsync)
+            .RequirePermission(Permissions.ProductsWrite);
     }
 
     private static async Task<IResult> GetProductsAsync(
@@ -156,6 +162,46 @@ public static class ProductsEndpoints
         {
             return SpecsInvalidResult(specsException);
         }
+    }
+
+    private static async Task<IResult> ChangeProductStatusAsync(
+        HttpContext context,
+        string id,
+        ChangeProductStatusRequest? request,
+        IValidator<ChangeProductStatusRequest> validator,
+        ProductManagementHandler handler)
+    {
+        // Kiểm tra tên trạng thái trước khi đọc sản phẩm trong cơ sở dữ liệu.
+        var validRequest = await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
+        // Validator đã đảm bảo tên hợp lệ, nên phép chuyển đổi luôn thành công.
+        ProductStatusNames.TryParse(validRequest.Status, out var target);
+        try
+        {
+            var changed = await handler.ChangeStatusAsync(context.GetActor(), id, target, context.RequestAborted);
+            return Results.Ok(new ApiResponse<ProductResponse>(changed));
+        }
+        catch (ProductNotPublishableException notPublishable)
+        {
+            // Trả danh sách lý do trong `details`, cùng dạng với `SPECS_INVALID`, để giao diện hiển thị đủ một lần.
+            return Results.Json(new
+            {
+                error = new
+                {
+                    code = notPublishable.Code,
+                    message = notPublishable.Message,
+                    details = notPublishable.Reasons
+                }
+            }, statusCode: notPublishable.StatusCode);
+        }
+    }
+
+    private static async Task<IResult> DeleteProductAsync(
+        HttpContext context,
+        string id,
+        ProductManagementHandler handler)
+    {
+        await handler.DeleteAsync(id, context.RequestAborted);
+        return Results.NoContent();
     }
 
     private static IResult SpecsInvalidResult(ProductSpecsException specsException)

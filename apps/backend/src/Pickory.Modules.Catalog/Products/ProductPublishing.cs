@@ -41,19 +41,38 @@ public static class ProductPublishing
             return new PublishCheckResult(reasons);
         }
 
-        if (enabledSkus.Any(sku => sku.Price is not > 0))
+        foreach (var sku in enabledSkus)
         {
-            reasons.Add("Mọi biến thể đang bật phải có giá bán lớn hơn 0.");
-        }
-
-        // Phí vận chuyển tính theo cân nặng và kích thước đóng gói của từng SKU.
-        var missingShippingInfo = enabledSkus.Any(sku =>
-            sku.WeightGrams is not > 0 || sku.LengthCm is not > 0 || sku.WidthCm is not > 0 || sku.HeightCm is not > 0);
-        if (missingShippingInfo)
-        {
-            reasons.Add("Mọi biến thể đang bật phải có đầy đủ cân nặng và kích thước đóng gói lớn hơn 0.");
+            // Mỗi lý do ghi mã SKU để admin tìm đúng biến thể cần sửa.
+            reasons.AddRange(CheckSku(sku));
         }
 
         return new PublishCheckResult(reasons);
+    }
+
+    private static IEnumerable<string> CheckSku(SkuPublishableInput sku)
+    {
+        // Giá thiếu không qua được `ValidatePrice`, vì hàm này nhận số `decimal` chứ không nhận null.
+        if (sku.Price is not { } price)
+        {
+            yield return $"SKU {sku.Code}: thiếu giá bán.";
+        }
+        else
+        {
+            // Dùng chung quy tắc giá với lúc lưu sản phẩm, để hai nơi không lệch nhau.
+            var priceCheck = ProductPricing.ValidatePrice(price, sku.CompareAtPrice);
+            if (!priceCheck.Valid)
+            {
+                yield return $"SKU {sku.Code}: {priceCheck.Error}";
+            }
+        }
+
+        // Phí vận chuyển tính theo cân nặng và kích thước đóng gói của từng SKU.
+        var missingShippingInfo = sku.WeightGrams is not > 0 || sku.LengthCm is not > 0
+            || sku.WidthCm is not > 0 || sku.HeightCm is not > 0;
+        if (missingShippingInfo)
+        {
+            yield return $"SKU {sku.Code}: thiếu cân nặng hoặc kích thước đóng gói.";
+        }
     }
 }

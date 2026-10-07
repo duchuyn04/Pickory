@@ -265,3 +265,15 @@ public sealed class UpdateProductRequestValidator : AbstractValidator<UpdateProd
             .When(request => request.ImagesSpecified && request.Images is not null);
     }
 }
+
+// Kiểm tra tên trạng thái trong yêu cầu đổi trạng thái sản phẩm.
+public sealed class ChangeProductStatusRequestValidator : AbstractValidator<ChangeProductStatusRequest>
+{
+    public ChangeProductStatusRequestValidator()
+    {
+        // Từ chối giá trị lạ trước khi đọc DB, để lỗi nhập liệu không lẫn với lỗi nghiệp vụ.
+        RuleFor(request => request.Status)
+            .Must(status => ProductStatusNames.TryParse(status, out _))
+            .WithMessage("Trạng thái phải là draft, active, hidden hoặc discontinued.");
+    }
+}

@@ -30,7 +30,7 @@ public sealed class ProductManagementHandler(
     CloudinaryCredentials cloudinary)
 {
     // Một khóa transaction chung ngăn hai request cấp cùng slug hoặc tạo trùng tổ hợp biến thể (SKU).
-    private const long ProductWriteLockKey = 578524097137070906;
+    public const long ProductWriteLockKey = 578524097137070906;
 
     public async Task<PagedResponse<ProductResponse>> GetListAsync(
         ProductListQuery query, CancellationToken cancellationToken)
@@ -142,6 +142,120 @@ public sealed class ProductManagementHandler(
             return ToResponse(product);
         }, cancellationToken);
     }
+
+    public async Task<ProductResponse> ChangeStatusAsync(
+        Actor actor, string id, ProductStatus target, CancellationToken cancellationToken)
+    {
+        // Đọc, kiểm tra điều kiện và ghi trong cùng transaction, để audit và trạng thái cùng thành công hoặc cùng hoàn nguyên.
+        return await RunWriteAsync(async events =>
+        {
+            var product = await database.Products.Include(item => item.Skus).Include(item => item.Images)
+                .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+            if (product is null)
+            {
+                throw ProductNotFound();
+            }
+
+            // Trạng thái không đổi thì không có gì để ghi, nên không audit và không phát sự kiện.
+            if (product.Status == target)
+            {
+                return ToResponse(product);
+            }
+
+            // Bảng chuyển trạng thái chặn sản phẩm đã phát hành quay về bản nháp.
+            if (!ProductPublishing.CanTransition(product.Status, target))
+            {
+                throw new AppException("INVALID_STATUS_TRANSITION", 409,
+                    $"Không thể chuyển sản phẩm từ {ToStatusName(product.Status)} sang {ToStatusName(target)}.");
+            }
+
+            // Chỉ đăng bán mới cần đủ điều kiện. Ẩn hoặc ngừng bán luôn được phép.
+            if (target == ProductStatus.Active)
+            {
+                await EnsurePublishableAsync(product, cancellationToken);
+            }
+
+            var previousStatus = product.Status;
+            product.Status = target;
+            product.UpdatedAt = timeProvider.GetUtcNow().UtcDateTime;
+            await database.SaveChangesAsync(cancellationToken);
+
+            // Audit dùng đúng kết nối transaction để lỗi ghi nhật ký hoàn nguyên cả trạng thái.
+            await auditLogWriter.WriteAsync(
+                new AuditLogEntry(actor.UserId!, "catalog.product.status_change", "product", product.Id,
+                    new { status = ToStatusName(previousStatus) }, new { status = ToStatusName(target) }),
+                database.Database.CurrentTransaction!.GetDbTransaction(), cancellationToken);
+            events.Emit(new ProductChangedEvent(product.Id, ProductChange.Status));
+            return ToResponse(product);
+        }, cancellationToken);
+    }
+
+    public async Task DeleteAsync(string id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Helper chỉ phát sự kiện sau commit, nên xóa thất bại không phát sự kiện `Deleted`.
+            await CatalogTransaction.RunAsync(database, dispatcher, async events =>
+            {
+                // Dùng chung khóa với tạo và sửa, để không xóa trong lúc request khác đang sửa sản phẩm.
+                await database.Database.ExecuteSqlInterpolatedAsync(
+                    $"SELECT pg_advisory_xact_lock({ProductWriteLockKey})", cancellationToken);
+                var product = await database.Products.Include(item => item.Skus).Include(item => item.Images)
+                    .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+                if (product is null)
+                {
+                    throw ProductNotFound();
+                }
+
+                // Movement `order_reserve` nghĩa là SKU từng có đơn. Xóa sản phẩm sẽ làm mất lịch sử đơn hàng.
+                var skuIds = product.Skus.Select(sku => sku.Id).ToList();
+                var hasOrders = await database.InventoryMovements.AnyAsync(movement =>
+                    skuIds.Contains(movement.SkuId) && movement.Type == InventoryMovementType.OrderReserve, cancellationToken);
+                if (hasOrders)
+                {
+                    throw ProductHasOrders();
+                }
+
+                // Movement `manual` và `return` không thuộc đơn hàng. Khóa ngoại Restrict buộc xóa chúng trước SKU (Decision 18).
+                await database.InventoryMovements
+                    .Where(movement => skuIds.Contains(movement.SkuId))
+                    .ExecuteDeleteAsync(cancellationToken);
+
+                // Job xóa ảnh nằm trong cùng transaction, để ảnh chỉ bị xóa khỏi Cloudinary khi sản phẩm đã bị xóa.
+                imageSync.ScheduleDeletionOfAllImages(product, timeProvider.GetUtcNow().UtcDateTime);
+                database.Products.Remove(product);
+                await database.SaveChangesAsync(cancellationToken);
+                events.Emit(new ProductChangedEvent(product.Id, ProductChange.Deleted));
+                return true;
+            }, cancellationToken);
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+            { SqlState: PostgresErrorCodes.ForeignKeyViolation, ConstraintName: "inventory_movements_skuId_fkey" })
+        {
+            // Movement đơn hàng xuất hiện sau bước kiểm tra. Khóa ngoại là lớp bảo vệ thứ hai và trả cùng lỗi.
+            throw ProductHasOrders();
+        }
+    }
+
+    private async Task EnsurePublishableAsync(Product product, CancellationToken cancellationToken)
+    {
+        var category = await database.Categories.AsNoTracking()
+            .SingleAsync(item => item.Id == product.CategoryId, cancellationToken);
+        // Số ảnh lấy từ `product_images`, không tin số ảnh do client gửi.
+        var input = new ProductPublishableInput(
+            JsonNode.Parse(product.Specs.RootElement.GetRawText()),
+            await ResolveAttributesAsync(category, cancellationToken),
+            product.Images.Count,
+            product.Skus.Select(sku => new SkuPublishableInput(sku.Code, sku.Enabled, sku.Price, sku.CompareAtPrice,
+                sku.WeightGrams, sku.LengthCm, sku.WidthCm, sku.HeightCm)).ToList());
+        var check = ProductPublishing.CheckPublishable(input);
+        if (!check.Publishable)
+        {
+            throw new ProductNotPublishableException(check.Reasons);
+        }
+    }
+
+    private static string ToStatusName(ProductStatus status) => status.ToString().ToLowerInvariant();
 
     private async Task<ProductResponse> RunWriteAsync(
         Func<CatalogEventCollector, Task<ProductResponse>> action, CancellationToken cancellationToken)
@@ -311,14 +425,7 @@ public sealed class ProductManagementHandler(
             throw new AppException("INVALID_BRAND", 400, "Thương hiệu không tồn tại.");
         }
 
-        // Danh mục con kế thừa bộ thuộc tính cha, nên kiểm tra cả hai bộ khi lưu sản phẩm.
-        var attributes = ReadAttributes(category.Attributes);
-        if (category.ParentId is not null)
-        {
-            var parent = await database.Categories.AsNoTracking()
-                .SingleAsync(item => item.Id == category.ParentId, cancellationToken);
-            attributes = CategoryAttributes.Resolve(ReadAttributes(parent.Attributes), attributes);
-        }
+        var attributes = await ResolveAttributesAsync(category, cancellationToken);
 
         // Trả từng khóa sai để giao diện gắn lỗi vào đúng ô thông số.
         var specs = SpecValidator.Validate(ToNode(target.Specs), attributes);
@@ -333,6 +440,21 @@ public sealed class ProductManagementHandler(
         {
             throw new AppException("DESCRIPTION_INVALID", 400, string.Join(" ", description.Errors));
         }
+    }
+
+    private async Task<IReadOnlyList<AttributeDefinition>> ResolveAttributesAsync(
+        Category category, CancellationToken cancellationToken)
+    {
+        // Danh mục con kế thừa bộ thuộc tính cha, nên kiểm tra cả hai bộ.
+        var attributes = ReadAttributes(category.Attributes);
+        if (category.ParentId is null)
+        {
+            return attributes;
+        }
+
+        var parent = await database.Categories.AsNoTracking()
+            .SingleAsync(item => item.Id == category.ParentId, cancellationToken);
+        return CategoryAttributes.Resolve(ReadAttributes(parent.Attributes), attributes);
     }
 
     private static void ValidateVariants(IReadOnlyList<IReadOnlyDictionary<string, string>> combinations,
@@ -484,7 +606,7 @@ public sealed class ProductManagementHandler(
         // Sao chép phần tử JSON để phản hồi không phụ thuộc vòng đời tài liệu của entity.
         return new ProductResponse(product.Id, product.CategoryId, product.BrandId, product.Name, product.Slug,
             product.ShortDesc, product.Description.RootElement.Clone(), product.Specs.RootElement.Clone(), ReadOptions(product.Options),
-            product.WarrantyMonths, product.Status.ToString().ToLowerInvariant(), product.MinPrice, product.InStock,
+            product.WarrantyMonths, ToStatusName(product.Status), product.MinPrice, product.InStock,
             product.Skus.OrderBy(sku => sku.CreatedAt).ThenBy(sku => sku.Id).Select(sku =>
                 new ProductVariantResponse(sku.Id, sku.Code, ReadOptionValues(sku.OptionValues), sku.Price,
                     sku.CompareAtPrice, sku.Stock, sku.Enabled, sku.WeightGrams, sku.LengthCm, sku.WidthCm, sku.HeightCm,
@@ -496,6 +618,7 @@ public sealed class ProductManagementHandler(
     }
 
     private static AppException ProductNotFound() => new("PRODUCT_NOT_FOUND", 404, "Không tìm thấy sản phẩm.");
+    private static AppException ProductHasOrders() => new("PRODUCT_HAS_ORDERS", 409, "Sản phẩm đã có đơn hàng nên không xóa được.");
     private static AppException DuplicateSkuCode() => new("SKU_CODE_ALREADY_EXISTS", 409, "Mã SKU đã tồn tại.");
     private static AppException InvalidVariants() => new("INVALID_PRODUCT_VARIANTS", 400, "Danh sách biến thể không khớp tổ hợp tùy chọn.");
     private sealed record VariantPlan(Sku Sku, ProductVariantRequest Variant, string Code, bool IsNew);
