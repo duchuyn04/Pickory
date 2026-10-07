@@ -1,4 +1,5 @@
 using FluentValidation;
+using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Products;
 
 namespace Pickory.Modules.Catalog.Features.Products;
@@ -51,6 +52,45 @@ public sealed class ProductVariantRequestValidator : AbstractValidator<ProductVa
         RuleFor(variant => variant.WeightGrams)
             .GreaterThan(0).WithMessage("Khối lượng phải lớn hơn 0.")
             .When(variant => variant.WeightGrams.HasValue);
+    }
+}
+
+// Kiểm tra một ảnh gửi kèm sản phẩm trước khi API hỏi kho ảnh.
+public sealed class ProductImageRequestValidator : AbstractValidator<ProductImageRequest>
+{
+    public ProductImageRequestValidator()
+    {
+        // Chỉ nhận ảnh trong thư mục sản phẩm, để không gắn được ảnh khác trong tài khoản Cloudinary.
+        RuleFor(image => image.PublicId)
+            .Must(publicId => !string.IsNullOrEmpty(publicId) && ImageUploadRules.IsProductPublicId(publicId))
+            .WithMessage("Mã ảnh không thuộc thư mục ảnh sản phẩm.");
+
+        // Alt text bắt buộc cho người dùng trình đọc màn hình và có giới hạn độ dài.
+        RuleFor(image => image.Alt)
+            .Must(alt => !string.IsNullOrWhiteSpace(alt)).WithMessage("Mô tả ảnh (alt) không được để trống.")
+            .Must(alt => alt is null || alt.Trim().Length <= ImageUploadRules.MaxAltLength)
+            .WithMessage($"Mô tả ảnh (alt) không được dài quá {ImageUploadRules.MaxAltLength} ký tự.");
+    }
+}
+
+// Kiểm tra cả danh sách ảnh: số lượng tối đa, không có phần tử rỗng và không trùng ảnh.
+public sealed class ProductImageListValidator : AbstractValidator<IReadOnlyList<ProductImageRequest>>
+{
+    public ProductImageListValidator()
+    {
+        RuleFor(images => images)
+            .Must(images => images.Count <= ImageUploadRules.MaxImagesPerProduct)
+            .WithMessage($"Mỗi sản phẩm có tối đa {ImageUploadRules.MaxImagesPerProduct} ảnh.")
+            .Must(images => images.All(image => image is not null))
+            .WithMessage("Danh sách ảnh không được chứa phần tử null.")
+            // Một ảnh gắn hai lần sẽ bị xóa nhầm khi admin bỏ một trong hai vị trí.
+            .Must(images => images.Where(image => image is not null)
+                .Select(image => image.PublicId).Distinct(StringComparer.Ordinal).Count() == images.Count(image => image is not null))
+            .WithMessage("Một ảnh không được gắn hai lần vào cùng sản phẩm.");
+
+        RuleForEach(images => images)
+            .SetValidator(new ProductImageRequestValidator())
+            .When(images => images.All(image => image is not null));
     }
 }
 
@@ -124,6 +164,11 @@ public sealed class CreateProductRequestValidator : AbstractValidator<CreateProd
         RuleForEach(request => request.Variants)
             .SetValidator(new ProductVariantRequestValidator())
             .When(request => request.Variants is not null);
+
+        // Ảnh không bắt buộc khi tạo. Có gửi thì phải qua luật của danh sách ảnh.
+        RuleFor(request => request.Images!)
+            .SetValidator(new ProductImageListValidator())
+            .When(request => request.Images is not null);
     }
 }
 
@@ -209,5 +254,14 @@ public sealed class UpdateProductRequestValidator : AbstractValidator<UpdateProd
         RuleForEach(request => request.Variants)
             .SetValidator(new ProductVariantRequestValidator())
             .When(request => request.VariantsSpecified && request.Variants is not null);
+
+        // Gửi `images: null` không rõ ý định. Muốn bỏ hết ảnh thì gửi danh sách rỗng.
+        RuleFor(request => request.Images)
+            .NotNull().WithMessage("Danh sách ảnh không được null. Gửi danh sách rỗng để bỏ hết ảnh.")
+            .When(request => request.ImagesSpecified);
+
+        RuleFor(request => request.Images!)
+            .SetValidator(new ProductImageListValidator())
+            .When(request => request.ImagesSpecified && request.Images is not null);
     }
 }

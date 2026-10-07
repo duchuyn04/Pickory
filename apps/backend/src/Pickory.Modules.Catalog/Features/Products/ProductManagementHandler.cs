@@ -24,7 +24,8 @@ public sealed class ProductManagementHandler(
     CatalogDbContext database,
     IAuditLogWriter auditLogWriter,
     IEventDispatcher dispatcher,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    ProductImageSync imageSync)
 {
     // Một khóa transaction chung ngăn hai request cấp cùng slug hoặc tạo trùng tổ hợp biến thể (SKU).
     private const long ProductWriteLockKey = 578524097137070906;
@@ -67,7 +68,7 @@ public sealed class ProductManagementHandler(
         // Đếm cùng bộ lọc để giao diện không hiển thị trang ngoài tập kết quả.
         var total = await products.CountAsync(cancellationToken);
         // Thứ tự phụ theo định danh giữ phân trang ổn định khi thời điểm tạo trùng nhau.
-        var items = await products.Include(product => product.Skus)
+        var items = await products.Include(product => product.Skus).Include(product => product.Images)
             .OrderByDescending(product => product.CreatedAt).ThenBy(product => product.Id)
             .Skip(query.Page.Skip).Take(query.Page.Limit).ToListAsync(cancellationToken);
         return new PagedResponse<ProductResponse>(items.Select(ToResponse).ToList(), total, query.Page.Page, query.Page.Limit);
@@ -76,7 +77,7 @@ public sealed class ProductManagementHandler(
     public async Task<ProductResponse> GetAsync(string id, CancellationToken cancellationToken)
     {
         // Không lọc SKU tắt vì form cần giữ định danh của các tổ hợp từng tồn tại.
-        var product = await database.Products.AsNoTracking().Include(item => item.Skus)
+        var product = await database.Products.AsNoTracking().Include(item => item.Skus).Include(item => item.Images)
             .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
         if (product is null)
         {
@@ -87,10 +88,12 @@ public sealed class ProductManagementHandler(
         return ToResponse(product);
     }
 
-    public Task<ProductResponse> CreateAsync(Actor actor, CreateProductRequest request, CancellationToken cancellationToken)
+    public async Task<ProductResponse> CreateAsync(Actor actor, CreateProductRequest request, CancellationToken cancellationToken)
     {
-        // Transaction bao gồm sản phẩm và SKU. Không phát sự kiện nếu bất kỳ bước ghi nào thất bại.
-        return RunWriteAsync(async events =>
+        // Kiểm ảnh mới với kho ảnh trước khi khóa ghi, để lời gọi mạng không giữ khóa sản phẩm.
+        await imageSync.VerifyNewImagesAsync(productId: null, request.Images, cancellationToken);
+        // Transaction bao gồm sản phẩm, SKU và ảnh. Không phát sự kiện nếu bất kỳ bước ghi nào thất bại.
+        return await RunWriteAsync(async events =>
         {
             var now = timeProvider.GetUtcNow().UtcDateTime;
             var product = new Product { Id = Guid.NewGuid().ToString("N"), CreatedAt = now };
@@ -99,12 +102,15 @@ public sealed class ProductManagementHandler(
         }, cancellationToken);
     }
 
-    public Task<ProductResponse> UpdateAsync(Actor actor, string id, UpdateProductRequest request, CancellationToken cancellationToken)
+    public async Task<ProductResponse> UpdateAsync(Actor actor, string id, UpdateProductRequest request, CancellationToken cancellationToken)
     {
-        // Đọc và ghi trong cùng transaction để lịch sử slug, giá và nhật ký cùng được hoàn nguyên.
-        return RunWriteAsync(async events =>
+        // Không gửi `images` thì giữ ảnh cũ, nên chỉ kiểm ảnh khi danh sách ảnh được gửi.
+        var targetImages = request.ImagesSpecified ? request.Images : null;
+        await imageSync.VerifyNewImagesAsync(id, targetImages, cancellationToken);
+        // Đọc và ghi trong cùng transaction để lịch sử slug, giá, ảnh và nhật ký cùng được hoàn nguyên.
+        return await RunWriteAsync(async events =>
         {
-            var product = await database.Products.Include(item => item.Skus)
+            var product = await database.Products.Include(item => item.Skus).Include(item => item.Images)
                 .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
             if (product is null)
             {
@@ -128,7 +134,8 @@ public sealed class ProductManagementHandler(
                 Specs: request.SpecsSpecified ? request.Specs : product.Specs.RootElement,
                 Options: request.OptionsSpecified ? request.Options : oldOptions,
                 WarrantyMonths: request.WarrantyMonthsSpecified ? request.WarrantyMonths : product.WarrantyMonths,
-                Variants: request.VariantsSpecified ? request.Variants : oldVariants);
+                Variants: request.VariantsSpecified ? request.Variants : oldVariants,
+                Images: targetImages);
             await SaveAsync(actor, product, target, creating: false, events, cancellationToken);
             return ToResponse(product);
         }, cancellationToken);
@@ -255,6 +262,12 @@ public sealed class ProductManagementHandler(
             sku.WidthCm = variant.WidthCm;
             sku.HeightCm = variant.HeightCm;
             sku.UpdatedAt = now;
+        }
+
+        // Đồng bộ ảnh sau khi SKU đã có định danh, để ảnh gắn biến thể kiểm được SKU thuộc sản phẩm này.
+        if (target.Images is not null)
+        {
+            imageSync.Apply(product, target.Images, now);
         }
 
         // Tính giá và khả năng còn hàng từ toàn bộ SKU sau khi đã tắt các tổ hợp bị bỏ.
@@ -473,7 +486,10 @@ public sealed class ProductManagementHandler(
             product.Skus.OrderBy(sku => sku.CreatedAt).ThenBy(sku => sku.Id).Select(sku =>
                 new ProductVariantResponse(sku.Id, sku.Code, ReadOptionValues(sku.OptionValues), sku.Price,
                     sku.CompareAtPrice, sku.Stock, sku.Enabled, sku.WeightGrams, sku.LengthCm, sku.WidthCm, sku.HeightCm,
-                    sku.CreatedAt, sku.UpdatedAt)).ToList(), product.CreatedAt, product.UpdatedAt);
+                    sku.CreatedAt, sku.UpdatedAt)).ToList(),
+            product.Images.OrderBy(image => image.Position).ThenBy(image => image.Id).Select(image =>
+                new ProductImageResponse(image.Id, image.PublicId, image.Alt, image.SkuId, image.Position)).ToList(),
+            product.CreatedAt, product.UpdatedAt);
     }
 
     private static AppException ProductNotFound() => new("PRODUCT_NOT_FOUND", 404, "Không tìm thấy sản phẩm.");

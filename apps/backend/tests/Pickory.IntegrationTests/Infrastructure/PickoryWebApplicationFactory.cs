@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Catalog.Contracts.Events;
+using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Identity.Emails;
 using Pickory.Modules.Identity.GoogleOAuth;
 using Pickory.Shared.Events;
@@ -118,6 +120,22 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             services.AddSingleton<IDomainEventHandler<UserLinkedEvent>, RecordingDomainEventHandler<UserLinkedEvent>>();
             services.AddSingleton<IDomainEventHandler<UserDeletedEvent>, RecordingDomainEventHandler<UserDeletedEvent>>();
             services.AddSingleton<IDomainEventHandler<ProductChangedEvent>, RecordingDomainEventHandler<ProductChangedEvent>>();
+
+            // Test không gọi Cloudinary thật, kể cả khi máy chạy test có đặt biến `CLOUDINARY_*`.
+            services.RemoveAll<IImageStorage>();
+            services.RemoveAll<CloudinaryCredentials>();
+            services.RemoveAll<FakeImageStorage>();
+            services.AddSingleton(FakeImageStorage.Credentials);
+            services.AddSingleton<FakeImageStorage>();
+            services.AddSingleton<IImageStorage>(provider => provider.GetRequiredService<FakeImageStorage>());
+
+            // Bỏ worker chạy nền. Test gọi `ImageDeletionProcessor` trực tiếp, để job không đổi trạng thái giữa lúc test đang kiểm.
+            var workerRegistration = services.SingleOrDefault(descriptor =>
+                descriptor.ServiceType == typeof(IHostedService) && descriptor.ImplementationType == typeof(ImageDeletionWorker));
+            if (workerRegistration is not null)
+            {
+                services.Remove(workerRegistration);
+            }
         });
     }
 
@@ -129,4 +147,7 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
 
     // Cung cấp danh sách sự kiện cho test. Test kiểm tra sự kiện phát đúng số lần.
     public RecordedDomainEvents DomainEvents => Services.GetRequiredService<RecordedDomainEvents>();
+
+    // Cung cấp kho ảnh giả cho test. Test đặt ảnh "đã tải lên" và đọc danh sách ảnh đã xóa.
+    public FakeImageStorage ImageStorage => Services.GetRequiredService<FakeImageStorage>();
 }

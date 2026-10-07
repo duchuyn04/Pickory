@@ -72,7 +72,7 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 - [x] Migration chạy trên DB sạch, `CHECK (stock >= 0)` chặn giá trị âm
 
 ### Phase 2: Back-office backend và UI
-- [x] CAT-13 · [x] UI-C8 · [x] CAT-04 · [x] UI-C4 · [x] CAT-05 · [x] UI-C5 · [ ] CAT-06 · [ ] UI-C6 · [ ] CAT-07 · [ ] CAT-08 · [ ] UI-C7
+- [x] CAT-13 · [x] UI-C8 · [x] CAT-04 · [x] UI-C4 · [x] CAT-05 · [x] UI-C5 · [x] CAT-06 · [ ] UI-C6 · [ ] CAT-07 · [ ] CAT-08 · [ ] UI-C7
 
 ### Checkpoint C2
 - [ ] Admin tạo danh mục, sản phẩm 2 tùy chọn, tải ảnh, đăng bán trên `pnpm dev`

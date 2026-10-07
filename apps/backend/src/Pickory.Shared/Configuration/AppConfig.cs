@@ -47,6 +47,16 @@ public record AppConfig
     // Bật test gọi API AI thật. Test thường không gọi provider thật để không tốn tiền.
     public bool AiLiveTests { get; init; }
 
+    // Khóa Cloudinary để ký yêu cầu tải ảnh và xóa ảnh. Chuỗi rỗng nghĩa là chưa cấu hình.
+    public string CloudinaryCloudName { get; init; } = string.Empty;
+
+    public string CloudinaryApiKey { get; init; } = string.Empty;
+
+    public string CloudinaryApiSecret { get; init; } = string.Empty;
+
+    // Có đủ bộ ba khóa thì dùng Cloudinary thật. `Load` đã chặn trường hợp chỉ có một phần.
+    public bool HasCloudinary => CloudinaryCloudName.Length > 0;
+
     // Đọc và kiểm tra tính hợp lệ của toàn bộ biến môi trường khi khởi động.
     public static AppConfig Load(IConfiguration configuration)
     {
@@ -151,6 +161,18 @@ public record AppConfig
 
         var embeddingModel = configuration["EMBEDDING_MODEL"];
 
+        var cloudinaryCloudName = (configuration["CLOUDINARY_CLOUD_NAME"] ?? string.Empty).Trim();
+        var cloudinaryApiKey = (configuration["CLOUDINARY_API_KEY"] ?? string.Empty).Trim();
+        var cloudinaryApiSecret = (configuration["CLOUDINARY_API_SECRET"] ?? string.Empty).Trim();
+        var cloudinaryKeyCount = new[] { cloudinaryCloudName, cloudinaryApiKey, cloudinaryApiSecret }
+            .Count(value => value.Length > 0);
+        // Thiếu một khóa thì ảnh tải lên được nhưng không xóa được. Thông báo không chứa giá trị khóa để secret không lọt vào log.
+        if (cloudinaryKeyCount is > 0 and < 3)
+        {
+            throw new InvalidOperationException(
+                "Cần đủ CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY và CLOUDINARY_API_SECRET, hoặc bỏ trống cả ba.");
+        }
+
         return new AppConfig
         {
             Port = port,
@@ -169,6 +191,9 @@ public record AppConfig
             AiChatDailyLimitUser = ReadPositiveInteger(configuration, "AI_CHAT_DAILY_LIMIT_USER", 50),
             AiChatDailyLimitAnon = ReadPositiveInteger(configuration, "AI_CHAT_DAILY_LIMIT_ANON", 15),
             AiLiveTests = ReadLiveTestsFlag(configuration),
+            CloudinaryCloudName = cloudinaryCloudName,
+            CloudinaryApiKey = cloudinaryApiKey,
+            CloudinaryApiSecret = cloudinaryApiSecret,
         };
     }
 

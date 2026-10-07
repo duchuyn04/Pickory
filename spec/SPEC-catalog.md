@@ -134,10 +134,15 @@ export { catalogPermissions } from './permissions';
 ### Ảnh (Cloudinary)
 
 - Trình duyệt tải ảnh thẳng lên Cloudinary bằng chữ ký do backend cấp (`POST /api/admin/uploads/signature`, cần `products:write`). Ảnh không đi qua server API.
+- Chữ ký ký cả `folder=pickory/products` và `allowed_formats=jpg,png,webp`. Phản hồi không chứa `CLOUDINARY_API_SECRET`.
 - Backend chỉ lưu `publicId`, alt text, thứ tự, và biến thể gắn với ảnh (nếu có).
-- Giới hạn: JPG, PNG, WebP; tối đa 5 MB mỗi ảnh; tối đa 10 ảnh mỗi sản phẩm.
+- Ảnh gửi kèm trường `images` của `POST` và `PATCH /api/admin/products`. Thứ tự trong danh sách là thứ tự hiển thị. `PATCH` không gửi `images` thì giữ ảnh cũ.
+- Giới hạn: JPG, PNG, WebP; tối đa 5 MB mỗi ảnh; tối đa 10 ảnh mỗi sản phẩm; alt text bắt buộc.
+- Cloudinary không giới hạn kích thước file qua chữ ký. Khi gắn ảnh mới, backend hỏi Cloudinary kích thước và định dạng thật. Ảnh sai bị từ chối và được xếp lịch xóa.
 - Hiển thị qua URL biến đổi của Cloudinary (`f_auto,q_auto`, các chiều rộng 200/400/800/1200) để trình duyệt chọn ảnh vừa kích thước.
 - Xóa ảnh khỏi sản phẩm thì xóa luôn trên Cloudinary (qua job nền, lỗi thì thử lại).
+- Job xóa ảnh nằm trong `image_deletion_jobs`, ghi cùng transaction với việc bỏ ảnh. Lỗi thì chờ 1, 2, 4 phút và tiếp tục nhân đôi, tối đa 6 giờ. Lỗi lần thứ 8 thì job dừng và API ghi log lỗi.
+- Thiếu `CLOUDINARY_*` ở dev và test thì API dùng kho ảnh giả. Production thiếu khóa thì API dừng khi khởi động.
 
 ### Mô tả sản phẩm
 
@@ -183,13 +188,13 @@ sort=newest|price_asc|price_desc                     page=1  pageSize=24 (tối 
 |---|---|---|---|
 | GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, tìm theo tên hoặc SKU. Lọc bằng `status`, `categoryId` (gồm danh mục con), `lowStock=true` (SKU bật có `stock <= 5`). |
 | GET | `/api/admin/products/:id` | `products:read` | Chi tiết để sửa |
-| POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể |
+| POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể, ảnh (`images`) |
 | POST | `/api/admin/products/:id/status` | `products:write` | Đổi trạng thái |
 | DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng (chỉ khi chưa từng có đơn) |
 | GET | `/api/admin/categories` | `products:read` | Danh sách phẳng, mỗi danh mục kèm đủ thuộc tính riêng |
 | POST · PATCH · DELETE | `/api/admin/categories[/:id]` | `products:write` | Quản lý danh mục và bộ thuộc tính |
 | POST · PATCH · DELETE | `/api/admin/brands[/:id]` | `products:write` | Quản lý thương hiệu |
-| POST | `/api/admin/uploads/signature` | `products:write` | Chữ ký tải ảnh lên Cloudinary |
+| POST | `/api/admin/uploads/signature` | `products:write` | Chữ ký tải ảnh lên Cloudinary: `cloudName`, `apiKey`, `uploadUrl`, `timestamp`, `folder`, `allowedFormats`, `maxFileBytes`, `signature` |
 | POST | `/api/admin/skus/:id/adjust-stock` | `inventory:write` | Điều chỉnh tồn kho, bắt buộc lý do |
 | GET | `/api/admin/skus/:id/movements` | `products:read` | Lịch sử tồn kho |
 | GET | `/api/admin/inventory/low-stock` | `products:read` | SKU dưới ngưỡng |

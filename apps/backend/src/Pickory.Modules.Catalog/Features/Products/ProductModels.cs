@@ -45,8 +45,15 @@ public sealed record ProductResponse(
     int? MinPrice,
     bool InStock,
     IReadOnlyList<ProductVariantResponse> Variants,
+    IReadOnlyList<ProductImageResponse> Images,
     DateTime CreatedAt,
     DateTime UpdatedAt);
+
+// Ảnh của sản phẩm theo thứ tự hiển thị. `SkuId` có giá trị khi ảnh thuộc riêng một biến thể.
+public sealed record ProductImageResponse(string Id, string PublicId, string Alt, string? SkuId, int Position);
+
+// Ảnh gửi kèm khi tạo hoặc sửa sản phẩm. Thứ tự trong danh sách là thứ tự hiển thị.
+public sealed record ProductImageRequest(string PublicId, string Alt, string? SkuId = null);
 
 // Dữ liệu phản hồi của biến thể (SKU) giữ thông tin bán hàng và tồn kho.
 public sealed record ProductVariantResponse(
@@ -74,7 +81,8 @@ public sealed record CreateProductRequest(
     JsonElement? Specs = null,
     IReadOnlyList<ProductOption>? Options = null,
     int? WarrantyMonths = null,
-    IReadOnlyList<ProductVariantRequest>? Variants = null)
+    IReadOnlyList<ProductVariantRequest>? Variants = null,
+    IReadOnlyList<ProductImageRequest>? Images = null)
 {
     // Giữ các trường dữ liệu ngoài mô hình để phát hiện trường cấm như tồn kho.
     [JsonExtensionData]
@@ -110,6 +118,7 @@ public sealed class UpdateProductRequest
     private IReadOnlyList<ProductOption>? _options;
     private int? _warrantyMonths;
     private IReadOnlyList<ProductVariantRequest>? _variants;
+    private IReadOnlyList<ProductImageRequest>? _images;
 
     public string? CategoryId
     {
@@ -236,6 +245,20 @@ public sealed class UpdateProductRequest
 
     [JsonIgnore]
     public bool VariantsSpecified { get; private set; }
+
+    public IReadOnlyList<ProductImageRequest>? Images
+    {
+        get => _images;
+        set
+        {
+            _images = value;
+            // Đánh dấu trường `images` có trong JSON. Không gửi thì giữ ảnh cũ, gửi thì thay toàn bộ danh sách ảnh.
+            ImagesSpecified = true;
+        }
+    }
+
+    [JsonIgnore]
+    public bool ImagesSpecified { get; private set; }
     // Giữ các trường mở rộng không thuộc mô hình để từ chối các trường cấm như tồn kho.
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; set; }

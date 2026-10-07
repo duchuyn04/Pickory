@@ -48,7 +48,8 @@ builder.Services.AddSharedInfrastructure();
 var databaseConnectionString = PostgresConnectionString.Convert(config.DatabaseUrl);
 builder.Services.AddIdentityModule(databaseConnectionString);
 builder.Services.AddAiGatewayModule(databaseConnectionString);
-builder.Services.AddCatalogModule(databaseConnectionString);
+// Catalog cần biết môi trường để dừng production khi thiếu khóa Cloudinary.
+builder.Services.AddCatalogModule(databaseConnectionString, config, builder.Environment.IsProduction());
 
 // Chuẩn hóa cấu hình JSON của Minimal API theo camelCase và ISO 8601 UTC.
 builder.Services.ConfigureHttpJsonOptions(options =>

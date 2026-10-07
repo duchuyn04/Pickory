@@ -224,13 +224,31 @@ Bundle chính không chứa chuỗi `@tiptap` hoặc `prosemirror`.
 ### CAT-06: Ảnh và Cloudinary
 **Mô tả:** `POST /api/admin/uploads/signature` (`products:write`) cấp chữ ký Cloudinary. API lưu `publicId`, alt, thứ tự, SKU gắn với ảnh. Bỏ ảnh thì ghi `image_deletion_jobs` trong cùng transaction. Worker xóa ảnh thử lại với backoff. Thiếu `CLOUDINARY_*` ở dev và test thì dùng provider giả; production thiếu khóa thì config lỗi.
 **Tiêu chí nghiệm thu:**
-- [ ] Chữ ký khớp giá trị tính tay với secret giả; response không chứa `CLOUDINARY_API_SECRET`
-- [ ] Chữ ký giới hạn định dạng JPG, PNG, WebP và kích thước 5 MB
-- [ ] Ảnh thứ 11 của một sản phẩm bị từ chối
-- [ ] Bỏ ảnh tạo 1 job; job lỗi thì tăng số lần thử và hẹn giờ thử lại; quá 8 lần thì dừng và ghi log lỗi
-- [ ] Không test nào gọi Cloudinary thật
+- [x] Chữ ký khớp giá trị tính tay với secret giả; response không chứa `CLOUDINARY_API_SECRET`
+- [x] Chữ ký giới hạn định dạng JPG, PNG, WebP; API từ chối ảnh trên 5 MB hoặc sai định dạng khi gắn vào sản phẩm
+- [x] Ảnh thứ 11 của một sản phẩm bị từ chối
+- [x] Bỏ ảnh tạo 1 job; job lỗi thì tăng số lần thử và hẹn giờ thử lại; quá 8 lần thì dừng và ghi log lỗi
+- [x] Không test nào gọi Cloudinary thật
 **Kiểm tra:** unit chữ ký và backoff; integration API và job với provider giả
 **Phụ thuộc:** CAT-05 · **File:** `modules/catalog/services/{images,image-deletion}.ts`, `modules/catalog/data/cloudinary.ts`, `shared/config.ts`, `server.ts` · **Quy mô:** M
+**Quyết định (2026-10-07):**
+- Cloudinary không giới hạn kích thước file qua chữ ký (tài liệu "Upload Presets"). Người dùng chọn cách backend kiểm lại khi gắn ảnh.
+- Câu tiêu chí thứ hai được sửa theo quyết định này. Câu cũ: "Chữ ký giới hạn định dạng JPG, PNG, WebP và kích thước 5 MB".
+- Ảnh gửi qua trường `images` của `POST` và `PATCH` sản phẩm. Spec không có endpoint ảnh riêng.
+
+**File (.NET):**
+- `apps/backend/src/Pickory.Modules.Catalog/Images/*`
+- `apps/backend/src/Pickory.Modules.Catalog/Features/Uploads/UploadSignatureEndpoint.cs`
+- `apps/backend/src/Pickory.Modules.Catalog/Features/Products/{ProductImageSync,ProductManagementHandler,ProductModels,ProductValidators}.cs`
+- `apps/backend/src/Pickory.Shared/Configuration/AppConfig.cs`, `apps/backend/src/Pickory.Api/Program.cs`, `.env.example`
+- `apps/backend/tests/Pickory.UnitTests/Modules/Catalog/Images/*`, `apps/backend/tests/Pickory.UnitTests/Shared/Configuration/AppConfigCloudinaryTests.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Api/Catalog/ProductImageTests.cs`, `apps/backend/tests/Pickory.IntegrationTests/Database/Catalog/ImageDeletionProcessorTests.cs`
+
+**Bằng chứng (2026-10-07):** Unit test `CloudinarySignatureTests` dùng ví dụ của tài liệu Cloudinary: secret `abcd` cho chữ ký `bfd09f95f331f558cbd1320e67aa8d488770583e`.
+Integration test `ProductImageTests` đạt 19/19: chữ ký, 403, ảnh thứ 11, ảnh 5 MB và trên 5 MB, GIF, ảnh không tồn tại, alt, SKU, job khi bỏ ảnh.
+Integration test `ImageDeletionProcessorTests` đạt 5/5: xóa xong, lỗi lần đầu chờ 1 phút, lỗi lần 7 còn thử, lỗi lần 8 dừng và ghi log Error.
+Factory của test luôn thay kho ảnh bằng `FakeImageStorage`. Test `TestHost_UsesFakeImageStorage` kiểm điều này.
+Sáu đột biến đều làm test đỏ. Backend đạt kiến trúc 3/3, unit 389/389, tích hợp 572/576 (bỏ qua 4). Ma trận quyền có thêm `POST /api/admin/uploads/signature`.
 
 ### UI-C6: Tải ảnh và sắp xếp ảnh
 **Mô tả:** Trong form sản phẩm: lấy chữ ký, tải ảnh thẳng lên Cloudinary, sắp xếp thứ tự bằng kéo thả và bằng nút lên xuống, gắn ảnh cho màu, sửa alt text.
