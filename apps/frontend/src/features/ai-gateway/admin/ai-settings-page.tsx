@@ -1,7 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { useCan } from '../../identity/hooks/use-actor';
+import './ai-settings.css';
 
 export interface AiSettingsData {
   monthlyBudgetUsd: number;
@@ -83,23 +85,7 @@ export function AiSettingsPage() {
 
   // Ngăn chặn hiển thị nếu người dùng thiếu quyền xem báo cáo sử dụng AI.
   if (!canReadUsage) {
-    return (
-      <div
-        style={{
-          padding: 'var(--space-6)',
-          backgroundColor: 'var(--color-surface)',
-          borderRadius: 'var(--radius-card)',
-          border: '1px solid var(--color-border)',
-        }}
-      >
-        <h2 style={{ color: 'var(--color-danger)', margin: '0 0 var(--space-2) 0' }}>
-          403 - Không có quyền truy cập
-        </h2>
-        <p style={{ color: 'var(--color-ink-muted)', margin: 0 }}>
-          Bạn cần quyền <code>ai-usage:read</code> để xem thống kê và cấu hình AI.
-        </p>
-      </div>
-    );
+    return <ForbiddenNotice permission="ai-usage:read" subject="thống kê và cấu hình AI" />;
   }
 
   // Chuyển ngày chọn sang múi giờ Việt Nam (+07:00) thay vì múi giờ cục bộ của trình duyệt.
@@ -192,564 +178,266 @@ export function AiSettingsPage() {
     }
   }
 
-  const cardStyle: React.CSSProperties = {
-    backgroundColor: 'var(--color-surface)',
-    border: '1px solid var(--color-border)',
-    borderRadius: 'var(--radius-card)',
-    padding: 'var(--space-4)',
-  };
-
-  const inputStyle: React.CSSProperties = {
-    width: '100%',
-    boxSizing: 'border-box',
-    padding: 'var(--space-2) var(--space-3)',
-    borderRadius: 'var(--radius-control)',
-    border: '1px solid var(--color-border)',
-    fontSize: 'var(--text-sm)',
-    backgroundColor:
-      canManageSettings && !isSettingsError ? 'var(--color-surface)' : 'var(--color-surface-muted)',
-  };
-
   const isSaveDisabled = !canManageSettings || isSubmitting || isSettingsLoading || isSettingsError;
-
-  const buttonStyle: React.CSSProperties = {
-    padding: 'var(--space-2) var(--space-4)',
-    backgroundColor: 'var(--color-brand)',
-    color: '#ffffff',
-    border: 'none',
-    borderRadius: 'var(--radius-control)',
-    fontSize: 'var(--text-sm)',
-    fontWeight: 600,
-    cursor: isSaveDisabled ? 'not-allowed' : 'pointer',
-    opacity: isSaveDisabled ? 0.6 : 1,
-  };
+  const isSettingsInputDisabled = !canManageSettings || isSubmitting || isSettingsError;
+  // Tỉ lệ lỗi trên 5% hiện màu lỗi để nhân viên chú ý; dưới ngưỡng hiện màu thành công.
+  const errorRateClass =
+    isUsageError || (usage?.errorRate ?? 0) > 0.05 ? 'kpi-value kpi-bad' : 'kpi-value kpi-ok';
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--space-5)',
-        fontFamily: 'var(--font-sans)',
-        minWidth: 0,
-      }}
-    >
-      <div>
-        <h1
-          style={{
-            fontSize: 'var(--text-xl)',
-            fontWeight: 700,
-            color: 'var(--color-ink)',
-            margin: '0 0 var(--space-1) 0',
-          }}
-        >
-          Cấu hình và sử dụng AI
-        </h1>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', margin: 0 }}>
-          Theo dõi chi phí mô hình (ước tính cao điểm bảo thủ), độ trễ p95, tỉ lệ lỗi và điều chỉnh
-          hạn mức.
-        </p>
+    <div className="page">
+      <div className="page-head">
+        <div className="page-head-text">
+          <h1>Cấu hình và sử dụng AI</h1>
+          <p>
+            Theo dõi chi phí mô hình (ước tính cao điểm bảo thủ), độ trễ p95, tỉ lệ lỗi và điều
+            chỉnh hạn mức.
+          </p>
+        </div>
       </div>
 
       {/* Cảnh báo ngân sách khi chi tiêu tháng hiện tại vượt 80% */}
       {usage?.budgetWarning && (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: 'var(--color-sand-soft)',
-            border: '1px solid var(--color-warning)',
-            borderRadius: 'var(--radius-card)',
-            padding: 'var(--space-3) var(--space-4)',
-            color: 'var(--color-warning)',
-          }}
-        >
+        <p role="alert" className="alert alert-warn">
           <strong>Cảnh báo ngân sách tháng:</strong> Chi tiêu AI trong tháng đã chạm hoặc vượt 80%
           ngân sách cấu hình.
-        </div>
+        </p>
       )}
 
-      {/* Thẻ thống kê tổng quan KPI */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(180px, 100%), 1fr))',
-          gap: 'var(--space-3)',
-        }}
-      >
-        <div style={cardStyle}>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
-            Chi phí ước tính (USD)
-          </div>
-          <div
-            style={{
-              fontSize: 'var(--text-xl)',
-              fontWeight: 700,
-              color: 'var(--color-brand)',
-              marginTop: 'var(--space-1)',
-            }}
-          >
+      <ul className="kpis" aria-label="Tổng quan sử dụng AI">
+        <li className="kpi">
+          <small>Chi phí ước tính (USD)</small>
+          <b className="kpi-value">
             {isUsageError ? '-' : isUsageLoading ? '...' : `$${(usage?.costUsd ?? 0).toFixed(4)}`}
-          </div>
-        </div>
-        <div style={cardStyle}>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
-            Tổng lượt gọi
-          </div>
-          <div
-            style={{
-              fontSize: 'var(--text-xl)',
-              fontWeight: 700,
-              color: 'var(--color-ink)',
-              marginTop: 'var(--space-1)',
-            }}
-          >
+          </b>
+        </li>
+        <li className="kpi">
+          <small>Tổng lượt gọi</small>
+          <b className="kpi-value">
             {isUsageError
               ? '-'
               : isUsageLoading
                 ? '...'
                 : (usage?.calls ?? 0).toLocaleString('vi-VN')}
-          </div>
-        </div>
-        <div style={cardStyle}>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
-            Tỉ lệ lỗi
-          </div>
-          <div
-            style={{
-              fontSize: 'var(--text-xl)',
-              fontWeight: 700,
-              color: isUsageError
-                ? 'var(--color-danger)'
-                : (usage?.errorRate ?? 0) > 0.05
-                  ? 'var(--color-danger)'
-                  : 'var(--color-success)',
-              marginTop: 'var(--space-1)',
-            }}
-          >
+          </b>
+        </li>
+        <li className="kpi">
+          <small>Tỉ lệ lỗi</small>
+          <b className={errorRateClass}>
             {isUsageError
               ? '-'
               : isUsageLoading
                 ? '...'
                 : `${((usage?.errorRate ?? 0) * 100).toFixed(1)}%`}
-          </div>
-        </div>
-        <div style={cardStyle}>
-          <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
-            Độ trễ p95
-          </div>
-          <div
-            style={{
-              fontSize: 'var(--text-xl)',
-              fontWeight: 700,
-              color: 'var(--color-ink)',
-              marginTop: 'var(--space-1)',
-            }}
-          >
+          </b>
+        </li>
+        <li className="kpi">
+          <small>Độ trễ p95</small>
+          <b className="kpi-value">
             {isUsageError ? '-' : isUsageLoading ? '...' : `${usage?.p95LatencyMs ?? 0} ms`}
-          </div>
-        </div>
-      </div>
+          </b>
+        </li>
+      </ul>
 
       {/* Biểu mẫu chỉnh sửa ngân sách và hạn mức */}
-      <div style={cardStyle}>
-        <h2
-          style={{
-            fontSize: 'var(--text-md)',
-            fontWeight: 700,
-            color: 'var(--color-ink)',
-            margin: '0 0 var(--space-2) 0',
-          }}
-        >
-          Ngân sách và hạn mức chat
-        </h2>
-        <p
-          style={{
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-ink-muted)',
-            margin: '0 0 var(--space-3) 0',
-          }}
-        >
+      <section className="card">
+        <div className="card-head">
+          <h2>Ngân sách và hạn mức chat</h2>
+        </div>
+        <p className="muted small ai-settings-note">
           {canManageSettings
             ? 'Thay đổi ngân sách và hạn mức sẽ có hiệu lực ngay ở lượt gọi tiếp theo.'
             : 'Chế độ chỉ xem (ai-usage:read). Cần quyền ai-settings:manage để thay đổi.'}
         </p>
 
-        {/* Thông báo lỗi khi tải cấu hình thất bại */}
         {isSettingsError && (
-          <div
-            role="alert"
-            style={{
-              padding: 'var(--space-2) var(--space-3)',
-              borderRadius: 'var(--radius-control)',
-              fontSize: 'var(--text-sm)',
-              marginBottom: 'var(--space-3)',
-              backgroundColor: '#fee4e2',
-              color: 'var(--color-danger)',
-              border: '1px solid var(--color-danger)',
-            }}
-          >
+          <p role="alert" className="alert ai-settings-note">
             Lỗi tải cài đặt:{' '}
             {(settingsError as Error)?.message || 'Không thể tải cấu hình AI từ máy chủ.'}
-          </div>
+          </p>
         )}
 
+        {/* Thông báo thành công dùng nền xanh, thông báo lỗi dùng nền đỏ nhạt. */}
         {feedback && (
-          <div
+          <p
             role="alert"
-            style={{
-              padding: 'var(--space-2) var(--space-3)',
-              borderRadius: 'var(--radius-control)',
-              fontSize: 'var(--text-sm)',
-              marginBottom: 'var(--space-3)',
-              backgroundColor: feedback.isError ? '#fee4e2' : 'var(--color-surface-muted)',
-              color: feedback.isError ? 'var(--color-danger)' : 'var(--color-success)',
-              border: `1px solid ${feedback.isError ? 'var(--color-danger)' : 'var(--color-success)'}`,
-            }}
+            className={
+              feedback.isError ? 'alert ai-settings-note' : 'alert alert-ok ai-settings-note'
+            }
           >
             {feedback.text}
-          </div>
+          </p>
         )}
 
         {isSettingsLoading ? (
-          <div>Đang tải cài đặt...</div>
+          <p role="status" className="empty-state">
+            Đang tải cài đặt...
+          </p>
         ) : (
           <form noValidate onSubmit={handleSaveSettings}>
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(min(220px, 100%), 1fr))',
-                gap: 'var(--space-3)',
-                marginBottom: 'var(--space-3)',
-              }}
-            >
-              <div>
-                <label
-                  htmlFor="ai-budget-usd"
-                  style={{
-                    display: 'block',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                    color: 'var(--color-ink)',
-                    marginBottom: 'var(--space-1)',
-                  }}
-                >
-                  Ngân sách tháng (USD)
-                </label>
+            <div className="form-grid form-grid-3">
+              <div className="field">
+                <label htmlFor="ai-budget-usd">Ngân sách tháng (USD)</label>
                 <input
                   id="ai-budget-usd"
                   type="number"
                   step="0.01"
                   min="0"
-                  disabled={!canManageSettings || isSubmitting || isSettingsError}
+                  disabled={isSettingsInputDisabled}
                   value={budgetInput}
                   onChange={(e) => setBudgetInput(e.target.value)}
-                  style={inputStyle}
                 />
               </div>
-              <div>
-                <label
-                  htmlFor="ai-limit-user"
-                  style={{
-                    display: 'block',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                    color: 'var(--color-ink)',
-                    marginBottom: 'var(--space-1)',
-                  }}
-                >
-                  Hạn mức chat ngày (User)
-                </label>
+              <div className="field">
+                <label htmlFor="ai-limit-user">Hạn mức chat ngày (User)</label>
                 <input
                   id="ai-limit-user"
                   type="number"
                   step="1"
                   min="1"
-                  disabled={!canManageSettings || isSubmitting || isSettingsError}
+                  disabled={isSettingsInputDisabled}
                   value={userLimitInput}
                   onChange={(e) => setUserLimitInput(e.target.value)}
-                  style={inputStyle}
                 />
               </div>
-              <div>
-                <label
-                  htmlFor="ai-limit-anon"
-                  style={{
-                    display: 'block',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                    color: 'var(--color-ink)',
-                    marginBottom: 'var(--space-1)',
-                  }}
-                >
-                  Hạn mức chat ngày (Khách)
-                </label>
+              <div className="field">
+                <label htmlFor="ai-limit-anon">Hạn mức chat ngày (Khách)</label>
                 <input
                   id="ai-limit-anon"
                   type="number"
                   step="1"
                   min="1"
-                  disabled={!canManageSettings || isSubmitting || isSettingsError}
+                  disabled={isSettingsInputDisabled}
                   value={anonLimitInput}
                   onChange={(e) => setAnonLimitInput(e.target.value)}
-                  style={inputStyle}
                 />
               </div>
             </div>
 
+            {/* Chỉ quyền ai-settings:manage mới thấy nút lưu. */}
             {canManageSettings && (
-              <button type="submit" disabled={isSaveDisabled} style={buttonStyle}>
+              <button type="submit" className="btn btn-primary" disabled={isSaveDisabled}>
                 {isSubmitting ? 'Đang lưu...' : 'Lưu cấu hình'}
               </button>
             )}
           </form>
         )}
-      </div>
+      </section>
 
       {/* Bộ lọc khoảng ngày theo giờ Việt Nam */}
-      <form
-        noValidate
-        onSubmit={handleFilterSubmit}
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 'var(--space-3)',
-          alignItems: 'center',
-          backgroundColor: 'var(--color-surface)',
-          padding: 'var(--space-3) var(--space-4)',
-          borderRadius: 'var(--radius-card)',
-          border: '1px solid var(--color-border)',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <label
-            htmlFor="ai-filter-start"
-            style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}
-          >
-            Từ ngày:
-          </label>
+      <form noValidate onSubmit={handleFilterSubmit} className="card filters-row ai-date-filter">
+        <div className="field">
+          <label htmlFor="ai-filter-start">Từ ngày</label>
           <input
             id="ai-filter-start"
             type="date"
             value={filterStartDate}
             onChange={(e) => setFilterStartDate(e.target.value)}
-            style={{
-              padding: 'var(--space-1) var(--space-2)',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--color-border)',
-              fontSize: 'var(--text-sm)',
-            }}
           />
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <label
-            htmlFor="ai-filter-end"
-            style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}
-          >
-            Đến ngày:
-          </label>
+        <div className="field">
+          <label htmlFor="ai-filter-end">Đến ngày</label>
           <input
             id="ai-filter-end"
             type="date"
             value={filterEndDate}
             onChange={(e) => setFilterEndDate(e.target.value)}
-            style={{
-              padding: 'var(--space-1) var(--space-2)',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--color-border)',
-              fontSize: 'var(--text-sm)',
-            }}
           />
         </div>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          style={{
-            ...buttonStyle,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer',
-            opacity: isSubmitting ? 0.6 : 1,
-          }}
-        >
-          Lọc
-        </button>
-        <button
-          type="button"
-          onClick={handleResetFilter}
-          style={{
-            padding: 'var(--space-2) var(--space-3)',
-            backgroundColor: 'transparent',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-            cursor: 'pointer',
-          }}
-        >
-          Đặt lại
-        </button>
+        <div className="head-actions">
+          <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
+            Lọc
+          </button>
+          <button type="button" className="btn" onClick={handleResetFilter}>
+            Đặt lại
+          </button>
+        </div>
       </form>
 
       {/* Bảng chi phí phân rã theo ngày và theo tính năng */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))',
-          gap: 'var(--space-4)',
-        }}
-      >
-        {/* Bảng theo ngày */}
-        <div style={cardStyle}>
-          <h2
-            style={{
-              fontSize: 'var(--text-md)',
-              fontWeight: 700,
-              color: 'var(--color-ink)',
-              margin: '0 0 var(--space-2) 0',
-            }}
-          >
-            Chi phí theo ngày
-          </h2>
-          {isUsageLoading ? (
-            <div>Đang nạp dữ liệu theo ngày...</div>
-          ) : isUsageError ? (
-            <div style={{ color: 'var(--color-danger)' }}>
-              Lỗi: {(usageError as Error)?.message}
-            </div>
-          ) : !usage?.byDay || usage.byDay.length === 0 ? (
-            <div style={{ color: 'var(--color-ink-muted)', fontSize: 'var(--text-sm)' }}>
-              Không có dữ liệu trong khoảng thời gian đã chọn.
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto', width: '100%' }}>
-              <table
-                style={{
-                  width: '100%',
-                  minWidth: '280px',
-                  borderCollapse: 'collapse',
-                  fontSize: 'var(--text-sm)',
-                }}
-              >
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
-                    <th
-                      scope="col"
-                      style={{ padding: 'var(--space-2)', color: 'var(--color-ink-muted)' }}
-                    >
-                      Ngày
-                    </th>
-                    <th
-                      scope="col"
-                      style={{ padding: 'var(--space-2)', color: 'var(--color-ink-muted)' }}
-                    >
-                      Lượt gọi
-                    </th>
-                    <th
-                      scope="col"
-                      style={{ padding: 'var(--space-2)', color: 'var(--color-ink-muted)' }}
-                    >
-                      Chi phí ước tính (USD)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usage.byDay.map((row) => (
-                    <tr key={row.day} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td style={{ padding: 'var(--space-2)', color: 'var(--color-ink)' }}>
-                        {row.day}
-                      </td>
-                      <td style={{ padding: 'var(--space-2)', color: 'var(--color-ink)' }}>
-                        {row.calls.toLocaleString('vi-VN')}
-                      </td>
-                      <td style={{ padding: 'var(--space-2)', color: 'var(--color-brand)' }}>
-                        ${row.costUsd.toFixed(4)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        {/* Bảng theo tính năng */}
-        <div style={cardStyle}>
-          <h2
-            style={{
-              fontSize: 'var(--text-md)',
-              fontWeight: 700,
-              color: 'var(--color-ink)',
-              margin: '0 0 var(--space-2) 0',
-            }}
-          >
-            Chi phí theo tính năng
-          </h2>
-          {isUsageLoading ? (
-            <div>Đang nạp dữ liệu theo tính năng...</div>
-          ) : isUsageError ? (
-            <div style={{ color: 'var(--color-danger)' }}>
-              Lỗi: {(usageError as Error)?.message}
-            </div>
-          ) : !usage?.byFeature || usage.byFeature.length === 0 ? (
-            <div style={{ color: 'var(--color-ink-muted)', fontSize: 'var(--text-sm)' }}>
-              Không có dữ liệu trong khoảng thời gian đã chọn.
-            </div>
-          ) : (
-            <div style={{ overflowX: 'auto', width: '100%' }}>
-              <table
-                style={{
-                  width: '100%',
-                  minWidth: '280px',
-                  borderCollapse: 'collapse',
-                  fontSize: 'var(--text-sm)',
-                }}
-              >
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--color-border)', textAlign: 'left' }}>
-                    <th
-                      scope="col"
-                      style={{ padding: 'var(--space-2)', color: 'var(--color-ink-muted)' }}
-                    >
-                      Tính năng
-                    </th>
-                    <th
-                      scope="col"
-                      style={{ padding: 'var(--space-2)', color: 'var(--color-ink-muted)' }}
-                    >
-                      Lượt gọi
-                    </th>
-                    <th
-                      scope="col"
-                      style={{ padding: 'var(--space-2)', color: 'var(--color-ink-muted)' }}
-                    >
-                      Chi phí ước tính (USD)
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usage.byFeature.map((row) => (
-                    <tr key={row.feature} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                      <td
-                        style={{
-                          padding: 'var(--space-2)',
-                          color: 'var(--color-ink)',
-                          fontFamily: 'monospace',
-                          fontSize: 'var(--text-xs)',
-                        }}
-                      >
-                        {row.feature}
-                      </td>
-                      <td style={{ padding: 'var(--space-2)', color: 'var(--color-ink)' }}>
-                        {row.calls.toLocaleString('vi-VN')}
-                      </td>
-                      <td style={{ padding: 'var(--space-2)', color: 'var(--color-brand)' }}>
-                        ${row.costUsd.toFixed(4)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
+      <div className="ai-usage-grid">
+        <UsageTable
+          title="Chi phí theo ngày"
+          firstColumn="Ngày"
+          loadingText="Đang nạp dữ liệu theo ngày..."
+          isLoading={isUsageLoading}
+          errorMessage={isUsageError ? (usageError as Error)?.message : undefined}
+          rows={(usage?.byDay ?? []).map((row) => ({ ...row, label: row.day }))}
+        />
+        <UsageTable
+          title="Chi phí theo tính năng"
+          firstColumn="Tính năng"
+          loadingText="Đang nạp dữ liệu theo tính năng..."
+          isLoading={isUsageLoading}
+          errorMessage={isUsageError ? (usageError as Error)?.message : undefined}
+          rows={(usage?.byFeature ?? []).map((row) => ({ ...row, label: row.feature }))}
+        />
       </div>
     </div>
+  );
+}
+
+interface UsageTableProps {
+  title: string;
+  firstColumn: string;
+  loadingText: string;
+  isLoading: boolean;
+  errorMessage?: string;
+  rows: (UsageGroupData & { label: string })[];
+}
+
+// Bảng chi phí dùng chung cho hai cách phân rã (theo ngày, theo tính năng), vì cùng cột và cùng trạng thái.
+function UsageTable({
+  title,
+  firstColumn,
+  loadingText,
+  isLoading,
+  errorMessage,
+  rows,
+}: UsageTableProps) {
+  return (
+    <section className="card card-flush">
+      <div className="card-head ai-usage-head">
+        <h2>{title}</h2>
+      </div>
+      {isLoading ? (
+        <p role="status" className="empty-state">
+          {loadingText}
+        </p>
+      ) : errorMessage !== undefined ? (
+        <p role="alert" className="alert ai-usage-alert">
+          Lỗi: {errorMessage}
+        </p>
+      ) : rows.length === 0 ? (
+        <p className="empty-state">Không có dữ liệu trong khoảng thời gian đã chọn.</p>
+      ) : (
+        <div className="table-wrap">
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th scope="col">{firstColumn}</th>
+                <th scope="col" className="num">
+                  Lượt gọi
+                </th>
+                <th scope="col" className="num">
+                  Chi phí ước tính (USD)
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.label}>
+                  <th scope="row" className="wrap-anywhere">
+                    {row.label}
+                  </th>
+                  <td className="num">{row.calls.toLocaleString('vi-VN')}</td>
+                  <td className="num">${row.costUsd.toFixed(4)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }

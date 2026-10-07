@@ -35,11 +35,11 @@ export function VariantTable({
   }
 
   return (
-    <section className="product-section">
+    <section className="card product-section">
       <h2>Biến thể</h2>
       <p>Tồn kho chỉ xem. Điều chỉnh tồn kho ở màn tồn kho với lý do và nhật ký.</p>
-      <div className="product-table-scroll">
-        <table className="product-table">
+      <div className="table-wrap product-table-scroll">
+        <table className="tbl product-table">
           <thead>
             <tr>
               <th scope="col">Tổ hợp</th>
@@ -93,7 +93,7 @@ export function VariantTable({
                       }}
                     />
                     {priceError && (
-                      <span id={priceErrorId} className="product-error">
+                      <span id={priceErrorId} className="form-error">
                         {priceError}
                       </span>
                     )}
@@ -101,7 +101,7 @@ export function VariantTable({
                   {/* Tồn kho chỉ đọc vì chỉnh tồn phải qua nghiệp vụ ghi nhận lý do. */}
                   <td>{variant.stock ?? 0}</td>
                   <td>
-                    <label className="product-check">
+                    <label className="check">
                       <input
                         type="checkbox"
                         aria-label={`Bật ${combinationName}`}

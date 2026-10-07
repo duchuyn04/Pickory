@@ -1,4 +1,4 @@
-import React from 'react';
+import './permission-grid.css';
 
 // Một quyền như server gửi qua GET /api/admin/permissions.
 export interface PermissionItem {
@@ -65,95 +65,37 @@ export function PermissionGrid({ permissions, selected, onChange, disabled }: Pe
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--space-5)',
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
+    <div className="permission-grid">
       {Object.entries(grouped).map(([groupKey, items]) => {
         const groupLabel = MODULE_GROUP_NAMES[groupKey] || groupKey;
         const allSelected = items.every((i) => selected.includes(i.id));
 
         return (
-          <div
-            key={groupKey}
-            style={{
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-control)',
-              overflow: 'hidden',
-              backgroundColor: 'var(--color-surface)',
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: 'var(--color-surface-muted)',
-                padding: 'var(--space-2) var(--space-4)',
-                borderBottom: '1px solid var(--color-border)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
-              <span
-                style={{ fontWeight: 600, fontSize: 'var(--text-sm)', color: 'var(--color-ink)' }}
-              >
-                {groupLabel}
-              </span>
+          <div key={groupKey} className="permission-group">
+            <div className="permission-group-head">
+              <span>{groupLabel}</span>
               {!disabled && (
-                <button
-                  type="button"
-                  onClick={() => toggleGroup(items)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--color-brand)',
-                    fontSize: 'var(--text-xs)',
-                    cursor: 'pointer',
-                    fontWeight: 600,
-                  }}
-                >
+                <button type="button" className="link-btn" onClick={() => toggleGroup(items)}>
                   {allSelected ? 'Bỏ chọn nhóm' : 'Chọn tất cả nhóm'}
                 </button>
               )}
             </div>
 
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))',
-                gap: 'var(--space-3)',
-                padding: 'var(--space-4)',
-              }}
-            >
+            <div className="permission-group-items">
               {items.map((item) => {
                 const isChecked = selected.includes(item.id);
                 return (
-                  <label
-                    key={item.id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 'var(--space-2)',
-                      cursor: disabled ? 'default' : 'pointer',
-                      fontSize: 'var(--text-sm)',
-                    }}
-                  >
+                  <label key={item.id} className="check permission-item">
                     <input
                       type="checkbox"
                       disabled={disabled}
                       checked={isChecked}
                       onChange={() => togglePermission(item.id)}
-                      style={{ marginTop: '2px', accentColor: 'var(--color-brand)' }}
                     />
-                    <div>
-                      <div style={{ fontWeight: 500, color: 'var(--color-ink)' }}>{item.name}</div>
-                      <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
-                        {item.description}
-                      </div>
-                    </div>
+                    <span>
+                      <span className="permission-name">{item.name}</span>
+                      <span className="cell-sub">{item.description}</span>
+                    </span>
                   </label>
                 );
               })}

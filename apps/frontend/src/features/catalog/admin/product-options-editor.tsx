@@ -18,12 +18,12 @@ export function ProductOptionsEditor({ options, disabled, onChange }: ProductOpt
   }
 
   return (
-    <div className="product-section">
+    <div className="card product-section">
       <h2>Tùy chọn</h2>
       <p>Thêm tối đa {MAX_AXES} trục. Phân cách các giá trị bằng dấu phẩy.</p>
       {options.map((option, index) => (
         <div className="product-option" key={index}>
-          <div className="product-field">
+          <div className="field">
             <label htmlFor={`option-name-${index}`}>Tên trục {index + 1}</label>
             <input
               id={`option-name-${index}`}
@@ -33,7 +33,7 @@ export function ProductOptionsEditor({ options, disabled, onChange }: ProductOpt
               onChange={(event) => changeOption(index, { ...option, name: event.target.value })}
             />
           </div>
-          <div className="product-field">
+          <div className="field">
             <label htmlFor={`option-values-${index}`}>Giá trị trục {index + 1}</label>
             <input
               id={`option-values-${index}`}
@@ -56,7 +56,7 @@ export function ProductOptionsEditor({ options, disabled, onChange }: ProductOpt
           {!disabled && (
             <button
               type="button"
-              className="product-button-secondary"
+              className="btn"
               onClick={() => {
                 // Dịch bản nháp cùng trục còn lại để không gắn giá trị cũ sang ô khác.
                 setValueDrafts((current) => current.filter((_, position) => position !== index));
@@ -72,7 +72,7 @@ export function ProductOptionsEditor({ options, disabled, onChange }: ProductOpt
       {!disabled && options.length < MAX_AXES && (
         <button
           name="add-option"
-          className="product-button-secondary"
+          className="btn"
           type="button"
           onClick={() => onChange([...options, { name: '', values: [''] }])}
         >

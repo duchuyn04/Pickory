@@ -1,21 +1,182 @@
 /*
- * Khối bao danh sách của trang danh mục và trang thương hiệu.
- * Inline style không viết được @media, nên viền và padding của khối nằm ở file này.
+ * Kiểu riêng của màn danh mục, thương hiệu và trình sửa thuộc tính.
+ * Nút, ô nhập, thẻ và bảng dùng lớp chung trong `components.css`.
  */
+
+/* Khối bao cây danh mục là thẻ trắng ở màn rộng. */
 .catalog-admin-list {
   padding: var(--space-4);
-  background-color: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
+  background-color: var(--color-surface);
+}
+
+.category-tree {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.category-node {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+/* Dòng danh mục gốc có nền xám để tách khỏi danh mục con bên dưới. */
+.category-node-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface-muted);
+}
+
+/* Đường kẻ chỉ xuất hiện khi có danh mục con nằm dưới dòng gốc. */
+.category-node-head:not(:last-child) {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.category-node-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.category-children {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+}
+
+.category-child {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+/* Thứ tự hiển thị là số ngắn, ô rộng hết dòng làm form khó đọc. */
+.category-position-input {
+  max-width: 140px;
+}
+
+.category-attributes {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Cột thao tác canh phải và giữ hai nút trên một hàng, để dòng thương hiệu không cao gấp đôi trên điện thoại. */
+.catalog-row-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
+.attribute-inherited {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+}
+
+.attribute-inherited-title {
+  margin: 0 0 var(--space-2);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.attribute-inherited-item {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+}
+
+.attribute-inherited-meta {
+  margin-left: var(--space-2);
+}
+
+.attribute-own-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.attribute-own-head h3 {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.attribute-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+/* Cột tối thiểu 130px nhưng không vượt 100%, để hộp thoại hẹp còn một cột và không tràn ngang. */
+.attribute-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr));
+  gap: var(--space-2);
+  align-items: start;
+}
+
+/* Lưới đã có khoảng cách, nên ô nhập trong lưới bỏ lề dưới mặc định của `.field`. */
+.attribute-grid .field,
+.attribute-options .field {
+  margin-bottom: 0;
+}
+
+.attribute-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: center;
+}
+
+.attribute-options {
+  flex: 1 1 100%;
+  min-width: 0;
+}
+
+.attribute-card-foot {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* Cùng breakpoint với `admin-layout.css`. */
 @media (max-width: 767px) {
-  /* Mỗi thẻ đã có viền riêng. Bỏ viền và padding của khối bao để thẻ con còn đủ chiều rộng. */
+  /* Mỗi nhánh đã có viền riêng. Bỏ viền và padding của khối bao để thẻ con còn đủ chiều rộng. */
   .catalog-admin-list {
     padding: 0;
-    background-color: transparent;
     border: none;
     border-radius: 0;
+    background-color: transparent;
+  }
+
+  .category-children {
+    padding: var(--space-2);
   }
 }

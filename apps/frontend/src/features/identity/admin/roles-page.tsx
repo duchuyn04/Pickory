@@ -1,9 +1,11 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { useCan } from '../hooks/use-actor';
 import type { PermissionItem } from '../components/permission-grid';
 import { RoleForm, type RoleData } from '../components/role-form';
+import './identity-admin.css';
 
 // Role khi đã tạo thì có id, kèm số người đang giữ để biết role nào xóa được.
 interface RoleRow extends RoleData {
@@ -47,20 +49,7 @@ export function RolesPage() {
 
   // Hook ở trên phải chạy hết trước lệnh return sớm này; backend vẫn chặn mọi request thật sự.
   if (!canManageRoles) {
-    return (
-      <div
-        style={{
-          padding: 'var(--space-6)',
-          backgroundColor: 'var(--color-surface)',
-          borderRadius: 'var(--radius-card)',
-        }}
-      >
-        <h2 style={{ color: 'var(--color-danger)', margin: 0 }}>403 - Không có quyền truy cập</h2>
-        <p style={{ color: 'var(--color-ink-muted)' }}>
-          Bạn cần quyền <code>roles:manage</code> để quản lý vai trò và phân quyền.
-        </p>
-      </div>
-    );
+    return <ForbiddenNotice permission="roles:manage" subject="vai trò và phân quyền" />;
   }
 
   // Không bắt lỗi ở đây: RoleForm bắt và hiện lỗi trong hộp thoại, để người dùng sửa rồi lưu lại.
@@ -108,45 +97,18 @@ export function RolesPage() {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--space-6)',
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1
-            style={{
-              fontSize: 'var(--text-xl)',
-              fontWeight: 700,
-              margin: '0 0 var(--space-1) 0',
-              color: 'var(--color-ink)',
-            }}
-          >
-            Quản lý Role & Phân quyền
-          </h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', margin: 0 }}>
-            Tạo role mới và thiết lập quyền hạn cho từng nhóm nhân viên trong back-office.
-          </p>
+    <div className="page">
+      <div className="page-head">
+        <div className="page-head-text">
+          <h1>Quản lý Role &amp; Phân quyền</h1>
+          <p>Tạo role mới và thiết lập quyền hạn cho từng nhóm nhân viên trong back-office.</p>
         </div>
         <button
           type="button"
+          className="btn btn-primary"
           onClick={() => {
             setEditingRole(null);
             setFormOpen(true);
-          }}
-          style={{
-            backgroundColor: 'var(--color-brand)',
-            color: '#ffffff',
-            border: 'none',
-            padding: 'var(--space-2) var(--space-4)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 600,
-            cursor: 'pointer',
           }}
         >
           + Thêm role mới
@@ -154,270 +116,108 @@ export function RolesPage() {
       </div>
 
       {actionError && (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: '#fee4e2',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            padding: 'var(--space-3)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
+        <p role="alert" className="alert">
           {actionError}
-        </div>
+        </p>
       )}
 
       {permissionsIsError && (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: '#fee4e2',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            padding: 'var(--space-3)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
+        <p role="alert" className="alert">
           {permissionsError instanceof Error
             ? permissionsError.message
             : 'Tải danh sách quyền hạn thất bại.'}
-        </div>
+        </p>
       )}
 
       {rolesLoading ? (
-        <div>Đang nạp danh sách role...</div>
+        <p role="status" className="empty-state">
+          Đang nạp danh sách role...
+        </p>
       ) : rolesIsError ? (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: '#fee4e2',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            padding: 'var(--space-4)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
+        <p role="alert" className="alert">
           {rolesError instanceof Error ? rolesError.message : 'Tải danh sách vai trò thất bại.'}
-        </div>
+        </p>
       ) : (
-        <div
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--radius-card)',
-            border: '1px solid var(--color-border)',
-            overflow: 'hidden',
-          }}
-        >
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr
-                style={{
-                  backgroundColor: 'var(--color-surface-muted)',
-                  borderBottom: '1px solid var(--color-border)',
-                }}
-              >
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Mã Role
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Tên hiển thị
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Loại
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Số quyền
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Số người giữ
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                    textAlign: 'right',
-                  }}
-                >
-                  Thao tác
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {roles.length > 0 ? (
-                roles.map((role) => (
-                  <tr key={role.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      {role.code}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {role.name}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-xs)',
-                      }}
-                    >
-                      {role.isSystem ? (
-                        <span
-                          style={{
-                            backgroundColor: '#fef3f2',
-                            color: '#b42318',
-                            padding: '2px 8px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Hệ thống (Khóa)
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            backgroundColor: '#ecfdf3',
-                            color: '#027a48',
-                            padding: '2px 8px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Tùy chỉnh
-                        </span>
-                      )}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                      }}
-                    >
-                      {role.code === 'admin'
-                        ? 'Tất cả (ngầm định)'
-                        : `${role.permissions.length} quyền`}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                      }}
-                    >
-                      {role.userCount} người
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                        textAlign: 'right',
-                      }}
-                    >
-                      {role.isSystem ? (
-                        <span
-                          style={{ color: 'var(--color-ink-muted)', fontSize: 'var(--text-xs)' }}
-                        >
-                          Cố định (hệ thống)
-                        </span>
-                      ) : (
-                        <div style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setEditingRole(role);
-                              setFormOpen(true);
-                            }}
-                            style={{
-                              background: 'none',
-                              border: '1px solid var(--color-border)',
-                              borderRadius: 'var(--radius-control)',
-                              padding: '4px 8px',
-                              cursor: 'pointer',
-                              fontSize: 'var(--text-xs)',
-                            }}
-                          >
-                            Sửa
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteRole(role)}
-                            style={{
-                              background: 'none',
-                              border: '1px solid var(--color-danger)',
-                              color: 'var(--color-danger)',
-                              borderRadius: 'var(--radius-control)',
-                              padding: '4px 8px',
-                              cursor: 'pointer',
-                              fontSize: 'var(--text-xs)',
-                            }}
-                          >
-                            Xóa
-                          </button>
-                        </div>
-                      )}
+        <section className="card card-flush">
+          <div className="table-wrap">
+            <table className="tbl identity-table">
+              <thead>
+                <tr>
+                  <th scope="col">Role</th>
+                  <th scope="col">Loại</th>
+                  <th scope="col" className="num">
+                    Số quyền
+                  </th>
+                  <th scope="col" className="num">
+                    Số người giữ
+                  </th>
+                  <th scope="col" className="num">
+                    Thao tác
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {roles.length > 0 ? (
+                  roles.map((role) => (
+                    <tr key={role.id}>
+                      <th scope="row">
+                        {role.name}
+                        <span className="cell-sub mono">{role.code}</span>
+                      </th>
+                      <td>
+                        {role.isSystem ? (
+                          <span className="badge badge-info">Hệ thống (Khóa)</span>
+                        ) : (
+                          <span className="badge">Tùy chỉnh</span>
+                        )}
+                      </td>
+                      <td className="num">
+                        {role.code === 'admin'
+                          ? 'Tất cả (ngầm định)'
+                          : `${role.permissions.length} quyền`}
+                      </td>
+                      <td className="num">{role.userCount} người</td>
+                      <td className="num">
+                        {/* Role hệ thống không sửa hay xóa được, nên chỉ hiện chữ thay cho nút. */}
+                        {role.isSystem ? (
+                          <span className="muted small">Cố định (hệ thống)</span>
+                        ) : (
+                          <div className="row-actions identity-row-actions">
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              aria-label={`Sửa role ${role.name}`}
+                              onClick={() => {
+                                setEditingRole(role);
+                                setFormOpen(true);
+                              }}
+                            >
+                              Sửa
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              aria-label={`Xóa role ${role.name}`}
+                              onClick={() => handleDeleteRole(role)}
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="empty-state">
+                      Chưa có vai trò nào trong hệ thống.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={6}
-                    style={{
-                      padding: 'var(--space-6)',
-                      textAlign: 'center',
-                      color: 'var(--color-ink-muted)',
-                    }}
-                  >
-                    Chưa có vai trò nào trong hệ thống.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
       {formOpen && (

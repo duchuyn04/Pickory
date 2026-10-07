@@ -1,13 +1,14 @@
-/* Kiểu nền áp cho toàn trang, chỉ dùng token trong tokens.css. */
+/* Kiểu nền áp cho toàn trang, chỉ dùng token trong `tokens.css`. */
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
+/* Nền trang xám để thẻ trắng nổi lên mà không cần đổ bóng đậm. */
 body {
   margin: 0;
-  background: var(--color-surface);
+  background: var(--color-page);
   color: var(--color-ink);
   font-family: var(--font-sans);
   font-size: var(--text-md);
@@ -24,8 +25,8 @@ a {
   color: inherit;
 }
 
-/* Viền focus rõ cho người dùng bàn phím. */
+/* Viền focus màu xanh để người dùng bàn phím phân biệt được với nút đỏ và viền lỗi. */
 :focus-visible {
-  outline: 2px solid var(--color-brand);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
 }

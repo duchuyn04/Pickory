@@ -10,6 +10,7 @@ import { UndoRedo } from '@tiptap/extensions';
 import { EditorContent, useEditor } from '@tiptap/react';
 import { descriptionSchema, type DescriptionDoc } from '../../../shared/catalog/description-schema';
 import { DescriptionToolbar } from './description-toolbar';
+import './description-editor.css';
 
 export interface DescriptionEditorProps {
   // Dữ liệu tài liệu JSON đã lưu theo cấu trúc của CAT-13.
@@ -68,8 +69,7 @@ export function DescriptionEditor({
         'aria-label': label,
         'aria-invalid': validationError ? 'true' : 'false',
         ...(validationError ? { 'aria-describedby': errorId } : {}),
-        style:
-          'min-height: 160px; padding: var(--space-3); font-size: var(--text-sm); font-family: var(--font-sans); color: var(--color-ink); outline: none; max-width: 100%; overflow-x: hidden; word-break: break-word;',
+        class: 'description-editor-content',
       },
     },
     onUpdate: ({ editor: currentEditor }) => {
@@ -175,43 +175,23 @@ export function DescriptionEditor({
     }
   }, [editor, validationError, errorId]);
 
+  // Lỗi ưu tiên hơn focus, để người dùng thấy viền lỗi cả khi đang gõ trong ô.
+  const frameState = validationError ? 'error' : isFocused ? 'focused' : 'idle';
+
   return (
-    <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box' }}>
+    <div className="description-editor">
       <div
         data-testid="description-editor-wrapper"
-        style={{
-          width: '100%',
-          maxWidth: '100%',
-          boxSizing: 'border-box',
-          overflow: 'hidden',
-          borderRadius: 'var(--radius-control)',
-          borderWidth: '1px',
-          borderStyle: 'solid',
-          borderColor: validationError
-            ? 'var(--color-danger)'
-            : isFocused
-              ? 'var(--color-brand)'
-              : 'var(--color-border)',
-          boxShadow: !validationError && isFocused ? '0 0 0 1px var(--color-brand)' : undefined,
-          backgroundColor: disabled ? 'var(--color-surface-muted)' : 'var(--color-surface)',
-          fontFamily: 'var(--font-sans)',
-        }}
+        className="description-editor-frame"
+        data-state={frameState}
+        data-disabled={disabled}
       >
         <DescriptionToolbar editor={editor} disabled={disabled} />
         <EditorContent editor={editor} />
       </div>
 
       {validationError && (
-        <div
-          id={errorId}
-          role="alert"
-          style={{
-            marginTop: 'var(--space-1)',
-            fontSize: 'var(--text-xs)',
-            color: 'var(--color-danger)',
-            fontFamily: 'var(--font-sans)',
-          }}
-        >
+        <div id={errorId} role="alert" className="form-error description-editor-error">
           {validationError}
         </div>
       )}

@@ -1,10 +1,12 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { useCan } from '../hooks/use-actor';
 import { AssignRolesDialog, type StaffRow } from '../components/assign-roles-dialog';
 import { InviteDialog } from '../components/invite-dialog';
 import type { RoleData } from '../components/role-form';
+import './identity-admin.css';
 
 // Trang quản lý nhân viên: xem danh sách, mời, đổi role, khóa và mở khóa.
 export function StaffPage() {
@@ -44,20 +46,7 @@ export function StaffPage() {
 
   // Hook ở trên phải chạy hết trước lệnh return sớm này; backend vẫn chặn mọi request thật sự.
   if (!canReadStaff) {
-    return (
-      <div
-        style={{
-          padding: 'var(--space-6)',
-          backgroundColor: 'var(--color-surface)',
-          borderRadius: 'var(--radius-card)',
-        }}
-      >
-        <h2 style={{ color: 'var(--color-danger)', margin: 0 }}>403 - Không có quyền truy cập</h2>
-        <p style={{ color: 'var(--color-ink-muted)' }}>
-          Bạn cần quyền <code>staff:read</code> để xem danh sách nhân viên.
-        </p>
-      </div>
-    );
+    return <ForbiddenNotice permission="staff:read" subject="danh sách nhân viên" />;
   }
 
   // Một nút dùng cho cả khóa và mở khóa, tùy trạng thái hiện tại của nhân viên.
@@ -90,309 +79,120 @@ export function StaffPage() {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--space-6)',
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-          <h1
-            style={{
-              fontSize: 'var(--text-xl)',
-              fontWeight: 700,
-              margin: '0 0 var(--space-1) 0',
-              color: 'var(--color-ink)',
-            }}
-          >
-            Quản lý Nhân viên
-          </h1>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', margin: 0 }}>
+    <div className="page">
+      <div className="page-head">
+        <div className="page-head-text">
+          <h1>Quản lý Nhân viên</h1>
+          <p>
             Danh sách nhân viên, phân quyền vai trò và quản lý trạng thái tài khoản back-office.
           </p>
         </div>
+        {/* Chỉ quyền staff:manage được mời nhân viên mới. */}
         {canManageStaff && (
-          <button
-            type="button"
-            onClick={() => setInviteOpen(true)}
-            style={{
-              backgroundColor: 'var(--color-brand)',
-              color: '#ffffff',
-              border: 'none',
-              padding: 'var(--space-2) var(--space-4)',
-              borderRadius: 'var(--radius-control)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
+          <button type="button" className="btn btn-primary" onClick={() => setInviteOpen(true)}>
             + Mời nhân viên
           </button>
         )}
       </div>
 
       {actionError && (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: '#fee4e2',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            padding: 'var(--space-3)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
+        <p role="alert" className="alert">
           {actionError}
-        </div>
+        </p>
       )}
 
       {rolesIsError && (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: '#fee4e2',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            padding: 'var(--space-3)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
+        <p role="alert" className="alert">
           {rolesError instanceof Error ? rolesError.message : 'Tải danh sách vai trò thất bại.'}
-        </div>
+        </p>
       )}
 
       {staffLoading ? (
-        <div>Đang nạp danh sách nhân viên...</div>
+        <p role="status" className="empty-state">
+          Đang nạp danh sách nhân viên...
+        </p>
       ) : staffIsError ? (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: '#fee4e2',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            padding: 'var(--space-4)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
+        <p role="alert" className="alert">
           {staffError instanceof Error ? staffError.message : 'Tải danh sách nhân viên thất bại.'}
-        </div>
+        </p>
       ) : (
-        <div
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--radius-card)',
-            border: '1px solid var(--color-border)',
-            overflow: 'hidden',
-          }}
-        >
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr
-                style={{
-                  backgroundColor: 'var(--color-surface-muted)',
-                  borderBottom: '1px solid var(--color-border)',
-                }}
-              >
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Họ và tên
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Email
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Vai trò
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Trạng thái
-                </th>
-                {canManageStaff && (
-                  <th
-                    style={{
-                      padding: 'var(--space-3) var(--space-4)',
-                      fontSize: 'var(--text-xs)',
-                      fontWeight: 600,
-                      textAlign: 'right',
-                    }}
-                  >
-                    Thao tác
-                  </th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {staffList.length > 0 ? (
-                staffList.map((staff) => (
-                  <tr key={staff.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {staff.name || 'Chưa có'}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                      }}
-                    >
-                      {staff.email}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                      }}
-                    >
-                      <div style={{ display: 'flex', gap: 'var(--space-1)', flexWrap: 'wrap' }}>
-                        {staff.roles.map((r) => (
-                          <span
-                            key={r}
-                            style={{
-                              backgroundColor:
-                                r === 'admin' ? '#fef3f2' : 'var(--color-surface-muted)',
-                              color: r === 'admin' ? '#b42318' : 'var(--color-ink)',
-                              border: '1px solid var(--color-border)',
-                              padding: '1px 6px',
-                              borderRadius: 'var(--radius-pill)',
-                              fontSize: 'var(--text-xs)',
-                              fontWeight: 500,
-                            }}
-                          >
-                            {r}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-xs)',
-                      }}
-                    >
-                      {staff.lockedAt ? (
-                        <span
-                          style={{
-                            backgroundColor: '#fef3f2',
-                            color: '#b42318',
-                            padding: '2px 8px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Đã khóa
-                        </span>
-                      ) : (
-                        <span
-                          style={{
-                            backgroundColor: '#ecfdf3',
-                            color: '#027a48',
-                            padding: '2px 8px',
-                            borderRadius: 'var(--radius-pill)',
-                            fontWeight: 600,
-                          }}
-                        >
-                          Hoạt động
-                        </span>
-                      )}
-                    </td>
-                    {canManageStaff && (
-                      <td
-                        style={{
-                          padding: 'var(--space-3) var(--space-4)',
-                          fontSize: 'var(--text-sm)',
-                          textAlign: 'right',
-                        }}
-                      >
-                        <div style={{ display: 'inline-flex', gap: 'var(--space-2)' }}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedStaff(staff)}
-                            style={{
-                              background: 'none',
-                              border: '1px solid var(--color-border)',
-                              borderRadius: 'var(--radius-control)',
-                              padding: '4px 8px',
-                              cursor: 'pointer',
-                              fontSize: 'var(--text-xs)',
-                            }}
-                          >
-                            Gán vai trò
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleToggleLock(staff)}
-                            style={{
-                              background: 'none',
-                              border: '1px solid',
-                              borderColor: staff.lockedAt
-                                ? 'var(--color-success)'
-                                : 'var(--color-danger)',
-                              color: staff.lockedAt
-                                ? 'var(--color-success)'
-                                : 'var(--color-danger)',
-                              borderRadius: 'var(--radius-control)',
-                              padding: '4px 8px',
-                              cursor: 'pointer',
-                              fontSize: 'var(--text-xs)',
-                            }}
-                          >
-                            {staff.lockedAt ? 'Mở khóa' : 'Khóa'}
-                          </button>
+        <section className="card card-flush">
+          <div className="table-wrap">
+            <table className="tbl identity-table">
+              <thead>
+                <tr>
+                  <th scope="col">Nhân viên</th>
+                  <th scope="col">Vai trò</th>
+                  <th scope="col">Trạng thái</th>
+                  {canManageStaff && (
+                    <th scope="col" className="num">
+                      Thao tác
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody>
+                {staffList.length > 0 ? (
+                  staffList.map((staff) => (
+                    <tr key={staff.id}>
+                      <th scope="row">
+                        {staff.name || 'Chưa có tên'}
+                        <span className="cell-sub wrap-anywhere">{staff.email}</span>
+                      </th>
+                      <td>
+                        <div className="row-actions">
+                          {/* Role admin dùng badge đỏ vì có mọi quyền, cần nổi bật khi rà soát. */}
+                          {staff.roles.map((role) => (
+                            <span
+                              key={role}
+                              className={role === 'admin' ? 'badge badge-bad' : 'badge'}
+                            >
+                              {role}
+                            </span>
+                          ))}
                         </div>
                       </td>
-                    )}
+                      <td>
+                        {staff.lockedAt ? (
+                          <span className="badge badge-bad">Đã khóa</span>
+                        ) : (
+                          <span className="badge badge-ok">Hoạt động</span>
+                        )}
+                      </td>
+                      {canManageStaff && (
+                        <td className="num">
+                          <div className="row-actions identity-row-actions">
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              onClick={() => setSelectedStaff(staff)}
+                            >
+                              Gán vai trò
+                            </button>
+                            {/* Nút khóa dùng màu nguy hiểm; nút mở khóa là thao tác thường. */}
+                            <button
+                              type="button"
+                              className={staff.lockedAt ? 'btn btn-sm' : 'btn btn-sm btn-danger'}
+                              onClick={() => handleToggleLock(staff)}
+                            >
+                              {staff.lockedAt ? 'Mở khóa' : 'Khóa'}
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={canManageStaff ? 4 : 3} className="empty-state">
+                      Chưa có nhân viên nào trong hệ thống.
+                    </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={canManageStaff ? 5 : 4}
-                    style={{
-                      padding: 'var(--space-6)',
-                      textAlign: 'center',
-                      color: 'var(--color-ink-muted)',
-                    }}
-                  >
-                    Chưa có nhân viên nào trong hệ thống.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       )}
 
       {inviteOpen && (

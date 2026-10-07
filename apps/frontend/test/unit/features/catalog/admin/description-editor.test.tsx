@@ -248,7 +248,7 @@ describe('DescriptionEditor', () => {
     expect(latestDoc).not.toBeNull();
   });
 
-  it('nút đang bật khác nút đang tắt ở cả màu nền và viền, và dùng CSS variable', async () => {
+  it('nút định dạng dùng lớp chung và đổi `aria-pressed` khi bật, để CSS tô trạng thái bật', async () => {
     // Tuân thủ quy chuẩn thiết kế không dùng Tailwind và thể hiện rõ trạng thái active.
     let editorInstance: Editor | null = null;
 
@@ -272,8 +272,9 @@ describe('DescriptionEditor', () => {
     );
     expect(boldButton).toBeDefined();
 
-    const inactiveBg = boldButton?.style.backgroundColor;
-    const inactiveBorder = boldButton?.style.border || boldButton?.style.borderColor;
+    // Nút định dạng dùng lớp chung; CSS tô trạng thái bật theo `aria-pressed`.
+    expect(boldButton?.classList.contains('editor-tool')).toBe(true);
+    expect(boldButton?.getAttribute('aria-pressed')).toBe('false');
 
     await act(async () => {
       editor.commands.setContent('<p>Nội dung</p>');
@@ -281,11 +282,7 @@ describe('DescriptionEditor', () => {
       boldButton?.click();
     });
 
-    const activeBg = boldButton?.style.backgroundColor;
-    const activeBorder = boldButton?.style.border || boldButton?.style.borderColor;
-
-    expect(activeBg).not.toBe(inactiveBg);
-    expect(activeBorder).not.toBe(inactiveBorder);
+    expect(boldButton?.getAttribute('aria-pressed')).toBe('true');
   });
 
   it('thanh công cụ tuân thủ mẫu ARIA toolbar với roving tabindex và phím điều hướng', async () => {
@@ -552,7 +549,7 @@ describe('DescriptionEditor', () => {
     expect(parseResult.success).toBe(true);
   });
 
-  it('focus vào editor thì khung bao ngoài đổi viền sang màu brand, blur thì trở lại viền thường, và khi có lỗi thì viền đỏ chiếm ưu tiên', async () => {
+  it('focus vào editor thì khung chuyển sang trạng thái focus, blur thì trở lại, và trạng thái lỗi chiếm ưu tiên', async () => {
     // Đảm bảo hiển thị vòng nét tiêu điểm trực quan theo tiêu chuẩn tiếp cận WCAG 2.4.7.
     let editorInstance: Editor | null = null;
 
@@ -576,15 +573,15 @@ describe('DescriptionEditor', () => {
     expect(getWrapper()).not.toBeNull();
 
     // Kiểm tra trạng thái bình thường chưa nhận tiêu điểm.
-    expect(getWrapper()?.style.borderColor).toBe('var(--color-border)');
+    expect(getWrapper()?.dataset.state).toBe('idle');
 
-    // Focus vào editor để kích hoạt viền màu thương hiệu.
+    // Focus vào editor để chuyển khung sang trạng thái focus.
     await act(async () => {
       editor.commands.focus();
       await new Promise((r) => setTimeout(r, 20));
     });
 
-    expect(getWrapper()?.style.borderColor).toBe('var(--color-brand)');
+    expect(getWrapper()?.dataset.state).toBe('focused');
 
     // Blur khỏi editor để đưa viền về trạng thái thông thường.
     await act(async () => {
@@ -592,16 +589,18 @@ describe('DescriptionEditor', () => {
       await new Promise((r) => setTimeout(r, 20));
     });
 
-    expect(getWrapper()?.style.borderColor).toBe('var(--color-border)');
+    expect(getWrapper()?.dataset.state).toBe('idle');
 
     // Khi có lỗi xác thực, viền màu đỏ cảnh báo phải có độ ưu tiên cao hơn viền focus.
     const longText = 'x'.repeat(DESCRIPTION_MAX_TEXT_LENGTH + 5);
     await act(async () => {
       editor.commands.setContent(`<p>${longText}</p>`);
       editor.commands.focus();
+      // Chờ sự kiện focus như các bước trên, để test thật sự kiểm lỗi thắng focus.
+      await new Promise((r) => setTimeout(r, 20));
     });
 
-    expect(getWrapper()?.style.borderColor).toBe('var(--color-danger)');
+    expect(getWrapper()?.dataset.state).toBe('error');
   });
 
   it('editor mới mở thì hai nút Hoàn tác và Làm lại bị tắt, gõ chữ thì Hoàn tác bật, hoàn tác xong thì Làm lại bật', async () => {

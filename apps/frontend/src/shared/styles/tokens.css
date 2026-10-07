@@ -1,28 +1,64 @@
 /*
  * Design token của Pickory. Nguồn và lý do từng giá trị: docs/design/design-system.md.
+ * Giá trị lấy từ bản mẫu `shop-retail/assets/css/admin.css` và `store.css`.
  * Component chỉ dùng biến ở đây, không viết màu hoặc cỡ chữ cứng.
  */
 :root {
-  /* Màu: cam ấm làm màu thương hiệu (đo từ Klook #EC6436), nền kem và cát cho khối nhấn */
-  --color-brand: #ec6436;
-  --color-brand-hover: #d4521f;
-  --color-brand-soft: #fdece4;
-  --color-sand: #f6dda8;
-  --color-sand-soft: #fbeed3;
-  --color-ink: #1f1a17;
-  --color-ink-muted: #7a6e65;
+  /* Thương hiệu: đỏ bán lẻ điện tử cho nút chính, mục đang chọn, giá và khuyến mãi. */
+  --color-brand: #d70018;
+  --color-brand-hover: #bd0015;
+  --color-brand-soft: #fbe6e8;
+  --color-on-brand: #ffffff;
+  --color-header-soft: #dd2438;
+  --color-price: #d70018;
+
+  /* Nền: trang xám nhạt, thẻ trắng, khối phụ xám rất nhạt. */
+  --color-page: #f4f5f7;
   --color-surface: #ffffff;
-  --color-surface-muted: #fcf8e7;
-  --color-border: #ece4d8;
-  --color-star: #f5a524;
-  --color-info: #1d6fe0;
-  --color-success: #127a43;
-  --color-warning: #93530a;
+  --color-surface-muted: #f6f7f9;
+  --color-surface-hover: #f7f9fc;
+  --color-table-head: #fafbfc;
+  --color-dark: #14171c;
+  --color-on-dark: #ffffff;
+
+  /* Chữ: chính, phụ và chữ của badge trung tính. */
+  --color-ink: #1b1f24;
+  --color-ink-muted: #5b6470;
+  --color-ink-secondary: #3f4650;
+
+  /* Viền: thẻ, ô nhập và đường kẻ dòng trong bảng. */
+  --color-border: #e3e6ea;
+  --color-border-strong: #d5d9df;
+  --color-border-subtle: #f0f1f3;
+  --color-neutral-soft: #eef0f3;
+
+  /* Tương tác: viền focus và link dùng xanh để tách khỏi đỏ của thương hiệu. */
+  --color-focus: #2a6fd6;
+  --color-focus-ring: rgba(42, 111, 214, 0.18);
+  --color-link: #2a6fd6;
+
+  /* Trạng thái: mỗi màu có nền nhạt riêng cho badge. */
+  --color-success: #0f6b36;
+  --color-success-soft: #e3f5ea;
+  --color-warning: #8a5300;
+  --color-warning-soft: #fff1d6;
   --color-danger: #b42318;
+  --color-danger-soft: #fde7e4;
+  --color-info: #1d4fae;
+  --color-info-soft: #e5efff;
+  --color-star: #f5a524;
+
+  /* Lớp phủ và bóng: chỉ panel nổi có bóng rõ, thẻ chỉ có bóng rất nhẹ. */
+  --color-overlay: rgba(10, 14, 20, 0.45);
+  --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-popover: 0 20px 60px rgba(0, 0, 0, 0.25);
+  --shadow-drawer: 0 0 40px rgba(10, 14, 20, 0.2);
+  --shadow-nav-active: 0 1px 2px rgba(16, 24, 40, 0.06), 0 0 0 1px var(--color-border);
 
   /* Bo góc */
-  --radius-card: 12px;
   --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-dialog: 14px;
   --radius-pill: 999px;
 
   /* Khoảng cách: thang 4px */
@@ -35,13 +71,16 @@
   --space-7: 48px;
   --space-8: 64px;
 
-  /* Chữ: dùng font hệ thống để hiển thị tiếng Việt có dấu đúng và không thêm dependency */
+  /* Chữ: Be Vietnam Pro hiển thị tiếng Việt có dấu tốt. Font hệ thống dùng khi chưa tải xong. */
   --font-sans:
     'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
   --text-xs: 12px;
+  --text-label: 13px;
   --text-sm: 14px;
   --text-md: 16px;
   --text-lg: 20px;
+  --text-title: 22px;
   --text-xl: 28px;
 }

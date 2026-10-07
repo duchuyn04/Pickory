@@ -11,3 +11,10 @@ export function getPasswordError(password: string, minLength = 8): string | null
   if (password.length > 128) return 'Mật khẩu không được vượt quá 128 ký tự.';
   return null;
 }
+
+// Ô nhập lại mật khẩu chỉ kiểm được ở giao diện, vì server chỉ nhận mật khẩu mới.
+export function getConfirmPasswordError(password: string, confirmPassword: string): string | null {
+  if (!confirmPassword) return 'Vui lòng xác nhận lại mật khẩu.';
+  if (password !== confirmPassword) return 'Mật khẩu xác nhận không khớp.';
+  return null;
+}

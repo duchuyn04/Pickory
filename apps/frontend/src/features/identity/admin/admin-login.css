@@ -1,0 +1,57 @@
+/* Màn đăng nhập nhân viên theo `shop-retail/admin/login.html`: thẻ trắng giữa nền tối. */
+.admin-login {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: var(--space-4);
+  background: var(--color-dark);
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+.admin-login-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  width: min(400px, 100%);
+  margin: 0;
+  padding: var(--space-5);
+}
+
+.admin-login-card .field {
+  margin-bottom: 0;
+}
+
+.admin-login-brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding-bottom: var(--space-2);
+}
+
+.admin-login-brand h1 {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-md);
+}
+
+.admin-login-brand small {
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+/* Nút Hiện nằm trong ô mật khẩu. Ô chừa lề phải để chữ không chạy dưới nút. */
+.admin-login-password {
+  position: relative;
+}
+
+.admin-login-password input {
+  padding-right: 64px;
+}
+
+.admin-login-toggle {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  transform: translateY(-50%);
+}

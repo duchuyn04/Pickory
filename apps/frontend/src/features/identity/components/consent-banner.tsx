@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
 import { useActor } from '../hooks/use-actor';
+import './consent-banner.css';
 
 // Khóa localStorage ghi nhớ trình duyệt này đã chọn rồi, để không hỏi lại ở mỗi lần tải trang.
 const CONSENT_CHOSEN_KEY = 'pk_consent_chosen';
@@ -53,77 +54,29 @@ export function ConsentBanner() {
   }
 
   return (
-    <div
-      role="region"
-      aria-label="Đồng ý cookie và quyền riêng tư"
-      style={{
-        position: 'fixed',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        backgroundColor: 'var(--color-surface)',
-        borderTop: '1px solid var(--color-border)',
-        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.08)',
-        padding: 'var(--space-4) var(--space-6)',
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        gap: 'var(--space-4)',
-        zIndex: 9999,
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
-      <div style={{ flex: '1 1 500px', fontSize: 'var(--text-sm)', color: 'var(--color-ink)' }}>
+    <div role="region" aria-label="Đồng ý cookie và quyền riêng tư" className="consent-banner">
+      <p className="consent-text">
         <strong>Quyền riêng tư của bạn:</strong> Chúng tôi sử dụng cookie cần thiết để vận hành
         trang web. Bạn có thể chọn cho phép tính năng cá nhân hóa (gợi ý sản phẩm phù hợp) và nhận
-        thông tin khuyến mãi.{' '}
-        <Link
-          to="/privacy"
-          style={{ color: 'var(--color-brand)', textDecoration: 'none', fontWeight: 600 }}
-        >
-          Tùy chỉnh lựa chọn
-        </Link>
-      </div>
+        thông tin khuyến mãi. <Link to="/privacy">Tùy chỉnh lựa chọn</Link>
+      </p>
 
-      <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-        {/* Hai nút cùng kích thước và độ nổi bật theo spec/SPEC-identity.md */}
+      <div className="consent-actions">
+        {/* Hai nút cùng lớp, cùng kích thước và độ nổi bật theo `spec/SPEC-identity.md`. */}
         <button
           type="button"
+          className="btn consent-choice"
           disabled={saving}
           onClick={() => handleChoice(false, false)}
-          style={{
-            flex: '1 1 140px',
-            minWidth: 130,
-            padding: 'var(--space-2) var(--space-4)',
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-control)',
-            color: 'var(--color-ink)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 600,
-            cursor: saving ? 'not-allowed' : 'pointer',
-          }}
         >
           Chỉ cần thiết
         </button>
 
         <button
           type="button"
+          className="btn consent-choice"
           disabled={saving}
           onClick={() => handleChoice(true, false)}
-          style={{
-            flex: '1 1 140px',
-            minWidth: 130,
-            padding: 'var(--space-2) var(--space-4)',
-            backgroundColor: 'var(--color-surface)',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-control)',
-            color: 'var(--color-ink)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 600,
-            cursor: saving ? 'not-allowed' : 'pointer',
-          }}
         >
           Đồng ý
         </button>

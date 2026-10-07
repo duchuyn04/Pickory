@@ -218,214 +218,83 @@ export function CategoriesPage() {
     : false;
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--space-6)',
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
-      {/* Khối đầu trang xuống dòng khi hẹp. Tiêu đề và nút tạo không bị ép ngắt từng chữ. */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 'var(--space-4)',
-        }}
-      >
-        <div style={{ flex: '1 1 240px', minWidth: 0 }}>
-          <h1
-            style={{
-              fontSize: 'var(--text-xl)',
-              fontWeight: 700,
-              color: 'var(--color-ink)',
-              margin: '0 0 var(--space-1) 0',
-            }}
-          >
-            Quản lý danh mục
-          </h1>
-          <p style={{ margin: 0, color: 'var(--color-ink-muted)', fontSize: 'var(--text-sm)' }}>
-            Cấu hình cây danh mục hai cấp và bộ thuộc tính kỹ thuật phục vụ thông số sản phẩm.
-          </p>
+    <div className="page">
+      <div className="page-head">
+        <div className="page-head-text">
+          <h1>Quản lý danh mục</h1>
+          <p>Cấu hình cây danh mục hai cấp và bộ thuộc tính kỹ thuật phục vụ thông số sản phẩm.</p>
         </div>
 
+        {/* Chỉ quyền products:write được tạo danh mục. */}
         {canWrite && (
-          <button
-            type="button"
-            onClick={handleOpenCreateRoot}
-            style={{
-              padding: 'var(--space-2) var(--space-4)',
-              whiteSpace: 'nowrap',
-              backgroundColor: 'var(--color-brand)',
-              color: 'var(--color-surface)',
-              border: 'none',
-              borderRadius: 'var(--radius-control)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
+          <button type="button" className="btn btn-primary" onClick={handleOpenCreateRoot}>
             + Thêm danh mục gốc
           </button>
         )}
       </div>
 
-      {/* Thông báo lỗi ở mức trang khi thao tác xóa danh mục thất bại */}
+      {/* Lỗi xóa hiện ở mức trang vì hộp thoại đã đóng khi người dùng bấm Xóa. */}
       {pageError && (
-        <div
-          role="alert"
-          style={{
-            padding: 'var(--space-3) var(--space-4)',
-            backgroundColor: 'var(--color-surface-muted)',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
+        <p role="alert" className="alert">
           {pageError}
-        </div>
+        </p>
       )}
 
-      {/* Trạng thái tải dữ liệu và hiển thị lỗi kết nối */}
       {isLoading && (
-        <div
-          style={{
-            padding: 'var(--space-6)',
-            textAlign: 'center',
-            color: 'var(--color-ink-muted)',
-          }}
-        >
+        <p role="status" className="empty-state">
           Đang nạp dữ liệu danh mục...
-        </div>
+        </p>
       )}
 
       {isError && (
-        <div
-          role="alert"
-          style={{
-            padding: 'var(--space-4)',
-            backgroundColor: 'var(--color-surface-muted)',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            borderRadius: 'var(--radius-card)',
-          }}
-        >
+        <p role="alert" className="alert">
           {error instanceof Error ? error.message : 'Tải danh sách danh mục thất bại.'}
-        </div>
+        </p>
       )}
 
       {/* Cây danh mục hai cấp */}
       {!isLoading && !isError && (
-        <div
-          className="catalog-admin-list"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--space-4)',
-          }}
-        >
+        <div className="catalog-admin-list category-tree">
           {roots.length === 0 ? (
-            <div
-              style={{
-                padding: 'var(--space-6)',
-                textAlign: 'center',
-                color: 'var(--color-ink-muted)',
-                fontSize: 'var(--text-sm)',
-              }}
-            >
-              Chưa có danh mục nào. Hãy tạo danh mục gốc đầu tiên.
-            </div>
+            <p className="empty-state">Chưa có danh mục nào. Hãy tạo danh mục gốc đầu tiên.</p>
           ) : (
             roots.map((root) => {
               const children = childrenByParent[root.id] || [];
 
               return (
-                <div
-                  key={root.id}
-                  style={{
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-control)',
-                    overflow: 'hidden',
-                  }}
-                >
-                  {/* Dòng danh mục gốc */}
-                  <div
-                    style={{
-                      padding: 'var(--space-3) var(--space-4)',
-                      backgroundColor: 'var(--color-surface-muted)',
-                      display: 'flex',
-                      flexWrap: 'wrap',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      gap: 'var(--space-2)',
-                      borderBottom: children.length > 0 ? '1px solid var(--color-border)' : 'none',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 'var(--space-1)',
-                      }}
-                    >
-                      <strong style={{ fontSize: 'var(--text-md)', color: 'var(--color-ink)' }}>
-                        {root.name}
-                      </strong>
-                      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
+                <div key={root.id} className="category-node">
+                  <div className="category-node-head">
+                    <div className="category-node-text">
+                      <strong>{root.name}</strong>
+                      <span className="cell-sub wrap-anywhere">
                         Vị trí {root.position} · {root.attributes?.length || 0} thuộc tính riêng ·
                         slug: <code>{root.slug}</code>
                       </span>
                     </div>
 
                     {canWrite && (
-                      <div style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}>
+                      <div className="row-actions">
                         <button
                           type="button"
+                          className="btn btn-sm"
                           aria-label={`Thêm con cho ${root.name}`}
                           onClick={() => handleOpenCreateChild(root)}
-                          style={{
-                            padding: 'var(--space-1) var(--space-3)',
-                            backgroundColor: 'var(--color-surface)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: 'var(--radius-control)',
-                            fontSize: 'var(--text-xs)',
-                            cursor: 'pointer',
-                          }}
                         >
                           + Thêm con
                         </button>
                         <button
                           type="button"
+                          className="btn btn-sm"
                           aria-label={`Sửa ${root.name}`}
                           onClick={() => handleOpenEdit(root)}
-                          style={{
-                            padding: 'var(--space-1) var(--space-3)',
-                            backgroundColor: 'var(--color-surface)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: 'var(--radius-control)',
-                            fontSize: 'var(--text-xs)',
-                            cursor: 'pointer',
-                          }}
                         >
                           Sửa
                         </button>
                         <button
                           type="button"
+                          className="btn btn-sm btn-danger"
                           aria-label={`Xóa ${root.name}`}
                           onClick={() => handleDelete(root)}
-                          style={{
-                            padding: 'var(--space-1) var(--space-3)',
-                            backgroundColor: 'var(--color-surface)',
-                            color: 'var(--color-danger)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: 'var(--radius-control)',
-                            fontSize: 'var(--text-xs)',
-                            cursor: 'pointer',
-                          }}
                         >
                           Xóa
                         </button>
@@ -433,91 +302,37 @@ export function CategoriesPage() {
                     )}
                   </div>
 
-                  {/* Danh sách các danh mục con trực thuộc với độ thụt lề chuẩn responsive */}
                   {children.length > 0 && (
-                    <div
-                      style={{
-                        padding: 'var(--space-2) var(--space-4) var(--space-2) var(--space-4)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        gap: 'var(--space-2)',
-                        backgroundColor: 'var(--color-surface)',
-                      }}
-                    >
+                    <div className="category-children">
                       {children.map((child) => (
                         <div
                           key={child.id}
                           data-testid="category-child-card"
-                          style={{
-                            padding: 'var(--space-2) var(--space-3)',
-                            border: '1px solid var(--color-border)',
-                            borderRadius: 'var(--radius-control)',
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            gap: 'var(--space-2)',
-                          }}
+                          className="category-child"
                         >
-                          <div
-                            style={{
-                              display: 'flex',
-                              flexDirection: 'column',
-                              gap: 'var(--space-1)',
-                            }}
-                          >
-                            <span
-                              style={{
-                                fontSize: 'var(--text-sm)',
-                                fontWeight: 600,
-                                color: 'var(--color-ink)',
-                              }}
-                            >
-                              {child.name}
-                            </span>
-                            <span
-                              style={{
-                                fontSize: 'var(--text-xs)',
-                                color: 'var(--color-ink-muted)',
-                              }}
-                            >
+                          <div className="category-node-text">
+                            <strong>{child.name}</strong>
+                            <span className="cell-sub wrap-anywhere">
                               Vị trí {child.position} · {child.attributes?.length || 0} thuộc tính
                               riêng · slug: <code>{child.slug}</code>
                             </span>
                           </div>
 
                           {canWrite && (
-                            <div
-                              style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap' }}
-                            >
+                            <div className="row-actions">
                               <button
                                 type="button"
+                                className="btn btn-sm"
                                 aria-label={`Sửa ${child.name}`}
                                 onClick={() => handleOpenEdit(child)}
-                                style={{
-                                  padding: 'var(--space-1) var(--space-2)',
-                                  backgroundColor: 'var(--color-surface)',
-                                  border: '1px solid var(--color-border)',
-                                  borderRadius: 'var(--radius-control)',
-                                  fontSize: 'var(--text-xs)',
-                                  cursor: 'pointer',
-                                }}
                               >
                                 Sửa
                               </button>
                               <button
                                 type="button"
+                                className="btn btn-sm btn-danger"
                                 aria-label={`Xóa ${child.name}`}
                                 onClick={() => handleDelete(child)}
-                                style={{
-                                  padding: 'var(--space-1) var(--space-2)',
-                                  backgroundColor: 'var(--color-surface)',
-                                  color: 'var(--color-danger)',
-                                  border: '1px solid var(--color-border)',
-                                  borderRadius: 'var(--radius-control)',
-                                  fontSize: 'var(--text-xs)',
-                                  cursor: 'pointer',
-                                }}
                               >
                                 Xóa
                               </button>
@@ -545,23 +360,11 @@ export function CategoriesPage() {
           isSubmitting={isSubmitting}
           submitText={editingCategory ? 'Lưu thay đổi' : 'Tạo danh mục'}
           error={formError}
-          maxWidth={860}
+          size="lg"
         >
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-            {/* Ô nhập tên danh mục */}
-            <div>
-              <label
-                htmlFor="category-name"
-                style={{
-                  display: 'block',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 600,
-                  color: 'var(--color-ink)',
-                  marginBottom: 'var(--space-1)',
-                }}
-              >
-                Tên danh mục *
-              </label>
+          <div className="form-grid form-grid-2">
+            <div className="field">
+              <label htmlFor="category-name">Tên danh mục *</label>
               <input
                 id="category-name"
                 type="text"
@@ -569,46 +372,17 @@ export function CategoriesPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Điện thoại, Laptop..."
-                style={{
-                  width: '100%',
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-control)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: 'var(--text-sm)',
-                  backgroundColor: 'var(--color-surface)',
-                  color: 'var(--color-ink)',
-                }}
               />
             </div>
 
-            {/* Lựa chọn danh mục cha (chỉ danh mục gốc được phép làm cha) */}
-            <div>
-              <label
-                htmlFor="category-parent"
-                style={{
-                  display: 'block',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 600,
-                  color: 'var(--color-ink)',
-                  marginBottom: 'var(--space-1)',
-                }}
-              >
-                Danh mục cha
-              </label>
+            {/* Chỉ danh mục gốc được làm cha, vì cây danh mục giới hạn hai cấp. */}
+            <div className="field">
+              <label htmlFor="category-parent">Danh mục cha</label>
               <select
                 id="category-parent"
                 disabled={hasChildren}
                 value={parentId}
                 onChange={(e) => setParentId(e.target.value)}
-                style={{
-                  width: '100%',
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-control)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: 'var(--text-sm)',
-                  backgroundColor: 'var(--color-surface)',
-                  color: 'var(--color-ink)',
-                }}
               >
                 <option value="">[Không có - Danh mục gốc]</option>
                 {roots
@@ -619,58 +393,23 @@ export function CategoriesPage() {
                     </option>
                   ))}
               </select>
-              {hasChildren && (
-                <div
-                  style={{
-                    fontSize: 'var(--text-xs)',
-                    color: 'var(--color-ink-muted)',
-                    marginTop: 'var(--space-1)',
-                  }}
-                >
-                  Danh mục có con không thể chuyển thành danh mục con.
-                </div>
-              )}
+              {hasChildren && <small>Danh mục có con không thể chuyển thành danh mục con.</small>}
             </div>
           </div>
 
-          {/* Thứ tự hiển thị */}
-          <div>
-            <label
-              htmlFor="category-position"
-              style={{
-                display: 'block',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                color: 'var(--color-ink)',
-                marginBottom: 'var(--space-1)',
-              }}
-            >
-              Thứ tự hiển thị (position)
-            </label>
+          <div className="field">
+            <label htmlFor="category-position">Thứ tự hiển thị (position)</label>
             <input
               id="category-position"
               type="number"
+              className="category-position-input"
               value={position}
               onChange={(e) => setPosition(Number(e.target.value) || 0)}
-              style={{
-                width: 140,
-                padding: 'var(--space-2) var(--space-3)',
-                borderRadius: 'var(--radius-control)',
-                border: '1px solid var(--color-border)',
-                fontSize: 'var(--text-sm)',
-                backgroundColor: 'var(--color-surface)',
-                color: 'var(--color-ink)',
-              }}
             />
           </div>
 
-          {/* Trình soạn thảo danh sách thuộc tính */}
-          <div
-            style={{
-              borderTop: '1px solid var(--color-border)',
-              paddingTop: 'var(--space-4)',
-            }}
-          >
+          {/* Đường kẻ tách trình soạn thuộc tính khỏi thông tin chung, vì đây là phần dài nhất của form. */}
+          <div className="category-attributes">
             <AttributeEditor
               attributes={attributes}
               onChange={setAttributes}

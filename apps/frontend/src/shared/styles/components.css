@@ -1,0 +1,688 @@
+/*
+ * Lớp component dùng chung, chuyển từ `shop-retail/assets/css/admin.css`.
+ * Màn mới dùng các lớp này thay cho `style={{`. Màu chỉ lấy từ `tokens.css`.
+ */
+
+/* Nút: cao tối thiểu 38px để dễ bấm, chữ không xuống dòng để nhãn không vỡ. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: var(--space-2) 14px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.btn:hover {
+  background: var(--color-page);
+}
+
+/* Nút chính là hành động duy nhất dùng nền đỏ trong một vùng. */
+.btn-primary {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.btn-primary:hover {
+  border-color: var(--color-brand-hover);
+  background: var(--color-brand-hover);
+}
+
+.btn-outline {
+  background: var(--color-surface);
+}
+
+.btn-ghost {
+  border-color: transparent;
+  background: none;
+  color: var(--color-ink-muted);
+}
+
+/* Nút nguy hiểm chỉ đổi màu chữ để không cạnh tranh với nút chính. */
+.btn-danger {
+  color: var(--color-danger);
+}
+
+.btn-sm {
+  min-height: 32px;
+  padding: var(--space-1) 10px;
+  font-size: var(--text-label);
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* Nút bị khóa mờ đi và đổi con trỏ để người dùng biết không bấm được. */
+.btn:disabled,
+.btn[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Ô nhập: nhãn nằm trên ô, khoảng cách đều để form đọc theo một cột. */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: var(--space-3);
+}
+
+.field > label,
+.field > span {
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+
+.field small {
+  color: var(--color-ink-muted);
+  font-weight: 400;
+}
+
+.field input,
+.field select,
+.field textarea,
+.input-sm {
+  width: 100%;
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+}
+
+/* Ô bị khóa có nền xám, để người dùng biết ô chỉ xem, không sửa được. */
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-ink-muted);
+  cursor: not-allowed;
+}
+
+/* Ô đang nhập có viền và vòng xanh. Viền đỏ dành riêng cho ô lỗi. */
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.input-sm:focus {
+  outline: none;
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.input-sm {
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+}
+
+/* Ô sai luôn đi kèm chữ lỗi trong `.form-error`, không chỉ dựa vào màu viền. */
+[aria-invalid='true'] {
+  border-color: var(--color-danger) !important;
+}
+
+.form-grid {
+  display: grid;
+  gap: 0 14px;
+}
+
+.form-grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.field-full {
+  grid-column: 1 / -1;
+}
+
+/* Màn hẹp chỉ đủ chỗ cho một cột ô nhập. */
+@media (max-width: 767px) {
+  .form-grid-2,
+  .form-grid-3 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.form-error {
+  color: var(--color-danger);
+  font-size: var(--text-label);
+}
+
+.hint {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  margin-top: var(--space-2);
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}
+
+/* Badge: mỗi trạng thái có cặp chữ và nền đạt tương phản AA. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 9px;
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-soft);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.badge-ok {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.badge-warn {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.badge-bad {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.badge-info {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+/* Thẻ: nền trắng và viền mảnh trên nền trang xám, không cần bóng đậm. */
+.card {
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+/* Thẻ chứa bảng bỏ lề trong để đường kẻ bảng chạm viền thẻ. */
+.card-flush {
+  padding: 0;
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.card-head h2 {
+  margin: 0 auto 0 0;
+  font-size: 15px;
+}
+
+/* Bảng rộng cuộn ngang trong khung riêng để trang không tràn trên điện thoại. */
+.table-wrap {
+  position: relative;
+  overflow-x: auto;
+}
+
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-label);
+}
+
+/* Chỉ tiêu đề cột dùng chữ nhỏ màu phụ. Tiêu đề dòng trong `tbody` trông như ô dữ liệu in đậm. */
+.tbl thead th {
+  padding: 10px var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-table-head);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-align: left;
+  white-space: nowrap;
+}
+
+/* Bảng trong thẻ đã có nền trắng, nên tiêu đề cột không cần nền riêng. */
+.card .tbl thead th {
+  background: none;
+}
+
+.tbl td,
+.tbl tbody th {
+  padding: 10px var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tbl tbody th {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.tbl tr:last-child td,
+.tbl tr:last-child th {
+  border-bottom: 0;
+}
+
+/* Dòng báo bảng rỗng canh giữa như trạng thái rỗng ngoài bảng, dù quy tắc ô bảng canh trái. */
+.tbl td.empty-state {
+  padding: var(--space-6) var(--space-4);
+  text-align: center;
+}
+
+/* Cột số canh phải và dùng chữ số cùng độ rộng để so sánh giá trị theo cột. */
+.tbl .num {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.tbl tbody tr:hover td,
+.tbl tbody tr:hover th {
+  background: var(--color-surface-hover);
+}
+
+/* Trang: các khối xếp dọc với khoảng cách đều, không khối nào tự đặt lề ngoài. */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* Khoảng cách giữa các khối đã do `.page` đặt, nên thẻ trong trang bỏ lề dưới mặc định. */
+.page > .card {
+  margin-bottom: 0;
+}
+
+/* Đầu trang: tiêu đề bên trái, nút hành động bên phải. Khối xuống dòng khi màn hẹp. */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+/* Khối chữ co tới 240px rồi mới đẩy nút xuống dòng, để tiêu đề không ngắt từng chữ. */
+.page-head-text {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.page-head h1 {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.page-head p {
+  margin: var(--space-1) 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+.head-actions,
+.row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+/* Khoảng cách của `.stack` đã tách các ô, nên ô nhập bên trong bỏ lề dưới mặc định. */
+.stack > .field,
+.stack > .form-grid > .field {
+  margin-bottom: 0;
+}
+
+.stack > .form-grid {
+  gap: var(--space-4) 14px;
+}
+
+.stack-sm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+/* Thông báo lỗi trên trang hoặc hộp thoại. Nền nhạt và chữ màu lỗi đạt tương phản AA. */
+.alert {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--color-danger-soft);
+  border-radius: var(--radius-control);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+}
+
+/* Thông báo thành công và cảnh báo dùng cặp nền nhạt và chữ đậm màu đạt tương phản AA. */
+.alert-ok {
+  border-color: var(--color-success-soft);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.alert-warn {
+  border-color: var(--color-warning-soft);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+/* Dải thẻ số liệu: mỗi thẻ tối thiểu 180px, tự xuống hàng trên màn hẹp. */
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.kpi {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: 14px var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.kpi small {
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}
+
+.kpi-value {
+  overflow: hidden;
+  font-size: var(--text-title);
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpi-ok {
+  color: var(--color-success);
+}
+
+.kpi-bad {
+  color: var(--color-danger);
+}
+
+/* Trạng thái đang tải hoặc danh sách rỗng nằm giữa khối, chữ phụ. */
+.empty-state {
+  margin: 0;
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.empty-state-dashed {
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-control);
+}
+
+.cell-sub {
+  display: block;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+/* Chuỗi liền như slug hoặc mã ảnh được ngắt ở bất kỳ ký tự nào, để không đẩy trang tràn ngang. */
+.wrap-anywhere {
+  overflow-wrap: anywhere;
+}
+
+.check {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  font-size: var(--text-label);
+  cursor: pointer;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-brand);
+}
+
+/* Hàng lọc nằm trên bảng trong cùng một thẻ, cách bảng bằng đường kẻ mảnh. */
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: flex-end;
+  padding: var(--space-3) 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.filters-row .field {
+  flex: 1 1 180px;
+  min-width: 0;
+  margin: 0;
+}
+
+.pager {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: flex-end;
+  padding: 10px 14px;
+  border-top: 1px solid var(--color-border-subtle);
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}
+
+/* Nút chỉ có icon rộng 36px để đủ vùng bấm. Tên truy cập nằm ở `aria-label`. */
+.icon-btn {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--color-neutral-soft);
+  color: var(--color-dark);
+}
+
+/* Hộp thoại: lớp phủ chặn thao tác phía sau, thân tự cuộn khi nội dung dài hơn màn. */
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: var(--color-overlay);
+}
+
+.dialog {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  border-radius: var(--radius-dialog);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+  outline: none;
+}
+
+.dialog-lg {
+  max-width: 860px;
+}
+
+.dialog-head,
+.dialog-foot {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  padding: 14px 20px;
+}
+
+.dialog-head {
+  justify-content: space-between;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.dialog-head h2 {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.dialog-body {
+  flex: 1;
+  min-width: 0;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.dialog-foot {
+  justify-content: flex-end;
+  border-top: 1px solid var(--color-border);
+}
+
+/* Màn hẹp giảm lề trong hộp thoại để ô nhập còn đủ chiều rộng. */
+@media (max-width: 767px) {
+  .dialog-backdrop {
+    padding: var(--space-2);
+  }
+
+  .dialog-body {
+    padding: var(--space-4);
+  }
+}
+
+/* Tiêu đề trang giữ chỗ của module chưa làm. */
+.admin-placeholder-title {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+}
+
+/* Tiêu đề màn thiếu quyền dùng màu lỗi để người dùng hiểu ngay vì sao không thấy dữ liệu. */
+.forbidden-title {
+  margin: 0 0 var(--space-2);
+  color: var(--color-danger);
+  font-size: var(--text-md);
+}
+
+/* Nhóm checkbox chọn vai trò. Khung tự cuộn khi có nhiều role, để nút lưu vẫn trong hộp thoại. */
+.role-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 220px;
+  margin: 0;
+  padding: var(--space-3);
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+
+.role-picker legend {
+  padding: 0 var(--space-1);
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+
+/* Nút dạng link dùng màu link xanh, để không cạnh tranh với nút chính màu đỏ. */
+.link-btn {
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--color-link);
+  font: inherit;
+  font-size: var(--text-label);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
+/* Ô logo chữ P trên nền đỏ, dùng ở khung admin và màn đăng nhập nhân viên. */
+.logo-mark {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  font-size: var(--text-md);
+  font-weight: 800;
+}
+
+/* Icon nét mảnh của `shared/icons.tsx`. Kích thước cố định để icon không co khi chữ bên cạnh dài. */
+.icon {
+  flex: none;
+  width: 18px;
+  height: 18px;
+}
+
+/* Ẩn khỏi màn hình nhưng trình đọc màn hình vẫn đọc được. */
+.sr {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.muted {
+  color: var(--color-ink-muted);
+}
+
+.small {
+  font-size: var(--text-label);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getEmailError, getPasswordError } from '../../../src/shared/identity-validation';
+import {
+  getConfirmPasswordError,
+  getEmailError,
+  getPasswordError,
+} from '../../../src/shared/identity-validation';
 
 describe('validation form identity', () => {
   it.each(['', 'abc@'])('từ chối email không hợp lệ %j trước khi gửi form', (email) => {
@@ -21,5 +25,19 @@ describe('validation form identity', () => {
     expect(getPasswordError('a', 1)).toBeNull();
     expect(getPasswordError('', 1)).not.toBeNull();
     expect(getPasswordError('a'.repeat(129), 1)).not.toBeNull();
+  });
+
+  it('ô xác nhận trống báo phải nhập lại mật khẩu', () => {
+    expect(getConfirmPasswordError('matkhaumoi123', '')).toBe('Vui lòng xác nhận lại mật khẩu.');
+  });
+
+  it('ô xác nhận khác mật khẩu mới báo không khớp', () => {
+    expect(getConfirmPasswordError('matkhaumoi123', 'matkhaukhac123')).toBe(
+      'Mật khẩu xác nhận không khớp.',
+    );
+  });
+
+  it('ô xác nhận trùng mật khẩu mới thì hợp lệ', () => {
+    expect(getConfirmPasswordError('matkhaumoi123', 'matkhaumoi123')).toBeNull();
   });
 });

@@ -2,7 +2,14 @@ import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '../../../shared/api';
-import { getPasswordError } from '../../../shared/identity-validation';
+import {
+  FieldError,
+  fieldErrorProps,
+  hasFieldErrors,
+  type FieldErrors,
+} from '../../../shared/field-error';
+import { getConfirmPasswordError, getPasswordError } from '../../../shared/identity-validation';
+import { AuthCard, PasswordInput } from './auth-ui';
 
 // Trang đặt mật khẩu mới từ link trong email; dùng chung cho quên mật khẩu và lời mời nhân viên.
 export function ResetPasswordPage() {
@@ -21,6 +28,8 @@ export function ResetPasswordPage() {
   const [submitted, setSubmitted] = useState(false);
   // Server cho biết đây là khách hay nhân viên, để nút "Đăng nhập" dẫn tới đúng trang đăng nhập.
   const [userKind, setUserKind] = useState<'customer' | 'staff' | null>(null);
+  // Lỗi theo từng ô hiện ngay dưới ô sai; `error` chỉ còn giữ lỗi trả về từ API.
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'password' | 'confirm'>>({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -37,21 +46,12 @@ export function ResetPasswordPage() {
     setError(null);
 
     // Kiểm tra ở trình duyệt trước khi gửi: token chỉ dùng được một lần, nên không nên để lỗi nhập liệu làm hỏng token oan.
-    const passwordError = getPasswordError(newPassword, 8);
-    if (passwordError) {
-      setError(passwordError);
-      return;
-    }
-
-    if (!confirmPassword) {
-      setError('Vui lòng xác nhận lại mật khẩu.');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp.');
-      return;
-    }
+    const nextFieldErrors = {
+      password: getPasswordError(newPassword, 8),
+      confirm: getConfirmPasswordError(newPassword, confirmPassword),
+    };
+    setFieldErrors(nextFieldErrors);
+    if (hasFieldErrors(nextFieldErrors)) return;
 
     setLoading(true);
 
@@ -84,289 +84,79 @@ export function ResetPasswordPage() {
   // Không có token thì không có gì để đặt lại, báo ngay thay vì hiện form không bao giờ thành công.
   if (!token) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          backgroundColor: 'var(--color-surface-muted)',
-          fontFamily: 'var(--font-sans)',
-        }}
-      >
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: 'var(--space-7) var(--space-4)',
-          }}
-        >
-          <div
-            style={{
-              width: '100%',
-              maxWidth: 420,
-              backgroundColor: 'var(--color-surface)',
-              borderRadius: 'var(--radius-card)',
-              border: '1px solid var(--color-border)',
-              padding: 'var(--space-6)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-              textAlign: 'center',
-            }}
-          >
-            <h1
-              style={{
-                fontSize: 'var(--text-xl)',
-                color: 'var(--color-ink)',
-                margin: '0 0 var(--space-2) 0',
-                fontWeight: 700,
-              }}
-            >
-              Đặt lại mật khẩu
-            </h1>
-            <div
-              role="alert"
-              style={{
-                backgroundColor: '#fee4e2',
-                border: '1px solid var(--color-danger)',
-                color: 'var(--color-danger)',
-                padding: 'var(--space-4)',
-                borderRadius: 'var(--radius-control)',
-                fontSize: 'var(--text-sm)',
-                margin: 'var(--space-4) 0',
-              }}
-            >
-              Mã token không hợp lệ hoặc thiếu trong liên kết. Vui lòng kiểm tra lại liên kết trong
-              email của bạn.
-            </div>
-            <Link
-              to="/forgot-password"
-              style={{
-                color: 'var(--color-brand)',
-                textDecoration: 'none',
-                fontWeight: 600,
-                fontSize: 'var(--text-sm)',
-              }}
-            >
-              ← Yêu cầu đặt lại mật khẩu mới
-            </Link>
-          </div>
+      <AuthCard title="Đặt lại mật khẩu">
+        <div className="auth-result">
+          <p role="alert" className="alert">
+            Mã token không hợp lệ hoặc thiếu trong liên kết. Vui lòng kiểm tra lại liên kết trong
+            email của bạn.
+          </p>
+          <Link to="/forgot-password" className="auth-link">
+            ← Yêu cầu đặt lại mật khẩu mới
+          </Link>
         </div>
-      </div>
+      </AuthCard>
     );
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: 'var(--color-surface-muted)',
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 'var(--space-7) var(--space-4)',
-        }}
-      >
-        <div
-          style={{
-            width: '100%',
-            maxWidth: 420,
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--radius-card)',
-            border: '1px solid var(--color-border)',
-            padding: 'var(--space-6)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-          }}
-        >
-          <h1
-            style={{
-              fontSize: 'var(--text-xl)',
-              color: 'var(--color-ink)',
-              margin: '0 0 var(--space-2) 0',
-              fontWeight: 700,
-              textAlign: 'center',
-            }}
-          >
-            Đặt lại mật khẩu
-          </h1>
-          <p
-            style={{
-              color: 'var(--color-ink-muted)',
-              fontSize: 'var(--text-sm)',
-              margin: '0 0 var(--space-5) 0',
-              textAlign: 'center',
-            }}
-          >
-            Nhập mật khẩu mới cho tài khoản của bạn
+    <AuthCard title="Đặt lại mật khẩu" subtitle="Nhập mật khẩu mới cho tài khoản của bạn">
+      {submitted ? (
+        <div className="auth-result">
+          <p role="status" className="alert alert-ok">
+            Mật khẩu của bạn đã được cập nhật thành công! Mọi phiên đăng nhập cũ đã được đăng xuất
+            an toàn.
           </p>
-
-          {submitted ? (
-            <div style={{ textAlign: 'center' }}>
-              <div
-                role="status"
-                style={{
-                  backgroundColor: '#e6f4ea',
-                  border: '1px solid var(--color-success)',
-                  color: 'var(--color-success)',
-                  padding: 'var(--space-4)',
-                  borderRadius: 'var(--radius-control)',
-                  fontSize: 'var(--text-sm)',
-                  marginBottom: 'var(--space-5)',
-                }}
-              >
-                Mật khẩu của bạn đã được cập nhật thành công! Mọi phiên đăng nhập cũ đã được đăng
-                xuất an toàn.
-              </div>
-              <Link
-                to={userKind === 'staff' ? '/admin/login' : '/login'}
-                style={{
-                  display: 'inline-block',
-                  backgroundColor: 'var(--color-brand)',
-                  color: '#ffffff',
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                  fontSize: 'var(--text-sm)',
-                  padding: 'var(--space-3) var(--space-5)',
-                  borderRadius: 'var(--radius-control)',
-                }}
-              >
-                {userKind === 'staff' ? 'Đăng nhập trang quản trị' : 'Đăng nhập ngay'}
-              </Link>
-            </div>
-          ) : (
-            <>
-              {error && (
-                <div
-                  role="alert"
-                  style={{
-                    backgroundColor: '#fee4e2',
-                    border: '1px solid var(--color-danger)',
-                    color: 'var(--color-danger)',
-                    padding: 'var(--space-3)',
-                    borderRadius: 'var(--radius-control)',
-                    fontSize: 'var(--text-sm)',
-                    marginBottom: 'var(--space-4)',
-                  }}
-                >
-                  {error}
-                </div>
-              )}
-
-              <form
-                noValidate
-                onSubmit={handleSubmit}
-                style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
-              >
-                <div>
-                  <label
-                    htmlFor="reset-password"
-                    style={{
-                      display: 'block',
-                      fontSize: 'var(--text-sm)',
-                      fontWeight: 600,
-                      color: 'var(--color-ink)',
-                      marginBottom: 'var(--space-1)',
-                    }}
-                  >
-                    Mật khẩu mới (tối thiểu 8 ký tự)
-                  </label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      id="reset-password"
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Nhập mật khẩu mới"
-                      style={{
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        padding: 'var(--space-3)',
-                        paddingRight: '60px',
-                        borderRadius: 'var(--radius-control)',
-                        border: '1px solid var(--color-border)',
-                        fontSize: 'var(--text-md)',
-                        outline: 'none',
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: 'var(--space-2)',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        color: 'var(--color-ink-muted)',
-                        fontSize: 'var(--text-xs)',
-                        cursor: 'pointer',
-                        padding: 'var(--space-1) var(--space-2)',
-                      }}
-                    >
-                      {showPassword ? 'Ẩn' : 'Hiện'}
-                    </button>
-                  </div>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="reset-confirm"
-                    style={{
-                      display: 'block',
-                      fontSize: 'var(--text-sm)',
-                      fontWeight: 600,
-                      color: 'var(--color-ink)',
-                      marginBottom: 'var(--space-1)',
-                    }}
-                  >
-                    Xác nhận mật khẩu mới
-                  </label>
-                  <input
-                    id="reset-confirm"
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Nhập lại mật khẩu mới"
-                    style={{
-                      width: '100%',
-                      boxSizing: 'border-box',
-                      padding: 'var(--space-3)',
-                      borderRadius: 'var(--radius-control)',
-                      border: '1px solid var(--color-border)',
-                      fontSize: 'var(--text-md)',
-                      outline: 'none',
-                    }}
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  style={{
-                    backgroundColor: 'var(--color-brand)',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: 'var(--space-3)',
-                    borderRadius: 'var(--radius-control)',
-                    fontSize: 'var(--text-md)',
-                    fontWeight: 600,
-                    cursor: loading ? 'not-allowed' : 'pointer',
-                    opacity: loading ? 0.7 : 1,
-                    marginTop: 'var(--space-2)',
-                  }}
-                >
-                  {loading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
-                </button>
-              </form>
-            </>
-          )}
+          {/* Nhân viên đặt mật khẩu từ lời mời nên quay về trang đăng nhập quản trị, không về trang của khách. */}
+          <Link to={userKind === 'staff' ? '/admin/login' : '/login'} className="btn btn-primary">
+            {userKind === 'staff' ? 'Đăng nhập trang quản trị' : 'Đăng nhập ngay'}
+          </Link>
         </div>
-      </div>
-    </div>
+      ) : (
+        <>
+          {error && (
+            <p role="alert" className="alert">
+              {error}
+            </p>
+          )}
+
+          <form noValidate onSubmit={handleSubmit} className="stack">
+            <div className="field">
+              <label htmlFor="reset-password">Mật khẩu mới (tối thiểu 8 ký tự)</label>
+              {/* Một nút Hiện điều khiển cả hai ô, để người dùng so được hai lần gõ. */}
+              <PasswordInput
+                id="reset-password"
+                value={newPassword}
+                onChange={setNewPassword}
+                autoComplete="new-password"
+                placeholder="Nhập mật khẩu mới"
+                visible={showPassword}
+                onVisibleChange={setShowPassword}
+                errorMessage={fieldErrors.password}
+              />
+              <FieldError inputId="reset-password" message={fieldErrors.password} />
+            </div>
+
+            <div className="field">
+              <label htmlFor="reset-confirm">Xác nhận mật khẩu mới</label>
+              <input
+                id="reset-confirm"
+                type={showPassword ? 'text' : 'password'}
+                required
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Nhập lại mật khẩu mới"
+                {...fieldErrorProps('reset-confirm', fieldErrors.confirm)}
+              />
+              <FieldError inputId="reset-confirm" message={fieldErrors.confirm} />
+            </div>
+
+            <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
+              {loading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
+            </button>
+          </form>
+        </>
+      )}
+    </AuthCard>
   );
 }

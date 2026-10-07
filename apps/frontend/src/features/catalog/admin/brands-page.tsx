@@ -127,197 +127,94 @@ export function BrandsPage() {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--space-6)',
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
-      {/* Khối đầu trang xuống dòng khi hẹp. Tiêu đề và nút tạo không bị ép ngắt từng chữ. */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: 'var(--space-4)',
-        }}
-      >
-        <div style={{ flex: '1 1 240px', minWidth: 0 }}>
-          <h1
-            style={{
-              fontSize: 'var(--text-xl)',
-              fontWeight: 700,
-              color: 'var(--color-ink)',
-              margin: '0 0 var(--space-1) 0',
-            }}
-          >
-            Quản lý thương hiệu
-          </h1>
-          <p style={{ margin: 0, color: 'var(--color-ink-muted)', fontSize: 'var(--text-sm)' }}>
-            Danh sách các thương hiệu sản phẩm kinh doanh trên hệ thống.
-          </p>
+    <div className="page">
+      <div className="page-head">
+        <div className="page-head-text">
+          <h1>Quản lý thương hiệu</h1>
+          <p>Danh sách các thương hiệu sản phẩm kinh doanh trên hệ thống.</p>
         </div>
 
+        {/* Chỉ quyền products:write được tạo thương hiệu. */}
         {canWrite && (
-          <button
-            type="button"
-            onClick={handleOpenCreate}
-            style={{
-              padding: 'var(--space-2) var(--space-4)',
-              whiteSpace: 'nowrap',
-              backgroundColor: 'var(--color-brand)',
-              color: 'var(--color-surface)',
-              border: 'none',
-              borderRadius: 'var(--radius-control)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
+          <button type="button" className="btn btn-primary" onClick={handleOpenCreate}>
             + Thêm thương hiệu
           </button>
         )}
       </div>
 
-      {/* Thông báo lỗi ở mức trang khi thao tác xóa thất bại */}
+      {/* Lỗi xóa hiện ở mức trang vì hộp thoại đã đóng khi người dùng bấm Xóa. */}
       {pageError && (
-        <div
-          role="alert"
-          style={{
-            padding: 'var(--space-3) var(--space-4)',
-            backgroundColor: 'var(--color-surface-muted)',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
+        <p role="alert" className="alert">
           {pageError}
-        </div>
+        </p>
       )}
 
-      {/* Trạng thái tải dữ liệu */}
       {isLoading && (
-        <div
-          style={{
-            padding: 'var(--space-6)',
-            textAlign: 'center',
-            color: 'var(--color-ink-muted)',
-          }}
-        >
+        <p role="status" className="empty-state">
           Đang nạp dữ liệu thương hiệu...
-        </div>
+        </p>
       )}
 
       {isError && (
-        <div
-          role="alert"
-          style={{
-            padding: 'var(--space-4)',
-            backgroundColor: 'var(--color-surface-muted)',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            borderRadius: 'var(--radius-card)',
-          }}
-        >
+        <p role="alert" className="alert">
           {error instanceof Error ? error.message : 'Tải danh sách thương hiệu thất bại.'}
-        </div>
+        </p>
       )}
 
-      {/* Bảng danh sách thương hiệu */}
       {!isLoading && !isError && (
-        <div className="catalog-admin-list">
+        <div className="card card-flush">
           {brands.length === 0 ? (
-            <div
-              style={{
-                padding: 'var(--space-6)',
-                textAlign: 'center',
-                color: 'var(--color-ink-muted)',
-                fontSize: 'var(--text-sm)',
-              }}
-            >
-              Chưa có thương hiệu nào. Hãy tạo thương hiệu đầu tiên.
-            </div>
+            <p className="empty-state">Chưa có thương hiệu nào. Hãy tạo thương hiệu đầu tiên.</p>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-2)' }}>
-              {brands.map((brand) => (
-                <div
-                  key={brand.id}
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    border: '1px solid var(--color-border)',
-                    borderRadius: 'var(--radius-control)',
-                    display: 'flex',
-                    flexWrap: 'wrap',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    gap: 'var(--space-2)',
-                  }}
-                >
-                  {/* Khối thông tin phải co lại được và ngắt dòng `logoPublicId` dài. Chuỗi liền làm trang tràn ngang ở 375px. */}
-                  <div
-                    style={{
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: 'var(--space-1)',
-                      minWidth: 0,
-                    }}
-                  >
-                    <strong style={{ fontSize: 'var(--text-md)', color: 'var(--color-ink)' }}>
-                      {brand.name}
-                    </strong>
-                    <span
-                      style={{
-                        fontSize: 'var(--text-xs)',
-                        color: 'var(--color-ink-muted)',
-                        overflowWrap: 'anywhere',
-                      }}
-                    >
-                      slug: <code>{brand.slug}</code>
-                      {brand.logoPublicId ? ` · logo: ${brand.logoPublicId}` : ''}
-                    </span>
-                  </div>
-
-                  {canWrite && (
-                    <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                      <button
-                        type="button"
-                        aria-label={`Sửa ${brand.name}`}
-                        onClick={() => handleOpenEdit(brand)}
-                        style={{
-                          padding: 'var(--space-1) var(--space-3)',
-                          backgroundColor: 'var(--color-surface)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: 'var(--radius-control)',
-                          fontSize: 'var(--text-xs)',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Sửa
-                      </button>
-                      <button
-                        type="button"
-                        aria-label={`Xóa ${brand.name}`}
-                        onClick={() => handleDelete(brand)}
-                        style={{
-                          padding: 'var(--space-1) var(--space-3)',
-                          backgroundColor: 'var(--color-surface)',
-                          color: 'var(--color-danger)',
-                          border: '1px solid var(--color-border)',
-                          borderRadius: 'var(--radius-control)',
-                          fontSize: 'var(--text-xs)',
-                          cursor: 'pointer',
-                        }}
-                      >
-                        Xóa
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="table-wrap">
+              <table className="tbl">
+                <thead>
+                  <tr>
+                    <th scope="col">Thương hiệu</th>
+                    {canWrite && (
+                      <th scope="col" className="num">
+                        Thao tác
+                      </th>
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {brands.map((brand) => (
+                    <tr key={brand.id}>
+                      <td>
+                        <strong>{brand.name}</strong>
+                        {/* Slug và mã logo là chuỗi liền, phải ngắt được để trang không tràn ngang ở 375px. */}
+                        <span className="cell-sub wrap-anywhere">
+                          slug: <code>{brand.slug}</code>
+                          {brand.logoPublicId ? ` · logo: ${brand.logoPublicId}` : ''}
+                        </span>
+                      </td>
+                      {canWrite && (
+                        <td className="num">
+                          <div className="row-actions catalog-row-actions">
+                            <button
+                              type="button"
+                              className="btn btn-sm"
+                              aria-label={`Sửa ${brand.name}`}
+                              onClick={() => handleOpenEdit(brand)}
+                            >
+                              Sửa
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-danger"
+                              aria-label={`Xóa ${brand.name}`}
+                              onClick={() => handleDelete(brand)}
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        </td>
+                      )}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -334,21 +231,9 @@ export function BrandsPage() {
           isSubmitting={isSubmitting}
           submitText={editingBrand ? 'Lưu thay đổi' : 'Tạo thương hiệu'}
           error={formError}
-          maxWidth={500}
         >
-          <div>
-            <label
-              htmlFor="brand-name"
-              style={{
-                display: 'block',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                color: 'var(--color-ink)',
-                marginBottom: 'var(--space-1)',
-              }}
-            >
-              Tên thương hiệu *
-            </label>
+          <div className="field">
+            <label htmlFor="brand-name">Tên thương hiệu *</label>
             <input
               id="brand-name"
               type="text"
@@ -356,46 +241,17 @@ export function BrandsPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Apple, Asus, Samsung..."
-              style={{
-                width: '100%',
-                padding: 'var(--space-2) var(--space-3)',
-                borderRadius: 'var(--radius-control)',
-                border: '1px solid var(--color-border)',
-                fontSize: 'var(--text-sm)',
-                backgroundColor: 'var(--color-surface)',
-                color: 'var(--color-ink)',
-              }}
             />
           </div>
 
-          <div>
-            <label
-              htmlFor="brand-logo"
-              style={{
-                display: 'block',
-                fontSize: 'var(--text-sm)',
-                fontWeight: 600,
-                color: 'var(--color-ink)',
-                marginBottom: 'var(--space-1)',
-              }}
-            >
-              Mã logo Cloudinary (tùy chọn)
-            </label>
+          <div className="field">
+            <label htmlFor="brand-logo">Mã logo Cloudinary (tùy chọn)</label>
             <input
               id="brand-logo"
               type="text"
               value={logoPublicId}
               onChange={(e) => setLogoPublicId(e.target.value)}
               placeholder="pickory/brands/apple_logo"
-              style={{
-                width: '100%',
-                padding: 'var(--space-2) var(--space-3)',
-                borderRadius: 'var(--radius-control)',
-                border: '1px solid var(--color-border)',
-                fontSize: 'var(--text-sm)',
-                backgroundColor: 'var(--color-surface)',
-                color: 'var(--color-ink)',
-              }}
             />
           </div>
         </AdminFormDialog>

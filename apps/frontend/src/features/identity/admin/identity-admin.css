@@ -1,0 +1,45 @@
+/* Kiểu riêng của các màn quản trị identity. Thẻ, bảng, nút và badge dùng lớp chung trong `components.css`. */
+
+/* Lỗi tải nằm trong thẻ bảng, nên cần lề để không dính vào viền thẻ. */
+.identity-table-alert {
+  margin: var(--space-3) 14px;
+}
+
+/* Cột thao tác canh phải và giữ các nút trên một hàng, để dòng bảng không cao gấp đôi. */
+.identity-row-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
+/* Thời gian giữ trên một dòng để các dòng nhật ký so được theo cột. */
+.audit-time {
+  white-space: nowrap;
+}
+
+.audit-details summary {
+  color: var(--color-link);
+  font-size: var(--text-label);
+  cursor: pointer;
+}
+
+/* JSON trước và sau dùng chữ đơn cách, cuộn trong khung riêng khi dài. */
+.audit-json {
+  max-width: 360px;
+  max-height: 240px;
+  margin: var(--space-1) 0 var(--space-2);
+  padding: var(--space-2);
+  overflow: auto;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+}
+
+/* Bảng giữ bề rộng tối thiểu và cuộn ngang trên điện thoại, để tên và email không bị ép xuống dòng từng chữ. */
+.identity-table {
+  min-width: 600px;
+}
+
+.identity-table tbody th {
+  min-width: 200px;
+}

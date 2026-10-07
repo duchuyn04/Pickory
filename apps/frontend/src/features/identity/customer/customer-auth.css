@@ -1,0 +1,113 @@
+/* Màn tài khoản của khách: thẻ trắng giữa trang xám, rộng tối đa 420px như form đăng nhập của bản mẫu. */
+.auth-page {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-6) var(--space-4) var(--space-7);
+  font-size: var(--text-sm);
+}
+
+.auth-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(420px, 100%);
+  margin: 0;
+  padding: var(--space-5);
+}
+
+.auth-card .field {
+  margin-bottom: 0;
+}
+
+.auth-head {
+  text-align: center;
+}
+
+.auth-head h1 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-title);
+}
+
+.auth-head p {
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+/* Dòng phụ dưới form, ví dụ "Chưa có tài khoản? Đăng ký ngay". */
+.auth-footer {
+  margin: 0;
+  color: var(--color-ink-muted);
+  text-align: center;
+}
+
+.auth-footer a,
+.auth-link {
+  color: var(--color-link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-footer a:hover,
+.auth-link:hover {
+  text-decoration: underline;
+}
+
+/* Nhãn mật khẩu và link quên mật khẩu nằm cùng một hàng. */
+.auth-label-row {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.auth-label-row .auth-link {
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+
+/* Nút Hiện nằm trong ô mật khẩu. Ô chừa lề phải để chữ không chạy dưới nút. */
+.password-input {
+  position: relative;
+}
+
+.password-input input {
+  padding-right: 64px;
+}
+
+.password-input button {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  transform: translateY(-50%);
+}
+
+.auth-divider {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  flex: 1;
+  height: 1px;
+  background: var(--color-border);
+  content: '';
+}
+
+/* Kết quả xong việc (đã gửi email, đã đổi mật khẩu) canh giữa cùng link bước tiếp theo. */
+.auth-result {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+  text-align: center;
+}
+
+/* Ô bẫy bot ẩn hoàn toàn như trước. Người dùng và trình đọc màn hình không thấy ô này. */
+.honeypot {
+  display: none;
+}

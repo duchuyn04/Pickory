@@ -182,25 +182,27 @@ export function ProductFormView({
   }
 
   return (
-    <form className="product-form" onSubmit={submit}>
-      <div className="product-page-heading">
-        <div>
+    <form className="page product-form" onSubmit={submit}>
+      <div className="page-head">
+        <div className="page-head-text">
           <h1>{product ? 'Chi tiết sản phẩm' : 'Tạo sản phẩm'}</h1>
           <p>
             {canWrite ? 'Thông tin và biến thể của sản phẩm' : 'Bạn chỉ có quyền xem sản phẩm.'}
           </p>
         </div>
-        <Link to="/admin/products">Về danh sách</Link>
+        <Link className="btn" to="/admin/products">
+          Về danh sách
+        </Link>
       </div>
       {formError && (
-        <p role="alert" className="product-alert">
+        <p role="alert" className="alert">
           {formError}
         </p>
       )}
-      <section className="product-section">
+      <section className="card product-section">
         <h2>Thông tin cơ bản</h2>
-        <div className="product-fields">
-          <div className="product-field">
+        <div className="form-grid form-grid-2">
+          <div className="field">
             <label htmlFor="product-name">Tên sản phẩm</label>
             <input
               id="product-name"
@@ -210,7 +212,7 @@ export function ProductFormView({
               onChange={(event) => setName(event.target.value)}
             />
           </div>
-          <div className="product-field">
+          <div className="field">
             <label htmlFor="product-category">Danh mục lá</label>
             <select
               id="product-category"
@@ -243,7 +245,7 @@ export function ProductFormView({
               ))}
             </select>
           </div>
-          <div className="product-field">
+          <div className="field">
             <label htmlFor="product-brand">Thương hiệu</label>
             <select
               id="product-brand"
@@ -260,7 +262,7 @@ export function ProductFormView({
               ))}
             </select>
           </div>
-          <div className="product-field">
+          <div className="field">
             <label htmlFor="product-warranty">Bảo hành (tháng)</label>
             <input
               id="product-warranty"
@@ -272,7 +274,7 @@ export function ProductFormView({
               onChange={(event) => setWarrantyMonths(Number(event.target.value))}
             />
           </div>
-          <div className="product-field product-field-wide">
+          <div className="field field-full">
             <label htmlFor="product-short-desc">Mô tả ngắn</label>
             <textarea
               id="product-short-desc"
@@ -284,7 +286,7 @@ export function ProductFormView({
           </div>
         </div>
       </section>
-      <section className="product-section">
+      <section className="card product-section">
         <h2>Thông số kỹ thuật</h2>
         <SpecFields
           attributes={attributes}
@@ -306,7 +308,7 @@ export function ProductFormView({
           }}
         />
       </section>
-      <section className="product-section">
+      <section className="card product-section">
         <h2>Mô tả chi tiết</h2>
         <DescriptionEditor
           value={description}
@@ -335,8 +337,8 @@ export function ProductFormView({
       />
       {/* Chỉ quyền products:write mới được hiển thị thao tác lưu. */}
       {canWrite && (
-        <div className="product-actions">
-          <button className="product-button-primary" disabled={isSaving} type="submit">
+        <div className="head-actions product-actions">
+          <button className="btn btn-primary" disabled={isSaving} type="submit">
             {isSaving ? 'Đang lưu...' : 'Lưu sản phẩm'}
           </button>
         </div>

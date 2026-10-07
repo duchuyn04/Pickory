@@ -1,64 +1,144 @@
 # Design system tham chiếu
 
-Tài liệu này chốt hướng giao diện của Pickory trước khi làm UI (UI-05 trở đi). Token cài sẵn ở
-`apps/frontend/src/shared/styles/tokens.css`. Mọi component dùng token, không viết màu hoặc cỡ chữ cứng.
-Prototype bấm được dùng đúng hệ thống này: `prototype/index.html`.
+Tài liệu này chốt hướng giao diện của Pickory. Token nằm ở `apps/frontend/src/shared/styles/tokens.css`. Lớp component dùng chung nằm ở `apps/frontend/src/shared/styles/components.css`.
 
-## Hướng đã chốt: cam ấm, nền kem và cát
+Component chỉ dùng token. Component không viết mã màu hoặc cỡ chữ cứng. Test `test/unit/shared/styles/css-colors.test.ts` chặn mã màu trong file CSS ngoài `tokens.css`.
 
-Phiên bản đầu dùng trắng đen (tham chiếu Klarna, Apple) bị đánh giá là quá đơn sắc. Hướng mới lấy
-màu thương hiệu cam ấm và các thẻ ưu đãi pastel của Klook, gần với thói quen mua sắm của khách Việt
-(Shopee, FPT Shop) mà vẫn giữ bố cục sạch.
+## Hướng đã chốt: đỏ bán lẻ điện tử, nền xám (2026-10-06)
 
-| Khu vực                     | Tham chiếu                                                                                  | Học được gì                                                                                         |
-| --------------------------- | ------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Màu và thẻ ưu đãi           | [Klook, trang chủ](https://mobbin.com/screens/077fd163-99db-436d-8141-62218721a3a1)         | Một màu cam cho nút và điểm nhấn, thẻ ưu đãi nền cát và kem, minh họa ấm                            |
-| Lưới sản phẩm, bộ lọc       | [Klarna, lưới sản phẩm](https://mobbin.com/screens/ab04c0f2-28f4-4b54-9a72-76cdd148428a)    | Ô ảnh nền nhạt, bộ lọc trái có số đếm, giá đậm                                                      |
-| Chat trợ lý                 | [Shop, chat có thẻ sản phẩm](https://mobbin.com/screens/587a9d1f-4092-4167-9bea-7eb3ebad9df4) | Thẻ sản phẩm trong hội thoại, chip gợi ý, ô nhập bo tròn                                            |
-| Đăng ký, đăng nhập          | [AirOps](https://mobbin.com/screens/3120091e-a27f-4333-a4ed-4a7577ca018d), [Clerk](https://mobbin.com/screens/bc7e98b3-dc24-4229-a284-58f96737937a) | Bố cục chia đôi (form và panel thương hiệu), Google trước, lỗi hiện ngay dưới ô nhập               |
-| Back-office                 | [Square, Permissions](https://mobbin.com/screens/19aeddb8-59bd-4151-b07a-69823251d7e6), [Vanta, Roles](https://mobbin.com/screens/6dd83a18-ede6-44a5-adc5-2ebff239c7de) | Sidebar sáng có icon, bảng đường kẻ mảnh, ma trận quyền theo role                                   |
+Người dùng chốt hướng này ngày 2026-10-06. Hướng mới thay hướng cam và kem trước đó.
+
+- Nguồn là bản mẫu HTML tĩnh `shop-retail/`. Bản mẫu này thay cho `prototype/`.
+- Pickory giữ tên và logo riêng. Tên `Hải Đăng Digital` của bản mẫu không dùng trong `apps/`.
+- Màu đỏ `#d70018` và nền xám `#f4f5f7` gần với thói quen mua đồ điện tử của khách Việt.
+
+## Xem bản mẫu
+
+1. Mở terminal ở thư mục `shop-retail/`.
+2. Chạy `python -m http.server 8765 --bind 127.0.0.1`.
+3. Mở `http://127.0.0.1:8765/index.html` để xem cửa hàng.
+4. Mở `http://127.0.0.1:8765/admin/login.html` để xem trang quản trị.
+5. Nhập mật khẩu `demo`.
 
 ## Nguyên tắc
 
-- Cam chỉ dùng cho hành động và điểm nhấn: nút chính, mục đang chọn, nhãn giảm giá, icon nổi bật. Chữ vẫn là màu nâu đen.
-- Nền kem cho ô ảnh sản phẩm, nền cát cho hero và panel thương hiệu, pastel xoay vòng cho ô danh mục.
-- Viền mảnh thay cho đổ bóng. Chỉ panel nổi (chat, modal, menu thả) có bóng nhẹ.
-- Không gradient trang trí, không emoji làm icon, dùng bộ icon nét mảnh thống nhất.
-- Màu đỏ dành cho lỗi và trạng thái nguy hiểm, không dùng cho khuyến mãi để khỏi lẫn với cam.
-- Back-office dùng chung token, dày đặc hơn (nút 36px, bảng gọn).
+- Đỏ dùng cho nút chính, mục đang chọn, giá và khuyến mãi. Mỗi vùng chỉ có một nút chính.
+- Lỗi dùng màu lỗi `--color-danger`, khác với đỏ thương hiệu. Lỗi luôn có chữ hoặc icon, không chỉ dựa vào màu.
+- Viền focus và link dùng màu xanh `--color-focus`. Màu này tách thao tác bàn phím khỏi nút đỏ và viền lỗi.
+- Nền trang xám, thẻ trắng có viền mảnh. Chỉ panel nổi (hộp thoại, menu thả) có bóng rõ.
+- Không gradient trang trí. Không emoji làm icon. Icon dùng bộ SVG nét mảnh trong `apps/frontend/src/shared/icons.tsx`.
+- Mỗi cặp chữ và nền đạt tương phản WCAG AA (4.5:1). Test `tokens.test.ts` kiểm các cặp chính.
 
 ## Token màu
 
-Giá trị đánh dấu **đo** được lấy mẫu điểm ảnh từ ảnh chụp Mobbin; còn lại là suy ra để hài hòa.
+| Token | Giá trị | Dùng cho |
+|---|---|---|
+| `--color-brand` | `#d70018` | Nút chính, mục đang chọn, nhãn khuyến mãi |
+| `--color-brand-hover` | `#bd0015` | Nút chính khi rê chuột |
+| `--color-brand-soft` | `#fbe6e8` | Nền nhạt của mục đang chọn |
+| `--color-on-brand` | `#ffffff` | Chữ trên nền đỏ |
+| `--color-header-soft` | `#dd2438` | Nền khi rê chuột trên header đỏ |
+| `--color-price` | `#d70018` | Giá bán |
+| `--color-page` | `#f4f5f7` | Nền trang |
+| `--color-surface` | `#ffffff` | Nền thẻ, ô nhập |
+| `--color-surface-muted` | `#f6f7f9` | Nền sidebar, khối phụ |
+| `--color-surface-hover` | `#f7f9fc` | Dòng bảng khi rê chuột |
+| `--color-table-head` | `#fafbfc` | Nền tiêu đề cột của bảng ngoài thẻ |
+| `--color-dark` | `#14171c` | Nút chọn đang bật, thanh thông báo nền tối |
+| `--color-on-dark` | `#ffffff` | Chữ trên nền tối, ví dụ ảnh đại diện ở khung admin |
+| `--color-ink` | `#1b1f24` | Chữ chính |
+| `--color-ink-muted` | `#5b6470` | Chữ phụ, tiêu đề cột |
+| `--color-ink-secondary` | `#3f4650` | Chữ của badge trung tính |
+| `--color-border` | `#e3e6ea` | Viền thẻ, đường kẻ dưới tiêu đề cột |
+| `--color-border-strong` | `#d5d9df` | Viền ô nhập và nút phụ |
+| `--color-border-subtle` | `#f0f1f3` | Đường kẻ giữa các dòng bảng |
+| `--color-neutral-soft` | `#eef0f3` | Nền badge trung tính, nền khi rê chuột |
+| `--color-focus` | `#2a6fd6` | Viền focus |
+| `--color-focus-ring` | `rgba(42, 111, 214, 0.18)` | Vòng sáng quanh ô đang nhập |
+| `--color-link` | `#2a6fd6` | Link trong nội dung |
+| `--color-success` | `#0f6b36` | Chữ trạng thái thành công |
+| `--color-success-soft` | `#e3f5ea` | Nền badge thành công |
+| `--color-warning` | `#8a5300` | Chữ trạng thái cảnh báo |
+| `--color-warning-soft` | `#fff1d6` | Nền badge cảnh báo |
+| `--color-danger` | `#b42318` | Chữ lỗi, viền ô lỗi |
+| `--color-danger-soft` | `#fde7e4` | Nền badge lỗi |
+| `--color-info` | `#1d4fae` | Chữ trạng thái thông tin |
+| `--color-info-soft` | `#e5efff` | Nền badge thông tin |
+| `--color-star` | `#f5a524` | Sao đánh giá |
+| `--color-overlay` | `rgba(10, 14, 20, 0.45)` | Lớp phủ sau hộp thoại |
 
-| Token                   | Giá trị   | Nguồn             | Dùng cho                                     |
-| ----------------------- | --------- | ----------------- | -------------------------------------------- |
-| `--color-brand`         | `#ec6436` | đo (nút Klook)    | Nút chính, mục đang chọn, nhãn giảm giá      |
-| `--color-brand-hover`   | `#d4521f` | suy ra            | Trạng thái hover của nút chính               |
-| `--color-brand-soft`    | `#fdece4` | suy ra            | Nền icon, ô danh mục, badge thương hiệu      |
-| `--color-sand`          | `#f6dda8` | đo (thẻ ưu đãi)   | Khối khuyến mãi đậm                          |
-| `--color-sand-soft`     | `#fbeed3` | suy ra            | Hero, panel đăng nhập                        |
-| `--color-surface-muted` | `#fcf8e7` | đo (nền kem)      | Ô ảnh sản phẩm, sidebar back-office          |
-| `--color-ink`           | `#1f1a17` | suy ra            | Chữ chính                                    |
-| `--color-ink-muted`     | `#7a6e65` | suy ra            | Chữ phụ                                      |
-| `--color-border`        | `#ece4d8` | suy ra            | Viền thẻ, đường kẻ bảng                      |
-| `--color-star`          | `#f5a524` | suy ra            | Sao đánh giá                                 |
-| `--color-info`          | `#1d6fe0` | suy ra            | Trạng thái thông tin (đang giao, đã xác nhận) |
-| `--color-success`       | `#127a43` | suy ra            | Thành công, đã thanh toán                    |
-| `--color-danger`        | `#b42318` | suy ra            | Lỗi, khóa, quá hạn                           |
+## Tương phản đo được
 
-## Chữ, bo góc, khoảng cách
+| Chữ | Nền | Tỉ lệ |
+|---|---|---|
+| `--color-ink` | `--color-page` | 15.18 |
+| `--color-ink-muted` | `--color-page` | 5.50 |
+| `--color-ink-muted` | `--color-surface-muted` | 5.59 |
+| `--color-on-brand` | `--color-brand` | 5.38 |
+| `--color-link` | `--color-surface` | 4.84 |
+| `--color-danger` | `--color-danger-soft` | 5.55 |
+| `--color-warning` | `--color-warning-soft` | 5.67 |
+| `--color-success` | `--color-success-soft` | 5.83 |
+| `--color-info` | `--color-info-soft` | 6.51 |
 
-- Font: **Be Vietnam Pro** (Google Fonts), dự phòng `system-ui`. Hiển thị tiếng Việt có dấu tốt.
-- Cỡ chữ 12, 13, 14, 16, 20, 28, 40 px. Tiêu đề dùng `text-wrap: balance` để không mồ côi chữ.
-- Bo góc: 6px (badge), 10px (ô nhập), 14px (thẻ), tròn hẳn cho nút và chip.
-- Khoảng cách theo thang 4px: 4, 8, 12, 16, 24, 32, 48, 64.
+## Chữ, bo góc, khoảng cách, bóng
 
-## Component chính
+- Font: Be Vietnam Pro, tải từ Google Fonts trong `apps/frontend/index.html`. Font hệ thống dùng khi font chưa tải xong.
+- Cỡ chữ: 12, 13, 14, 16, 20, 22, 28 px (`--text-xs`, `--text-label`, `--text-sm`, `--text-md`, `--text-lg`, `--text-title`, `--text-xl`).
+- Tiêu đề trang (`h1` trong `.page-head`) dùng `--text-title`.
+- Màn quản trị dùng chữ thân 14 px. Nhãn ô nhập, nút nhỏ và chữ trong bảng dùng 13 px.
+- Bo góc: 8 px cho nút và ô nhập, 12 px cho thẻ, 14 px cho hộp thoại, tròn hẳn cho badge.
+- Khoảng cách theo thang 4 px: 4, 8, 12, 16, 24, 32, 48, 64.
+- Bóng: `--shadow-card` rất nhẹ cho thẻ nổi, `--shadow-popover` cho hộp thoại và menu thả.
+- Khung admin dùng `--shadow-nav-active` cho mục menu đang chọn và `--shadow-drawer` cho ngăn kéo menu trên điện thoại.
 
-- **Nút chính:** nền cam, chữ trắng, bo tròn, cao 44px (cửa hàng) hoặc 36px (back-office).
-- **Thẻ sản phẩm:** ô ảnh nền kem, nhãn giảm giá nền cam góc trên trái, thương hiệu, tên 2 dòng, dòng thông số ngắn, sao màu hổ phách, giá đậm.
-- **Ô danh mục:** ảnh trên nền pastel xoay vòng (kem, cát, cam nhạt, xanh nhạt, xanh lá nhạt).
-- **Đăng ký, đăng nhập:** chia đôi, công tắc "Đăng nhập / Tạo tài khoản", Google trước, ô mật khẩu có nút hiện/ẩn và thước độ mạnh, lỗi hiện ngay dưới ô nhập.
-- **Chat:** tin của khách nền cam, tin của trợ lý không nền, thẻ sản phẩm trong luồng, trích dẫn số nhỏ dẫn tới đúng mục tài liệu.
-- **Bảng back-office:** không viền dọc, mục menu đang chọn có vạch cam bên trái.
+## Component chung
+
+| Lớp | Dùng cho | Màn mẫu |
+|---|---|---|
+| `.btn`, `.btn-primary`, `.btn-outline`, `.btn-ghost`, `.btn-danger`, `.btn-sm`, `.btn-block` | Nút | `shop-retail/admin/products.html` |
+| `.field`, `.input-sm`, `.form-grid`, `.form-grid-2`, `.form-grid-3`, `.field-full` | Ô nhập và lưới form | `shop-retail/admin/product.html` |
+| `.form-error`, `.hint`, `[aria-invalid='true']` | Lỗi và gợi ý dưới ô nhập | `shop-retail/admin/product.html` |
+| `.badge`, `.badge-ok`, `.badge-warn`, `.badge-bad`, `.badge-info` | Trạng thái | `shop-retail/admin/orders.html` |
+| `.card`, `.card-head`, `.card-flush` | Thẻ nội dung | `shop-retail/admin/index.html` |
+| `.table-wrap`, `.tbl`, `.num` | Bảng dữ liệu | `shop-retail/admin/products.html` |
+| `.sr`, `.muted`, `.small`, `.mono` | Tiện ích chữ | Mọi màn |
+| `.icon` | Icon 18 px của component `Icon` | Mọi màn |
+| `.page`, `.page-head`, `.page-head-text`, `.head-actions` | Khung trang và đầu trang | `shop-retail/admin/products.html` |
+| `.stack`, `.stack-sm`, `.row-actions` | Xếp khối dọc và nhóm nút | Mọi màn |
+| `.alert`, `.empty-state`, `.empty-state-dashed` | Lỗi, đang tải, danh sách rỗng | `shop-retail/admin/products.html` |
+| `.filters-row`, `.pager`, `.cell-sub`, `.wrap-anywhere`, `.check` | Bộ lọc, phân trang và chữ phụ trong bảng | `shop-retail/admin/products.html` |
+| `.icon-btn` | Nút chỉ có icon | `shop-retail/admin/index.html` |
+| `.dialog-backdrop`, `.dialog`, `.dialog-lg`, `.dialog-head`, `.dialog-body`, `.dialog-foot` | Hộp thoại form | `shop-retail/admin/product.html` |
+| `.alert-ok`, `.alert-warn` | Thông báo thành công và cảnh báo | `shop-retail/admin/settings.html` |
+| `.kpis`, `.kpi`, `.kpi-value`, `.kpi-ok`, `.kpi-bad` | Thẻ số liệu | `shop-retail/admin/index.html` |
+| `.link-btn` | Nút dạng link màu xanh | `shop-retail/admin/index.html` |
+| `.role-picker` | Nhóm checkbox chọn vai trò, dùng với `fieldset` và `legend` | `shop-retail/admin/settings.html` |
+| `.logo-mark` | Ô logo chữ P ở khung admin và màn đăng nhập | `shop-retail/admin/login.html` |
+| `.forbidden-title` | Tiêu đề màn thiếu quyền của component `ForbiddenNotice` | Mọi màn admin |
+
+Lưới form `.form-grid-2` và `.form-grid-3` đổi về một cột khi màn rộng dưới 768 px.
+
+Màn thiếu quyền dùng component `ForbiddenNotice` trong `apps/frontend/src/shared/forbidden-notice.tsx`.
+
+Lỗi nhập liệu hiện ngay dưới ô sai bằng `FieldError` và `fieldErrorProps` trong `apps/frontend/src/shared/field-error.tsx`. Ô sai nhận `aria-invalid` và `aria-describedby`. Lỗi trả về từ API hiện ở `.alert` đầu form.
+
+Màn tài khoản của khách dùng `AuthCard`, `PasswordInput`, `AuthDivider` và `GoogleSignInLink` trong `apps/frontend/src/features/identity/customer/auth-ui.tsx`.
+
+Header của khách nằm ở `apps/frontend/src/shared/header.tsx`. Header dùng nền `--color-brand`, chữ `--color-on-brand` và nền rê chuột `--color-header-soft`.
+
+Bảng `.tbl` chỉ tô kiểu tiêu đề cột cho `thead th`. Ô `th scope="row"` trong `tbody` hiện như ô dữ liệu in đậm.
+
+`main.tsx` nạp `tokens.css`, `base.css` và `components.css` trước `App`. CSS riêng của từng màn nạp sau, nên ghi đè được lớp chung có cùng độ ưu tiên.
+
+Màn đã chuyển sang design system không viết `style={{`. Test `test/unit/shared/styles/inline-styles.test.ts` giữ danh sách các thư mục đã chuyển.
+
+## Kế hoạch áp dụng
+
+Kế hoạch chi tiết ở `tasks/plan-design.md` và `tasks/todo-design.md`.
+
+1. DS-01: token, lớp component chung và tài liệu này.
+2. DS-02: khung admin theo `shop-retail/admin/index.html`. Khung nằm ở `features/identity/admin/admin-layout.tsx`.
+3. DS-03: màn admin catalog.
+4. DS-04: màn admin identity và AI.
+5. DS-05: header và màn tài khoản của khách.

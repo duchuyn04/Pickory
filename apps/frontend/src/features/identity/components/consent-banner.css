@@ -1,0 +1,56 @@
+/* Banner đồng ý cookie dính đáy màn hình cho tới khi khách chọn. */
+.consent-banner {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 90;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+  font-family: var(--font-sans);
+}
+
+.consent-text {
+  flex: 1 1 480px;
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+}
+
+.consent-text a {
+  color: var(--color-link);
+  font-weight: 600;
+}
+
+.consent-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+/* Hai lựa chọn rộng bằng nhau, để không nút nào được làm nổi bật hơn nút kia. */
+.consent-choice {
+  min-width: 130px;
+}
+
+@media (max-width: 767px) {
+  .consent-banner {
+    padding: var(--space-3) var(--space-4);
+  }
+
+  /* Trên điện thoại, hàng nút chiếm hết chiều rộng và hai nút chia đều. */
+  .consent-actions {
+    flex: 1 1 100%;
+  }
+
+  .consent-choice {
+    flex: 1 1 0;
+  }
+}

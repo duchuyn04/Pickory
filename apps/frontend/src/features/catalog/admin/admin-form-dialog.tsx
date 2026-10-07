@@ -1,4 +1,5 @@
 import React from 'react';
+import { Icon } from '../../../shared/icons';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 
 // Thuộc tính đầu vào cho khung hộp thoại biểu mẫu quản trị dùng chung.
@@ -12,7 +13,8 @@ export interface AdminFormDialogProps {
   submitText?: string;
   cancelText?: string;
   error?: string | null;
-  maxWidth?: number;
+  // Hộp thoại có trình sửa thuộc tính cần bản rộng `lg`. Form ngắn dùng bản mặc định.
+  size?: 'md' | 'lg';
   children: React.ReactNode;
 }
 
@@ -27,7 +29,7 @@ export function AdminFormDialog({
   submitText = 'Lưu',
   cancelText = 'Hủy',
   error,
-  maxWidth = 600,
+  size = 'md',
   children,
 }: AdminFormDialogProps) {
   // Bẫy focus đưa con trỏ vào ô nhập liệu đầu tiên khi mở hộp thoại.
@@ -42,155 +44,41 @@ export function AdminFormDialog({
   }
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-4)',
-        zIndex: 10000,
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
+    <div className="dialog-backdrop">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={`${formId}-dialog-title`}
         tabIndex={-1}
-        style={{
-          width: '100%',
-          maxWidth,
-          maxHeight: '90vh',
-          backgroundColor: 'var(--color-surface)',
-          borderRadius: 'var(--radius-card)',
-          border: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)',
-          outline: 'none',
-        }}
+        className={size === 'lg' ? 'dialog dialog-lg' : 'dialog'}
       >
-        {/* Tiêu đề hộp thoại */}
-        <div
-          style={{
-            padding: 'var(--space-4) var(--space-6)',
-            borderBottom: '1px solid var(--color-border)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <h2
-            id={`${formId}-dialog-title`}
-            style={{
-              fontSize: 'var(--text-lg)',
-              fontWeight: 700,
-              margin: 0,
-              color: 'var(--color-ink)',
-            }}
-          >
-            {title}
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Đóng"
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: 'var(--text-lg)',
-              cursor: 'pointer',
-              color: 'var(--color-ink-muted)',
-            }}
-          >
-            ✕
+        <div className="dialog-head">
+          <h2 id={`${formId}-dialog-title`}>{title}</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Đóng">
+            <Icon name="close" />
           </button>
         </div>
 
-        {/* Thân hộp thoại chứa form và cảnh báo lỗi */}
-        <div
-          style={{
-            padding: 'var(--space-6)',
-            overflowY: 'auto',
-            flex: 1,
-          }}
-        >
+        {/* Thân hộp thoại tự cuộn, để nút lưu ở chân hộp thoại luôn nhìn thấy. */}
+        <div className="dialog-body">
           {error && (
-            <div
-              role="alert"
-              style={{
-                backgroundColor: 'var(--color-surface-muted)',
-                border: '1px solid var(--color-danger)',
-                color: 'var(--color-danger)',
-                padding: 'var(--space-3)',
-                borderRadius: 'var(--radius-control)',
-                fontSize: 'var(--text-sm)',
-                marginBottom: 'var(--space-4)',
-              }}
-            >
+            <p role="alert" className="alert">
               {error}
-            </div>
+            </p>
           )}
 
-          <form
-            id={formId}
-            noValidate
-            onSubmit={onSubmit}
-            style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
-          >
+          <form id={formId} noValidate onSubmit={onSubmit} className="stack">
             {children}
           </form>
         </div>
 
-        {/* Chân hộp thoại chứa các nút hành động */}
-        <div
-          style={{
-            padding: 'var(--space-4) var(--space-6)',
-            borderTop: '1px solid var(--color-border)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 'var(--space-3)',
-          }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={isSubmitting}
-            style={{
-              padding: 'var(--space-2) var(--space-4)',
-              backgroundColor: 'transparent',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-control)',
-              fontSize: 'var(--text-sm)',
-              cursor: 'pointer',
-              color: 'var(--color-ink)',
-            }}
-          >
+        <div className="dialog-foot">
+          <button type="button" className="btn" onClick={onClose} disabled={isSubmitting}>
             {cancelText}
           </button>
-          <button
-            type="submit"
-            form={formId}
-            disabled={isSubmitting}
-            style={{
-              padding: 'var(--space-2) var(--space-4)',
-              backgroundColor: 'var(--color-brand)',
-              color: 'var(--color-surface)',
-              border: 'none',
-              borderRadius: 'var(--radius-control)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              opacity: isSubmitting ? 0.7 : 1,
-            }}
-          >
+          {/* Khóa nút gửi khi đang lưu để một lần bấm không tạo hai bản ghi. */}
+          <button type="submit" className="btn btn-primary" form={formId} disabled={isSubmitting}>
             {isSubmitting ? 'Đang lưu...' : submitText}
           </button>
         </div>

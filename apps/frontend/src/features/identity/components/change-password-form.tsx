@@ -2,7 +2,14 @@ import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
-import { getPasswordError } from '../../../shared/identity-validation';
+import {
+  FieldError,
+  fieldErrorProps,
+  hasFieldErrors,
+  type FieldErrors,
+} from '../../../shared/field-error';
+import { getConfirmPasswordError, getPasswordError } from '../../../shared/identity-validation';
+import '../customer/account.css';
 
 // Form đổi mật khẩu trong trang tài khoản.
 export function ChangePasswordForm() {
@@ -11,6 +18,8 @@ export function ChangePasswordForm() {
   // Ô nhập lại mật khẩu mới để người dùng không đặt nhầm do gõ sai mà không hay.
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  // Lỗi theo từng ô hiện ngay dưới ô sai; `error` chỉ còn giữ lỗi trả về từ API.
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'newPassword' | 'confirm'>>({});
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
@@ -24,17 +33,13 @@ export function ChangePasswordForm() {
     setSuccess(false);
 
     // Kiểm tra ở trình duyệt để báo lỗi tiếng Việt ngay, không tốn một lượt gọi API; server vẫn kiểm tra lại.
-    const validationError = getPasswordError(newPassword);
-    if (validationError) {
-      setError(validationError);
-      return;
-    }
-
     // Việc khớp với ô nhập lại chỉ kiểm được ở phía giao diện vì server không nhận ô này.
-    if (newPassword !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp.');
-      return;
-    }
+    const nextFieldErrors = {
+      newPassword: getPasswordError(newPassword),
+      confirm: getConfirmPasswordError(newPassword, confirmPassword),
+    };
+    setFieldErrors(nextFieldErrors);
+    if (hasFieldErrors(nextFieldErrors)) return;
 
     setLoading(true);
 
@@ -74,186 +79,76 @@ export function ChangePasswordForm() {
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        borderRadius: 'var(--radius-card)',
-        border: '1px solid var(--color-border)',
-        padding: 'var(--space-6)',
-      }}
-    >
-      <h2
-        style={{
-          fontSize: 'var(--text-lg)',
-          fontWeight: 700,
-          margin: '0 0 var(--space-2) 0',
-          color: 'var(--color-ink)',
-        }}
-      >
-        Đổi mật khẩu
-      </h2>
-      <p
-        style={{
-          fontSize: 'var(--text-sm)',
-          color: 'var(--color-ink-muted)',
-          margin: '0 0 var(--space-4) 0',
-        }}
-      >
+    <section className="card account-section">
+      <h2>Đổi mật khẩu</h2>
+      <p className="muted small">
         Sau khi đổi mật khẩu thành công, bạn sẽ được đăng xuất khỏi tất cả các thiết bị để đảm bảo
         an toàn.
       </p>
 
       {success && (
-        <div
-          style={{
-            backgroundColor: '#e6f4ea',
-            border: '1px solid var(--color-success)',
-            color: 'var(--color-success)',
-            padding: 'var(--space-3)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-            marginBottom: 'var(--space-4)',
-          }}
-        >
+        <p role="status" className="alert alert-ok">
           Đổi mật khẩu thành công! Đang chuyển hướng về trang đăng nhập...
-        </div>
+        </p>
       )}
 
       {error && (
-        <div
-          style={{
-            backgroundColor: '#fee4e2',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            padding: 'var(--space-3)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-            marginBottom: 'var(--space-4)',
-          }}
-        >
+        <p role="alert" className="alert">
           {error}
-        </div>
+        </p>
       )}
 
-      <form
-        noValidate
-        onSubmit={handleSubmit}
-        style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
-      >
-        <div>
-          <label
-            htmlFor="current-pw"
-            style={{
-              display: 'block',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-              color: 'var(--color-ink)',
-              marginBottom: 'var(--space-1)',
-            }}
-          >
-            Mật khẩu hiện tại
-          </label>
+      <form noValidate onSubmit={handleSubmit} className="stack">
+        <div className="field">
+          <label htmlFor="current-pw">Mật khẩu hiện tại</label>
           <input
             id="current-pw"
             type="password"
+            autoComplete="current-password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
             placeholder="Nhập mật khẩu hiện tại"
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 'var(--space-3)',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--color-border)',
-              fontSize: 'var(--text-md)',
-              outline: 'none',
-            }}
           />
+        </div>
+
+        <div className="form-grid form-grid-2">
+          <div className="field">
+            <label htmlFor="new-pw">Mật khẩu mới (tối thiểu 8 ký tự)</label>
+            <input
+              id="new-pw"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              placeholder="Nhập mật khẩu mới"
+              {...fieldErrorProps('new-pw', fieldErrors.newPassword)}
+            />
+            <FieldError inputId="new-pw" message={fieldErrors.newPassword} />
+          </div>
+
+          <div className="field">
+            <label htmlFor="confirm-new-pw">Xác nhận mật khẩu mới</label>
+            <input
+              id="confirm-new-pw"
+              type="password"
+              required
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              placeholder="Nhập lại mật khẩu mới"
+              {...fieldErrorProps('confirm-new-pw', fieldErrors.confirm)}
+            />
+            <FieldError inputId="confirm-new-pw" message={fieldErrors.confirm} />
+          </div>
         </div>
 
         <div>
-          <label
-            htmlFor="new-pw"
-            style={{
-              display: 'block',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-              color: 'var(--color-ink)',
-              marginBottom: 'var(--space-1)',
-            }}
-          >
-            Mật khẩu mới (tối thiểu 8 ký tự)
-          </label>
-          <input
-            id="new-pw"
-            type="password"
-            required
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="Nhập mật khẩu mới"
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 'var(--space-3)',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--color-border)',
-              fontSize: 'var(--text-md)',
-              outline: 'none',
-            }}
-          />
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
+          </button>
         </div>
-
-        <div>
-          <label
-            htmlFor="confirm-new-pw"
-            style={{
-              display: 'block',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-              color: 'var(--color-ink)',
-              marginBottom: 'var(--space-1)',
-            }}
-          >
-            Xác nhận mật khẩu mới
-          </label>
-          <input
-            id="confirm-new-pw"
-            type="password"
-            required
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            placeholder="Nhập lại mật khẩu mới"
-            style={{
-              width: '100%',
-              boxSizing: 'border-box',
-              padding: 'var(--space-3)',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--color-border)',
-              fontSize: 'var(--text-md)',
-              outline: 'none',
-            }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            alignSelf: 'flex-start',
-            backgroundColor: 'var(--color-brand)',
-            color: '#ffffff',
-            border: 'none',
-            padding: 'var(--space-3) var(--space-5)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-md)',
-            fontWeight: 600,
-            cursor: loading ? 'not-allowed' : 'pointer',
-            opacity: loading ? 0.7 : 1,
-          }}
-        >
-          {loading ? 'Đang cập nhật...' : 'Cập nhật mật khẩu'}
-        </button>
       </form>
-    </div>
+    </section>
   );
 }

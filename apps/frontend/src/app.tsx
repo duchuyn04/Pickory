@@ -42,20 +42,12 @@ function CustomerLayout() {
   );
 }
 
+// Trang giữ chỗ cho module chưa làm, để mục menu đã có route không mở ra trang trắng.
 function AdminPlaceholderPage({ title }: { title: string }) {
   return (
-    <div
-      style={{
-        padding: 'var(--space-6)',
-        backgroundColor: 'var(--color-surface)',
-        borderRadius: 'var(--radius-card)',
-        border: '1px solid var(--color-border)',
-      }}
-    >
-      <h2 style={{ margin: '0 0 var(--space-2) 0', color: 'var(--color-ink)' }}>{title}</h2>
-      <p style={{ margin: 0, color: 'var(--color-ink-muted)' }}>
-        Chức năng đang được phát triển trong module kế tiếp.
-      </p>
+    <div className="card">
+      <h2 className="admin-placeholder-title">{title}</h2>
+      <p className="muted">Chức năng đang được phát triển trong module kế tiếp.</p>
     </div>
   );
 }

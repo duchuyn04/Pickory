@@ -1,0 +1,111 @@
+/* Thanh đầu trang của khách: nền đỏ thương hiệu, chữ trắng, dính đầu trang khi cuộn. */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  font-family: var(--font-sans);
+}
+
+.site-header-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) 14px;
+  align-items: center;
+  max-width: 1200px;
+  min-height: 64px;
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-4);
+}
+
+.site-logo {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  color: inherit;
+  font-size: 19px;
+  font-weight: 800;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* Trên nền đỏ, ô logo đảo màu thành nền trắng chữ đỏ như bản mẫu. */
+.site-logo-mark {
+  background: var(--color-on-brand);
+  color: var(--color-brand);
+}
+
+.site-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+.site-nav a,
+.site-action {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.site-nav a:hover,
+.site-action:hover {
+  background: var(--color-header-soft);
+}
+
+/* Viền focus trắng vì viền xanh mặc định khó thấy trên nền đỏ. */
+.site-header :focus-visible {
+  outline-color: var(--color-on-brand);
+}
+
+.site-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  margin-left: auto;
+}
+
+.site-action-primary {
+  background: var(--color-on-brand);
+  color: var(--color-brand);
+  font-weight: 700;
+}
+
+.site-action-primary:hover {
+  background: var(--color-brand-soft);
+}
+
+.site-header-alert {
+  max-width: 1200px;
+  margin: 0 auto var(--space-2);
+}
+
+/* Màn hẹp: điều hướng xuống hàng riêng dưới logo, thao tác nằm cạnh logo. */
+@media (max-width: 767px) {
+  .site-header-inner {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .site-nav {
+    order: 3;
+    width: 100%;
+  }
+
+  .site-action {
+    padding: 6px var(--space-2);
+  }
+}

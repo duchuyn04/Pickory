@@ -170,56 +170,11 @@ export function DescriptionToolbar({ editor, disabled = false }: DescriptionTool
     }
   };
 
-  // Kiểu dáng cho nút định dạng có trạng thái bật và tắt.
-  const getFormatButtonStyle = (
-    active: boolean,
-    isButtonDisabled: boolean,
-  ): React.CSSProperties => {
-    return {
-      padding: 'var(--space-1) var(--space-3)',
-      borderRadius: 'var(--radius-control)',
-      border: active ? '1px solid var(--color-brand)' : '1px solid var(--color-border)',
-      backgroundColor: active ? 'var(--color-brand-soft)' : 'var(--color-surface)',
-      color: active ? 'var(--color-brand)' : 'var(--color-ink)',
-      fontSize: 'var(--text-sm)',
-      fontFamily: 'var(--font-sans)',
-      fontWeight: active ? 600 : 500,
-      cursor: isButtonDisabled ? 'not-allowed' : 'pointer',
-      opacity: isButtonDisabled ? 0.5 : 1,
-      transition: 'background-color 0.15s ease, border-color 0.15s ease',
-    };
-  };
-
-  // Kiểu dáng cho nút hành động đơn lẻ không lưu trạng thái bật.
-  const getActionButtonStyle = (isButtonDisabled: boolean): React.CSSProperties => {
-    return {
-      padding: 'var(--space-1) var(--space-3)',
-      borderRadius: 'var(--radius-control)',
-      border: '1px solid var(--color-border)',
-      backgroundColor: 'var(--color-surface)',
-      color: 'var(--color-ink)',
-      fontSize: 'var(--text-sm)',
-      fontFamily: 'var(--font-sans)',
-      fontWeight: 500,
-      cursor: isButtonDisabled ? 'not-allowed' : 'pointer',
-      opacity: isButtonDisabled ? 0.5 : 1,
-      transition: 'background-color 0.15s ease, border-color 0.15s ease',
-    };
-  };
-
   return (
     <div
       role="toolbar"
       aria-label="Thanh công cụ định dạng văn bản"
-      style={{
-        display: 'flex',
-        flexWrap: 'wrap',
-        alignItems: 'center',
-        gap: 'var(--space-2)',
-        padding: 'var(--space-2)',
-        borderBottom: '1px solid var(--color-border)',
-        backgroundColor: 'var(--color-surface-muted)',
-      }}
+      className="description-toolbar"
     >
       {TOOLBAR_ITEMS.map((item, index) => {
         const isItemActive = item.isActive(editor);
@@ -240,11 +195,7 @@ export function DescriptionToolbar({ editor, disabled = false }: DescriptionTool
             disabled={isItemDisabled}
             aria-pressed={item.isToggle ? isItemActive : undefined}
             aria-label={item.label}
-            style={
-              item.isToggle
-                ? getFormatButtonStyle(isItemActive, isItemDisabled)
-                : getActionButtonStyle(isItemDisabled)
-            }
+            className="editor-tool"
           >
             {item.label}
           </button>

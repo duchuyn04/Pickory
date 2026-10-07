@@ -13,13 +13,13 @@ export function SpecFields({ attributes, values, errors, disabled, onChange }: S
   if (attributes.length === 0) return <p>Danh mục chưa có thông số.</p>;
 
   return (
-    <div className="product-fields">
+    <div className="form-grid form-grid-2">
       {attributes.map((attribute) => {
         const inputId = `spec-${attribute.key}`;
         const errorId = `${inputId}-error`;
         const error = errors[attribute.key];
         return (
-          <div className="product-field" key={attribute.key}>
+          <div className="field" key={attribute.key}>
             <label htmlFor={inputId}>
               {attribute.label}
               {attribute.unit ? ` (${attribute.unit})` : ''}
@@ -90,7 +90,7 @@ export function SpecFields({ attributes, values, errors, disabled, onChange }: S
             )}
             {/* Liên kết lỗi với ô nhập giúp trình đọc màn hình nêu đúng thông số sai. */}
             {error && (
-              <span id={errorId} className="product-error">
+              <span id={errorId} className="form-error">
                 {error}
               </span>
             )}
