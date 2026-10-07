@@ -1,10 +1,10 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
-import { Navigate, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
 import { Icon } from '../../../shared/icons';
 import { useActor, type ActorData } from '../hooks/use-actor';
-import { ADMIN_NAV_GROUPS, filterNavGroupsByPermission } from './admin-navigation';
+import { ADMIN_NAV_GROUPS, filterNavGroupsByPermission, isNavItemActive } from './admin-navigation';
 import './admin-layout.css';
 
 const SIDEBAR_ID = 'admin-sidebar';
@@ -39,6 +39,7 @@ export function AdminLayout() {
   const { data: actor, isLoading } = useActor();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
   // Ngăn kéo menu chỉ dùng ở màn hẹp. CSS luôn hiện sidebar ở màn rộng.
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(readStoredCollapsed);
@@ -120,10 +121,10 @@ export function AdminLayout() {
               <ul className="admin-nav-list">
                 {group.items.map((item) => (
                   <li key={item.path}>
-                    {/* `end` chỉ cho Tổng quan, để trang con như /admin/products/:id vẫn đánh dấu mục cha. */}
-                    <NavLink
+                    {/* Mục cha vẫn sáng ở trang con như /admin/products/:id. Trang tồn kho SKU thuộc mục Tồn kho. */}
+                    <Link
                       to={item.path}
-                      end={item.path === '/admin'}
+                      aria-current={isNavItemActive(item, pathname) ? 'page' : undefined}
                       className="admin-nav-link"
                       title={isCollapsed ? item.label : undefined}
                       // Đóng ngăn kéo sau khi chọn trang, để nội dung trang mới không bị lớp phủ che.
@@ -131,7 +132,7 @@ export function AdminLayout() {
                     >
                       <Icon name={item.icon} />
                       <span className="admin-nav-label">{item.label}</span>
-                    </NavLink>
+                    </Link>
                   </li>
                 ))}
               </ul>

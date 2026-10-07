@@ -686,3 +686,8 @@
   font-family: var(--font-mono);
   font-size: var(--text-xs);
 }
+
+/* Lỗi từ máy chủ nằm trên cùng thân hộp thoại, cách nhóm ô nhập bên dưới một khoảng. */
+.dialog-body > .alert {
+  margin-bottom: var(--space-3);
+}

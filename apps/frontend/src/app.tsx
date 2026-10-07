@@ -2,6 +2,8 @@ import { lazy, Suspense } from 'react';
 import { AiSettingsPage } from './features/ai-gateway/admin/ai-settings-page';
 import { BrandsPage } from './features/catalog/admin/brands-page';
 import { CategoriesPage } from './features/catalog/admin/categories-page';
+import { InventoryPage } from './features/catalog/admin/inventory-page';
+import { SkuInventoryPage } from './features/catalog/admin/sku-inventory-page';
 import { Outlet, Route, Routes } from 'react-router-dom';
 import { AccountPage } from './features/identity/customer/account-page';
 import { AdminDashboardPage } from './features/identity/admin/dashboard-page';
@@ -98,6 +100,8 @@ export function App() {
               </Suspense>
             }
           />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="products/:productId/skus/:skuId/inventory" element={<SkuInventoryPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="brands" element={<BrandsPage />} />
           <Route

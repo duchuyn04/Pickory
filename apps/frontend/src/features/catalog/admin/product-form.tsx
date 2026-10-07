@@ -410,6 +410,7 @@ export function ProductFormView({
       />
       <ProductOptionsEditor options={options} disabled={disabled} onChange={updateOptions} />
       <VariantTable
+        productId={product?.id}
         variants={variants}
         disabled={disabled}
         priceErrors={priceErrors}

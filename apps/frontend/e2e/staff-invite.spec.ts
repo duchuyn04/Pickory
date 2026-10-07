@@ -52,6 +52,7 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
     for (const label of [
       'Tổng quan',
       'Sản phẩm',
+      'Tồn kho',
       'Danh mục',
       'Thương hiệu',
       'Khách hàng',
@@ -68,6 +69,7 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
       'Tổng quan',
       'Đơn hàng',
       'Sản phẩm',
+      'Tồn kho',
       'Danh mục',
       'Thương hiệu',
       'Khách hàng',

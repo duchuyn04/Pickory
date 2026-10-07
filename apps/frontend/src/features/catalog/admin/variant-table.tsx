@@ -1,6 +1,9 @@
+import { Link } from 'react-router-dom';
 import { toCombinationKey, type ProductVariant } from './product-logic';
 
 interface VariantTableProps {
+  // Có mã sản phẩm thì SKU đã lưu có liên kết tới màn tồn kho. Sản phẩm mới chưa có mã nên không có liên kết.
+  productId?: string;
   variants: ProductVariant[];
   disabled: boolean;
   priceErrors: Record<string, string>;
@@ -19,6 +22,7 @@ const numericColumns: { field: NumericField; title: string }[] = [
 
 // Bảng dùng cùng khóa tổ hợp với form để gắn lỗi giá đúng SKU.
 export function VariantTable({
+  productId,
   variants,
   disabled,
   priceErrors,
@@ -99,7 +103,19 @@ export function VariantTable({
                     )}
                   </td>
                   {/* Tồn kho chỉ đọc vì chỉnh tồn phải qua nghiệp vụ ghi nhận lý do. */}
-                  <td>{variant.stock ?? 0}</td>
+                  <td>
+                    {variant.stock ?? 0}
+                    {/* SKU chưa lưu chưa có id từ máy chủ nên chưa có trang tồn kho. */}
+                    {productId && variant.id && (
+                      <Link
+                        className="cell-link"
+                        aria-label={`Tồn kho ${combinationName}`}
+                        to={`/admin/products/${productId}/skus/${variant.id}/inventory`}
+                      >
+                        Tồn kho
+                      </Link>
+                    )}
+                  </td>
                   <td>
                     <label className="check">
                       <input

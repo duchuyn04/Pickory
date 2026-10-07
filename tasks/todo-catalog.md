@@ -344,10 +344,34 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### UI-C7: Màn tồn kho
 **Mô tả:** Danh sách SKU sắp hết hàng (ngưỡng 5), form điều chỉnh có ô lý do bắt buộc, bảng lịch sử movement của SKU.
 **Tiêu chí nghiệm thu:**
-- [ ] Điều chỉnh thành công thì tồn kho và lịch sử cập nhật không cần tải lại trang
-- [ ] Không có `inventory:write` thì không thấy form điều chỉnh
+- [x] Điều chỉnh thành công thì tồn kho và lịch sử cập nhật không cần tải lại trang
+- [x] Không có `inventory:write` thì không thấy form điều chỉnh
 **Kiểm tra:** test component; Playwright trên `pnpm dev`
 **Phụ thuộc:** CAT-08, UI-C5 · **File:** `features/catalog/admin/{inventory-page,adjust-stock-dialog}.tsx`, `app.tsx` · **Quy mô:** S
+
+**Quyết định (2026-10-08):**
+- Hai route: `/admin/inventory` (danh sách SKU sắp hết hàng, có phân trang) và `/admin/products/:productId/skus/:skuId/inventory` (trang tồn kho một SKU, lấy SKU từ `GET /api/admin/products/:productId` và lịch sử từ `GET /api/admin/skus/:skuId/movements`).
+- Lối vào trang SKU: liên kết ở mỗi dòng danh sách sắp hết hàng, và liên kết "Tồn kho" cho mỗi SKU đã lưu trong bảng biến thể của form sản phẩm. SKU chưa lưu không có liên kết.
+- Menu: thêm mục "Tồn kho" vào nhóm "Sản phẩm", quyền `products:read`, icon mới `inventory` cùng kiểu nét. Trang SKU đánh dấu mục "Tồn kho" thay cho "Sản phẩm".
+- Form điều chỉnh là dialog `adjust-stock-dialog.tsx`: loại (Điều chỉnh hoặc Khách trả hàng), số lượng thay đổi, lý do tối đa 500 ký tự. Kiểm ở client cùng luật backend, lỗi dưới ô, lỗi 409 hiện trong dialog và dialog không đóng, nút gửi khóa khi chờ API, hiện tồn kho hiện tại và sau điều chỉnh.
+- Sau khi điều chỉnh: đóng dialog, trả focus về nút "Điều chỉnh tồn kho", ghi số tồn và movement mới vào cache, làm mới các query liên quan, hiện thông báo `role="status"`. Không tải lại trang.
+- Không có `inventory:write` thì không render nút và dialog. Trang vẫn hiện số tồn và lịch sử cho người có `products:read`.
+- Bảng lịch sử: thời điểm giờ Việt Nam, loại bằng nhãn tiếng Việt (4 loại), thay đổi có dấu `+` hoặc `-`, lý do, mã đơn hoặc mã người làm rút gọn 8 ký tự. Mới nhất trước, có phân trang.
+
+**File:**
+- `apps/frontend/src/features/catalog/admin/{inventory-logic.ts,adjust-stock-dialog.tsx,inventory-page.tsx,sku-inventory-page.tsx,inventory.css,variant-table.tsx,product-form.tsx}`
+- `apps/frontend/src/app.tsx`, `apps/frontend/src/shared/icons.tsx`, `apps/frontend/src/shared/styles/components.css`
+- `apps/frontend/src/features/identity/admin/{admin-navigation.ts,admin-layout.tsx}`
+- `apps/frontend/test/unit/features/catalog/admin/{inventory-logic.test.ts,adjust-stock-dialog.test.tsx,inventory-page.test.tsx,sku-inventory-page.test.tsx,variant-table.test.tsx}`, `apps/frontend/test/unit/features/identity/admin/admin-layout.test.tsx`
+- `apps/frontend/e2e/{catalog-inventory.spec.ts,environment.ts,staff-invite.spec.ts}`
+
+**Bằng chứng (2026-10-08):**
+- `pnpm typecheck` và `pnpm lint` đạt 0 lỗi. `pnpm test` đạt 349/349 (30 file).
+- `env -u NODE_ENV pnpm build` thành công. Bundle chính `index-*.js` là 401.76 kB (gzip 116.91 kB), form sản phẩm `product-form-*.js` là 436.85 kB (gzip 132.07 kB), `products-page-*.js` là 4.78 kB. Hai trang tồn kho nằm trong bundle chính vì nhỏ, không kéo Tiptap.
+- Playwright `--headed`: `catalog-inventory.spec.ts` đạt, cả bộ 9/9 đạt. Chế độ ẩn cũng 9/9 đạt. Console 0 lỗi và 0 cảnh báo, ngoại trừ một dòng "Failed to load resource" của phản hồi 409 mà spec chủ động gây ra (spec đếm và khẳng định đúng 1 dòng).
+- Phép thử đột biến: 10/10 điểm bị test bắt (bỏ kiểm lý do rỗng, hiện nút khi thiếu quyền, bỏ ghi lịch sử vào cache, bỏ làm mới lịch sử, bỏ chặn gửi hai lần, bỏ khóa nút gửi, SKU chưa lưu có liên kết, mục menu sai, mất dấu `+`, liên kết danh sách sai SKU).
+- Ảnh chụp 1280 px và 375 px của danh sách, trang SKU và dialog. Ở 375 px trang không tràn ngang, bảng cuộn trong khung của nó.
+- Script kiểm tra comment báo 0 vi phạm. Các file đã đổi không chứa em dash hoặc en dash.
 
 ### Checkpoint C2
 - [ ] Admin tạo danh mục, sản phẩm 2 tùy chọn, tải ảnh (provider giả), đăng bán trên `pnpm dev`
