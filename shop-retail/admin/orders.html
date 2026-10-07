@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Đơn hàng | Quản trị Hải Đăng Digital</title>
+<link rel="icon" href="../assets/p/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&amp;display=swap">
+<link rel="stylesheet" href="../assets/css/admin.css">
+<script>window.ROOT='../';try{if(localStorage.getItem('adm-collapsed')==='1')document.documentElement.classList.add('side-mini')}catch(e){}</script>
+</head>
+<body class="adm adm-orders">
+<a class="skip" href="#main">Bỏ qua đến nội dung</a>
+<div class="adm-shell" data-admin="orders">
+  <aside class="adm-side" id="adm-side" data-side aria-label="Menu quản trị">
+    <div class="side-store">
+      <a class="side-store-main" href="index.html" title="Hải Đăng Digital">
+        <span class="logo-mark" aria-hidden="true">H</span>
+        <span class="side-store-text"><b>Hải Đăng Digital</b><small>Cửa hàng mẫu</small></span>
+      </a>
+      <a class="icon-btn side-store-open" href="../index.html" target="_blank" rel="noopener" title="Xem cửa hàng" aria-label="Xem cửa hàng (mở tab mới)"><svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg></a>
+    </div>
+
+    <button class="side-search" type="button" data-palette-open title="Tìm nhanh">
+      <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span class="nav-label">Tìm nhanh</span><kbd class="nav-label">Ctrl K</kbd>
+    </button>
+
+    <nav class="side-scroll" aria-label="Quản trị">
+      <ul class="side-group">
+        <li><a class="nav-item" href="index.html"  title="Tổng quan"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg><span class="nav-label">Tổng quan</span></a></li>
+      </ul>
+      <p class="side-label">Bán hàng</p>
+      <ul class="side-group">
+        <li><a class="nav-item" href="orders.html" aria-current="page" title="Đơn hàng"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M16 8h-6a2 2 0 1 0 0 4h4a2 2 0 1 1 0 4H8"/><path d="M12 17.5v-11"/></svg><span class="nav-label">Đơn hàng</span><b class="nav-badge" data-nav-badge="orders" hidden></b></a>
+          <ul class="side-sub" data-side-sub>
+            <li><a href="orders.html?status=pending" data-sub="pending"><span class="nav-label">Chờ xác nhận</span><small data-sub-count="pending"></small></a></li>
+            <li><a href="orders.html?status=confirmed" data-sub="confirmed"><span class="nav-label">Cần đóng gói</span><small data-sub-count="confirmed"></small></a></li>
+            <li><a href="orders.html?status=shipping" data-sub="shipping"><span class="nav-label">Đang giao</span><small data-sub-count="shipping"></small></a></li>
+            <li><a href="orders.html?status=returned" data-sub="returned"><span class="nav-label">Trả hàng</span><small data-sub-count="returned"></small></a></li>
+          </ul>
+        </li>
+        <li><a class="nav-item" href="customers.html"  title="Khách hàng"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg><span class="nav-label">Khách hàng</span></a></li>
+        <li><a class="nav-item" href="promotions.html"  title="Khuyến mãi"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/></svg><span class="nav-label">Khuyến mãi</span></a></li>
+      </ul>
+      <p class="side-label">Sản phẩm</p>
+      <ul class="side-group">
+        <li><a class="nav-item" href="products.html"  title="Sản phẩm"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m7.5 4.27 9 5.15"/><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/></svg><span class="nav-label">Sản phẩm</span></a></li>
+        <li><a class="nav-item" href="inventory.html"  title="Tồn kho"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 8.35V20a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8.35A2 2 0 0 1 3.26 6.5l8-3.2a2 2 0 0 1 1.48 0l8 3.2A2 2 0 0 1 22 8.35Z"/><path d="M6 18h12"/><path d="M6 14h12"/><rect width="12" height="12" x="6" y="10"/></svg><span class="nav-label">Tồn kho</span><b class="nav-badge" data-nav-badge="stock" hidden></b></a></li>
+      </ul>
+      <p class="side-label">Phân tích</p>
+      <ul class="side-group">
+        <li><a class="nav-item" href="reports.html"  title="Báo cáo"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg><span class="nav-label">Báo cáo</span></a></li>
+      </ul>
+    </nav>
+
+    <div class="side-foot">
+      <ul class="side-group">
+        <li><a class="nav-item" href="settings.html"  title="Cài đặt"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg><span class="nav-label">Cài đặt</span></a></li>
+      </ul>
+      <div class="side-user">
+        <span class="avatar" aria-hidden="true" data-staff-initial>Q</span>
+        <span class="side-user-text nav-label"><b data-staff-name>Quản lý</b><small data-staff-role>Chủ cửa hàng</small></span>
+        <button class="icon-btn nav-label" type="button" data-staff-logout title="Đăng xuất" aria-label="Đăng xuất"><svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></svg></button>
+      </div>
+      <button class="side-collapse" type="button" data-side-collapse aria-pressed="false" title="Thu gọn menu"><svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/></svg><span class="nav-label">Thu gọn</span></button>
+    </div>
+  </aside>
+  <div class="adm-scrim" data-side-close hidden></div>
+  <div class="adm-body">
+    <header class="adm-top">
+      <button class="icon-btn adm-burger" type="button" data-side-open aria-label="Mở menu" aria-controls="adm-side"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg></button>
+      <button class="adm-search" type="button" data-palette-open>
+        <svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span>Tìm mã đơn, sản phẩm, khách hàng</span><kbd>Ctrl K</kbd>
+      </button>
+      <div class="adm-top-right">
+<span class="demo-pill" title="Dữ liệu minh họa"><svg class="i i-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>Dữ liệu mẫu</span>        <div class="notif">
+          <button class="icon-btn" type="button" data-notif-toggle aria-expanded="false" aria-controls="notif-panel" aria-label="Thông báo"><svg class="i " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><b class="dot" data-notif-dot hidden></b></button>
+          <div class="notif-panel" id="notif-panel" data-notif-panel hidden>
+            <div class="notif-head"><b>Thông báo</b><button class="link-btn" type="button" data-notif-read>Đánh dấu đã đọc</button></div>
+            <ul data-notif-list></ul>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main id="main" class="adm-main">
+<div class="adm-head">
+  <h1>Đơn hàng</h1>
+  <div class="head-actions"><button class="btn btn-outline" type="button" data-export="orders"><svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>Xuất CSV</button></div>
+</div>
+<div class="card card-flush">
+  <div class="tabs" role="tablist" aria-label="Trạng thái đơn" data-status-tabs></div>
+  <div class="filters-row">
+    <label class="search-in"><span class="sr">Tìm đơn</span><svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><input type="search" placeholder="Mã đơn, tên khách, số điện thoại" data-q></label>
+    <label><span class="sr">Thanh toán</span><select data-f-pay><option value="">Mọi phương thức</option><option value="cod">Thanh toán khi nhận hàng (COD)</option><option value="bank">Chuyển khoản ngân hàng</option><option value="card">Thẻ ATM, Visa, Mastercard</option><option value="installment">Trả góp 0% qua thẻ tín dụng</option></select></label>
+    <label><span class="sr">Đã thanh toán</span><select data-f-paid><option value="">Mọi trạng thái thanh toán</option><option value="1">Đã thanh toán</option><option value="0">Chưa thanh toán</option></select></label>
+    <label><span class="sr">Kênh</span><select data-f-channel><option value="">Mọi kênh</option><option>Website</option><option>Hotline</option><option>Cửa hàng</option></select></label>
+    <label><span class="sr">Thời gian</span><select data-f-days><option value="">Mọi thời gian</option><option value="1">Hôm nay</option><option value="7">7 ngày</option><option value="30">30 ngày</option></select></label>
+  </div>
+  <div class="bulk" data-bulk hidden>
+    <b data-bulk-n></b>
+    <button class="btn btn-sm" type="button" data-bulk-act="confirmed">Xác nhận</button>
+    <button class="btn btn-sm" type="button" data-bulk-act="packing">Chuyển sang đóng gói</button>
+    <button class="btn btn-sm" type="button" data-bulk-act="shipping">Giao cho vận chuyển</button>
+    <button class="btn btn-sm" type="button" data-bulk-print><svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></svg>In phiếu</button>
+  </div>
+  <div class="table-wrap"><table class="tbl tbl-click" data-orders></table></div>
+  <div class="empty-row" data-orders-empty hidden><b>Không có đơn phù hợp</b><span>Đổi bộ lọc hoặc từ khóa tìm kiếm.</span></div>
+  <div class="pager" data-pager></div>
+</div>
+    </main>
+  </div>
+</div>
+
+<dialog class="palette" data-palette aria-label="Tìm nhanh">
+  <div class="palette-in">
+    <label class="palette-q"><svg class="i i-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg><span class="sr">Tìm nhanh</span><input type="search" placeholder="Gõ mã đơn, tên sản phẩm, tên hoặc số điện thoại khách" data-palette-q autocomplete="off"></label>
+    <ul class="palette-list" data-palette-list role="listbox"></ul>
+    <p class="palette-hint"><kbd>Enter</kbd> mở, <kbd>Esc</kbd> đóng, phím mũi tên lên xuống để chọn</p>
+  </div>
+</dialog>
+<div class="toasts" aria-live="polite" data-toasts></div>
+<div class="tip" data-tip role="tooltip" hidden></div>
+<script src="../assets/js/catalog.js"></script>
+<script src="../assets/js/seed.js"></script>
+<script src="../assets/js/common.js"></script>
+<script src="../assets/js/admin.js"></script>
+</body>
+</html>
