@@ -191,6 +191,9 @@ public sealed class ProductImageTests : IClassFixture<PickoryWebApplicationFacto
         Assert.Equal([front, back], images.Select(image => image.GetProperty("publicId").GetString()));
         Assert.Equal([0, 1], images.Select(image => image.GetProperty("position").GetInt32()));
         Assert.Equal("Mặt sau", images[1].GetProperty("alt").GetString());
+        // Phản hồi có URL giao ảnh, để giao diện hiện ảnh thu nhỏ mà không cần quyền ghi hay chữ ký.
+        Assert.Equal($"https://res.cloudinary.com/{FakeImageStorage.Credentials.CloudName}/image/upload/{front}",
+            images[0].GetProperty("url").GetString());
     }
 
     [Fact]

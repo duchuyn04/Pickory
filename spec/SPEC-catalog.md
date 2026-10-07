@@ -137,12 +137,15 @@ export { catalogPermissions } from './permissions';
 - Chữ ký ký cả `folder=pickory/products` và `allowed_formats=jpg,png,webp`. Phản hồi không chứa `CLOUDINARY_API_SECRET`.
 - Backend chỉ lưu `publicId`, alt text, thứ tự, và biến thể gắn với ảnh (nếu có).
 - Ảnh gửi kèm trường `images` của `POST` và `PATCH /api/admin/products`. Thứ tự trong danh sách là thứ tự hiển thị. `PATCH` không gửi `images` thì giữ ảnh cũ.
+- Mỗi ảnh trong phản hồi sản phẩm có `url` giao ảnh gốc. Giao diện chèn `f_auto,q_auto,w_<rộng>` sau `/image/upload/` để lấy ảnh vừa kích thước.
+- Ảnh gắn riêng cho biến thể qua `skuId` của một SKU đã lưu. Trang sản phẩm hiện ảnh này cho các biến thể cùng giá trị màu.
 - Giới hạn: JPG, PNG, WebP; tối đa 5 MB mỗi ảnh; tối đa 10 ảnh mỗi sản phẩm; alt text bắt buộc.
 - Cloudinary không giới hạn kích thước file qua chữ ký. Khi gắn ảnh mới, backend hỏi Cloudinary kích thước và định dạng thật. Ảnh sai bị từ chối và được xếp lịch xóa.
 - Hiển thị qua URL biến đổi của Cloudinary (`f_auto,q_auto`, các chiều rộng 200/400/800/1200) để trình duyệt chọn ảnh vừa kích thước.
 - Xóa ảnh khỏi sản phẩm thì xóa luôn trên Cloudinary (qua job nền, lỗi thì thử lại).
 - Job xóa ảnh nằm trong `image_deletion_jobs`, ghi cùng transaction với việc bỏ ảnh. Lỗi thì chờ 1, 2, 4 phút và tiếp tục nhân đôi, tối đa 6 giờ. Lỗi lần thứ 8 thì job dừng và API ghi log lỗi.
 - Thiếu `CLOUDINARY_*` ở dev và test thì API dùng kho ảnh giả. Production thiếu khóa thì API dừng khi khởi động.
+- Kho ảnh giả ở dev và E2E coi mọi ảnh trong thư mục `pickory/products` là JPG nhỏ hợp lệ, vì trình duyệt không tải được ảnh thật. Test tích hợp dùng kho giả nghiêm ngặt.
 
 ### Mô tả sản phẩm
 

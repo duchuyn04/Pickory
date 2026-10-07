@@ -253,11 +253,28 @@ Sáu đột biến đều làm test đỏ. Backend đạt kiến trúc 3/3, unit
 ### UI-C6: Tải ảnh và sắp xếp ảnh
 **Mô tả:** Trong form sản phẩm: lấy chữ ký, tải ảnh thẳng lên Cloudinary, sắp xếp thứ tự bằng kéo thả và bằng nút lên xuống, gắn ảnh cho màu, sửa alt text.
 **Tiêu chí nghiệm thu:**
-- [ ] File sai định dạng hoặc trên 5 MB bị chặn trước khi tải, có thông báo tiếng Việt
-- [ ] Sắp xếp làm được bằng bàn phím (nút lên, xuống), không chỉ bằng chuột
-- [ ] Ảnh có ô alt text bắt buộc
+- [x] File sai định dạng hoặc trên 5 MB bị chặn trước khi tải, có thông báo tiếng Việt
+- [x] Sắp xếp làm được bằng bàn phím (nút lên, xuống), không chỉ bằng chuột
+- [x] Ảnh có ô alt text bắt buộc
 **Kiểm tra:** test component với provider giả; thủ công với Cloudinary thật nếu có khóa
 **Phụ thuộc:** CAT-06, UI-C5 · **File:** `features/catalog/admin/{image-manager,use-image-upload}.tsx`, `features/catalog/shared/image-url.ts` · **Quy mô:** S
+**Quyết định (2026-10-08):**
+- Ảnh gắn màu bằng cách chọn một biến thể đã lưu (`skuId`). Trang sản phẩm hiện ảnh này cho các biến thể cùng màu. Không đổi backend.
+- Kho ảnh giả ở dev và E2E chạy ở chế độ dễ dãi. E2E chặn request tới Cloudinary và trả kết quả giả. Test tích hợp vẫn dùng kho giả nghiêm ngặt.
+- Phản hồi sản phẩm có `url` cho từng ảnh, để người chỉ có quyền xem cũng thấy ảnh thu nhỏ.
+
+**File (frontend và .NET):**
+- `apps/frontend/src/features/catalog/admin/{image-manager.tsx,image-upload.ts,product-form.tsx,products.css}`
+- `apps/frontend/src/features/catalog/shared/image-url.ts`, `apps/frontend/src/shared/icons.tsx`
+- `apps/frontend/test/unit/features/catalog/{image-url.test.ts,admin/image-upload.test.ts,admin/image-manager.test.tsx,admin/product-form.test.tsx}`
+- `apps/frontend/e2e/catalog-images.spec.ts`
+- `apps/backend/src/Pickory.Modules.Catalog/Images/{FakeImageStorage,ImageStorageRegistration}.cs`, `apps/backend/src/Pickory.Modules.Catalog/Features/Products/{ProductModels,ProductManagementHandler}.cs`
+
+**Bằng chứng (2026-10-08):** Vitest đạt 306/306, gồm test của `image-upload`, `image-manager`, `image-url` và 2 test ảnh của form sản phẩm.
+Playwright đạt 8/8 ở chế độ có giao diện và chế độ ẩn. Spec `catalog-images.spec.ts` chặn GIF và file trên 5 MB mà không gọi Cloudinary.
+Spec này cũng kiểm alt bắt buộc, sắp xếp bằng phím Enter trên nút "Đưa ảnh 2 lên", thứ tự giữ sau khi tải lại, và 375 px không tràn trang.
+Bốn đột biến đều làm test đỏ. Test focus khi đưa ảnh xuống cuối được thêm sau khi đột biến bỏ phần đưa focus vẫn xanh.
+Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 
 ### CAT-07: Đổi trạng thái và xóa cứng
 **Mô tả:** `POST /api/admin/products/:id/status` và `DELETE /api/admin/products/:id` (`products:write`). Dùng `checkPublishable` và `canTransition` của CAT-02. Ghi audit và phát `onProductChanged` với `change: 'status'` hoặc `'deleted'`.

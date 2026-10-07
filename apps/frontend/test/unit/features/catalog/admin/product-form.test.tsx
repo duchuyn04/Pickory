@@ -328,6 +328,7 @@ describe('ProductFormView', () => {
       warrantyMonths: 12,
       status: 'active',
       minPrice: 150000,
+      images: [],
     };
     const onSave = vi.fn();
     await renderForm(true, onSave, existingProduct);
@@ -346,5 +347,81 @@ describe('ProductFormView', () => {
     const payload = onSave.mock.calls[0]![0] as { variants: Record<string, unknown>[] };
     expect(payload.variants).toHaveLength(1);
     expect('stock' in payload.variants[0]!).toBe(false);
+  });
+
+  function productWithImages(alts: string[]): ProductDetail {
+    return {
+      id: 'prod-anh',
+      categoryId: 'headset',
+      brandId: 'brand',
+      name: 'Tai nghe có ảnh',
+      shortDesc: '',
+      description: { type: 'doc', content: [{ type: 'paragraph' }] },
+      specs: { connection: 'Bluetooth' },
+      options: [],
+      variants: [
+        {
+          id: 'var-mac-dinh',
+          code: 'EAR-1',
+          optionValues: {},
+          price: 150000,
+          compareAtPrice: null,
+          stock: 0,
+          enabled: true,
+          weightGrams: null,
+          lengthCm: null,
+          widthCm: null,
+          heightCm: null,
+        },
+      ],
+      warrantyMonths: 12,
+      status: 'draft',
+      minPrice: 150000,
+      // API trả ảnh theo `position`. Form phải giữ đúng thứ tự này.
+      images: alts.map((alt, index) => ({
+        id: `img-${index}`,
+        publicId: `pickory/products/anh-${index}`,
+        alt,
+        skuId: index === 1 ? 'var-mac-dinh' : null,
+        position: index,
+        url: `https://res.cloudinary.com/demo/image/upload/pickory/products/anh-${index}`,
+      })),
+    };
+  }
+
+  it('gửi ảnh theo thứ tự hiển thị kèm alt đã cắt khoảng trắng và biến thể', async () => {
+    const onSave = vi.fn();
+    await renderForm(true, onSave, productWithImages(['  Mặt trước  ', 'Mặt sau']));
+
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('button[aria-label="Đưa ảnh 2 lên"]')!.click(),
+    );
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('button[type="submit"]')!.click(),
+    );
+
+    expect(onSave).toHaveBeenCalledTimes(1);
+    const payload = onSave.mock.calls[0]![0] as { images: Record<string, unknown>[] };
+    expect(payload.images).toEqual([
+      { publicId: 'pickory/products/anh-1', alt: 'Mặt sau', skuId: 'var-mac-dinh' },
+      { publicId: 'pickory/products/anh-0', alt: 'Mặt trước', skuId: null },
+    ]);
+  });
+
+  it('ảnh thiếu alt chặn gửi và báo lỗi ngay dưới ô alt', async () => {
+    const onSave = vi.fn();
+    await renderForm(true, onSave, productWithImages(['Mặt trước', '   ']));
+
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('button[type="submit"]')!.click(),
+    );
+
+    expect(onSave).not.toHaveBeenCalled();
+    const input = container.querySelector<HTMLInputElement>('#image-alt-1')!;
+    expect(input.getAttribute('aria-invalid')).toBe('true');
+    expect(container.querySelector(`#${input.getAttribute('aria-describedby')}`)?.textContent).toBe(
+      'Nhập mô tả ảnh (alt).',
+    );
+    expect(container.querySelector('#image-alt-0')!.getAttribute('aria-invalid')).toBeNull();
   });
 });

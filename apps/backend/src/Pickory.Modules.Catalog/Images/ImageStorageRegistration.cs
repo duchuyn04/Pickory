@@ -27,9 +27,9 @@ public static class ImageStorageRegistration
             return services;
         }
 
-        // Dev và test dùng một instance giả chung, để test đặt ảnh và đọc ảnh đã xóa trên cùng đối tượng API dùng.
+        // Dev dùng kho giả dễ dãi, vì trình duyệt không tải được ảnh thật. Test tích hợp thay bằng bản nghiêm ngặt.
         services.AddSingleton(FakeImageStorage.Credentials);
-        services.AddSingleton<FakeImageStorage>();
+        services.AddSingleton(new FakeImageStorage(acceptUnknownProductImages: true));
         services.AddSingleton<IImageStorage>(provider => provider.GetRequiredService<FakeImageStorage>());
         return services;
     }

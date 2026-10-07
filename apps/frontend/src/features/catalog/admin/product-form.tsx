@@ -7,6 +7,13 @@ import { type DescriptionDoc } from '../../../shared/catalog/description-schema'
 import { validateSpecs } from '../../../shared/catalog/validate-specs';
 import { useCan } from '../../identity/hooks/use-actor';
 import { DescriptionEditor } from './description-editor';
+import { ImageManager, type ProductImageDraft } from './image-manager';
+import {
+  MAX_IMAGES_PER_PRODUCT,
+  uploadImageFiles,
+  uploadToCloudinary,
+  type UploadSignature,
+} from './image-upload';
 import { toCatalogErrorMessage } from './catalog-errors';
 import {
   buildVariantCombinations,
@@ -28,6 +35,15 @@ export interface ProductCategory {
   name: string;
   attributes: AttributeDefinition[];
 }
+// Ảnh trong phản hồi chi tiết sản phẩm, đã sắp theo `position`.
+export interface ProductImageDetail {
+  id: string;
+  publicId: string;
+  alt: string;
+  skuId: string | null;
+  position: number;
+  url: string;
+}
 export interface ProductBrand {
   id: string;
   name: string;
@@ -45,6 +61,7 @@ export interface ProductDetail {
   warrantyMonths: number;
   status: string;
   minPrice: number | null;
+  images: ProductImageDetail[];
 }
 
 const emptyDescription: DescriptionDoc = { type: 'doc', content: [{ type: 'paragraph' }] };
@@ -78,6 +95,15 @@ export function ProductFormView({
   const [variants, setVariants] = useState<ProductVariant[]>(() =>
     mergeProductVariants(buildVariantCombinations(product?.options ?? []), product?.variants),
   );
+  const [images, setImages] = useState<ProductImageDraft[]>(() =>
+    [...(product?.images ?? [])]
+      .sort((first, second) => first.position - second.position)
+      .map(({ publicId, alt, skuId, url }) => ({ publicId, alt, skuId, url })),
+  );
+  // Lỗi alt theo `publicId`, để lỗi đi theo ảnh khi admin đổi thứ tự.
+  const [imageAltErrors, setImageAltErrors] = useState<Record<string, string>>({});
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
   const [specErrors, setSpecErrors] = useState<Record<string, string>>({});
   const [priceErrors, setPriceErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -106,6 +132,34 @@ export function ProductFormView({
     } catch {
       // Trục đang nhập chưa thể sinh tổ hợp. Giữ bảng cũ đến khi người dùng nhập đủ giá trị.
       return;
+    }
+  }
+
+  async function addImageFiles(files: File[]) {
+    setIsUploading(true);
+    setUploadErrors([]);
+    try {
+      // File sai bị chặn trước khi xin chữ ký. Chỉ tải số ảnh còn trống trong giới hạn của sản phẩm.
+      const result = await uploadImageFiles(
+        files,
+        {
+          requestSignature: () =>
+            apiRequest<UploadSignature>('/api/admin/uploads/signature', { method: 'POST' }),
+          uploadFile: (file, signature) => uploadToCloudinary(file, signature),
+        },
+        MAX_IMAGES_PER_PRODUCT - images.length,
+      );
+      // Ảnh mới thêm vào cuối danh sách với alt trống, để admin nhập mô tả trước khi lưu.
+      setImages((current) => [
+        ...current,
+        ...result.uploaded.map(({ publicId, url }) => ({ publicId, url, alt: '', skuId: null })),
+      ]);
+      setUploadErrors(result.errors);
+    } catch (error) {
+      // Lỗi xin chữ ký (mất phiên, thiếu quyền) không làm mất ảnh đã có trong form.
+      setUploadErrors([toCatalogErrorMessage(error, 'Không lấy được chữ ký tải ảnh.')]);
+    } finally {
+      setIsUploading(false);
     }
   }
 
@@ -149,8 +203,15 @@ export function ProductFormView({
         .map((variant) => [toCombinationKey(variant.optionValues), 'Nhập giá bán lớn hơn 0.']),
     );
     setPriceErrors(invalidPrices);
-    // Không gửi nếu còn giá sai vì từng ô đã hiển thị lỗi riêng.
-    if (Object.keys(invalidPrices).length > 0) return;
+    // Alt bắt buộc cho người dùng trình đọc màn hình. Lỗi hiện ngay dưới ô alt của đúng ảnh.
+    const missingAlts = Object.fromEntries(
+      images
+        .filter((image) => image.alt.trim().length === 0)
+        .map((image) => [image.publicId, 'Nhập mô tả ảnh (alt).']),
+    );
+    setImageAltErrors(missingAlts);
+    // Không gửi nếu còn giá sai hoặc ảnh thiếu alt vì từng ô đã hiển thị lỗi riêng.
+    if (Object.keys(invalidPrices).length > 0 || Object.keys(missingAlts).length > 0) return;
     // Khóa form trong lúc chờ máy chủ để tránh hai lần ghi cùng một bản nháp.
     setIsSaving(true);
     try {
@@ -165,6 +226,8 @@ export function ProductFormView({
         options: normalizedOptions,
         warrantyMonths,
         variants: currentVariants.map(toProductVariantRequest),
+        // Thứ tự trong danh sách là thứ tự hiển thị. Backend không nhận URL ảnh thu nhỏ.
+        images: images.map(({ publicId, alt, skuId }) => ({ publicId, alt: alt.trim(), skuId })),
       });
     } catch (error) {
       // Lỗi thông số trả về key từ API phải nằm ngay dưới ô, không xóa bản nháp.
@@ -319,6 +382,32 @@ export function ProductFormView({
           }}
         />
       </section>
+      <ImageManager
+        images={images}
+        // Chỉ biến thể đã lưu mới có định danh để gắn ảnh. Biến thể mới gắn được sau lần lưu đầu.
+        variants={variants
+          .filter((variant) => variant.id)
+          .map((variant) => ({
+            id: variant.id!,
+            label: Object.values(variant.optionValues).join(' / ') || 'Mặc định',
+          }))}
+        disabled={disabled}
+        isUploading={isUploading}
+        uploadErrors={uploadErrors}
+        altErrors={imageAltErrors}
+        onChange={(nextImages) => {
+          setImages(nextImages);
+          // Bỏ lỗi của ảnh đã có alt, giữ lỗi của ảnh vẫn còn trống.
+          setImageAltErrors((current) =>
+            Object.fromEntries(
+              Object.entries(current).filter(([publicId]) =>
+                nextImages.some((image) => image.publicId === publicId && !image.alt.trim()),
+              ),
+            ),
+          );
+        }}
+        onAddFiles={addImageFiles}
+      />
       <ProductOptionsEditor options={options} disabled={disabled} onChange={updateOptions} />
       <VariantTable
         variants={variants}

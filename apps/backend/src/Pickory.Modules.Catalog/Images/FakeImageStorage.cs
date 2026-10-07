@@ -2,9 +2,13 @@ using System.Collections.Concurrent;
 
 namespace Pickory.Modules.Catalog.Images;
 
-// Kho ảnh giả cho dev và test khi chưa có khóa Cloudinary. Không gọi mạng.
-public sealed class FakeImageStorage : IImageStorage
+// Kho ảnh giả không gọi mạng, dùng khi chưa có khóa Cloudinary.
+// Chế độ dễ dãi chỉ bật ở dev và E2E, nơi trình duyệt không tải được ảnh thật.
+public sealed class FakeImageStorage(bool acceptUnknownProductImages = false) : IImageStorage
 {
+    // Ảnh "đã tải lên" ở chế độ dễ dãi: JPG nhỏ, luôn qua luật kích thước và định dạng.
+    private static readonly StoredImage UnknownProductImage = new(Bytes: 150_000, Format: "jpg");
+
     // Khóa giả để endpoint chữ ký vẫn trả dữ liệu đúng dạng ở dev. Secret này không mở được tài khoản thật nào.
     public static readonly CloudinaryCredentials Credentials = new("pickory-fake", "fake-api-key", "fake-api-secret");
 
@@ -29,7 +33,14 @@ public sealed class FakeImageStorage : IImageStorage
 
     public Task<StoredImage?> FindAsync(string publicId, CancellationToken cancellationToken)
     {
-        return Task.FromResult(_images.TryGetValue(publicId, out var image) ? image : null);
+        if (_images.TryGetValue(publicId, out var image))
+        {
+            return Task.FromResult<StoredImage?>(image);
+        }
+
+        // Chế độ dễ dãi chỉ nhận ảnh trong thư mục sản phẩm, để luật thư mục vẫn được kiểm ở dev.
+        var acceptAsUploaded = acceptUnknownProductImages && ImageUploadRules.IsProductPublicId(publicId);
+        return Task.FromResult(acceptAsUploaded ? UnknownProductImage : null);
     }
 
     public Task DeleteAsync(string publicId, CancellationToken cancellationToken)

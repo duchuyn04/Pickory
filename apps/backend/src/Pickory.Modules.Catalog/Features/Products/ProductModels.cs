@@ -49,8 +49,9 @@ public sealed record ProductResponse(
     DateTime CreatedAt,
     DateTime UpdatedAt);
 
-// Ảnh của sản phẩm theo thứ tự hiển thị. `SkuId` có giá trị khi ảnh thuộc riêng một biến thể.
-public sealed record ProductImageResponse(string Id, string PublicId, string Alt, string? SkuId, int Position);
+// Ảnh theo thứ tự hiển thị; `SkuId` có giá trị khi ảnh thuộc riêng một biến thể.
+// `Url` là URL ảnh gốc, giao diện thêm tham số biến đổi để lấy ảnh vừa kích thước.
+public sealed record ProductImageResponse(string Id, string PublicId, string Alt, string? SkuId, int Position, string Url);
 
 // Ảnh gửi kèm khi tạo hoặc sửa sản phẩm. Thứ tự trong danh sách là thứ tự hiển thị.
 public sealed record ProductImageRequest(string PublicId, string Alt, string? SkuId = null);

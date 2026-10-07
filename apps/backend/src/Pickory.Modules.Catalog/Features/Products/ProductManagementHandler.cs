@@ -7,6 +7,7 @@ using Pickory.Modules.Catalog.Attributes;
 using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Descriptions;
 using Pickory.Modules.Catalog.Entities;
+using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Events;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Catalog.Products;
@@ -25,7 +26,8 @@ public sealed class ProductManagementHandler(
     IAuditLogWriter auditLogWriter,
     IEventDispatcher dispatcher,
     TimeProvider timeProvider,
-    ProductImageSync imageSync)
+    ProductImageSync imageSync,
+    CloudinaryCredentials cloudinary)
 {
     // Một khóa transaction chung ngăn hai request cấp cùng slug hoặc tạo trùng tổ hợp biến thể (SKU).
     private const long ProductWriteLockKey = 578524097137070906;
@@ -477,7 +479,7 @@ public sealed class ProductManagementHandler(
         };
     }
 
-    private static ProductResponse ToResponse(Product product)
+    private ProductResponse ToResponse(Product product)
     {
         // Sao chép phần tử JSON để phản hồi không phụ thuộc vòng đời tài liệu của entity.
         return new ProductResponse(product.Id, product.CategoryId, product.BrandId, product.Name, product.Slug,
@@ -488,7 +490,8 @@ public sealed class ProductManagementHandler(
                     sku.CompareAtPrice, sku.Stock, sku.Enabled, sku.WeightGrams, sku.LengthCm, sku.WidthCm, sku.HeightCm,
                     sku.CreatedAt, sku.UpdatedAt)).ToList(),
             product.Images.OrderBy(image => image.Position).ThenBy(image => image.Id).Select(image =>
-                new ProductImageResponse(image.Id, image.PublicId, image.Alt, image.SkuId, image.Position)).ToList(),
+                new ProductImageResponse(image.Id, image.PublicId, image.Alt, image.SkuId, image.Position,
+                    $"https://res.cloudinary.com/{cloudinary.CloudName}/image/upload/{image.PublicId}")).ToList(),
             product.CreatedAt, product.UpdatedAt);
     }
 
