@@ -9,10 +9,10 @@ public static class CatalogTransaction
     public static async Task<T> RunAsync<T>(
         CatalogDbContext database,
         IEventDispatcher dispatcher,
-        Func<CatalogEventCollector, Task<T>> action,
+        Func<DomainEventCollector, Task<T>> action,
         CancellationToken cancellationToken)
     {
-        var events = new CatalogEventCollector(dispatcher);
+        var events = new DomainEventCollector(dispatcher);
         T result;
         // Thao tác lỗi thì transaction bị hủy khi dispose, và sự kiện đã gom không được phát.
         await using (var transaction = await database.Database.BeginTransactionAsync(cancellationToken))

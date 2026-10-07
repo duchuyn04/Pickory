@@ -69,6 +69,8 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
 
     public async Task DisposeAsync()
     {
+        // Kiểm bất biến trước khi dọn, vì dọn dữ liệu xóa luôn movement.
+        await StockInvariant.AssertHoldsAsync(_database);
         await using var context = _database.CreateCatalogContext();
         // Movement giữ khóa ngoại Restrict tới SKU, nên phải xóa trước sản phẩm.
         await context.InventoryMovements

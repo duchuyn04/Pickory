@@ -5,10 +5,13 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Pickory.Modules.Catalog.Features.Brands;
 using Pickory.Modules.Catalog.Features.Categories;
+using Pickory.Modules.Catalog.Features.Inventory;
 using Pickory.Modules.Catalog.Features.Products;
 using Pickory.Modules.Catalog.Features.Uploads;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Persistence;
+using Pickory.Modules.Catalog.Stock;
+using Pickory.Modules.Catalog.Contracts.Stock;
 using Pickory.Shared.Configuration;
 
 namespace Pickory.Modules.Catalog;
@@ -29,6 +32,9 @@ public static class CatalogModule
         services.AddScoped<BrandManagementHandler>();
         services.AddScoped<ProductManagementHandler>();
         services.AddScoped<ProductImageSync>();
+        // Tồn kho: handler cho API quản trị, và `IStockService` cho module `commerce`.
+        services.AddScoped<InventoryHandler>();
+        services.AddScoped<IStockService, StockService>();
         // Kho ảnh chọn theo khóa Cloudinary. Worker chạy nền xóa ảnh mà sản phẩm đã bỏ.
         services.AddCatalogImageStorage(config, isProduction);
         services.AddScoped<ImageDeletionProcessor>();
@@ -50,6 +56,7 @@ public static class CatalogModule
         BrandsEndpoints.Map(endpoints);
         ProductsEndpoints.Map(endpoints);
         UploadSignatureEndpoint.Map(endpoints);
+        InventoryEndpoints.Map(endpoints);
         return endpoints;
     }
 }

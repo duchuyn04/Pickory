@@ -1,19 +1,18 @@
 using Pickory.Modules.Catalog.Contracts.Events;
-using Pickory.Modules.Catalog.Events;
 using Pickory.Shared.Events;
 using Xunit;
 
-namespace Pickory.UnitTests.Modules.Catalog.Events;
+namespace Pickory.UnitTests.Shared.Events;
 
 // Port phần `createEventCollector` của `events.test.ts` ở bản Node (CAT-03).
-public sealed class CatalogEventCollectorTests
+public sealed class DomainEventCollectorTests
 {
     [Fact]
     // Sự kiện chỉ phát khi gọi `FlushAsync`. Gọi lần hai không phát lại.
     public async Task FlushAsync_PublishesQueuedEventsOnce()
     {
         var dispatcher = new RecordingDispatcher();
-        var collector = new CatalogEventCollector(dispatcher);
+        var collector = new DomainEventCollector(dispatcher);
 
         collector.Emit(new ProductChangedEvent("prod-collector", ProductChange.Created));
         Assert.Empty(dispatcher.Published);
@@ -28,7 +27,7 @@ public sealed class CatalogEventCollectorTests
     public async Task Discard_DropsQueuedEvents()
     {
         var dispatcher = new RecordingDispatcher();
-        var collector = new CatalogEventCollector(dispatcher);
+        var collector = new DomainEventCollector(dispatcher);
         collector.Emit(new StockChangedEvent("sku-1", 0, 5));
 
         collector.Discard();
@@ -42,7 +41,7 @@ public sealed class CatalogEventCollectorTests
     public async Task FlushAsync_KeepsOrder()
     {
         var dispatcher = new RecordingDispatcher();
-        var collector = new CatalogEventCollector(dispatcher);
+        var collector = new DomainEventCollector(dispatcher);
         collector.Emit(new ProductChangedEvent("prod-1", ProductChange.Created));
         collector.Emit(new StockChangedEvent("sku-1", 10, 0));
 

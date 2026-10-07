@@ -53,7 +53,7 @@ CAT-01 bộ thuộc tính + validate thông số (packages/shared)
 12. **Facets theo kiểu loại trừ chính nó.** Số đếm của thuộc tính X áp mọi bộ lọc khác, trừ bộ lọc của X. Người dùng chọn `RAM 16GB` vẫn thấy số đếm của `RAM 32GB`. Facets chỉ đếm sản phẩm khách thấy được.
 13. **Thẻ meta SEO theo hướng (b).** Backend có hàm `renderProductMeta` và route trả `index.html` đã chèn thẻ `title`, `description`, Open Graph cho `/products/:slug` và `/categories/:slug`. Hạ tầng deploy chưa chốt (Open Question 1 của `SPEC.md`). Task chỉ làm hàm, route và test. Bước gắn vào server production chờ quyết định deploy.
 14. **Slug bỏ dấu không cần thư viện.** Dùng `normalize('NFD')`, xóa dấu kết hợp, đổi `đ` thành `d`. Trùng slug thì thêm hậu tố `-2`, `-3`.
-15. **Mã lỗi nghiệp vụ.** Dùng `AppError` với mã cố định: `SPECS_INVALID`, `ATTRIBUTE_IN_USE`, `PRODUCT_NOT_PUBLISHABLE`, `PRODUCT_HAS_ORDERS`, `COMPARE_CATEGORY_MISMATCH`, `UNKNOWN_FILTER`. Message viết tiếng Việt.
+15. **Mã lỗi nghiệp vụ.** Dùng `AppError` với mã cố định: `SPECS_INVALID`, `ATTRIBUTE_IN_USE`, `PRODUCT_NOT_PUBLISHABLE`, `PRODUCT_HAS_ORDERS`, `COMPARE_CATEGORY_MISMATCH`, `UNKNOWN_FILTER`. Bổ sung ngày 2026-10-08: `INSUFFICIENT_STOCK` (điều chỉnh tay làm tồn kho âm, trả 409). Message viết tiếng Việt.
 16. **Audit log.** Ghi `recordAudit` trong cùng transaction cho đổi giá (`catalog.sku.price_change`), đổi trạng thái (`catalog.product.status_change`) và điều chỉnh tồn kho (`catalog.sku.stock_adjust`). Mỗi thao tác đúng 1 dòng.
 
 17. **Mô tả chi tiết là tài liệu JSON, không phải Markdown hay HTML.** Ngày 2026-10-05 người dùng chọn trình soạn thảo trực quan. Trình soạn thảo dùng Tiptap, chỉ bật đoạn văn, tiêu đề 3 cấp, chữ đậm, chữ nghiêng. Schema Zod đặt ở `packages/shared/src/catalog/` làm whitelist. Backend và trình soạn thảo dùng chung schema này. Frontend đổi từng nút thành thẻ React, không dùng `dangerouslySetInnerHTML`. Tiêu đề cấp 1, 2, 3 hiện thành H2, H3, H4 vì trang đã có H1. Hàm `descriptionToPlainText` phục vụ `smart-search`. Ngày 2026-10-05 người dùng duyệt Tiptap cho Ask first. Builder chọn các extension tối thiểu và ghim phiên bản sau khi đối chiếu tài liệu chính thức.
@@ -72,11 +72,11 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 - [x] Migration chạy trên DB sạch, `CHECK (stock >= 0)` chặn giá trị âm
 
 ### Phase 2: Back-office backend và UI
-- [x] CAT-13 · [x] UI-C8 · [x] CAT-04 · [x] UI-C4 · [x] CAT-05 · [x] UI-C5 · [x] CAT-06 · [x] UI-C6 · [x] CAT-07 · [ ] CAT-08 · [ ] UI-C7
+- [x] CAT-13 · [x] UI-C8 · [x] CAT-04 · [x] UI-C4 · [x] CAT-05 · [x] UI-C5 · [x] CAT-06 · [x] UI-C6 · [x] CAT-07 · [x] CAT-08 · [ ] UI-C7
 
 ### Checkpoint C2
 - [ ] Admin tạo danh mục, sản phẩm 2 tùy chọn, tải ảnh, đăng bán trên `pnpm dev`
-- [ ] 20 `reserve` đồng thời cho SKU còn 5 cái: đúng 5 thành công
+- [x] 20 `reserve` đồng thời cho SKU còn 5 cái: đúng 5 thành công
 - [ ] Ma trận quyền có mọi endpoint back-office của `catalog`
 
 ### Phase 3: Đọc công khai và giao diện khách

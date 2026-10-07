@@ -112,6 +112,8 @@ public sealed class ProductManagementHandler(
         // Đọc và ghi trong cùng transaction để lịch sử slug, giá, ảnh và nhật ký cùng được hoàn nguyên.
         return await RunWriteAsync(async events =>
         {
+            // Khóa dòng sản phẩm trước khi đọc, cùng thứ tự khóa với sổ tồn kho. Nhờ vậy `stock` đọc bên dưới là bản sau khi giữ hàng đã commit.
+            await LockProductRowAsync(id, cancellationToken);
             var product = await database.Products.Include(item => item.Skus).Include(item => item.Images)
                 .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
             if (product is null)
@@ -200,6 +202,8 @@ public sealed class ProductManagementHandler(
                 // Dùng chung khóa với tạo và sửa, để không xóa trong lúc request khác đang sửa sản phẩm.
                 await database.Database.ExecuteSqlInterpolatedAsync(
                     $"SELECT pg_advisory_xact_lock({ProductWriteLockKey})", cancellationToken);
+                // Khóa dòng sản phẩm trước khi kiểm movement. Đơn đang giữ hàng chưa commit phải commit xong thì mới thấy movement của nó.
+                await LockProductRowAsync(id, cancellationToken);
                 var product = await database.Products.Include(item => item.Skus).Include(item => item.Images)
                     .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
                 if (product is null)
@@ -237,6 +241,13 @@ public sealed class ProductManagementHandler(
         }
     }
 
+    // Khóa dòng sản phẩm đến hết transaction. Sổ tồn kho cũng khóa `products` trước `skus`, nên hai bên không chờ nhau theo vòng.
+    private async Task LockProductRowAsync(string productId, CancellationToken cancellationToken)
+    {
+        await database.Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT id FROM products WHERE id = {productId} FOR UPDATE", cancellationToken);
+    }
+
     private async Task EnsurePublishableAsync(Product product, CancellationToken cancellationToken)
     {
         var category = await database.Categories.AsNoTracking()
@@ -258,7 +269,7 @@ public sealed class ProductManagementHandler(
     private static string ToStatusName(ProductStatus status) => status.ToString().ToLowerInvariant();
 
     private async Task<ProductResponse> RunWriteAsync(
-        Func<CatalogEventCollector, Task<ProductResponse>> action, CancellationToken cancellationToken)
+        Func<DomainEventCollector, Task<ProductResponse>> action, CancellationToken cancellationToken)
     {
         try
         {
@@ -280,7 +291,7 @@ public sealed class ProductManagementHandler(
     }
 
     private async Task SaveAsync(Actor actor, Product product, CreateProductRequest target, bool creating,
-        CatalogEventCollector events, CancellationToken cancellationToken)
+        DomainEventCollector events, CancellationToken cancellationToken)
     {
         // Kiểm tra toàn bộ dữ liệu đích trước khi thay đổi entity để lỗi không lưu một phần.
         var options = target.Options ?? [];

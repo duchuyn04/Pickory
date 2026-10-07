@@ -306,16 +306,40 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### CAT-08: Tồn kho, giữ hàng và trả hàng
 **Mô tả:** `applyStockMovement(tx, movement)` là hàm duy nhất đổi `stock`. `POST /api/admin/skus/:id/adjust-stock` (`inventory:write`, bắt buộc lý do). `GET /api/admin/skus/:id/movements` và `GET /api/admin/inventory/low-stock` (`products:read`). `stock.reserve` và `stock.release` cho `commerce`. Phát `onStockChanged` sau commit.
 **Tiêu chí nghiệm thu:**
-- [ ] 20 `reserve` đồng thời cho SKU còn 5 cái: đúng 5 thành công, tồn kho về 0, không âm
-- [ ] `reserve` thiếu 1 SKU thì không giữ SKU nào, trả `shortages` đúng số
-- [ ] Gọi `reserve` hoặc `release` 2 lần cùng `orderId` không đổi tồn kho lần thứ 2
-- [ ] `reserve` và `release` nhận `tx` của bên gọi kèm collector; `onStockChanged` không phát khi transaction của bên gọi rollback, phát sau khi bên gọi `flush()` (Decision 4)
-- [ ] `stock` của mọi SKU bằng tổng `delta` của movement sau mỗi file test
-- [ ] Điều chỉnh tay thiếu lý do trả 400; thành công tạo đúng 1 dòng audit `catalog.sku.stock_adjust`
-- [ ] Tồn kho đổi thì `minPrice` và `inStock` của sản phẩm cập nhật trong cùng transaction
-- [ ] `sales` gọi `adjust-stock` nhận 403
+- [x] 20 `reserve` đồng thời cho SKU còn 5 cái: đúng 5 thành công, tồn kho về 0, không âm
+- [x] `reserve` thiếu 1 SKU thì không giữ SKU nào, trả `shortages` đúng số
+- [x] Gọi `reserve` hoặc `release` 2 lần cùng `orderId` không đổi tồn kho lần thứ 2
+- [x] `reserve` và `release` nhận `tx` của bên gọi kèm collector; `onStockChanged` không phát khi transaction của bên gọi rollback, phát sau khi bên gọi `flush()` (Decision 4)
+- [x] `stock` của mọi SKU bằng tổng `delta` của movement sau mỗi file test
+- [x] Điều chỉnh tay thiếu lý do trả 400; thành công tạo đúng 1 dòng audit `catalog.sku.stock_adjust`
+- [x] Tồn kho đổi thì `minPrice` và `inStock` của sản phẩm cập nhật trong cùng transaction
+- [x] `sales` gọi `adjust-stock` nhận 403
 **Kiểm tra:** integration test, gồm test đồng thời bằng `Promise.all` trên DB thật
 **Phụ thuộc:** CAT-05 · **File:** `modules/catalog/services/inventory.ts`, `modules/catalog/data/stock.ts`, `modules/catalog/routes/admin-inventory.ts`, `modules/catalog/index.ts` · **Quy mô:** M
+**File (.NET):** `apps/backend/src/Pickory.Shared/Events/DomainEventCollector.cs` (chuyển từ `CatalogEventCollector`), `apps/backend/src/Pickory.Modules.Catalog.Contracts/Stock/{IStockService,StockItem,StockShortage,ReserveResult,StockCallerTransaction}.cs`, `apps/backend/src/Pickory.Modules.Catalog/Stock/{StockLedger,StockService,StockRequests,StockShortages,MovementTypeNames}.cs`, `apps/backend/src/Pickory.Modules.Catalog/Features/Inventory/{AdjustStockRequest,AdjustStockRequestValidator,InventoryHandler,InventoryModels,InventoryEndpoints}.cs`, `apps/backend/src/Pickory.Modules.Catalog/Features/Products/ProductManagementHandler.cs`, `apps/backend/src/Pickory.Modules.Catalog/CatalogModule.cs`, `apps/backend/tests/Pickory.UnitTests/Modules/Catalog/{Stock,Inventory}/`, `apps/backend/tests/Pickory.IntegrationTests/Api/Catalog/{StockServiceTests,InventoryTests,ProductStockConcurrencyTests}.cs`, `apps/backend/tests/Pickory.IntegrationTests/Infrastructure/{StockInvariant,StockTestData,LockWait}.cs`, `apps/backend/tests/Pickory.IntegrationTests/Api/PermissionMatrixTests.cs`, `spec/SPEC-catalog.md`
+
+**Quyết định (2026-10-08):**
+- `IStockService` nằm trong `Pickory.Modules.Catalog.Contracts` (thư mục `Stock/`), cùng `StockItem`, `ReserveResult`, `StockShortage`.
+- Bên gọi truyền `StockCallerTransaction(DbTransaction, DomainEventCollector)`, có thể null. Khi null, catalog tự mở transaction và tự phát sự kiện sau commit.
+- `CatalogEventCollector` chuyển thành `DomainEventCollector` trong `Pickory.Shared`, không đổi hành vi.
+- Đầu `ReserveAsync` và `ReleaseAsync` lấy `pg_advisory_xact_lock` theo `orderId`. Không dựa vào việc bắt lỗi unique.
+- Thiếu hàng thì ledger kiểm đủ hàng trước khi ghi, nên không để lại thay đổi nào. Không dùng savepoint.
+- `StockLedger` là nơi duy nhất đổi `stock`: khóa dòng sản phẩm rồi dòng SKU theo `id`, UPDATE có điều kiện, ghi movement, tính lại `minPrice` và `inStock`.
+- Thứ tự khóa duy nhất cho mọi đường ghi: dòng `products` trước, dòng `skus` sau. Sửa sản phẩm (`PATCH`) và xóa cứng cũng khóa dòng `products` trước khi đọc, để không ghi đè `minPrice` bằng tồn kho cũ.
+- `reserve` lại cùng `orderId` sau `release` nhận `Ok` nhưng không giữ hàng (Decision 7). `commerce` dùng `orderId` mới khi đặt lại.
+- Điều chỉnh tay nhận `delta`, `reason`, `type` (`manual` hoặc `return`). Làm tồn kho âm trả 409 `INSUFFICIENT_STOCK`. SKU lạ trả 404 `SKU_NOT_FOUND`.
+- Audit `catalog.sku.stock_adjust`: `before` là `{ stock }`, `after` là `{ stock, delta, type, reason }`.
+- `movements` và `low-stock` phân trang theo `PageQuery`. `low-stock` dùng điều kiện của bộ lọc `LowStock` hiện có.
+- Mỗi SKU đổi tồn kho phát đúng 1 `StockChangedEvent` sau commit. Lời gọi lặp không đổi gì thì không phát.
+
+**Bằng chứng (2026-10-08):**
+- `dotnet build apps/backend/Pickory.sln` đạt 0 cảnh báo và 0 lỗi.
+- `dotnet test apps/backend/Pickory.sln` xanh: kiến trúc 3/3, unit 425/425, tích hợp 666 đạt và 4 bỏ qua (test gọi AI thật).
+- Test 20 `reserve` đồng thời cho SKU còn 5 cái chạy riêng 5 lần liên tiếp, cả 5 lần đạt: đúng 5 thành công, tồn kho về 0, đúng 5 movement `order_reserve`.
+- Bất biến `stock` bằng tổng `delta` được kiểm trong `DisposeAsync` của mọi lớp test tích hợp catalog (10 lớp), trên toàn DB test.
+- Phép thử đột biến: 13/15 điểm bị test bắt. Hai đột biến sống sót đều tương đương về hành vi: bỏ điều kiện `stock + @delta >= 0` trong UPDATE (dòng SKU đã khóa và đã kiểm đủ hàng, nên điều kiện chỉ là lớp dự phòng cùng `CHECK` của DB), và bỏ khóa `products` trong `DeleteAsync` (khóa ngoại `RESTRICT` vẫn chặn xóa và API vẫn trả 409).
+- Review lượt 1: test `Patch_WhileReserveSellsOutCheapVariant_KeepsMinPriceOfInStockVariant` đỏ 3 lần trên code cũ (`minPrice` 150000 thay vì 200000), xanh sau khi thống nhất thứ tự khóa. 4 test trong `ProductStockConcurrencyTests` chạy 5 lần liên tiếp đều đạt.
+- Script kiểm tra comment báo 0 vi phạm. Các file đã đổi không chứa em dash hoặc en dash.
 
 ### UI-C7: Màn tồn kho
 **Mô tả:** Danh sách SKU sắp hết hàng (ngưỡng 5), form điều chỉnh có ô lý do bắt buộc, bảng lịch sử movement của SKU.

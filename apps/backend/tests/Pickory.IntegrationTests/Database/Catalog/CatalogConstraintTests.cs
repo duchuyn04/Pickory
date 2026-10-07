@@ -9,8 +9,13 @@ namespace Pickory.IntegrationTests.Database.Catalog;
 
 // Port từ `schema-constraints.int.test.ts` của bản Node (CAT-03). DB tự chặn dữ liệu sai, kể cả khi code có lỗi.
 [Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CatalogConstraintTests(IntegrationDatabaseFixture database)
+public sealed class CatalogConstraintTests(IntegrationDatabaseFixture database) : IAsyncLifetime
 {
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    // Dữ liệu seed của lớp này phải giữ bất biến `stock` bằng tổng `delta`, kể cả khi test kiểm ràng buộc DB.
+    public async Task DisposeAsync() => await StockInvariant.AssertHoldsAsync(database);
+
     // Tạo danh mục, thương hiệu, sản phẩm và một SKU với slug riêng cho mỗi test.
     private static async Task<Sku> CreateSkuAsync(CatalogDbContext catalog, int stock)
     {
@@ -30,6 +35,8 @@ public sealed class CatalogConstraintTests(IntegrationDatabaseFixture database)
         };
         var sku = new Sku { Product = product, Code = $"SKU-{suffix}", OptionValues = JsonDocument.Parse("{}"), Price = 20_000_000, Stock = stock };
         catalog.Skus.Add(sku);
+        // Movement đầu kỳ khớp số tồn, để bất biến `stock` bằng tổng `delta` đúng ngay từ lúc seed.
+        catalog.InventoryMovements.Add(new InventoryMovement { Sku = sku, Delta = stock, Type = InventoryMovementType.Manual, Reason = "Tồn kho đầu kỳ của test" });
         await catalog.SaveChangesAsync();
         return sku;
     }
@@ -54,6 +61,8 @@ public sealed class CatalogConstraintTests(IntegrationDatabaseFixture database)
         var sku = await CreateSkuAsync(catalog, stock: 10);
         var orderId = $"order-{Guid.NewGuid():N}";
         catalog.InventoryMovements.Add(new InventoryMovement { SkuId = sku.Id, Delta = -1, Type = InventoryMovementType.OrderReserve, OrderId = orderId, Reason = "Giữ hàng cho đơn hàng" });
+        // Tồn kho trừ cùng lần lưu với movement thứ nhất, để bất biến vẫn đúng sau test.
+        sku.Stock = 9;
         await catalog.SaveChangesAsync();
 
         catalog.InventoryMovements.Add(new InventoryMovement { SkuId = sku.Id, Delta = -1, Type = InventoryMovementType.OrderReserve, OrderId = orderId, Reason = "Giữ hàng cho đơn hàng" });
@@ -92,9 +101,8 @@ public sealed class CatalogConstraintTests(IntegrationDatabaseFixture database)
     public async Task Product_CannotBeDeletedWhileSkuHasMovements()
     {
         await using var catalog = database.CreateCatalogContext();
+        // `CreateSkuAsync` đã ghi movement `manual` nhập kho ban đầu, nên SKU này đã có lịch sử tồn kho.
         var sku = await CreateSkuAsync(catalog, stock: 5);
-        catalog.InventoryMovements.Add(new InventoryMovement { SkuId = sku.Id, Delta = 5, Type = InventoryMovementType.Manual, Reason = "Nhập kho ban đầu" });
-        await catalog.SaveChangesAsync();
 
         var deleteProduct = () => catalog.Database.ExecuteSqlInterpolatedAsync($"DELETE FROM products WHERE id = {sku.ProductId}");
 

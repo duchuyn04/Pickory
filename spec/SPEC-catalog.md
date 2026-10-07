@@ -88,24 +88,33 @@ export type AttributeDefinition = {
 
 **Interface giữ hàng cho `commerce`:**
 
-Khối code dưới đây là interface của bản Node. Bản .NET chưa có, sẽ thêm vào project `Pickory.Modules.Catalog.Contracts` ở các task catalog sau.
+Interface nằm trong project `Pickory.Modules.Catalog.Contracts` (thư mục `Stock/`). Module `commerce` gọi qua `IStockService`.
 
-```ts
-// apps/backend/src/modules/catalog/index.ts
-export const stock: {
-  /** Giữ hàng cho đơn. Tất cả hoặc không: thiếu 1 SKU thì không giữ SKU nào. */
-  reserve(orderId: string, items: { skuId: string; quantity: number }[], tx?: Tx): Promise<ReserveResult>;
-  /** Trả lại hàng đã giữ (đơn hủy, quá hạn thanh toán). Gọi lặp lại không trả hàng 2 lần. */
-  release(orderId: string, tx?: Tx): Promise<void>;
-};
+```csharp
+public interface IStockService
+{
+    // Giữ hàng cho đơn. Tất cả hoặc không: thiếu 1 SKU thì không giữ SKU nào.
+    Task<ReserveResult> ReserveAsync(
+        string orderId, IReadOnlyList<StockItem> items, StockCallerTransaction? caller, CancellationToken cancellationToken);
 
-export type ReserveResult =
-  | { ok: true }
-  | { ok: false; shortages: { skuId: string; requested: number; available: number }[] };
+    // Trả lại hàng đã giữ (đơn hủy, quá hạn thanh toán). Gọi lặp lại không trả hàng 2 lần.
+    Task ReleaseAsync(string orderId, StockCallerTransaction? caller, CancellationToken cancellationToken);
+}
+
+public sealed record StockItem(string SkuId, int Quantity);
+public sealed record StockShortage(string SkuId, int Requested, int Available);
+public sealed record ReserveResult(bool Ok, IReadOnlyList<StockShortage> Shortages);
+
+// Transaction của bên gọi. Catalog ghi trong transaction này và gom StockChangedEvent vào Events.
+public sealed record StockCallerTransaction(DbTransaction Transaction, DomainEventCollector Events);
 ```
 
-- `reserve` dùng câu lệnh cập nhật có điều kiện (`stock >= quantity`) trong 1 transaction, nên 2 người mua cùng lúc không bán vượt tồn kho.
-- `reserve` và `release` idempotent theo `orderId`.
+- `caller` bằng `null`: catalog tự mở transaction và tự phát sự kiện sau commit.
+- `caller` có giá trị: bên gọi tự commit rồi gọi `Events.FlushAsync`. Bên gọi rollback thì gọi `Events.Discard`, và không có sự kiện nào được phát.
+- `Quantity` phải lớn hơn 0. Mục trùng `SkuId` được cộng số lượng. Số lượng không dương làm `ReserveAsync` ném `ArgumentException`.
+- `reserve` khóa dòng SKU theo thứ tự `id`, kiểm đủ hàng rồi mới ghi, và dùng câu lệnh cập nhật có điều kiện (`stock + delta >= 0`). Thiếu hàng thì catalog chưa ghi gì, nên 2 người mua cùng lúc không bán vượt tồn kho.
+- `reserve` và `release` idempotent theo `orderId`. Đầu mỗi hàm lấy khóa `pg_advisory_xact_lock` theo `orderId`, nên hai lời gọi cùng đơn chạy nối tiếp.
+- Đơn đã `release` mà gọi `reserve` lại cùng `orderId` nhận `Ok` nhưng không giữ hàng, vì đã có movement `order_reserve`. Module `commerce` phải dùng `orderId` mới khi đặt lại.
 - Hàng đã giao không cần bước riêng: khi đã giữ thì tồn kho đã trừ. Đổi trả hàng nhập lại bằng điều chỉnh tay (loại `return`).
 
 ### Interface đọc cho các module khác
@@ -198,9 +207,9 @@ sort=newest|price_asc|price_desc                     page=1  pageSize=24 (tối 
 | POST · PATCH · DELETE | `/api/admin/categories[/:id]` | `products:write` | Quản lý danh mục và bộ thuộc tính |
 | POST · PATCH · DELETE | `/api/admin/brands[/:id]` | `products:write` | Quản lý thương hiệu |
 | POST | `/api/admin/uploads/signature` | `products:write` | Chữ ký tải ảnh lên Cloudinary: `cloudName`, `apiKey`, `uploadUrl`, `timestamp`, `folder`, `allowedFormats`, `maxFileBytes`, `signature` |
-| POST | `/api/admin/skus/:id/adjust-stock` | `inventory:write` | Điều chỉnh tồn kho, bắt buộc lý do |
-| GET | `/api/admin/skus/:id/movements` | `products:read` | Lịch sử tồn kho |
-| GET | `/api/admin/inventory/low-stock` | `products:read` | SKU dưới ngưỡng |
+| POST | `/api/admin/skus/:id/adjust-stock` | `inventory:write` | Điều chỉnh tồn kho. Body `{ "delta": int, "reason": string, "type": "manual" \| "return" }`, `type` mặc định `manual`. `delta` khác 0, `reason` từ 1 đến 500 ký tự, `return` cần `delta` dương. Trả 200 với `skuId`, `stock` mới và `movement`. Lỗi: 400 `VALIDATION_ERROR`, 404 `SKU_NOT_FOUND`, 409 `INSUFFICIENT_STOCK` (tồn kho sẽ âm). |
+| GET | `/api/admin/skus/:id/movements` | `products:read` | Lịch sử tồn kho, mới nhất trước, phân trang `page` và `limit`. Mỗi dòng có `id`, `delta`, `type`, `orderId`, `actorId`, `reason`, `createdAt`. Lỗi: 404 `SKU_NOT_FOUND`. |
+| GET | `/api/admin/inventory/low-stock` | `products:read` | SKU đang bật có `stock <= 5`, sắp theo `stock` tăng dần rồi theo `code`, phân trang `page` và `limit`. Mỗi dòng có `skuId`, `code`, `productId`, `productName`, `optionValues`, `stock`. |
 
 ## Data Model (Prisma, rút gọn)
 

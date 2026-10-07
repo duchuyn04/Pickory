@@ -12,8 +12,13 @@ namespace Pickory.IntegrationTests.Database.Catalog;
 
 // Port từ `events.int.test.ts` và phần `emitAfterCommit` của `events.test.ts` ở bản Node (CAT-03).
 [Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CatalogTransactionTests(IntegrationDatabaseFixture database)
+public sealed class CatalogTransactionTests(IntegrationDatabaseFixture database) : IAsyncLifetime
 {
+    public Task InitializeAsync() => Task.CompletedTask;
+
+    // Test giao dịch không đụng tồn kho, nhưng bất biến phải đúng trên toàn DB.
+    public async Task DisposeAsync() => await StockInvariant.AssertHoldsAsync(database);
+
     private static string NewSlug(string prefix)
     {
         return $"{prefix}-{Guid.NewGuid():N}";
@@ -93,7 +98,7 @@ public sealed class CatalogTransactionTests(IntegrationDatabaseFixture database)
             calls++;
             return Task.CompletedTask;
         });
-        var rollbackCollector = new CatalogEventCollector(dispatcher);
+        var rollbackCollector = new DomainEventCollector(dispatcher);
         await using (var catalog = database.CreateCatalogContext())
         await using (var transaction = await catalog.Database.BeginTransactionAsync())
         {
@@ -106,7 +111,7 @@ public sealed class CatalogTransactionTests(IntegrationDatabaseFixture database)
 
         Assert.Equal(0, calls);
 
-        var commitCollector = new CatalogEventCollector(dispatcher);
+        var commitCollector = new DomainEventCollector(dispatcher);
         await using (var catalog = database.CreateCatalogContext())
         await using (var transaction = await catalog.Database.BeginTransactionAsync())
         {

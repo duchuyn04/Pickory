@@ -77,6 +77,9 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "POST", "/api/admin/products/dummy-id/status", [Permissions.ProductsWrite] },
         { "DELETE", "/api/admin/products/dummy-id", [Permissions.ProductsWrite] },
         { "POST", "/api/admin/uploads/signature", [Permissions.ProductsWrite] },
+        { "POST", "/api/admin/skus/dummy-id/adjust-stock", [Permissions.InventoryWrite] },
+        { "GET", "/api/admin/skus/dummy-id/movements", [Permissions.ProductsRead] },
+        { "GET", "/api/admin/inventory/low-stock", [Permissions.ProductsRead] },
     };
     [Theory]
     [MemberData(nameof(BackofficeEndpoints))]

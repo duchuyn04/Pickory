@@ -1,10 +1,8 @@
-using Pickory.Shared.Events;
-
-namespace Pickory.Modules.Catalog.Events;
+namespace Pickory.Shared.Events;
 
 // Gom sự kiện trong lúc transaction đang chạy, rồi phát sau khi commit.
 // Module khác không nhận sự kiện về dữ liệu chưa commit hoặc đã bị hủy.
-public sealed class CatalogEventCollector(IEventDispatcher dispatcher)
+public sealed class DomainEventCollector(IEventDispatcher dispatcher)
 {
     private List<Func<CancellationToken, Task>> _queued = [];
 

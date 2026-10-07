@@ -62,6 +62,8 @@ public sealed class ProductImageTests : IClassFixture<PickoryWebApplicationFacto
 
     public async Task DisposeAsync()
     {
+        // Kiểm bất biến trước khi dọn, vì dọn dữ liệu xóa luôn movement.
+        await StockInvariant.AssertHoldsAsync(_database);
         await using var context = _database.CreateCatalogContext();
         await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ExecuteDeleteAsync();
         await context.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();

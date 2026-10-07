@@ -24,6 +24,8 @@ public sealed class ImageDeletionProcessorTests(IntegrationDatabaseFixture datab
 
     public async Task DisposeAsync()
     {
+        // Test job xóa ảnh không đụng tồn kho, nhưng bất biến phải đúng trên toàn DB.
+        await StockInvariant.AssertHoldsAsync(database);
         // Dọn job của test này, để lần chạy sau và test khác không thấy dữ liệu cũ.
         await using var context = database.CreateCatalogContext();
         await context.ImageDeletionJobs.Where(job => job.PublicId.StartsWith(_prefix)).ExecuteDeleteAsync();

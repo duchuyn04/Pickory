@@ -120,6 +120,7 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             services.AddSingleton<IDomainEventHandler<UserLinkedEvent>, RecordingDomainEventHandler<UserLinkedEvent>>();
             services.AddSingleton<IDomainEventHandler<UserDeletedEvent>, RecordingDomainEventHandler<UserDeletedEvent>>();
             services.AddSingleton<IDomainEventHandler<ProductChangedEvent>, RecordingDomainEventHandler<ProductChangedEvent>>();
+            services.AddSingleton<IDomainEventHandler<StockChangedEvent>, RecordingDomainEventHandler<StockChangedEvent>>();
 
             // Test không gọi Cloudinary thật, kể cả khi máy chạy test có đặt biến `CLOUDINARY_*`.
             services.RemoveAll<IImageStorage>();

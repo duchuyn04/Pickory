@@ -56,6 +56,8 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
 
     public async Task DisposeAsync()
     {
+        // Kiểm bất biến trước khi dọn, vì dọn dữ liệu xóa luôn movement.
+        await StockInvariant.AssertHoldsAsync(_database);
         await using var catalogDatabase = _database.CreateCatalogContext();
 
         // Tìm toàn bộ sản phẩm thuộc các danh mục hoặc thương hiệu đã tạo trong bài test.

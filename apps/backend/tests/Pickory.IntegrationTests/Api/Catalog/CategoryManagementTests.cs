@@ -41,9 +41,10 @@ public sealed class CategoryManagementTests : IClassFixture<PickoryWebApplicatio
         _salesCookie = $"pk_session={salesToken}";
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
-        return Task.CompletedTask;
+        // Test quản lý danh mục và thương hiệu không đụng tồn kho, nhưng bất biến phải đúng trên toàn DB.
+        await StockInvariant.AssertHoldsAsync(_database);
     }
 
     [Fact]
