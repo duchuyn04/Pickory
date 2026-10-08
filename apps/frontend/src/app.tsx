@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react';
 import { AiSettingsPage } from './features/ai-gateway/admin/ai-settings-page';
 import { BrandsPage } from './features/catalog/admin/brands-page';
 import { CategoriesPage } from './features/catalog/admin/categories-page';
+import { CategoryPage } from './features/catalog/customer/category-page';
 import { InventoryPage } from './features/catalog/admin/inventory-page';
 import { SkuInventoryPage } from './features/catalog/admin/sku-inventory-page';
 import { Outlet, Route, Routes } from 'react-router-dom';
@@ -67,6 +68,7 @@ export function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/privacy" element={<PrivacySettingsPage />} />
+          <Route path="/c/:slug" element={<CategoryPage />} />
         </Route>
         <Route path="/admin/login" element={<StaffLoginPage />} />
         <Route path="/admin" element={<AdminLayout />}>

@@ -624,7 +624,7 @@ public sealed class ProductManagementHandler(
                     sku.CreatedAt, sku.UpdatedAt)).ToList(),
             product.Images.OrderBy(image => image.Position).ThenBy(image => image.Id).Select(image =>
                 new ProductImageResponse(image.Id, image.PublicId, image.Alt, image.SkuId, image.Position,
-                    $"https://res.cloudinary.com/{cloudinary.CloudName}/image/upload/{image.PublicId}")).ToList(),
+                    ProductImageUrl.Build(cloudinary, image.PublicId))).ToList(),
             product.CreatedAt, product.UpdatedAt);
     }
 

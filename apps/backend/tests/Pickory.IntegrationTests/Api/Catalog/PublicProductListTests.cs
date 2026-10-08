@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Catalog.Attributes;
 using Pickory.Modules.Catalog.Entities;
+using Pickory.Modules.Catalog.Images;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Api.Catalog;
@@ -556,6 +557,10 @@ public sealed class PublicProductListTests : IClassFixture<PickoryWebApplication
         Assert.Equal("Hãng A", first.GetProperty("brand").GetProperty("name").GetString());
         Assert.Equal($"pickory/products/{_suffix}-first", first.GetProperty("image").GetProperty("publicId").GetString());
         Assert.Equal("Ảnh đại diện", first.GetProperty("image").GetProperty("alt").GetString());
+        // Trình duyệt không biết tên kho ảnh, nên API trả sẵn URL gốc để giao diện thêm tham số biến đổi.
+        Assert.Equal(
+            $"https://res.cloudinary.com/{FakeImageStorage.Credentials.CloudName}/image/upload/pickory/products/{_suffix}-first",
+            first.GetProperty("image").GetProperty("url").GetString());
         // Danh sách chỉ mang tóm tắt. Mô tả, thông số và SKU thuộc trang chi tiết.
         Assert.False(first.TryGetProperty("description", out _));
         Assert.False(first.TryGetProperty("specs", out _));

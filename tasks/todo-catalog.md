@@ -481,11 +481,23 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### UI-C1: Trang danh mục
 **Mô tả:** Lưới sản phẩm, bộ lọc sinh từ thuộc tính `filterable`, sắp xếp, phân trang. Trạng thái lọc nằm trên URL. Ảnh dùng URL biến đổi Cloudinary (`f_auto,q_auto`, chiều rộng 200/400/800/1200).
 **Tiêu chí nghiệm thu:**
-- [ ] Mở lại URL đã chia sẻ thì thấy đúng bộ lọc và trang
-- [ ] Facet hiện số đếm, ví dụ "RAM 16GB (12)"
-- [ ] Không cuộn ngang ở viewport 375 px; bộ lọc dùng được bằng bàn phím
+- [x] Mở lại URL đã chia sẻ thì thấy đúng bộ lọc và trang
+- [x] Facet hiện số đếm, ví dụ "RAM 16GB (12)"
+- [x] Không cuộn ngang ở viewport 375 px; bộ lọc dùng được bằng bàn phím
 **Kiểm tra:** test component; Playwright trên `pnpm dev`
 **Phụ thuộc:** CAT-09, UI-C6 · **File:** `features/catalog/{category-page,product-filters,product-card}.tsx`, `app.tsx` · **Quy mô:** M
+
+**File:** `apps/frontend/src/features/catalog/customer/{category-page,product-filters,product-card,category-query,facet-labels,product-display,category-tree,range-input,use-product-list,catalog-api}.ts(x)`, `category-page.css`, `apps/frontend/src/app.tsx` (route `/c/:slug`), `apps/frontend/src/shared/icons.tsx`, `apps/frontend/src/features/catalog/shared/image-url.ts`; backend: `Pickory.Modules.Catalog/Images/ProductImageUrl.cs`, `Features/Storefront/{ProductSearchService,StorefrontModels}.cs`, `Features/Products/ProductManagementHandler.cs`; test: `apps/frontend/test/unit/features/catalog/customer/`, `apps/frontend/e2e/catalog-category-page.spec.ts`, `PublicProductListTests.cs`
+
+**Bằng chứng (2026-10-08):**
+
+- Playwright chạy trên Vite dev server (cùng lệnh với `pnpm dev`), với API E2E và DB `pickory_e2e`.
+- `GET /api/products` thêm trường `image.url`. Hàm `ProductImageUrl.Build` dùng chung với phản hồi admin.
+- Vitest: 46 file, 510 test đạt, gồm 77 test mới của UI-C1. `pnpm typecheck` và `pnpm lint` sạch.
+- Spec `catalog-category-page.spec.ts`: 7 test đạt, chạy có giao diện (`--headed`). Bộ E2E ẩn: 18 test đạt. Bộ E2E có giao diện lượt đầu có 2 test ngoài UI-C1 lỗi do máy quá tải, cả hai đạt khi chạy riêng.
+- Phép thử đột biến: 8 điểm, đều bị test bắt. Điểm thứ 8 là bỏ bảng tra tên thương hiệu đang chọn có số đếm 0.
+- `dotnet test` toàn solution do reviewer chạy lại: 3 test kiến trúc, 488 test đơn vị và 721 test tích hợp đạt; 4 test bỏ qua, 0 lỗi.
+- Trong lượt của builder, test Identity `AdminStaffTests.TwoLastAdmins_DemotingEachOtherConcurrentlyKeepsOneAdmin` lỗi 2 lần và đạt khi chạy riêng.
 
 ### CAT-10: Chi tiết, slug cũ, so sánh và catalogReader
 **Mô tả:** `GET /api/products/:slug`, `GET /api/products/compare?ids=`. Hoàn thiện `catalogReader`: `getProduct`, `getProducts`, `getSkus`, `listForIndexing`, `getAttributeDefinitions`, `countLowStock`.

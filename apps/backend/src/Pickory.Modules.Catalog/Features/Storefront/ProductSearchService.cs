@@ -2,13 +2,14 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Pickory.Modules.Catalog.Attributes;
 using Pickory.Modules.Catalog.Entities;
+using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Shared.Exceptions;
 
 namespace Pickory.Modules.Catalog.Features.Storefront;
 
 // Chạy truy vấn danh sách sản phẩm công khai và tính facets. Module khác gọi lại được cùng bộ lọc qua `SearchAsync`.
-public sealed class ProductSearchService(CatalogDbContext database)
+public sealed class ProductSearchService(CatalogDbContext database, CloudinaryCredentials cloudinary)
 {
     public async Task<ProductListResponse> SearchAsync(ProductSearchQuery query, CancellationToken cancellationToken)
     {
@@ -55,7 +56,7 @@ public sealed class ProductSearchService(CatalogDbContext database)
         return products;
     }
 
-    private static async Task<IReadOnlyList<ProductListItem>> LoadPageAsync(
+    private async Task<IReadOnlyList<ProductListItem>> LoadPageAsync(
         IQueryable<Product> matching, ProductSearchQuery query, CancellationToken cancellationToken)
     {
         var rows = await matching
@@ -90,7 +91,10 @@ public sealed class ProductSearchService(CatalogDbContext database)
                 row.MinPrice,
                 row.InStock,
                 row.Status.ToString().ToLowerInvariant(),
-                row.Thumbnail is null ? null : new ProductThumbnail(row.Thumbnail.PublicId, row.Thumbnail.Alt)))
+                row.Thumbnail is null
+                    ? null
+                    : new ProductThumbnail(
+                        row.Thumbnail.PublicId, row.Thumbnail.Alt, ProductImageUrl.Build(cloudinary, row.Thumbnail.PublicId))))
             .ToList();
     }
 

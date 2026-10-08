@@ -87,6 +87,15 @@ const iconPaths = {
   chevronLeft: <path d="m15 18-6-6 6-6" />,
   chevronUp: <path d="m18 15-6-6-6 6" />,
   chevronDown: <path d="m6 9 6 6 6-6" />,
+  chevronRight: <path d="m9 18 6-6-6-6" />,
+  filter: <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />,
+  image: (
+    <>
+      <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+      <circle cx="9" cy="9" r="2" />
+      <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+    </>
+  ),
   trash: (
     <>
       <path d="M3 6h18" />

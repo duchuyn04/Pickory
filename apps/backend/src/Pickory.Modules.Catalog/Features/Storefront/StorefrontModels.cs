@@ -22,7 +22,7 @@ public sealed record ProductListItem(
 public sealed record ProductBrandSummary(string Id, string Name, string Slug);
 
 // Ảnh đại diện là ảnh ở vị trí đầu tiên của sản phẩm.
-public sealed record ProductThumbnail(string PublicId, string Alt);
+public sealed record ProductThumbnail(string PublicId, string Alt, string Url);
 
 // Số sản phẩm theo từng giá trị lọc. Mỗi nhóm đếm theo kiểu loại trừ chính nó (Decision 12).
 public sealed record ProductFacets(IReadOnlyList<BrandFacet> Brands, IReadOnlyList<AttributeFacet> Attributes);

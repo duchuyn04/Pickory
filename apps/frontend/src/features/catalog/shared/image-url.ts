@@ -8,3 +8,12 @@ export function withCloudinaryTransform(url: string, width: number): string {
   const insertAt = segmentIndex + uploadSegment.length;
   return `${url.slice(0, insertAt)}f_auto,q_auto,w_${width}/${url.slice(insertAt)}`;
 }
+
+export const CATALOG_IMAGE_WIDTHS = [200, 400, 800, 1200] as const;
+
+// Danh sách `srcset` để trình duyệt tự chọn kích thước vừa với ô ảnh và mật độ điểm ảnh của màn hình.
+export function buildCloudinarySrcSet(url: string): string {
+  return CATALOG_IMAGE_WIDTHS.map(
+    (width) => `${withCloudinaryTransform(url, width)} ${width}w`,
+  ).join(', ');
+}
