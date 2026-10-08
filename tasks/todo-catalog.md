@@ -434,11 +434,47 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### CAT-09: Danh sách sản phẩm có lọc và facets
 **Mô tả:** `GET /api/products` theo bảng tham số trong spec và Decision 11, 12 của `plan-catalog.md`. Chỉ trả sản phẩm `active` và `discontinued`. `catalogReader.listProducts` dùng cùng bộ lọc.
 **Tiêu chí nghiệm thu:**
-- [ ] Lọc kết hợp danh mục, thương hiệu, khoảng giá, `inStock` và 3 thuộc tính trả đúng tập sản phẩm
-- [ ] `facets` đếm đúng theo kiểu loại trừ chính nó
-- [ ] Thuộc tính không `filterable` hoặc không tồn tại trả 400 `UNKNOWN_FILTER`
-- [ ] `pageSize` trên 48 trả 400; ba kiểu `sort` đúng thứ tự
-- [ ] Danh mục cha trả cả sản phẩm của danh mục con
+- [x] Lọc kết hợp danh mục, thương hiệu, khoảng giá, `inStock` và 3 thuộc tính trả đúng tập sản phẩm
+- [x] `facets` đếm đúng theo kiểu loại trừ chính nó
+- [x] Thuộc tính không `filterable` hoặc không tồn tại trả 400 `UNKNOWN_FILTER`
+- [x] `pageSize` trên 48 trả 400; ba kiểu `sort` đúng thứ tự
+- [x] Danh mục cha trả cả sản phẩm của danh mục con
+**Quyết định (2026-10-08):**
+1. Code nằm ở `Pickory.Modules.Catalog/Features/Storefront/`, tách thành route, bộ đọc tham số, dịch vụ tìm kiếm.
+2. `catalogReader.listProducts` chưa có interface trong `Contracts`. `ProductSearchService.SearchAsync` dùng lại được cho task sau.
+3. Khách chỉ thấy `active` và `discontinued`. `draft` và `hidden` không vào danh sách và không vào facets.
+4. `category` là slug và lấy cả danh mục con. Slug lạ trả 404 `CATEGORY_NOT_FOUND`. `brand` là danh sách slug, slug lạ không gây lỗi.
+5. `priceMin` và `priceMax` là số nguyên không âm so với `MinPrice`. `inStock` chỉ nhận `true` hoặc `false`. `sort` mặc định `newest`, mọi kiểu thêm `Id` làm khóa phụ.
+6. `page` từ 1, `pageSize` từ 1 đến 48 (mặc định 24). Độ lệch tràn `int` trả 400.
+7. Tập thuộc tính lọc được là thuộc tính `filterable` của danh mục và các danh mục cha. Không có `category` thì mọi `attr.*` trả 400 `UNKNOWN_FILTER`, `details` nêu tên khóa sai.
+8. Response gồm `items`, `page`, `pageSize`, `total`, `facets`. Mỗi sản phẩm có tóm tắt và ảnh đại diện ở vị trí đầu.
+9. Facets tính trong DB: một truy vấn cho hãng và một truy vấn cho mỗi thuộc tính, mỗi nhóm bỏ bộ lọc của chính nó. Lọc, sắp xếp, phân trang cũng chạy trong DB.
+10. Route công khai, không thêm dòng vào ma trận quyền back-office.
+
+**File:** `apps/backend/src/Pickory.Modules.Catalog/Features/Storefront/{PublicProductsEndpoints,ProductSearchQuery,AttributeFilterReader,AttributeFilter,UnknownFilterException,ProductFilterExpressions,ProductSearchService,StorefrontModels,ProductSort}.cs`, `CatalogModule.cs`; test: `Pickory.UnitTests/Modules/Catalog/Storefront/`, `Pickory.IntegrationTests/Api/Catalog/PublicProductListTests.cs`
+
+**Bằng chứng (2026-10-08):**
+
+- `dotnet build` đạt 0 cảnh báo và 0 lỗi.
+- `dotnet test` toàn solution chạy 2 lần, cả hai đạt 3 test kiến trúc, 488 test đơn vị, 721 test tích hợp; 4 test tích hợp bỏ qua, 0 lỗi. Test mới: 63 đơn vị và 54 tích hợp.
+- Phép thử đột biến: 22 điểm đều bị test bắt.
+  - Lượt đầu có 15 điểm, gồm:
+    - bỏ loại `draft` và `hidden`;
+    - facets áp bộ lọc của chính nó;
+    - `pageSize` 49 và bỏ khóa phụ `Id`;
+    - bỏ danh mục con và nhận thuộc tính không `filterable`;
+    - đổi chiều sort và bỏ `inStock`;
+    - cận số mở và bỏ kiểm khoảng giá.
+  - Hai đột biến sống ở lượt đầu: khóa phụ `Id` của `newest` và cận số đóng. Builder đã siết test, và test bắt được cả hai.
+  - Lượt review 1 thêm 7 điểm:
+    - facets bỏ bộ lọc giá;
+    - facets bỏ bộ lọc `inStock`;
+    - thứ tự facets `boolean`, `enum`, `text` và hãng;
+    - cha mồ côi trong chuỗi danh mục.
+- Chưa đo hiệu năng: p95 với 500 sản phẩm thuộc CAT-12.
+- Task không đổi giao diện, nên không chạy Playwright.
+- Script kiểm tra comment báo 0 vi phạm. Các file đã đổi không chứa em dash hoặc en dash.
+
 **Kiểm tra:** integration test với bộ dữ liệu cố định
 **Phụ thuộc:** CAT-08, CAT-07 · **File:** `modules/catalog/services/product-search.ts`, `modules/catalog/data/product-query.ts`, `modules/catalog/routes/public-catalog.ts` · **Quy mô:** M
 

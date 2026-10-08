@@ -7,6 +7,7 @@ using Pickory.Modules.Catalog.Features.Brands;
 using Pickory.Modules.Catalog.Features.Categories;
 using Pickory.Modules.Catalog.Features.Inventory;
 using Pickory.Modules.Catalog.Features.Products;
+using Pickory.Modules.Catalog.Features.Storefront;
 using Pickory.Modules.Catalog.Features.Uploads;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Persistence;
@@ -32,6 +33,8 @@ public static class CatalogModule
         services.AddScoped<BrandManagementHandler>();
         services.AddScoped<ProductManagementHandler>();
         services.AddScoped<ProductImageSync>();
+        // Danh sách sản phẩm công khai: một dịch vụ tìm kiếm dùng chung cho route và module khác về sau.
+        services.AddScoped<ProductSearchService>();
         // Tồn kho: handler cho API quản trị, và `IStockService` cho module `commerce`.
         services.AddScoped<InventoryHandler>();
         services.AddScoped<IStockService, StockService>();
@@ -55,6 +58,7 @@ public static class CatalogModule
         CategoriesEndpoints.Map(endpoints);
         BrandsEndpoints.Map(endpoints);
         ProductsEndpoints.Map(endpoints);
+        PublicProductsEndpoints.Map(endpoints);
         UploadSignatureEndpoint.Map(endpoints);
         InventoryEndpoints.Map(endpoints);
         return endpoints;
