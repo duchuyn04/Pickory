@@ -414,8 +414,18 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 
 ### Checkpoint C2
 - [ ] Admin tạo danh mục, sản phẩm 2 tùy chọn, tải ảnh (provider giả), đăng bán trên `pnpm dev`
-- [ ] Ma trận quyền có mọi endpoint back-office của `catalog`
-- [ ] Review với người dùng
+  - Đã kiểm bằng E2E `catalog-checkpoint-c2.spec.ts`, Cloudinary giả lập bằng `page.route`. Chưa kiểm trên `pnpm dev`: thiếu khóa Cloudinary. Người dùng chọn cách này ngày 2026-10-08.
+- [x] Ma trận quyền có mọi endpoint back-office của `catalog`
+- [x] Review với người dùng
+
+**Bằng chứng (2026-10-08):**
+
+- Playwright có giao diện: spec C2 đạt 1/1, cả bộ đạt 11/11. Chế độ ẩn đạt 11/11. Console của spec C2 có 0 lỗi và 0 cảnh báo.
+- `EndpointDataSource` đối chiếu 17 route quản trị catalog với ma trận. Không thiếu route; test đột biến xóa `POST /api/admin/products` báo thiếu đúng route.
+- `dotnet build` đạt 0 cảnh báo và 0 lỗi. Ma trận quyền đạt 176/176 test.
+- `dotnet test` đạt 3 test kiến trúc, 425 test đơn vị, 667 test tích hợp; 4 test tích hợp bỏ qua.
+- `pnpm typecheck`, `pnpm lint` thành công. Script kiểm tra comment báo 0 vi phạm.
+- Người dùng xác nhận review Checkpoint C2 ngày 2026-10-08.
 
 ---
 

@@ -1,7 +1,13 @@
 using System.Net;
+using System.Reflection;
+using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Api.Identity;
 using Pickory.IntegrationTests.Infrastructure;
+using Pickory.Modules.Catalog;
 using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Roles;
@@ -15,6 +21,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
+    private readonly PickoryWebApplicationFactory _factory;
     private string _customerCookie = null!;
     private string _salesCookie = null!;
     private string _supportCookie = null!;
@@ -23,6 +30,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     public PermissionMatrixTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
     {
         _database = database;
+        _factory = factory;
         // Tắt tự động nạp cookie để test kiểm soát chính xác từng phiên người dùng.
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
     }
@@ -164,6 +172,128 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
 
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    // Route mới của catalog phải có trong ma trận để không bỏ sót phép kiểm quyền.
+    public void BackofficeEndpoints_CoversAllCatalogAdminEndpoints()
+    {
+        // Dùng endpoint của ứng dụng thật để route mới không cần thêm vào danh sách kiểm thử riêng.
+        var endpointDataSource = _factory.Services.GetRequiredService<EndpointDataSource>();
+        var catalogAdminEndpoints = new List<(string Method, string Pattern)>();
+
+        foreach (var endpoint in endpointDataSource.Endpoints)
+        {
+            // Chỉ `RouteEndpoint` có `RoutePattern` để đối chiếu với ma trận.
+            if (endpoint is not RouteEndpoint routeEndpoint)
+            {
+                continue;
+            }
+
+            var rawPattern = routeEndpoint.RoutePattern.RawText;
+            // Route không có đường dẫn không thể ghép với dòng ma trận theo phương thức và đường dẫn.
+            if (string.IsNullOrWhiteSpace(rawPattern))
+            {
+                continue;
+            }
+
+            // Ma trận luôn ghi đường dẫn với dấu `/` đầu tiên; `RoutePattern` có thể không ghi dấu đó.
+            var normalizedPattern = rawPattern.StartsWith('/') ? rawPattern : "/" + rawPattern;
+
+            // Kiểu khai báo của handler giúp giới hạn phép kiểm vào module catalog.
+            var methodInfo = endpoint.Metadata.GetMetadata<MethodInfo>()
+                ?? endpoint.Metadata.OfType<Delegate>().FirstOrDefault()?.Method
+                ?? endpoint.RequestDelegate?.Method;
+
+            var declaringType = methodInfo?.DeclaringType;
+            var isCatalogEndpoint = declaringType != null &&
+                (declaringType.Assembly == typeof(CatalogModule).Assembly ||
+                 declaringType.Namespace?.StartsWith("Pickory.Modules.Catalog", StringComparison.Ordinal) == true);
+
+            // Route của module khác không thuộc tiêu chí bao phủ catalog trong checkpoint này.
+            if (!isCatalogEndpoint)
+            {
+                continue;
+            }
+
+            // Route công khai không yêu cầu quyền quản trị và không có trong ma trận.
+            if (!normalizedPattern.StartsWith("/api/admin/", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            // Route thiếu phương thức HTTP không có cặp phương thức và đường dẫn để đối chiếu.
+            var httpMethodMetadata = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>();
+            var httpMethods = httpMethodMetadata?.HttpMethods;
+            if (httpMethods is null || httpMethods.Count == 0)
+            {
+                continue;
+            }
+
+            // Một route có thể chấp nhận nhiều phương thức HTTP, mỗi phương thức cần một dòng ma trận.
+            foreach (var method in httpMethods)
+            {
+                catalogAdminEndpoints.Add((method.ToUpperInvariant(), normalizedPattern));
+            }
+        }
+
+        // Nếu bộ nhận diện route hỏng, danh sách rỗng sẽ làm phép so sánh bao phủ luôn xanh.
+        Assert.NotEmpty(catalogAdminEndpoints);
+
+        // Ma trận dùng đường dẫn cụ thể để gửi request nên cần khóa tra cứu cùng dạng.
+        var matrixRows = BackofficeEndpoints
+            .Select(row => new
+            {
+                Method = ((string)row[0]).ToUpperInvariant(),
+                Path = (string)row[1],
+                RequiredPermissions = (string[])row[2]
+            })
+            .ToList();
+
+        var matrixLookup = matrixRows
+            .Select(row => (row.Method, row.Path))
+            .ToHashSet();
+
+        // Route thiếu dòng ma trận sẽ không được kiểm tra quyền cho các tài khoản.
+        var missingRoutes = new List<string>();
+        foreach (var (method, pattern) in catalogAdminEndpoints)
+        {
+            // Ma trận dùng `dummy-id` thay cho tham số của đường dẫn.
+            var matrixPath = NormalizeRoutePatternForMatrix(pattern);
+            if (!matrixLookup.Contains((method, matrixPath)))
+            {
+                missingRoutes.Add($"{method} {pattern}");
+            }
+        }
+
+        // Liệt kê từng route thiếu để người sửa biết chính xác dòng cần bổ sung.
+        Assert.True(
+            missingRoutes.Count == 0,
+            $"Thiếu route quản trị catalog trong BackofficeEndpoints: {string.Join(", ", missingRoutes)}");
+
+        // Dòng ma trận không có route ứng dụng có thể che sai lệch khi route bị xóa.
+        var catalogPermissionSet = CatalogPermissions.All.ToHashSet(StringComparer.Ordinal);
+        var registeredCatalogRoutes = catalogAdminEndpoints
+            .Select(endpoint => (endpoint.Method, Path: NormalizeRoutePatternForMatrix(endpoint.Pattern)))
+            .ToHashSet();
+
+        var unknownMatrixRoutes = matrixRows
+            .Where(row => row.RequiredPermissions.Any(permission => catalogPermissionSet.Contains(permission)))
+            .Where(row => !registeredCatalogRoutes.Contains((row.Method, row.Path)))
+            .Select(row => $"{row.Method} {row.Path}")
+            .ToList();
+
+        // Liệt kê dòng thừa để phát hiện route catalog đã bị xóa khỏi ứng dụng.
+        Assert.True(
+            unknownMatrixRoutes.Count == 0,
+            $"Ma trận BackofficeEndpoints chứa route catalog không tồn tại: {string.Join(", ", unknownMatrixRoutes)}");
+    }
+
+    // Ma trận dùng `dummy-id` trong request thử quyền nên cần cùng định dạng với route ứng dụng.
+    private static string NormalizeRoutePatternForMatrix(string pattern)
+    {
+        var normalizedPattern = pattern.StartsWith('/') ? pattern : "/" + pattern;
+        return Regex.Replace(normalizedPattern, @"\{[^}]+\}", "dummy-id");
     }
 
     private async Task<string> CreateSessionAsync(UserKind kind, string roleCode, string prefix)

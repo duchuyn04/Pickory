@@ -76,8 +76,9 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 
 ### Checkpoint C2
 - [ ] Admin tạo danh mục, sản phẩm 2 tùy chọn, tải ảnh, đăng bán trên `pnpm dev`
+  - Đã kiểm bằng E2E `catalog-checkpoint-c2.spec.ts`, Cloudinary giả lập bằng `page.route`. Chưa kiểm trên `pnpm dev`: thiếu khóa Cloudinary. Người dùng chọn cách này ngày 2026-10-08.
 - [x] 20 `reserve` đồng thời cho SKU còn 5 cái: đúng 5 thành công
-- [ ] Ma trận quyền có mọi endpoint back-office của `catalog`
+- [x] Ma trận quyền có mọi endpoint back-office của `catalog`
 
 ### Phase 3: Đọc công khai và giao diện khách
 - [ ] CAT-09 · [ ] UI-C1 · [ ] CAT-10 · [ ] UI-C2 · [ ] UI-C3 · [ ] CAT-11 · [ ] CAT-12
