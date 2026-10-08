@@ -9,6 +9,7 @@ using Pickory.Modules.Catalog.Descriptions;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Events;
+using Pickory.Modules.Catalog.Features.Inventory;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Catalog.Products;
 using Pickory.Modules.Catalog.Specs;
@@ -63,8 +64,7 @@ public sealed class ProductManagementHandler(
         // Lọc sản phẩm có ít nhất một biến thể đang bật và tồn kho dưới hoặc bằng ngưỡng.
         if (query.LowStock)
         {
-            products = products.Where(product => product.Skus.Any(sku =>
-                sku.Enabled && sku.Stock <= CatalogInventoryDefaults.LowStockThreshold));
+            products = products.Where(product => product.Skus.AsQueryable().Any(LowStockExpressions.IsLowStock));
         }
 
         // Đếm cùng bộ lọc để giao diện không hiển thị trang ngoài tập kết quả.

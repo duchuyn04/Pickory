@@ -502,11 +502,48 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### CAT-10: Chi tiết, slug cũ, so sánh và catalogReader
 **Mô tả:** `GET /api/products/:slug`, `GET /api/products/compare?ids=`. Hoàn thiện `catalogReader`: `getProduct`, `getProducts`, `getSkus`, `listForIndexing`, `getAttributeDefinitions`, `countLowStock`.
 **Tiêu chí nghiệm thu:**
-- [ ] Slug cũ trả 301 sang slug mới
-- [ ] Sản phẩm `draft` và `hidden` trả 404; `discontinued` trả 200 có trạng thái để hiện "Ngừng kinh doanh"
-- [ ] So sánh 4 sản phẩm cùng danh mục trả đủ thông số; khác danh mục trả 400 `COMPARE_CATEGORY_MISMATCH`; trên 4 sản phẩm trả 400
-- [ ] `getProducts` giữ thứ tự `ids` và bỏ qua id không hợp lệ
-- [ ] `listForIndexing` duyệt hết sản phẩm bằng cursor, không lặp, không sót
+- [x] Slug cũ trả 301 sang slug mới
+- [x] Sản phẩm `draft` và `hidden` trả 404; `discontinued` trả 200 có trạng thái để hiện "Ngừng kinh doanh"
+- [x] So sánh 4 sản phẩm cùng danh mục trả đủ thông số; khác danh mục trả 400 `COMPARE_CATEGORY_MISMATCH`; trên 4 sản phẩm trả 400
+- [x] `getProducts` giữ thứ tự `ids` và bỏ qua id không hợp lệ
+- [x] `listForIndexing` duyệt hết sản phẩm bằng cursor, không lặp, không sót
+**Quyết định (2026-10-08):**
+1. Route mới nằm trong `PublicProductDetailEndpoints.cs`. `ICatalogReader` và các record nằm trong `Pickory.Modules.Catalog.Contracts/Reading/`. `CatalogReader` đăng ký trong `CatalogModule.cs`.
+2. `GET /api/products/{slug}` chỉ nhận slug. Slug hiện tại của sản phẩm khách thấy được trả 200. Slug cũ trả 301 tới slug mới và giữ query string.
+3. `draft`, `hidden` và slug lạ cùng trả 404 `PRODUCT_NOT_FOUND`. Slug cũ của sản phẩm khách không thấy cũng trả 404. `discontinued` trả 200 kèm `status`.
+4. `GET /api/products/compare?ids=` nhận 1 đến 4 id sau khi bỏ id trùng. Id lạ hoặc khách không thấy bị bỏ qua. Khác danh mục lá trả 400 `COMPARE_CATEGORY_MISMATCH`. Không còn sản phẩm nào thì trả 200 với danh sách rỗng.
+5. Thuộc tính hiệu lực dùng chung `CategoryAttributeIndex` cho chi tiết, so sánh và `GetAttributeDefinitionsAsync`. So sánh trả đủ mọi thuộc tính, không chỉ `filterable`.
+6. `GetSkusAsync` trả cả SKU tắt và sản phẩm không bán, kèm `Enabled` và `ProductStatus`. Ảnh riêng của SKU thắng, không có thì lấy ảnh đầu của sản phẩm.
+7. `ListForIndexingAsync` sắp theo `Id`, cursor là `Id` cuối của trang trước, `pageSize` từ 1 đến 500.
+8. `CountLowStockAsync`, danh sách sắp hết hàng và bộ lọc `lowStock` của danh sách sản phẩm quản trị cùng dùng `LowStockExpressions.IsLowStock`.
+9. `ListProductsAsync` đi qua `ProductSearchQuery.Read` và `ProductSearchService`, `limit` bị kéo về khoảng 1 đến 48.
+10. Route công khai, không thêm dòng vào ma trận quyền back-office.
+
+**File:** `apps/backend/src/Pickory.Modules.Catalog.Contracts/Reading/*.cs`, `apps/backend/src/Pickory.Modules.Catalog/Reading/{CatalogReader,RequestedIdOrder,IndexingPaging,SkuImageChooser}.cs`, `apps/backend/src/Pickory.Modules.Catalog/Features/Storefront/{PublicProductDetailEndpoints,ProductDetailService,ProductDetailAssembler,ProductSummaryReader,ProductComparisonService,CategoryAttributeIndex,CompareIdsReader,AttributeGrouping,CloudinaryImageUrl}.cs`, `Features/Inventory/{LowStockExpressions,InventoryHandler}.cs`, `Features/Products/ProductManagementHandler.cs` (chỉ bộ lọc `lowStock`), `CatalogModule.cs`; test: `Pickory.UnitTests/Modules/Catalog/{Reading,Storefront}/`, `Pickory.IntegrationTests/Api/Catalog/{CatalogReaderTests,PublicProductDetailTests}.cs`, `Pickory.IntegrationTests/Infrastructure/ReadingTestData.cs`
+
+**Bằng chứng (2026-10-08):**
+
+- `dotnet build` đạt 0 cảnh báo và 0 lỗi.
+- `dotnet test` toàn solution đạt 3 test kiến trúc, 519 test đơn vị, 771 test tích hợp; 4 test tích hợp bỏ qua, 0 lỗi. Test mới: 31 đơn vị và 50 tích hợp.
+- Phép thử đột biến: 23 điểm đều bị test bắt.
+  - Lượt đầu có 18 điểm:
+    - chi tiết trả `draft`; chi tiết trả SKU tắt;
+    - slug cũ trả 302; bỏ query string; chuyển hướng cho sản phẩm `draft`;
+    - so sánh bỏ kiểm cùng danh mục; trần 5 id; chỉ lấy thuộc tính `filterable`;
+    - `GetProducts` theo thứ tự DB;
+    - `GetSkus` bỏ SKU tắt; luôn lấy ảnh đầu; chọn ảnh SKU sai;
+    - cursor dùng `>=`; cắt trang luôn trả cursor `null`;
+    - sắp hết hàng dùng `<`; đếm cả SKU tắt;
+    - bỏ kẹp `limit`; bỏ thuộc tính của danh mục cha.
+  - Review lượt 1 thấy 2 đột biến còn xanh: tên tham số `brand` và `priceMin` của `ListProductsAsync`. Builder thêm test lọc hãng và khoảng giá.
+  - Lượt review 1 thêm 5 điểm:
+    - đổi tên tham số `brand`, `priceMin`, `priceMax`;
+    - ngưỡng chung `<=` thành `<`;
+    - bộ lọc `lowStock` của danh sách sản phẩm bỏ ngưỡng.
+- Task không đổi giao diện, nên không chạy Playwright.
+- Script kiểm tra comment báo 0 vi phạm. Các file đã đổi không chứa em dash hoặc en dash.
+- Chưa đo hiệu năng trang chi tiết và lập chỉ mục với dữ liệu lớn.
+
 **Kiểm tra:** integration test
 **Phụ thuộc:** CAT-09 · **File:** `modules/catalog/services/{product-detail,catalog-reader}.ts`, `modules/catalog/routes/public-catalog.ts`, `modules/catalog/index.ts` · **Quy mô:** M
 

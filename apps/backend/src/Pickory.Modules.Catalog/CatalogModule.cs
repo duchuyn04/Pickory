@@ -11,7 +11,9 @@ using Pickory.Modules.Catalog.Features.Storefront;
 using Pickory.Modules.Catalog.Features.Uploads;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Persistence;
+using Pickory.Modules.Catalog.Reading;
 using Pickory.Modules.Catalog.Stock;
+using Pickory.Modules.Catalog.Contracts.Reading;
 using Pickory.Modules.Catalog.Contracts.Stock;
 using Pickory.Shared.Configuration;
 
@@ -35,6 +37,11 @@ public static class CatalogModule
         services.AddScoped<ProductImageSync>();
         // Danh sách sản phẩm công khai: một dịch vụ tìm kiếm dùng chung cho route và module khác về sau.
         services.AddScoped<ProductSearchService>();
+        // Chi tiết, tóm tắt và so sánh sản phẩm cho khách. `CatalogReader` ghép các dịch vụ này cho module khác.
+        services.AddScoped<ProductDetailService>();
+        services.AddScoped<ProductSummaryReader>();
+        services.AddScoped<ProductComparisonService>();
+        services.AddScoped<ICatalogReader, CatalogReader>();
         // Tồn kho: handler cho API quản trị, và `IStockService` cho module `commerce`.
         services.AddScoped<InventoryHandler>();
         services.AddScoped<IStockService, StockService>();
@@ -59,6 +66,7 @@ public static class CatalogModule
         BrandsEndpoints.Map(endpoints);
         ProductsEndpoints.Map(endpoints);
         PublicProductsEndpoints.Map(endpoints);
+        PublicProductDetailEndpoints.Map(endpoints);
         UploadSignatureEndpoint.Map(endpoints);
         InventoryEndpoints.Map(endpoints);
         return endpoints;

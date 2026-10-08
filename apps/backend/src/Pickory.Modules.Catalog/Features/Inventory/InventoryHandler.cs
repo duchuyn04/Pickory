@@ -80,9 +80,8 @@ public sealed class InventoryHandler(
 
     public async Task<PagedResponse<LowStockSkuResponse>> GetLowStockAsync(PageQuery page, CancellationToken cancellationToken)
     {
-        // Cùng điều kiện với bộ lọc `lowStock` của danh sách sản phẩm. SKU tắt không bán nên không cần nhập thêm.
-        var lowStock = database.Skus.AsNoTracking()
-            .Where(sku => sku.Enabled && sku.Stock <= CatalogInventoryDefaults.LowStockThreshold);
+        // Dùng chung định nghĩa với `CountLowStockAsync` của `ICatalogReader`, để badge và danh sách cho cùng một số.
+        var lowStock = database.Skus.AsNoTracking().WhereLowStock();
         var total = await lowStock.CountAsync(cancellationToken);
         // Thứ tự phụ theo mã SKU giữ phân trang ổn định khi nhiều SKU cùng số tồn.
         var rows = await lowStock.OrderBy(sku => sku.Stock).ThenBy(sku => sku.Code)
