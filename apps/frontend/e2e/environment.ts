@@ -42,6 +42,7 @@ export const e2eEnvironment = {
   salesEmail: 'e2e-identity-sales@pickory.local',
   catalogSalesEmail: 'e2e-catalog-sales@pickory.local',
   inventorySalesEmail: 'e2e-inventory-sales@pickory.local',
+  productStatusSalesEmail: 'e2e-product-status-sales@pickory.local',
   accountPassword: process.env.E2E_ACCOUNT_PASSWORD,
   outboxDirectory: fileURLToPath(
     new URL('../../backend/.dev-outbox/e2e-identity/', import.meta.url),

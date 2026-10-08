@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { apiRequest, ApiError } from '../../../shared/api';
 import type { AttributeDefinition } from '../../../shared/catalog/attributes';
@@ -25,6 +25,8 @@ import {
   type ProductVariant,
 } from './product-logic';
 import { ProductOptionsEditor } from './product-options-editor';
+import { ProductStatusPanel } from './product-status-panel';
+import type { ProductStatus } from './product-status';
 import { SpecFields } from './spec-fields';
 import { VariantTable } from './variant-table';
 import './products.css';
@@ -72,6 +74,9 @@ interface ProductFormViewProps {
   canWrite: boolean;
   product?: ProductDetail;
   onSave: (payload: Record<string, unknown>) => Promise<unknown>;
+  // Chỉ trang sửa dùng hai hàm này. Trang tạo mới không có khối trạng thái nên không gọi.
+  onChangeStatus: (target: ProductStatus) => Promise<void>;
+  onDelete: () => Promise<void>;
 }
 
 export function ProductFormView({
@@ -80,6 +85,8 @@ export function ProductFormView({
   canWrite,
   product,
   onSave,
+  onChangeStatus,
+  onDelete,
 }: ProductFormViewProps) {
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? '');
   const [brandId, setBrandId] = useState(product?.brandId ?? '');
@@ -108,6 +115,22 @@ export function ProductFormView({
   const [priceErrors, setPriceErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+
+  // Ảnh chụp toàn bộ ô nhập. So ảnh chụp hiện tại với ảnh chụp lúc tải hoặc lúc lưu để biết còn thay đổi chưa lưu.
+  const formSnapshot = JSON.stringify({
+    categoryId,
+    brandId,
+    name,
+    shortDesc,
+    warrantyMonths,
+    description,
+    specs,
+    options,
+    variants,
+    images,
+  });
+  const savedSnapshotRef = useRef(formSnapshot);
+  const hasUnsavedChanges = formSnapshot !== savedSnapshotRef.current;
 
   const attributes = categoryId ? getLeafCategoryAttributes(categoryId, categories) : [];
   // Sản phẩm chỉ gắn vào danh mục lá, không thể chọn danh mục chứa danh mục con.
@@ -229,6 +252,8 @@ export function ProductFormView({
         // Thứ tự trong danh sách là thứ tự hiển thị. Backend không nhận URL ảnh thu nhỏ.
         images: images.map(({ publicId, alt, skuId }) => ({ publicId, alt: alt.trim(), skuId })),
       });
+      // Lưu xong thì dữ liệu trên máy chủ bằng dữ liệu trong form, nên các nút trạng thái được mở lại.
+      savedSnapshotRef.current = formSnapshot;
     } catch (error) {
       // Lỗi thông số trả về key từ API phải nằm ngay dưới ô, không xóa bản nháp.
       if (error instanceof ApiError && error.code === 'SPECS_INVALID' && error.details) {
@@ -261,6 +286,17 @@ export function ProductFormView({
         <p role="alert" className="alert">
           {formError}
         </p>
+      )}
+      {/* Sản phẩm mới luôn là bản nháp và chưa có định danh, nên chỉ trang sửa có khối trạng thái. */}
+      {product && (
+        <ProductStatusPanel
+          productName={product.name}
+          status={product.status}
+          canWrite={canWrite}
+          hasUnsavedChanges={hasUnsavedChanges}
+          onChangeStatus={onChangeStatus}
+          onDelete={onDelete}
+        />
       )}
       <section className="card product-section">
         <h2>Thông tin cơ bản</h2>
@@ -483,6 +519,24 @@ export function ProductFormPage() {
     navigate(`/admin/products/${saved.id}`, { replace: true });
   }
 
+  async function changeStatus(target: ProductStatus) {
+    const updated = await apiRequest<ProductDetail>(`/api/admin/products/${id}/status`, {
+      method: 'POST',
+      body: JSON.stringify({ status: target }),
+    });
+    // Ghi phản hồi vào cache để nhãn trạng thái đổi ngay, không chờ lần tải lại.
+    queryClient.setQueryData(['admin-product', id], updated);
+    // Danh sách hiện nhãn trạng thái của sản phẩm nên phải tải lại.
+    await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+  }
+
+  async function deleteProduct() {
+    await apiRequest<void>(`/api/admin/products/${id}`, { method: 'DELETE' });
+    // Sản phẩm đã mất, nên danh sách cũ trong cache không còn đúng.
+    await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    navigate('/admin/products');
+  }
+
   return (
     <ProductFormView
       key={id ?? 'new'}
@@ -491,6 +545,8 @@ export function ProductFormPage() {
       product={productQuery.data}
       canWrite={canWrite}
       onSave={save}
+      onChangeStatus={changeStatus}
+      onDelete={deleteProduct}
     />
   );
 }

@@ -6,6 +6,11 @@ import { LOW_STOCK_THRESHOLD } from '../../../shared/catalog/inventory';
 import { useCan } from '../../identity/hooks/use-actor';
 import { toCatalogErrorMessage } from './catalog-errors';
 import type { ProductCategory, ProductDetail } from './product-form';
+import {
+  PRODUCT_STATUS_BADGE_CLASSES,
+  PRODUCT_STATUS_NAMES,
+  type ProductStatus,
+} from './product-status';
 import './products.css';
 
 interface PagedProducts {
@@ -14,20 +19,6 @@ interface PagedProducts {
   page: number;
   limit: number;
 }
-const statusNames: Record<string, string> = {
-  draft: 'Bản nháp',
-  active: 'Đang bán',
-  hidden: 'Đã ẩn',
-  discontinued: 'Ngừng bán',
-};
-// Màu badge theo trạng thái: đang bán là xanh, đã ẩn là vàng, ngừng bán là đỏ, bản nháp trung tính.
-const statusBadgeClasses: Record<string, string> = {
-  draft: 'badge',
-  active: 'badge badge-ok',
-  hidden: 'badge badge-warn',
-  discontinued: 'badge badge-bad',
-};
-
 export function ProductsPage() {
   const canWrite = useCan('products:write');
   const [search, setSearch] = useState('');
@@ -101,7 +92,7 @@ export function ProductsPage() {
               }}
             >
               <option value="">Mọi trạng thái</option>
-              {Object.entries(statusNames).map(([value, label]) => (
+              {Object.entries(PRODUCT_STATUS_NAMES).map(([value, label]) => (
                 <option key={value} value={value}>
                   {label}
                 </option>
@@ -191,8 +182,12 @@ export function ProductsPage() {
                         ?.name ?? product.categoryId}
                     </td>
                     <td>
-                      <span className={statusBadgeClasses[product.status] ?? 'badge'}>
-                        {statusNames[product.status] ?? product.status}
+                      <span
+                        className={
+                          PRODUCT_STATUS_BADGE_CLASSES[product.status as ProductStatus] ?? 'badge'
+                        }
+                      >
+                        {PRODUCT_STATUS_NAMES[product.status as ProductStatus] ?? product.status}
                       </span>
                     </td>
                     <td className="num">

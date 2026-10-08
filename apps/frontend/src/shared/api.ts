@@ -31,6 +31,9 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
     throw new ApiError('NETWORK_ERROR', 0, 'Không kết nối được máy chủ.');
   }
 
+  // `DELETE /api/admin/products/{id}` trả 204 không có thân. Phản hồi này là thành công, không phải phản hồi hỏng.
+  if (response.status === 204) return undefined as T;
+
   const body = (await response.json().catch(() => null)) as ApiResponse<T> | null;
   if (body && 'data' in body) return body.data;
   if (body && 'error' in body) {

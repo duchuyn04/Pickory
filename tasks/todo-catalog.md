@@ -373,6 +373,45 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 - Ảnh chụp 1280 px và 375 px của danh sách, trang SKU và dialog. Ở 375 px trang không tràn ngang, bảng cuộn trong khung của nó.
 - Script kiểm tra comment báo 0 vi phạm. Các file đã đổi không chứa em dash hoặc en dash.
 
+### UI-C5b: Đổi trạng thái và xóa sản phẩm trên giao diện
+**Mô tả:** Form sửa sản phẩm có khối trạng thái. Khối này hiện trạng thái hiện tại và nút cho từng trạng thái chuyển được. Nút xóa mở hộp thoại xác nhận. Giao diện gọi 2 endpoint của CAT-07. Task thêm ngày 2026-10-08: Checkpoint C2 cần đăng bán trên giao diện, nhưng UI-C5 không có phần này.
+**Tiêu chí nghiệm thu:**
+- [x] Chỉ hiện nút cho trạng thái chuyển được từ trạng thái hiện tại, theo bảng `CanTransition` của backend
+- [x] API trả 422 `PRODUCT_NOT_PUBLISHABLE` thì hiện từng lý do trong `details`; sản phẩm giữ trạng thái cũ
+- [x] Đổi trạng thái thành công thì nhãn trạng thái cập nhật mà không tải lại trang
+- [x] Xóa cần xác nhận; xóa thành công thì về danh sách sản phẩm; 409 `PRODUCT_HAS_ORDERS` hiện thông báo tiếng Việt
+- [x] Không có `products:write` thì không thấy nút đổi trạng thái và nút xóa
+**Kiểm tra:** test component; Playwright `--headed`
+**Phụ thuộc:** CAT-07, UI-C5 · **File:** `features/catalog/admin/{product-status-panel,delete-product-dialog}.tsx`, `product-form.tsx` · **Quy mô:** S
+
+**Quyết định (2026-10-08):**
+- Khối trạng thái chỉ có ở trang sửa `/admin/products/:id`. Trang tạo mới không có, vì sản phẩm mới luôn là `draft`.
+- Nhãn và màu badge của trạng thái gom vào `product-status.ts`, dùng chung với danh sách sản phẩm.
+- Bảng chuyển trạng thái ở frontend chép từ `AllowedTransitions` của `ProductPublishing.cs`, bỏ cặp chuyển sang chính nó. Unit test liệt kê đủ 4 trạng thái.
+- Nhãn nút theo trạng thái đích: "Đăng bán" (từ `draft`), "Bán lại" (từ `hidden` hoặc `discontinued`), "Ẩn sản phẩm", "Ngừng kinh doanh".
+- Form theo dõi thay đổi chưa lưu bằng ảnh chụp các ô nhập so với ảnh chụp lúc tải hoặc lúc lưu. Có thay đổi thì khóa nút trạng thái và hiện "Lưu thay đổi trước khi đổi trạng thái."
+- Lỗi 422 hiện thông báo của API và danh sách lý do trong `role="alert"`. `details` của lỗi này là mảng chuỗi, khác dạng `{ key, message }` của `SPECS_INVALID`. Sản phẩm giữ trạng thái cũ.
+- Lỗi 409 và lỗi mạng hiện thông báo tiếng Việt của API qua `toCatalogErrorMessage`.
+- Đổi trạng thái thành công: ghi `ProductResponse` vào cache `['admin-product', id]`, làm mới `['admin-products']`, hiện thông báo `role="status"`.
+- Xóa: nút "Xóa sản phẩm" kiểu nguy hiểm, tách khỏi nút trạng thái. Hộp thoại nêu tên sản phẩm và nói không thể hoàn tác, focus ở nút Hủy. Thành công (204) thì về `/admin/products` và làm mới danh sách. Lỗi 409 hiện trong hộp thoại, hộp thoại không đóng.
+- Hộp thoại xóa là `div` riêng, không dùng `AdminFormDialog`, vì khung đó có thẻ `form` và sẽ lồng trong form sản phẩm.
+- Không có `products:write` thì không render nút trạng thái và nút xóa. Nhãn hiện tại vẫn hiện.
+- Nút đang chờ API bị khóa cùng các nút khác trong khối, kể cả nút xóa.
+- `apiRequest` coi phản hồi 204 là thành công và trả `undefined`, vì endpoint xóa không có thân phản hồi.
+
+**File:**
+- `apps/frontend/src/features/catalog/admin/{product-status.ts,product-status-panel.tsx,delete-product-dialog.tsx,product-form.tsx,products-page.tsx,products.css}`, `apps/frontend/src/shared/api.ts`
+- `apps/frontend/test/unit/features/catalog/product-status.test.ts`, `apps/frontend/test/unit/features/catalog/admin/{product-status-panel,product-form-page-status,product-form}.test.tsx`, `apps/frontend/test/unit/shared/api.test.ts`
+- `apps/frontend/e2e/{catalog-product-status.spec.ts,environment.ts}`
+
+**Bằng chứng (2026-10-08):**
+- `pnpm typecheck` và `pnpm lint` đạt 0 lỗi. `pnpm test` đạt 419/419 (35 file).
+- `env -u NODE_ENV pnpm build` thành công. Bundle chính `index-*.js` 401.89 kB (gzip 116.95 kB), `product-form-*.js` 440.77 kB (gzip 133.09 kB), `products-page-*.js` 4.64 kB, chunk mới `product-status-*.js` 0.70 kB.
+- Playwright `--headed`: `catalog-product-status.spec.ts` đạt, cả bộ 10/10 đạt. Chế độ ẩn cũng 10/10 đạt. Console 0 lỗi và 0 cảnh báo, ngoại trừ 2 dòng "Failed to load resource" của phản hồi 422 mà spec chủ động gây ra (spec đếm và khẳng định đúng 2 dòng).
+- Phép thử đột biến: 13/13 điểm bị test bắt (cho `active` về `draft`, bỏ danh sách lý do 422, hiện nút khi thiếu quyền, không khóa nút khi chưa lưu, xóa không qua hộp thoại, luôn coi là đã lưu, bỏ ghi cache, không mở khóa sau khi lưu, bỏ xử lý 204). Sau review lượt 1, lệnh chặn bấm hai lần dùng cờ `useRef` (bấm hai lần trong cùng lượt vẽ chỉ gọi API một lần), và đột biến bỏ cờ hoặc bỏ mở lại cờ đều bị bắt. Đột biến luôn coi là đã lưu cũng làm spec E2E đỏ ở chế độ `--headed`.
+- Ảnh chụp 1280 px và 375 px của khối trạng thái, lỗi 422 và hộp thoại xóa. Ở 375 px trang không tràn ngang.
+- Script kiểm tra comment báo 0 vi phạm. Các file đã đổi không chứa em dash hoặc en dash.
+
 ### Checkpoint C2
 - [ ] Admin tạo danh mục, sản phẩm 2 tùy chọn, tải ảnh (provider giả), đăng bán trên `pnpm dev`
 - [ ] Ma trận quyền có mọi endpoint back-office của `catalog`

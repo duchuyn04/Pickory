@@ -97,6 +97,8 @@ async function renderForm(canWrite = true, onSave = vi.fn(), product?: ProductDe
           canWrite={canWrite}
           product={product}
           onSave={onSave}
+          onChangeStatus={vi.fn(async () => {})}
+          onDelete={vi.fn(async () => {})}
         />
       </MemoryRouter>,
     ),
