@@ -13,6 +13,7 @@ using Pickory.Modules.Catalog.Features.Uploads;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Catalog.Reading;
+using Pickory.Modules.Catalog.Seeding;
 using Pickory.Modules.Catalog.Stock;
 using Pickory.Modules.Catalog.Contracts.Reading;
 using Pickory.Modules.Catalog.Contracts.Stock;
@@ -66,6 +67,14 @@ public static class CatalogModule
         await using var scope = services.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<CatalogDbContext>().Database.MigrateAsync(cancellationToken);
     }
+
+    // Lệnh `catalog:seed` ghi dữ liệu mẫu. Lệnh `catalog:benchmark` do `Pickory.Api` chạy vì cần khởi động web API.
+    public static bool IsCatalogSeedCommand(IReadOnlyList<string> args) => CatalogCommandLine.IsSeedCommand(args);
+
+    public static bool IsCatalogBenchmarkCommand(IReadOnlyList<string> args) => CatalogCommandLine.IsBenchmarkCommand(args);
+
+    public static Task<int> RunCatalogSeedCommandAsync(IServiceProvider services, bool isProduction) =>
+        CatalogCommandLine.RunSeedAsync(services, isProduction, Console.Out, Console.Error, CancellationToken.None);
 
     public static IEndpointRouteBuilder MapCatalogEndpoints(this IEndpointRouteBuilder endpoints)
     {

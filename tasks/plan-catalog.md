@@ -81,11 +81,11 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 - [x] Ma trận quyền có mọi endpoint back-office của `catalog`
 
 ### Phase 3: Đọc công khai và giao diện khách
-- [x] CAT-09 · [x] UI-C1 · [x] CAT-10 · [x] UI-C2 · [x] UI-C3 · [x] CAT-11 · [ ] CAT-12
+- [x] CAT-09 · [x] UI-C1 · [x] CAT-10 · [x] UI-C2 · [x] UI-C3 · [x] CAT-11 · [x] CAT-12
 
 ### Checkpoint C3
 - [ ] Khách lọc, xem chi tiết, so sánh trên dữ liệu seed
-- [ ] `GET /api/products` p95 dưới 300 ms với 500 sản phẩm
+- [x] `GET /api/products` p95 dưới 300 ms với 500 sản phẩm
 
 ### Phase 4: E2E và nghiệm thu
 - [ ] E2E-C1

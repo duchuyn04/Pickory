@@ -1,7 +1,9 @@
+using Pickory.Api.Benchmark;
 using Pickory.Api.E2e;
 using Pickory.Api.Middleware;
 using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
+using Pickory.Modules.Catalog.Seeding;
 using Pickory.Modules.Identity;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.DependencyInjection;
@@ -31,9 +33,31 @@ if (builder.Configuration["PICKORY_SKIP_DOTENV"] != "true")
 var config = AppConfig.Load(builder.Configuration);
 builder.Services.AddSingleton(config);
 
-// Container cần nghe trên mọi giao diện mạng. API E2E chỉ nghe trên loopback để máy khác không truy cập được.
-var listenAddress = E2eStartup.IsCommand(args) ? "127.0.0.1" : "0.0.0.0";
-builder.WebHost.UseUrls($"http://{listenAddress}:{config.Port}");
+// Lệnh benchmark ghi 500 sản phẩm, nên kiểm tên DB trước mọi thao tác. Sai tên thì dừng mà chưa kết nối DB.
+var isBenchmarkCommand = CatalogModule.IsCatalogBenchmarkCommand(args);
+if (isBenchmarkCommand)
+{
+    try
+    {
+        BenchmarkDatabase.EnsureBenchmarkDatabase(config.DatabaseUrl);
+    }
+    catch (InvalidOperationException exception)
+    {
+        Console.Error.WriteLine(exception.Message);
+        return 1;
+    }
+}
+
+// Lệnh seed và benchmark tự in kết quả và lỗi ra màn hình. Log JSON của EF Core sẽ làm loãng kết quả đó.
+if (isBenchmarkCommand || CatalogModule.IsCatalogSeedCommand(args))
+{
+    builder.Logging.ClearProviders();
+}
+
+// Container cần nghe trên mọi giao diện mạng. API E2E và lệnh benchmark chỉ nghe trên loopback, benchmark dùng cổng 0 để hệ điều hành cấp cổng trống.
+var listenAddress = E2eStartup.IsCommand(args) || isBenchmarkCommand ? "127.0.0.1" : "0.0.0.0";
+var listenPort = isBenchmarkCommand ? 0 : config.Port;
+builder.WebHost.UseUrls($"http://{listenAddress}:{listenPort}");
 
 // Giới hạn kích thước payload tối đa 1 MB cho toàn bộ máy chủ web.
 builder.WebHost.ConfigureKestrel(options =>
@@ -65,6 +89,12 @@ if (IdentityModule.IsIdentityCommand(args))
     return await IdentityModule.RunIdentityCommandAsync(args, app.Services);
 }
 
+// Lệnh `catalog:seed` ghi dữ liệu mẫu rồi thoát, giống `identity:seed`.
+if (CatalogModule.IsCatalogSeedCommand(args))
+{
+    return await CatalogModule.RunCatalogSeedCommandAsync(app.Services, builder.Environment.IsProduction());
+}
+
 // Lệnh `e2e:start` dựng lại DB E2E rồi chạy API như bình thường. Playwright chỉ thấy API sẵn sàng sau bước chuẩn bị.
 if (E2eStartup.IsCommand(args))
 {
@@ -91,6 +121,12 @@ app.MapGet("/api/health", () => Results.Ok(new ApiResponse<object>(new { status 
 app.MapIdentityEndpoints();
 app.MapAiGatewayEndpoints();
 app.MapCatalogEndpoints();
+
+// Lệnh benchmark cần đủ route để đo `GET /api/products`, nên chạy sau khi route đã gắn.
+if (isBenchmarkCommand)
+{
+    return await CatalogBenchmark.RunAsync(app, config);
+}
 
 app.Run();
 return 0;

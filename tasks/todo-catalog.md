@@ -675,13 +675,47 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### CAT-12: Dữ liệu seed và đo hiệu năng
 **Mô tả:** `pnpm db:seed` tạo khoảng 30 sản phẩm thật trong 5 danh mục: Laptop, Điện thoại, Tai nghe, Màn hình, Phụ kiện. Có sản phẩm nhiều biến thể, hết hàng và ngừng kinh doanh. Script đo p95 sinh 500 sản phẩm trên DB riêng.
 **Tiêu chí nghiệm thu:**
-- [ ] Chạy seed 2 lần không tạo bản ghi trùng
-- [ ] Mọi sản phẩm `active` trong seed qua được `checkPublishable`
-- [ ] Mọi thay đổi tồn kho trong seed đi qua `applyStockMovement`
-- [ ] Mô tả của sản phẩm seed được tạo bằng `plainTextToDescription` và qua được schema mô tả
-- [ ] Script đo báo p95 của `GET /api/products` dưới 300 ms với 500 sản phẩm trên máy dev
+- [x] Chạy seed 2 lần không tạo bản ghi trùng
+- [x] Mọi sản phẩm `active` trong seed qua được `checkPublishable`
+- [x] Mọi thay đổi tồn kho trong seed đi qua `applyStockMovement`
+- [x] Mô tả của sản phẩm seed được tạo bằng `plainTextToDescription` và qua được schema mô tả
+- [x] Script đo báo p95 của `GET /api/products` dưới 300 ms với 500 sản phẩm trên máy dev
 **Kiểm tra:** chạy seed trên DB sạch; chạy script đo và ghi kết quả vào task
 **Phụ thuộc:** CAT-10 · **File:** `modules/catalog/data/seed.ts`, `prisma/seed.ts`, `scripts/catalog-benchmark.ts` · **Quy mô:** M
+
+**File:** `apps/backend/src/Pickory.Modules.Catalog/Seeding/{CatalogSeedData,SeedModels,CatalogSeeder,CatalogCommandLine,BenchmarkProducts,BenchmarkMath}.cs`, `apps/backend/src/Pickory.Api/Benchmark/CatalogBenchmark.cs`, `apps/backend/src/Pickory.Api/Program.cs`, `apps/backend/src/Pickory.Modules.Catalog/CatalogModule.cs`, `spec/SPEC.md` (lệnh chạy); test: `apps/backend/tests/Pickory.UnitTests/Modules/Catalog/Seeding/`, `apps/backend/tests/Pickory.IntegrationTests/Api/Catalog/CatalogSeedTests.cs`
+
+**Quyết định (2026-10-08):**
+
+- Hai lệnh dòng lệnh thay `pnpm db:seed` và `scripts/catalog-benchmark.ts`, theo mẫu `identity:seed`. Cả hai chạy bằng `dotnet run --project apps/backend/src/Pickory.Api -- <lệnh>`.
+- `catalog:seed` ghi 30 sản phẩm thật trong 5 danh mục gốc (Laptop, Điện thoại, Tai nghe, Màn hình, Phụ kiện). Lệnh từ chối chạy khi `ASPNETCORE_ENVIRONMENT` là `Production`. Dữ liệu viết trong `CatalogSeedData.cs`, code ghi DB nằm ở `CatalogSeeder.cs`.
+- Dữ liệu có 5 sản phẩm nhiều biến thể trong đó có tùy chọn "Màu", 3 sản phẩm hết hàng, 3 sản phẩm `discontinued` và 2 sản phẩm có `compareAtPrice`.
+- Seeder dùng lại `CategoryManagementHandler`, `BrandManagementHandler` và `ProductManagementHandler`, nên luật slug, SKU, giá và đăng bán không bị viết lại. Không phải tách hàm nào của handler.
+- Dữ liệu mẫu không do người cụ thể thao tác, nên handler nhận `IAuditLogWriter` rỗng (`NullAuditLogWriter`). Nhật ký quản trị cần người dùng thật.
+- Khóa tự nhiên chống trùng: slug với danh mục, thương hiệu và sản phẩm; SKU theo bộ tùy chọn của sản phẩm; ảnh theo `publicId` trong thư mục `pickory/products/seed/`. Bản ghi đã có thì bỏ qua, không ghi đè. Lệnh in số tạo mới và số bỏ qua.
+- Seed chạy lại được khi lệnh bị dừng giữa chừng, vì tồn kho và trạng thái được kiểm riêng cho từng sản phẩm đã có.
+- Sản phẩm `active` đi qua `ChangeStatusAsync`, nên `ProductPublishing.CheckPublishable` chạy trước khi đổi trạng thái. Không qua thì lệnh dừng với mã lỗi 1 và in lý do. Sản phẩm `discontinued` đi `draft`, `active` rồi `discontinued`.
+- SKU tạo với `Stock = 0`. Tồn kho ban đầu ghi bằng `StockLedger.ApplyAsync`, loại `manual`, lý do "Dữ liệu mẫu". Mỗi SKU có tồn kho có đúng một movement.
+- Mô tả dựng bằng `DescriptionText.FromPlainText`, hàm này kiểm bằng `DescriptionSchema.Validate`. Lỗi được đổi thành lỗi dữ liệu mẫu kèm tên sản phẩm.
+- Ảnh dùng `publicId` giữ chỗ vì chưa có tài khoản Cloudinary (Open Question 3). Trình duyệt không tải được các ảnh này ở dev. Checkpoint C3 sẽ thêm khung giữ chỗ khi ảnh lỗi.
+- `catalog:benchmark` chỉ chạy khi tên DB trong `DATABASE_URL` có chữ `bench`. Lệnh kiểm tên trước khi kết nối DB. Lệnh tạo DB nếu chưa có, chạy migration, sinh 500 sản phẩm `active` qua cùng đường ghi với seed, rồi khởi động API trong cùng tiến trình trên `127.0.0.1` với cổng 0.
+- Phép đo: 20 request làm nóng không tính, sau đó 400 request tuần tự bằng `HttpClient`, luân phiên 24 kiểu truy vấn. Lệnh in p50, p95, max và trả mã lỗi 1 khi p95 từ 300 ms trở lên. Phân vị tính theo hạng gần nhất, nằm trong hàm thuần có unit test.
+- Cách chạy hai lệnh nằm trong `spec/SPEC.md`, ngay dưới lệnh `identity:create-admin`.
+
+**Bằng chứng (2026-10-08):**
+
+- `catalog:seed` trên DB dev, lần 1: tạo mới 5 danh mục, 18 thương hiệu, 30 sản phẩm, 49 SKU, 60 ảnh, 45 movement tồn kho và 33 lần chuyển trạng thái. Lần 2: tạo mới 0 bản ghi, bỏ qua 5 danh mục, 18 thương hiệu, 30 sản phẩm và 45 movement.
+- `catalog:benchmark` trên `pickory_bench` với 500 sản phẩm `active`, 24 kiểu truy vấn, 400 request đo:
+  - Lần 1: p50 10.8 ms, p95 17.9 ms, max 57.8 ms.
+  - Lần 2 (dữ liệu đã có): p50 12.9 ms, p95 19.7 ms, max 88.9 ms.
+- Máy đo: Intel Core i5-11300H 3.10 GHz (4 nhân, 8 luồng), 7.8 GB RAM, Windows 11 (10.0.26200), .NET 10.0.9, PostgreSQL trong Docker.
+- Chạy `catalog:benchmark` với `DATABASE_URL` trỏ DB dev `pickory`: lệnh từ chối với mã thoát 1, số sản phẩm của DB dev vẫn là 30.
+- Unit test thư mục `Seeding`: 32 test đạt (phân vị, tên DB benchmark, danh sách truy vấn, bộ 500 sản phẩm, lệnh dòng lệnh). Integration test `CatalogSeedTests`: 8 test đạt.
+- `dotnet test` toàn solution: 3 test kiến trúc, 578 test đơn vị và 796 test tích hợp đạt; 4 test bỏ qua, 0 lỗi. `dotnet build`: 0 lỗi, 0 cảnh báo.
+- Phép thử đột biến: 9 điểm, đều bị test bắt.
+  - Seed không kiểm sản phẩm đã có; lần chạy thứ hai ghi thêm movement; gán `Stock` trực tiếp.
+  - Bỏ `CheckPublishable`; bỏ kiểm schema mô tả; sản phẩm ngừng kinh doanh không được chuyển trạng thái.
+  - Kiểm tên DB benchmark luôn đúng; phân vị lệch chỉ số 1; seed không từ chối Production.
 
 ### Checkpoint C3
 - [ ] Khách lọc, xem chi tiết, so sánh trên dữ liệu seed
