@@ -53,7 +53,7 @@ public static class ProductDetailAssembler
         product.Images.OrderBy(image => image.Position).ThenBy(image => image.Id).ToList();
 
     public static ProductImageInfo ToImageInfo(ProductImage image, CloudinaryCredentials credentials) =>
-        new(CloudinaryImageUrl.Original(credentials, image.PublicId), image.Alt, image.SkuId);
+        new(ProductImageUrl.Build(credentials, image.PublicId), image.Alt, image.SkuId);
 
     public static JsonElement? ReadSpecValue(JsonDocument specs, string key)
     {

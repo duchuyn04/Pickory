@@ -57,7 +57,7 @@ public sealed class ProductSummaryReader(CatalogDbContext database, CloudinaryCr
                 ProductDetailAssembler.StatusName(row.Status),
                 row.Thumbnail is null
                     ? null
-                    : new ProductImageInfo(CloudinaryImageUrl.Original(credentials, row.Thumbnail.PublicId), row.Thumbnail.Alt, row.Thumbnail.SkuId)),
+                    : new ProductImageInfo(ProductImageUrl.Build(credentials, row.Thumbnail.PublicId), row.Thumbnail.Alt, row.Thumbnail.SkuId)),
             row.CategoryId));
 
         // DB không giữ thứ tự của `ids`. Sắp lại để người gọi nhận đúng thứ tự đã yêu cầu.

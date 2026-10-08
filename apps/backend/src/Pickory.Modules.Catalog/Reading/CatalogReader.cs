@@ -92,7 +92,7 @@ public sealed class CatalogReader(
                 row.HeightCm,
                 chosen is null
                     ? null
-                    : new ProductImageInfo(CloudinaryImageUrl.Original(credentials, chosen.PublicId), chosen.Alt, chosen.SkuId));
+                    : new ProductImageInfo(ProductImageUrl.Build(credentials, chosen.PublicId), chosen.Alt, chosen.SkuId));
         });
 
         // DB không giữ thứ tự của `skuIds`. Sắp lại để giỏ hàng nhận đúng thứ tự đã gửi.
@@ -127,7 +127,7 @@ public sealed class CatalogReader(
             item.MinPrice,
             item.InStock,
             item.Status,
-            item.Image is null ? null : new ProductImageInfo(CloudinaryImageUrl.Original(credentials, item.Image.PublicId), item.Image.Alt, null))).ToList();
+            item.Image is null ? null : new ProductImageInfo(item.Image.Url, item.Image.Alt, null))).ToList();
     }
 
     public Task<int> CountLowStockAsync(CancellationToken cancellationToken) =>
