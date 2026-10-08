@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { useCan } from '../hooks/use-actor';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './identity-admin.css';
 
 // Một dòng nhật ký như API trả về; actorEmail và actorName do server tra thêm để hiển thị người làm thay vì chuỗi UUID.
@@ -190,9 +191,10 @@ export function AuditLogPage() {
             Đang nạp dữ liệu nhật ký...
           </p>
         ) : isError ? (
-          <p role="alert" className="alert identity-table-alert">
-            {error instanceof Error ? error.message : 'Tải nhật ký thao tác thất bại.'}
-          </p>
+          <ErrorAlert
+            message={error instanceof Error ? error.message : 'Tải nhật ký thao tác thất bại.'}
+            className="identity-table-alert"
+          />
         ) : (
           <div className="table-wrap">
             <table className="tbl identity-table audit-table">

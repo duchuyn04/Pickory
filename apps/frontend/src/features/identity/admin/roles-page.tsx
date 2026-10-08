@@ -5,6 +5,7 @@ import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { useCan } from '../hooks/use-actor';
 import type { PermissionItem } from '../components/permission-grid';
 import { RoleForm, type RoleData } from '../components/role-form';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './identity-admin.css';
 
 // Role khi đã tạo thì có id, kèm số người đang giữ để biết role nào xóa được.
@@ -115,18 +116,16 @@ export function RolesPage() {
         </button>
       </div>
 
-      {actionError && (
-        <p role="alert" className="alert">
-          {actionError}
-        </p>
-      )}
+      {actionError && <ErrorAlert message={actionError} />}
 
       {permissionsIsError && (
-        <p role="alert" className="alert">
-          {permissionsError instanceof Error
-            ? permissionsError.message
-            : 'Tải danh sách quyền hạn thất bại.'}
-        </p>
+        <ErrorAlert
+          message={
+            permissionsError instanceof Error
+              ? permissionsError.message
+              : 'Tải danh sách quyền hạn thất bại.'
+          }
+        />
       )}
 
       {rolesLoading ? (
@@ -134,9 +133,11 @@ export function RolesPage() {
           Đang nạp danh sách role...
         </p>
       ) : rolesIsError ? (
-        <p role="alert" className="alert">
-          {rolesError instanceof Error ? rolesError.message : 'Tải danh sách vai trò thất bại.'}
-        </p>
+        <ErrorAlert
+          message={
+            rolesError instanceof Error ? rolesError.message : 'Tải danh sách vai trò thất bại.'
+          }
+        />
       ) : (
         <section className="card card-flush">
           <div className="table-wrap">

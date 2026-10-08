@@ -10,6 +10,7 @@ import {
   type LowStockSku,
   type PagedList,
 } from './inventory-logic';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './products.css';
 import './inventory.css';
 
@@ -49,9 +50,13 @@ export function InventoryPage() {
           </p>
         )}
         {lowStockQuery.isError && (
-          <p role="alert" className="alert product-list-alert">
-            {toCatalogErrorMessage(lowStockQuery.error, 'Không tải được danh sách tồn kho.')}
-          </p>
+          <ErrorAlert
+            message={toCatalogErrorMessage(
+              lowStockQuery.error,
+              'Không tải được danh sách tồn kho.',
+            )}
+            className="product-list-alert"
+          />
         )}
         {lowStock && lowStock.items.length === 0 && (
           <p className="empty-state">Không có SKU nào sắp hết hàng.</p>

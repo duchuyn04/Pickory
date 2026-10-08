@@ -4,6 +4,7 @@ import { Icon } from '../../../shared/icons';
 import { getEmailError } from '../../../shared/identity-validation';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import type { RoleData } from './role-form';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 interface InviteDialogProps {
   availableRoles: RoleData[];
@@ -108,11 +109,7 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
               viên.
             </p>
 
-            {error && (
-              <p role="alert" className="alert">
-                {error}
-              </p>
-            )}
+            {error && <ErrorAlert message={error} />}
 
             <div className="field">
               <label htmlFor="inv-email">Email nhân viên *</label>

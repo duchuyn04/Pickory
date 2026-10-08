@@ -11,6 +11,7 @@ import {
   PRODUCT_STATUS_NAMES,
   type ProductStatus,
 } from './product-status';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './products.css';
 
 interface PagedProducts {
@@ -61,9 +62,9 @@ export function ProductsPage() {
         )}
       </div>
       {categoriesQuery.isError && (
-        <p role="alert" className="alert">
-          {toCatalogErrorMessage(categoriesQuery.error, 'Không tải được danh mục.')}
-        </p>
+        <ErrorAlert
+          message={toCatalogErrorMessage(categoriesQuery.error, 'Không tải được danh mục.')}
+        />
       )}
       <section className="card card-flush">
         <div className="filters-row">
@@ -141,9 +142,10 @@ export function ProductsPage() {
           </p>
         )}
         {productsQuery.isError && (
-          <p role="alert" className="alert product-list-alert">
-            {toCatalogErrorMessage(productsQuery.error, 'Không tải được sản phẩm.')}
-          </p>
+          <ErrorAlert
+            message={toCatalogErrorMessage(productsQuery.error, 'Không tải được sản phẩm.')}
+            className="product-list-alert"
+          />
         )}
         {products && products.items.length === 0 && (
           <p className="empty-state">Không có sản phẩm phù hợp.</p>

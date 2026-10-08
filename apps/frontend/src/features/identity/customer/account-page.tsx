@@ -5,6 +5,7 @@ import { apiRequest } from '../../../shared/api';
 import { ChangePasswordForm } from '../components/change-password-form';
 import { DeleteAccountDialog } from '../components/delete-account-dialog';
 import { useActor } from '../hooks/use-actor';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './account.css';
 
 // Trang tài khoản của khách: sửa hồ sơ, đổi mật khẩu, quyền riêng tư, xóa tài khoản.
@@ -91,11 +92,7 @@ export function AccountPage() {
           </p>
         )}
 
-        {error && (
-          <p role="alert" className="alert">
-            {error}
-          </p>
-        )}
+        {error && <ErrorAlert message={error} />}
 
         <form noValidate onSubmit={handleUpdateProfile} className="stack">
           <div className="form-grid form-grid-2">

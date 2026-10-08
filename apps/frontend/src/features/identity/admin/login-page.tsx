@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
 import { getEmailError, getPasswordError } from '../../../shared/identity-validation';
 import { useActor } from '../hooks/use-actor';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './admin-login.css';
 
 // Trang đăng nhập nhân viên, tách khỏi trang đăng nhập khách và không có nút đăng nhập Google.
@@ -73,11 +74,7 @@ export function StaffLoginPage() {
         </div>
 
         {/* `role="alert"` để trình đọc màn hình đọc ngay lỗi đăng nhập vừa xuất hiện. */}
-        {error && (
-          <p role="alert" className="alert">
-            {error}
-          </p>
-        )}
+        {error && <ErrorAlert message={error} />}
 
         <div className="field">
           <label htmlFor="email">Email nhân viên</label>

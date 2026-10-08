@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Icon } from '../../../shared/icons';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import { PermissionGrid, type PermissionItem } from './permission-grid';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 export interface RoleData {
   // Không có id nghĩa là role chưa được tạo.
@@ -102,11 +103,7 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
 
         <div className="dialog-body">
           <form id="role-form" noValidate onSubmit={handleSubmit} className="stack">
-            {error && (
-              <p role="alert" className="alert">
-                {error}
-              </p>
-            )}
+            {error && <ErrorAlert message={error} />}
 
             <div className="form-grid form-grid-2">
               {/* Mã role khóa khi sửa, vì server không cho đổi mã sau khi tạo. */}

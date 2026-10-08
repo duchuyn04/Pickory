@@ -16,6 +16,7 @@ import {
   type PagedList,
 } from './inventory-logic';
 import type { ProductDetail } from './product-form';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './products.css';
 import './inventory.css';
 
@@ -105,9 +106,9 @@ export function SkuInventoryPage() {
   if (productQuery.isError) {
     return (
       <div className="page">
-        <p role="alert" className="alert">
-          {toCatalogErrorMessage(productQuery.error, 'Không tải được sản phẩm.')}
-        </p>
+        <ErrorAlert
+          message={toCatalogErrorMessage(productQuery.error, 'Không tải được sản phẩm.')}
+        />
         <Link className="btn" to="/admin/inventory">
           Về danh sách tồn kho
         </Link>
@@ -117,9 +118,7 @@ export function SkuInventoryPage() {
   if (!product || !sku) {
     return (
       <div className="page">
-        <p role="alert" className="alert">
-          Không tìm thấy biến thể trong sản phẩm này.
-        </p>
+        <ErrorAlert message="Không tìm thấy biến thể trong sản phẩm này." />
         <Link className="btn" to="/admin/inventory">
           Về danh sách tồn kho
         </Link>
@@ -198,9 +197,10 @@ export function SkuInventoryPage() {
           </p>
         )}
         {movementsQuery.isError && (
-          <p role="alert" className="alert product-list-alert">
-            {toCatalogErrorMessage(movementsQuery.error, 'Không tải được lịch sử tồn kho.')}
-          </p>
+          <ErrorAlert
+            message={toCatalogErrorMessage(movementsQuery.error, 'Không tải được lịch sử tồn kho.')}
+            className="product-list-alert"
+          />
         )}
         {movements && movements.items.length === 0 && (
           <p className="empty-state">SKU này chưa có thay đổi tồn kho.</p>

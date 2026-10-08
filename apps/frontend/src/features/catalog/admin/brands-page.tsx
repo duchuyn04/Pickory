@@ -4,6 +4,7 @@ import { apiRequest } from '../../../shared/api';
 import { useCan } from '../../identity/hooks/use-actor';
 import { AdminFormDialog } from './admin-form-dialog';
 import { toCatalogErrorMessage } from './catalog-errors';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './catalog-admin.css';
 
 // Dữ liệu phản hồi thương hiệu sản phẩm từ API.
@@ -143,11 +144,7 @@ export function BrandsPage() {
       </div>
 
       {/* Lỗi xóa hiện ở mức trang vì hộp thoại đã đóng khi người dùng bấm Xóa. */}
-      {pageError && (
-        <p role="alert" className="alert">
-          {pageError}
-        </p>
-      )}
+      {pageError && <ErrorAlert message={pageError} />}
 
       {isLoading && (
         <p role="status" className="empty-state">
@@ -156,9 +153,9 @@ export function BrandsPage() {
       )}
 
       {isError && (
-        <p role="alert" className="alert">
-          {error instanceof Error ? error.message : 'Tải danh sách thương hiệu thất bại.'}
-        </p>
+        <ErrorAlert
+          message={error instanceof Error ? error.message : 'Tải danh sách thương hiệu thất bại.'}
+        />
       )}
 
       {!isLoading && !isError && (

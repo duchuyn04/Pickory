@@ -9,6 +9,7 @@ import {
 } from '../../../shared/field-error';
 import { getEmailError } from '../../../shared/identity-validation';
 import { AuthCard } from './auth-ui';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 // Trang nhập email để nhận link đặt lại mật khẩu.
 export function ForgotPasswordPage() {
@@ -64,11 +65,7 @@ export function ForgotPasswordPage() {
         </div>
       ) : (
         <>
-          {error && (
-            <p role="alert" className="alert">
-              {error}
-            </p>
-          )}
+          {error && <ErrorAlert message={error} />}
 
           <form noValidate onSubmit={handleSubmit} className="stack">
             <div className="field">

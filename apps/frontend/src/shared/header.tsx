@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useActor } from '../features/identity/hooks/use-actor';
 import { apiRequest } from './api';
 import { Icon } from './icons';
+import { ErrorAlert } from './error-alert';
 import './header.css';
 
 // Thanh đầu trang của khách theo `shop-retail/index.html`: nền đỏ, logo Pickory và thao tác theo phiên.
@@ -86,11 +87,7 @@ export function Header() {
       </div>
 
       {/* Lỗi đăng xuất nằm dưới thanh đỏ, vì chữ màu lỗi không đọc được trên nền đỏ. */}
-      {logoutError && (
-        <p role="alert" className="alert site-header-alert">
-          {logoutError}
-        </p>
-      )}
+      {logoutError && <ErrorAlert message={logoutError} className="site-header-alert" />}
     </header>
   );
 }

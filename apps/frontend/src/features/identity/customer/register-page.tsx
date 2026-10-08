@@ -11,6 +11,7 @@ import {
 import { getEmailError, getPasswordError } from '../../../shared/identity-validation';
 import { useActor } from '../hooks/use-actor';
 import { AuthCard, AuthDivider, GoogleSignInLink, PasswordInput } from './auth-ui';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 // Trang đăng ký tài khoản khách bằng email và mật khẩu.
 export function RegisterPage() {
@@ -79,11 +80,7 @@ export function RegisterPage() {
 
   return (
     <AuthCard title="Đăng ký tài khoản" subtitle="Tạo tài khoản để quản lý đơn hàng và nhận ưu đãi">
-      {error && (
-        <p role="alert" className="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       <form noValidate onSubmit={handleSubmit} className="stack">
         <div className="field">

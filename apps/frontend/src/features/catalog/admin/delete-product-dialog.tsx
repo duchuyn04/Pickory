@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import { toCatalogErrorMessage } from './catalog-errors';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './products.css';
 
 interface DeleteProductDialogProps {
@@ -59,11 +60,7 @@ export function DeleteProductDialog({ productName, onConfirm, onClose }: DeleteP
           <h2 id="delete-product-title">Xóa sản phẩm</h2>
         </div>
         <div className="dialog-body stack">
-          {errorMessage && (
-            <div role="alert" className="alert">
-              {errorMessage}
-            </div>
-          )}
+          {errorMessage && <ErrorAlert message={errorMessage} />}
           <p id="delete-product-description" className="delete-product-text">
             Bạn sắp xóa vĩnh viễn sản phẩm <strong className="wrap-anywhere">{productName}</strong>.
             Thao tác này không thể hoàn tác.

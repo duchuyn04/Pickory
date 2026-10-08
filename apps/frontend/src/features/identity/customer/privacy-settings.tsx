@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { useActor } from '../hooks/use-actor';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './account.css';
 
 // Trang để khách vãng lai và khách đã đăng nhập xem và đổi lựa chọn đồng ý bất cứ lúc nào.
@@ -72,11 +73,7 @@ export function PrivacySettingsPage() {
         </p>
       )}
 
-      {error && (
-        <p role="alert" className="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       {isLoading ? (
         <p role="status" className="empty-state">

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { useCan } from '../../identity/hooks/use-actor';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './ai-settings.css';
 
 export interface AiSettingsData {
@@ -251,23 +252,26 @@ export function AiSettingsPage() {
         </p>
 
         {isSettingsError && (
-          <p role="alert" className="alert ai-settings-note">
-            Lỗi tải cài đặt:{' '}
-            {(settingsError as Error)?.message || 'Không thể tải cấu hình AI từ máy chủ.'}
-          </p>
+          <ErrorAlert
+            className="ai-settings-note"
+            message={
+              <>
+                Lỗi tải cài đặt:{' '}
+                {(settingsError as Error)?.message || 'Không thể tải cấu hình AI từ máy chủ.'}
+              </>
+            }
+          />
         )}
 
-        {/* Thông báo thành công dùng nền xanh, thông báo lỗi dùng nền đỏ nhạt. */}
-        {feedback && (
-          <p
-            role="alert"
-            className={
-              feedback.isError ? 'alert ai-settings-note' : 'alert alert-ok ai-settings-note'
-            }
-          >
-            {feedback.text}
-          </p>
-        )}
+        {/* Lỗi dùng mẫu `ErrorAlert`. Thông báo thành công giữ nền xanh `alert-ok`. */}
+        {feedback &&
+          (feedback.isError ? (
+            <ErrorAlert className="ai-settings-note" message={feedback.text} />
+          ) : (
+            <p role="alert" className="alert alert-ok ai-settings-note">
+              {feedback.text}
+            </p>
+          ))}
 
         {isSettingsLoading ? (
           <p role="status" className="empty-state">
@@ -405,9 +409,7 @@ function UsageTable({
           {loadingText}
         </p>
       ) : errorMessage !== undefined ? (
-        <p role="alert" className="alert ai-usage-alert">
-          Lỗi: {errorMessage}
-        </p>
+        <ErrorAlert className="ai-usage-alert" message={<>Lỗi: {errorMessage}</>} />
       ) : rows.length === 0 ? (
         <p className="empty-state">Không có dữ liệu trong khoảng thời gian đã chọn.</p>
       ) : (

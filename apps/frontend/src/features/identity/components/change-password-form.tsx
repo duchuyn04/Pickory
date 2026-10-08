@@ -9,6 +9,7 @@ import {
   type FieldErrors,
 } from '../../../shared/field-error';
 import { getConfirmPasswordError, getPasswordError } from '../../../shared/identity-validation';
+import { ErrorAlert } from '../../../shared/error-alert';
 import '../customer/account.css';
 
 // Form đổi mật khẩu trong trang tài khoản.
@@ -92,11 +93,7 @@ export function ChangePasswordForm() {
         </p>
       )}
 
-      {error && (
-        <p role="alert" className="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       <form noValidate onSubmit={handleSubmit} className="stack">
         <div className="field">

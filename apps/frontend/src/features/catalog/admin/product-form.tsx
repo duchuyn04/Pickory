@@ -29,6 +29,7 @@ import { ProductStatusPanel } from './product-status-panel';
 import type { ProductStatus } from './product-status';
 import { SpecFields } from './spec-fields';
 import { VariantTable } from './variant-table';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './products.css';
 
 export interface ProductCategory {
@@ -282,11 +283,7 @@ export function ProductFormView({
           Về danh sách
         </Link>
       </div>
-      {formError && (
-        <p role="alert" className="alert">
-          {formError}
-        </p>
-      )}
+      {formError && <ErrorAlert message={formError} />}
       {/* Sản phẩm mới luôn là bản nháp và chưa có định danh, nên chỉ trang sửa có khối trạng thái. */}
       {product && (
         <ProductStatusPanel

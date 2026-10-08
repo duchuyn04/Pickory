@@ -3,6 +3,7 @@ import { apiRequest } from '../../../shared/api';
 import { Icon } from '../../../shared/icons';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import type { RoleData } from './role-form';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 // Một dòng nhân viên như GET /api/admin/staff trả về; roles là mã role chứ không phải đối tượng.
 export interface StaffRow {
@@ -109,11 +110,7 @@ export function AssignRolesDialog({
               Tài khoản: <strong>{staff.email}</strong>. Chọn các vai trò áp dụng cho nhân viên này.
             </p>
 
-            {error && (
-              <p role="alert" className="alert">
-                {error}
-              </p>
-            )}
+            {error && <ErrorAlert message={error} />}
 
             {/* `fieldset` và `legend` đặt tên cho cả nhóm checkbox, để trình đọc màn hình đọc đúng câu hỏi. */}
             <fieldset className="role-picker">

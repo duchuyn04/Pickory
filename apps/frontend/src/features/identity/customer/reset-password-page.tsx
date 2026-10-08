@@ -10,6 +10,7 @@ import {
 } from '../../../shared/field-error';
 import { getConfirmPasswordError, getPasswordError } from '../../../shared/identity-validation';
 import { AuthCard, PasswordInput } from './auth-ui';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 // Trang đặt mật khẩu mới từ link trong email; dùng chung cho quên mật khẩu và lời mời nhân viên.
 export function ResetPasswordPage() {
@@ -86,10 +87,7 @@ export function ResetPasswordPage() {
     return (
       <AuthCard title="Đặt lại mật khẩu">
         <div className="auth-result">
-          <p role="alert" className="alert">
-            Mã token không hợp lệ hoặc thiếu trong liên kết. Vui lòng kiểm tra lại liên kết trong
-            email của bạn.
-          </p>
+          <ErrorAlert message="Mã token không hợp lệ hoặc thiếu trong liên kết. Vui lòng kiểm tra lại liên kết trong email của bạn." />
           <Link to="/forgot-password" className="auth-link">
             ← Yêu cầu đặt lại mật khẩu mới
           </Link>
@@ -113,11 +111,7 @@ export function ResetPasswordPage() {
         </div>
       ) : (
         <>
-          {error && (
-            <p role="alert" className="alert">
-              {error}
-            </p>
-          )}
+          {error && <ErrorAlert message={error} />}
 
           <form noValidate onSubmit={handleSubmit} className="stack">
             <div className="field">

@@ -106,7 +106,7 @@ export function ProductStatusPanel({
               </button>
             ))}
           </div>
-          {failure && <ErrorAlert title={failure.message} items={failure.reasons} />}
+          {failure && <ErrorAlert message={failure.message} items={failure.reasons} />}
           {/* Vùng thông báo luôn có mặt để trình đọc màn hình đọc được nội dung xuất hiện sau. */}
           <div role="status" className={successMessage ? 'alert alert-ok' : undefined}>
             {successMessage}

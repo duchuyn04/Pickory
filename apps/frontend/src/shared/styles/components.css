@@ -402,6 +402,10 @@
 
 .alert-list-title {
   margin: 0;
+}
+
+/* Chỉ in đậm khi có danh sách lý do bên dưới. Lỗi một dòng giữ chữ thường. */
+.alert-list-heading {
   font-weight: 700;
 }
 

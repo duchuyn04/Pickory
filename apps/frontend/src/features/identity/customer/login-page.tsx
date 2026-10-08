@@ -11,6 +11,7 @@ import {
 import { getEmailError, getPasswordError } from '../../../shared/identity-validation';
 import { useActor } from '../hooks/use-actor';
 import { AuthCard, AuthDivider, GoogleSignInLink, PasswordInput } from './auth-ui';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 // Trang đăng nhập của khách (nhân viên đăng nhập ở /admin/login).
 export function LoginPage() {
@@ -70,11 +71,7 @@ export function LoginPage() {
   return (
     <AuthCard title="Đăng nhập" subtitle="Đăng nhập tài khoản khách hàng Pickory">
       {/* `role="alert"` để trình đọc màn hình đọc ngay lỗi đăng nhập vừa xuất hiện. */}
-      {error && (
-        <p role="alert" className="alert">
-          {error}
-        </p>
-      )}
+      {error && <ErrorAlert message={error} />}
 
       <form noValidate onSubmit={handleSubmit} className="stack">
         <div className="field">

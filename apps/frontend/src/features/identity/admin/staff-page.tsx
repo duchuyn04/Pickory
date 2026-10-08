@@ -6,6 +6,7 @@ import { useCan } from '../hooks/use-actor';
 import { AssignRolesDialog, type StaffRow } from '../components/assign-roles-dialog';
 import { InviteDialog } from '../components/invite-dialog';
 import type { RoleData } from '../components/role-form';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './identity-admin.css';
 
 // Trang quản lý nhân viên: xem danh sách, mời, đổi role, khóa và mở khóa.
@@ -95,16 +96,14 @@ export function StaffPage() {
         )}
       </div>
 
-      {actionError && (
-        <p role="alert" className="alert">
-          {actionError}
-        </p>
-      )}
+      {actionError && <ErrorAlert message={actionError} />}
 
       {rolesIsError && (
-        <p role="alert" className="alert">
-          {rolesError instanceof Error ? rolesError.message : 'Tải danh sách vai trò thất bại.'}
-        </p>
+        <ErrorAlert
+          message={
+            rolesError instanceof Error ? rolesError.message : 'Tải danh sách vai trò thất bại.'
+          }
+        />
       )}
 
       {staffLoading ? (
@@ -112,9 +111,11 @@ export function StaffPage() {
           Đang nạp danh sách nhân viên...
         </p>
       ) : staffIsError ? (
-        <p role="alert" className="alert">
-          {staffError instanceof Error ? staffError.message : 'Tải danh sách nhân viên thất bại.'}
-        </p>
+        <ErrorAlert
+          message={
+            staffError instanceof Error ? staffError.message : 'Tải danh sách nhân viên thất bại.'
+          }
+        />
       ) : (
         <section className="card card-flush">
           <div className="table-wrap">

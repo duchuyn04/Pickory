@@ -10,6 +10,7 @@ import { useCan } from '../../identity/hooks/use-actor';
 import { AdminFormDialog } from './admin-form-dialog';
 import { AttributeEditor } from './attribute-editor';
 import { toCatalogErrorMessage } from './catalog-errors';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './catalog-admin.css';
 
 // Bản ghi danh mục trả về từ API quản trị bao gồm đầy đủ thuộc tính riêng.
@@ -234,11 +235,7 @@ export function CategoriesPage() {
       </div>
 
       {/* Lỗi xóa hiện ở mức trang vì hộp thoại đã đóng khi người dùng bấm Xóa. */}
-      {pageError && (
-        <p role="alert" className="alert">
-          {pageError}
-        </p>
-      )}
+      {pageError && <ErrorAlert message={pageError} />}
 
       {isLoading && (
         <p role="status" className="empty-state">
@@ -247,9 +244,9 @@ export function CategoriesPage() {
       )}
 
       {isError && (
-        <p role="alert" className="alert">
-          {error instanceof Error ? error.message : 'Tải danh sách danh mục thất bại.'}
-        </p>
+        <ErrorAlert
+          message={error instanceof Error ? error.message : 'Tải danh sách danh mục thất bại.'}
+        />
       )}
 
       {/* Cây danh mục hai cấp */}

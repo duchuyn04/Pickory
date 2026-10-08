@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
 import { AuthCard } from './auth-ui';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 // Trang xác thực email, mở từ link trong thư đăng ký.
 export function VerifyEmailPage() {
@@ -61,9 +62,7 @@ export function VerifyEmailPage() {
     <AuthCard title="Xác thực email">
       <div className="auth-result">
         {!token && (
-          <p role="alert" className="alert">
-            Liên kết xác thực thiếu mã token. Vui lòng kiểm tra lại liên kết trong email của bạn.
-          </p>
+          <ErrorAlert message="Liên kết xác thực thiếu mã token. Vui lòng kiểm tra lại liên kết trong email của bạn." />
         )}
 
         {loading && (
@@ -85,9 +84,7 @@ export function VerifyEmailPage() {
 
         {!loading && error && (
           <>
-            <p role="alert" className="alert">
-              {error}
-            </p>
+            <ErrorAlert message={error} />
             <Link to="/" className="auth-link">
               ← Quay lại trang chủ
             </Link>

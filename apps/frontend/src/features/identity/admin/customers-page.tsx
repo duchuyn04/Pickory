@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { useCan } from '../hooks/use-actor';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
+import { ErrorAlert } from '../../../shared/error-alert';
 import './identity-admin.css';
 
 // Một dòng khách hàng như API trả về; không có passwordHash.
@@ -100,11 +101,7 @@ export function CustomersPage() {
         </div>
       </div>
 
-      {actionError && (
-        <p role="alert" className="alert">
-          {actionError}
-        </p>
-      )}
+      {actionError && <ErrorAlert message={actionError} />}
 
       <section className="card card-flush">
         <form noValidate onSubmit={handleSearchSubmit} className="filters-row">
@@ -130,9 +127,10 @@ export function CustomersPage() {
             Đang nạp danh sách khách hàng...
           </p>
         ) : isError ? (
-          <p role="alert" className="alert identity-table-alert">
-            {error instanceof Error ? error.message : 'Tải danh sách khách hàng thất bại.'}
-          </p>
+          <ErrorAlert
+            message={error instanceof Error ? error.message : 'Tải danh sách khách hàng thất bại.'}
+            className="identity-table-alert"
+          />
         ) : (
           <div className="table-wrap">
             <table className="tbl identity-table">

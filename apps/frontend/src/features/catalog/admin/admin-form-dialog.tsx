@@ -1,6 +1,7 @@
 import React from 'react';
 import { Icon } from '../../../shared/icons';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 // Thuộc tính đầu vào cho khung hộp thoại biểu mẫu quản trị dùng chung.
 export interface AdminFormDialogProps {
@@ -62,11 +63,7 @@ export function AdminFormDialog({
 
         {/* Thân hộp thoại tự cuộn, để nút lưu ở chân hộp thoại luôn nhìn thấy. */}
         <div className="dialog-body">
-          {error && (
-            <p role="alert" className="alert">
-              {error}
-            </p>
-          )}
+          {error && <ErrorAlert message={error} />}
 
           <form id={formId} noValidate onSubmit={onSubmit} className="stack">
             {children}

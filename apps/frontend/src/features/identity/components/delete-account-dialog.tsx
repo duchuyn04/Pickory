@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import { ErrorAlert } from '../../../shared/error-alert';
 import '../customer/account.css';
 import '../customer/customer-auth.css';
 
@@ -69,11 +70,7 @@ export function DeleteAccountDialog() {
             trong vòng 5 phút gần nhất rồi để trống mật khẩu và bấm Xác nhận.
           </p>
 
-          {error && (
-            <p role="alert" className="alert">
-              {error}
-            </p>
-          )}
+          {error && <ErrorAlert message={error} />}
 
           <form noValidate onSubmit={handleDelete} className="stack">
             <div className="field">
