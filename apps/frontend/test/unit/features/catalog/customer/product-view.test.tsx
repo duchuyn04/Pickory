@@ -4,6 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ProductDetail } from '../../../../../src/features/catalog/customer/catalog-api';
+import { compareListStore } from '../../../../../src/features/catalog/customer/use-compare-list';
 import { ProductView } from '../../../../../src/features/catalog/customer/product-view';
 import {
   buildProductDetail,
@@ -21,6 +22,8 @@ let root: Root;
 beforeEach(() => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   window.localStorage.clear();
+  // Kho danh sách so sánh sống suốt phiên, nên mỗi test phải nạp lại từ storage vừa xóa.
+  compareListStore.reload();
   container = document.createElement('div');
   document.body.append(container);
   root = createRoot(container);
@@ -257,6 +260,7 @@ describe('ProductView: so sánh', () => {
     // Dựng lại cây React mô phỏng tải lại trang: trạng thái đọc từ localStorage.
     await act(async () => root.unmount());
     root = createRoot(container);
+    compareListStore.reload();
     await renderProduct(buildProductDetail());
     expect(compareButton()?.textContent).toBe('Bỏ khỏi so sánh');
     expect(countText()).toBe('Danh sách so sánh: 1/4');
@@ -266,14 +270,26 @@ describe('ProductView: so sánh', () => {
     expect(countText()).toBe('Danh sách so sánh: 0/4');
   });
 
+  it('chỉ hiện link Xem so sánh khi danh sách có sản phẩm', async () => {
+    await renderProduct(buildProductDetail());
+    const compareLink = () => container.querySelector('a[href="/compare"]');
+    expect(compareLink()).toBeNull();
+    await act(async () => compareButton()?.click());
+    expect(compareLink()?.textContent).toBe('Xem so sánh');
+  });
+
   it('tắt nút kèm chú thích khi danh sách đã đủ 4 sản phẩm', async () => {
     window.localStorage.setItem(
       'pickory.compare',
       JSON.stringify({ categoryId: 'cat-2', productIds: ['a', 'b', 'c', 'd'] }),
     );
+    compareListStore.reload();
     await renderProduct(buildProductDetail());
     expect(compareButton()?.disabled).toBe(true);
     expect(container.textContent).toContain('Đã đủ 4 sản phẩm');
+    expect(document.getElementById('compare-note')?.getAttribute('role')).toBe('status');
+    // Lý do đứng ngay dưới nút bị tắt, trước dòng đếm và link.
+    expect(compareButton()?.nextElementSibling?.id).toBe('compare-note');
   });
 
   it('báo khác danh mục và cho bắt đầu danh sách mới', async () => {
@@ -281,9 +297,12 @@ describe('ProductView: so sánh', () => {
       'pickory.compare',
       JSON.stringify({ categoryId: 'cat-khac', productIds: ['a', 'b'] }),
     );
+    compareListStore.reload();
     await renderProduct(buildProductDetail());
     expect(compareButton()?.disabled).toBe(true);
     expect(container.textContent).toContain('sản phẩm của danh mục khác');
+    expect(document.getElementById('compare-note')?.getAttribute('role')).toBe('status');
+    expect(compareButton()?.nextElementSibling?.id).toBe('compare-note');
     const startNew = [...container.querySelectorAll('button')].find(
       (button) => button.textContent === 'Bắt đầu danh sách mới',
     );

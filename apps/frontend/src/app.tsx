@@ -3,6 +3,7 @@ import { AiSettingsPage } from './features/ai-gateway/admin/ai-settings-page';
 import { BrandsPage } from './features/catalog/admin/brands-page';
 import { CategoriesPage } from './features/catalog/admin/categories-page';
 import { CategoryPage } from './features/catalog/customer/category-page';
+import { ComparePage } from './features/catalog/customer/compare-page';
 import { ProductPage } from './features/catalog/customer/product-page';
 import { InventoryPage } from './features/catalog/admin/inventory-page';
 import { SkuInventoryPage } from './features/catalog/admin/sku-inventory-page';
@@ -71,6 +72,7 @@ export function App() {
           <Route path="/privacy" element={<PrivacySettingsPage />} />
           <Route path="/c/:slug" element={<CategoryPage />} />
           <Route path="/p/:slug" element={<ProductPage />} />
+          <Route path="/compare" element={<ComparePage />} />
         </Route>
         <Route path="/admin/login" element={<StaffLoginPage />} />
         <Route path="/admin" element={<AdminLayout />}>

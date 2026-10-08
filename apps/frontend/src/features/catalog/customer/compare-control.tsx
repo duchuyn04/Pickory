@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { COMPARE_LIST_LIMIT, describeAddState } from './compare-list';
 import { useCompareList } from './use-compare-list';
 
@@ -30,16 +31,14 @@ export function CompareControl({ categoryId, productId }: CompareControlProps) {
       >
         {isInList ? 'Bỏ khỏi so sánh' : 'Thêm vào so sánh'}
       </button>
-      <p className="muted small compare-count">
-        Danh sách so sánh: {list.productIds.length}/{COMPARE_LIST_LIMIT}
-      </p>
+      {/* Lý do nút bị tắt đứng ngay dưới nút, để khách thấy nguyên nhân ngay khi nhìn nút. */}
       {addState === 'full' && (
-        <p id="compare-note" className="muted small">
+        <p id="compare-note" role="status" className="muted small">
           Đã đủ {COMPARE_LIST_LIMIT} sản phẩm
         </p>
       )}
       {addState === 'category-mismatch' && (
-        <div id="compare-note" className="compare-mismatch">
+        <div id="compare-note" role="status" className="compare-mismatch">
           <p className="muted small">
             Danh sách so sánh đang có sản phẩm của danh mục khác. Chỉ so sánh được các sản phẩm cùng
             danh mục.
@@ -52,6 +51,15 @@ export function CompareControl({ categoryId, productId }: CompareControlProps) {
             Bắt đầu danh sách mới
           </button>
         </div>
+      )}
+      <p className="muted small compare-count">
+        Danh sách so sánh: {list.productIds.length}/{COMPARE_LIST_LIMIT}
+      </p>
+      {list.productIds.length > 0 && (
+        // Lối vào trang so sánh chỉ có nghĩa khi danh sách có ít nhất một sản phẩm.
+        <Link to="/compare" className="small">
+          Xem so sánh
+        </Link>
       )}
     </div>
   );

@@ -590,6 +590,7 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
   - Nút lạ hiện nội dung con; bỏ quy tắc ESLint; `discontinued` vẫn đổi được biến thể.
   - Danh sách so sánh nhận sản phẩm thứ 5; chuyển slug cũ làm mất query string; giá niêm yết bằng giá bán vẫn hiện.
   - Bảng thông số giữ dòng `null`; giá trị không ghép được không bị tắt.
+- Review lượt 1: thêm test cho sự kiện `storage` có khóa `null` (tab khác xóa toàn bộ storage). Đột biến bỏ nhánh này đỏ. Chú thích lý do chặn nút đặt ngay dưới nút.
 - Phép thử đột biến ở E2E (`--headed`): 3 điểm, đều bị test bắt. Gồm luôn dùng SKU đầu, nút lạ hiện nội dung con và `discontinued` vẫn đổi được biến thể.
 - Review lượt 1: bộ chọn từng chặn khách tới SKU không chung giá trị nào với SKU hiện tại, ví dụ "Đen 256GB" sang "Bạc 512GB". Đã sửa và có test đơn vị, test component và test E2E với đúng ví dụ này.
 - Phép thử đột biến sau review: 7 điểm Vitest và 1 điểm E2E, đều bị test bắt.
@@ -601,11 +602,37 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### UI-C3: Trang so sánh
 **Mô tả:** Danh sách so sánh lưu ở `localStorage`, tối đa 4 sản phẩm cùng danh mục. Bảng thông số đặt cạnh nhau, đánh dấu dòng khác nhau.
 **Tiêu chí nghiệm thu:**
-- [ ] Thêm sản phẩm thứ 5 hoặc khác danh mục thì hiện thông báo, không thêm
-- [ ] Dòng có giá trị khác nhau được đánh dấu bằng cả màu và chữ, không chỉ bằng màu
-- [ ] `localStorage` không dùng được thì trang vẫn hoạt động trong phiên
+- [x] Thêm sản phẩm thứ 5 hoặc khác danh mục thì hiện thông báo, không thêm
+- [x] Dòng có giá trị khác nhau được đánh dấu bằng cả màu và chữ, không chỉ bằng màu
+- [x] `localStorage` không dùng được thì trang vẫn hoạt động trong phiên
 **Kiểm tra:** test component
 **Phụ thuộc:** CAT-10, UI-C2 · **File:** `features/catalog/{compare-page,use-compare-list}.tsx`, `app.tsx` · **Quy mô:** S
+
+**File:** `apps/frontend/src/features/catalog/customer/{compare-page,compare-rows,compare-list-store,use-compare-list,compare-control}.ts(x)`, `compare-page.css`, `catalog-api.ts`, `product-display.ts`, `apps/frontend/src/app.tsx` (route `/compare`); test: `apps/frontend/test/unit/features/catalog/customer/`, `apps/frontend/e2e/catalog-compare-page.spec.ts`
+
+**Quyết định (2026-10-08):**
+
+- Route `/compare` nằm trong `CustomerLayout`. Trang đọc danh sách từ `useCompareList` và gọi `GET /api/products/compare?ids=` với id theo đúng thứ tự trong danh sách. Danh sách rỗng thì không gọi API.
+- Lỗi cũ của `use-compare-list.ts`: khi `localStorage` không dùng được, mỗi lần thêm đọc lại storage rỗng và xóa sản phẩm trước đó. Mỗi component cũng giữ state riêng.
+- Cách sửa: `compare-list-store.ts` giữ danh sách trong bộ nhớ, dùng chung cho cả phiên. Storage chỉ là nơi lưu thêm. Component đồng bộ bằng `useSyncExternalStore` và kho nghe sự kiện `storage` của `window`.
+- Bảng so sánh có một cột cho mỗi sản phẩm. Đầu cột có ảnh, tên link tới `/p/{slug}`, giá, nhãn trạng thái và nút "Bỏ khỏi so sánh". Thông số chia theo `attributeGroups`, mỗi nhóm một dòng tiêu đề.
+- Giá trị `null` hiện "Chưa có thông tin". Dòng mà mọi sản phẩm đều `null` bị ẩn, nhóm không còn dòng nào cũng ẩn.
+- Một dòng khác nhau khi các giá trị đã format không giống hệt nhau, `null` khác mọi giá trị có thật. Dòng khác nhau có màu nền `--color-warning-soft` và nhãn chữ "Khác nhau" trong ô tên thông số. Công tắc "Chỉ hiện điểm khác nhau" dùng `input type="checkbox"` gốc.
+- API bỏ sản phẩm bị ẩn hoặc không tồn tại. Trang bỏ các id đó khỏi danh sách và hiện dòng thông báo. Lỗi `COMPARE_CATEGORY_MISMATCH` hiện `ErrorAlert` kèm nút "Xóa danh sách so sánh". Lỗi khác hiện `ErrorAlert`.
+- `compare-control.tsx` có link "Xem so sánh" khi danh sách có ít nhất một sản phẩm. Thông báo "Đã đủ 4 sản phẩm" và thông báo khác danh mục dùng `role="status"`.
+- Dưới 768 px, bảng cuộn ngang trong khung `.table-wrap`. Cột tên thông số dính bên trái bằng `position: sticky`.
+
+**Bằng chứng (2026-10-08):**
+
+- Playwright chạy trên Vite dev server (cùng lệnh với `pnpm dev`), với API E2E và DB `pickory_e2e`.
+- Vitest: 58 file, 640 test đạt. Có 3 file test mới của UI-C3 (`compare-rows`, `compare-list-store`, `compare-page`). `pnpm typecheck` và `pnpm lint` sạch.
+- Spec `catalog-compare-page.spec.ts`: 6 test đạt, chạy có giao diện (`--headed`). Cả bộ E2E: 33 test đạt khi chạy có giao diện và 33 test đạt khi chạy ẩn ở lượt trước review. Sau review chạy lại hai spec `catalog-compare-page` (6 test) và `catalog-product-page` (9 test), đều đạt ở chế độ `--headed`.
+- Phép thử đột biến ở Vitest: 10 điểm, đều bị test bắt.
+  - Danh sách nhận sản phẩm thứ 5; danh sách nhận sản phẩm khác danh mục.
+  - Dòng khác nhau chỉ đổi màu, bỏ nhãn chữ; coi `null` bằng mọi giá trị.
+  - Bỏ kho trong bộ nhớ; không bỏ id mà API không trả; gọi API khi danh sách rỗng.
+  - Bỏ link "Xem so sánh"; công tắc không ẩn dòng giống nhau; bỏ đọc lại khi tab khác đổi storage.
+- Phép thử đột biến ở E2E (`--headed`): 3 điểm, đều bị test bắt. Gồm danh sách nhận sản phẩm thứ 5, bỏ nhãn chữ "Khác nhau" và bỏ kho trong bộ nhớ.
 
 ### CAT-11: Thẻ meta SEO
 **Mô tả:** Hàm `renderPageMeta(template, meta)` chèn `title`, `description`, Open Graph (`og:title`, `og:description`, `og:image`, `og:url`) vào `index.html`. Route trả HTML cho `/products/:slug` và `/categories/:slug`. Bước gắn vào server production chờ quyết định deploy.

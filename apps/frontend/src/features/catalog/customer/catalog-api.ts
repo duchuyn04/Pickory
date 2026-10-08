@@ -137,3 +137,47 @@ export interface ProductDetail {
   minPrice: number | null;
   inStock: boolean;
 }
+
+// Định nghĩa một thuộc tính hiệu lực của danh mục trong `GET /api/products/compare`.
+export interface CompareAttribute {
+  key: string;
+  label: string;
+  group: string;
+  type: AttributeFacetType;
+  unit: string | null;
+  options: string[] | null;
+  required: boolean;
+  filterable: boolean;
+}
+
+export interface CompareAttributeGroup {
+  name: string;
+  attributes: CompareAttribute[];
+}
+
+// Tóm tắt một sản phẩm trong bảng so sánh. `image` là ảnh ở vị trí đầu tiên.
+export interface ComparedProductSummary {
+  id: string;
+  slug: string;
+  name: string;
+  brand: ProductBrandSummary;
+  minPrice: number | null;
+  inStock: boolean;
+  status: string;
+  image: ProductImageInfo | null;
+}
+
+export type CompareSpecValue = string | number | boolean | null;
+
+export interface ComparedProduct {
+  summary: ComparedProductSummary;
+  // Có đủ khóa của mọi thuộc tính hiệu lực. Giá trị là null khi sản phẩm chưa nhập.
+  specs: Record<string, CompareSpecValue>;
+}
+
+// Response của `GET /api/products/compare`. `category` là null khi không còn sản phẩm nào khách thấy được.
+export interface ProductCompareResponse {
+  category: ProductCategoryRef | null;
+  attributeGroups: CompareAttributeGroup[];
+  products: ComparedProduct[];
+}

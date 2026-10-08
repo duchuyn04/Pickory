@@ -12,7 +12,10 @@ export interface ProductBadge {
   className: string;
 }
 
-export function getProductBadges(product: ProductListItem): ProductBadge[] {
+// Chỉ cần trạng thái và tồn kho, nên trang so sánh dùng chung được với tóm tắt của API so sánh.
+export function getProductBadges(
+  product: Pick<ProductListItem, 'status' | 'inStock'>,
+): ProductBadge[] {
   const badges: ProductBadge[] = [];
   // Hai trạng thái độc lập nhau: sản phẩm ngừng kinh doanh vẫn có thể còn tồn kho.
   if (product.status === 'discontinued') {

@@ -257,6 +257,11 @@
   font-weight: 600;
 }
 
+/* Link tới trang so sánh dùng màu link chung, để khách nhận ra đây là chỗ bấm được. */
+.compare-control a {
+  color: var(--color-link);
+}
+
 .compare-control p {
   margin: 0;
 }

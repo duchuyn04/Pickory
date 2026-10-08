@@ -1,0 +1,185 @@
+/*
+ * Kiểu riêng của trang so sánh, theo `shop-retail/compare.html`.
+ * Khung cuộn `.table-wrap`, nút, badge và ô chọn dùng lớp chung trong `components.css`.
+ */
+
+.compare-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.compare-head h1 {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 700;
+}
+
+.compare-head p {
+  margin: 0;
+}
+
+.compare-alert,
+.compare-notice {
+  margin-bottom: var(--space-3);
+}
+
+.compare-notice {
+  margin-top: 0;
+}
+
+.compare-alert-action {
+  margin-bottom: var(--space-3);
+}
+
+.compare-toggle {
+  margin-bottom: var(--space-3);
+}
+
+.compare-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+}
+
+.compare-empty p {
+  margin: 0;
+}
+
+/* Khung cuộn ngang nằm trong trang, nên bảng rộng không làm cả trang cuộn ngang. */
+.compare-wrap {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.compare-table {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+  table-layout: fixed;
+}
+
+.compare-table th,
+.compare-table td {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.compare-table thead th {
+  background: var(--color-surface);
+}
+
+.compare-corner,
+.compare-table tbody th[scope='row'] {
+  width: 180px;
+}
+
+/* Cột tên thông số dính bên trái khi cuộn bảng. Nền đặc để chữ của ô khác không lộ ra phía sau. */
+.compare-table tbody th[scope='row'],
+.compare-corner {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-weight: 500;
+}
+
+.compare-table tbody th[scope='row'] .badge {
+  margin-left: var(--space-2);
+  vertical-align: middle;
+}
+
+/* Dòng tiêu đề nhóm. Chữ dính trái để khách thấy tên nhóm khi cuộn ngang. */
+.compare-group th {
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.compare-group th span {
+  position: sticky;
+  left: var(--space-3);
+}
+
+/* Dòng khác nhau: nền cảnh báo nhạt cộng nhãn chữ "Khác nhau", để không chỉ dựa vào màu. */
+.compare-table tr.is-diff td,
+.compare-table tr.is-diff th[scope='row'] {
+  background: var(--color-warning-soft);
+}
+
+.compare-table tr.is-diff th[scope='row'] {
+  color: var(--color-ink);
+}
+
+.compare-product {
+  font-weight: 400;
+}
+
+.compare-product-media {
+  width: 96px;
+  height: 96px;
+  margin-bottom: var(--space-2);
+}
+
+.compare-product-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.compare-product-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  color: var(--color-ink-muted);
+}
+
+.compare-product-name {
+  display: block;
+  color: var(--color-link);
+  font-weight: 600;
+}
+
+.compare-product-price {
+  margin: var(--space-1) 0 var(--space-2);
+  color: var(--color-price);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.compare-product-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.compare-skeleton {
+  min-height: 320px;
+  border-radius: var(--radius-card);
+  background: var(--color-neutral-soft);
+}
+
+@media (max-width: 767px) {
+  .compare-corner,
+  .compare-table tbody th[scope='row'] {
+    width: 120px;
+  }
+
+  .compare-head h1 {
+    font-size: var(--text-lg);
+  }
+}
