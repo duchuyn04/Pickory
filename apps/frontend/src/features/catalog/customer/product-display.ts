@@ -23,3 +23,10 @@ export function getProductBadges(product: ProductListItem): ProductBadge[] {
   }
   return badges;
 }
+
+// Phần trăm giảm so với giá niêm yết. Trả null khi không có giá niêm yết cao hơn giá bán.
+export function formatDiscountPercent(price: number, compareAtPrice: number | null): number | null {
+  // Giá niêm yết bằng hoặc thấp hơn giá bán không phải khuyến mãi, nên không gạch giá và không hiện phần trăm.
+  if (compareAtPrice === null || compareAtPrice <= price) return null;
+  return Math.round(((compareAtPrice - price) / compareAtPrice) * 100);
+}

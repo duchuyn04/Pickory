@@ -78,3 +78,62 @@ export interface BrandSummary {
   name: string;
   slug: string;
 }
+
+export interface ProductCategoryRef {
+  id: string;
+  name: string;
+  slug: string;
+}
+
+// Một thông số kèm định nghĩa thuộc tính. `value` là null khi sản phẩm chưa có giá trị.
+export interface ProductSpecEntry {
+  key: string;
+  label: string;
+  group: string;
+  type: AttributeFacetType;
+  unit: string | null;
+  value: string | number | boolean | null;
+}
+
+export interface ProductOptionInfo {
+  name: string;
+  values: string[];
+}
+
+// SKU đang bật. Khách chỉ biết còn hàng hay không, không biết số tồn.
+export interface ProductSkuInfo {
+  id: string;
+  code: string;
+  optionValues: Record<string, string>;
+  price: number;
+  compareAtPrice: number | null;
+  inStock: boolean;
+}
+
+// `skuId` khác null khi ảnh gắn riêng cho một SKU.
+export interface ProductImageInfo {
+  url: string;
+  alt: string;
+  skuId: string | null;
+}
+
+// Response của `GET /api/products/{slug}`. `status` là `active` hoặc `discontinued`.
+export interface ProductDetail {
+  id: string;
+  slug: string;
+  name: string;
+  status: string;
+  shortDesc: string;
+  // Tài liệu JSON của trình soạn mô tả. Kiểu `unknown` vì nội dung phải được kiểm khi vẽ.
+  description: unknown;
+  warrantyMonths: number;
+  brand: ProductBrandSummary;
+  category: ProductCategoryRef;
+  parentCategory: ProductCategoryRef | null;
+  specs: ProductSpecEntry[];
+  options: ProductOptionInfo[];
+  skus: ProductSkuInfo[];
+  images: ProductImageInfo[];
+  minPrice: number | null;
+  inStock: boolean;
+}

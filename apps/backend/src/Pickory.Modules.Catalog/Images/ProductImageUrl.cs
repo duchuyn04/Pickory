@@ -1,6 +1,6 @@
 namespace Pickory.Modules.Catalog.Images;
 
-// Dựng URL gốc của ảnh sản phẩm. Quản trị, danh sách công khai, chi tiết, so sánh và `ICatalogReader` dùng chung để các nơi không lệch nhau.
+// Dựng URL gốc của ảnh sản phẩm. Mọi phản hồi có ảnh sản phẩm, cho quản trị và cho khách, đều dựng URL ở đây để không lệch nhau.
 public static class ProductImageUrl
 {
     public static string Build(CloudinaryCredentials credentials, string publicId)

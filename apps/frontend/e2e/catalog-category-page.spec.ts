@@ -162,7 +162,7 @@ const PRODUCT_SEEDS: ProductSeed[] = [
   },
 ];
 
-// Tạo danh mục cha có danh mục con, ba thuộc tính lọc được, hai thương hiệu và các sản phẩm bằng API của admin.
+// Tạo dữ liệu bằng API của admin. Gồm danh mục cha có danh mục con, ba thuộc tính lọc được, hai thương hiệu và các sản phẩm.
 async function seedCatalog(page: Page): Promise<SeededCatalog> {
   const headers = { Origin: e2eEnvironment.webOrigin };
   const suffix = Date.now().toString(36);

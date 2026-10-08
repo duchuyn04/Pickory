@@ -550,15 +550,53 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### UI-C2: Trang sản phẩm
 **Mô tả:** Gallery ảnh đổi theo màu, chọn biến thể, giá và tồn kho theo biến thể, bảng thông số chia nhóm, mô tả chi tiết (đổi tài liệu JSON thành thẻ React), nút thêm vào so sánh. Nút thêm giỏ ở trạng thái tắt tới khi có `commerce`. Chừa vị trí cho khối gợi ý và tóm tắt review.
 **Tiêu chí nghiệm thu:**
-- [ ] Chọn biến thể khác thì giá, giá niêm yết, tồn kho và ảnh đổi đúng
-- [ ] Tiêu đề cấp 1, 2, 3 của mô tả hiện thành thẻ H2, H3, H4; trang chỉ có đúng một H1
-- [ ] Chữ đậm và chữ nghiêng hiện đúng
-- [ ] Tài liệu chứa nút lạ không hiện nội dung của nút đó và không chạy script (test với payload `script` và `onerror`)
-- [ ] Quy tắc ESLint chặn `dangerouslySetInnerHTML` trong `features/catalog/`; fixture lỗi chứng minh quy tắc hoạt động
-- [ ] Sản phẩm `discontinued` hiện "Ngừng kinh doanh" và không cho chọn mua
-- [ ] Không cuộn ngang ở viewport 375 px
+- [x] Chọn biến thể khác thì giá, giá niêm yết, tồn kho và ảnh đổi đúng
+- [x] Tiêu đề cấp 1, 2, 3 của mô tả hiện thành thẻ H2, H3, H4; trang chỉ có đúng một H1
+- [x] Chữ đậm và chữ nghiêng hiện đúng
+- [x] Tài liệu chứa nút lạ không hiện nội dung của nút đó và không chạy script (test với payload `script` và `onerror`)
+- [x] Quy tắc ESLint chặn `dangerouslySetInnerHTML` trong `features/catalog/`; fixture lỗi chứng minh quy tắc hoạt động
+- [x] Sản phẩm `discontinued` hiện "Ngừng kinh doanh" và không cho chọn mua
+- [x] Không cuộn ngang ở viewport 375 px
 **Kiểm tra:** test component; Playwright trên `pnpm dev`
 **Phụ thuộc:** CAT-10, UI-C1, CAT-13 · **File:** `features/catalog/{product-page,variant-picker,spec-table,product-gallery,description-view}.tsx`, `eslint.config.js` · **Quy mô:** M
+
+**File:** `apps/frontend/src/features/catalog/customer/{product-page,product-view,variant-picker,product-gallery,spec-table,description-view,compare-control}.tsx`, `{variant-selection,gallery-images,spec-format,compare-list,description-blocks,use-compare-list,catalog-api,product-display}.ts`, `product-page.css`, `apps/frontend/src/app.tsx` (route `/p/:slug`), `apps/frontend/eslint.config.js`; test: `apps/frontend/test/unit/features/catalog/customer/`, `apps/frontend/e2e/catalog-product-page.spec.ts`; backend: chỉ sửa một comment trong `Pickory.Modules.Catalog/Images/ProductImageUrl.cs`
+
+**Quyết định (2026-10-08):**
+
+- Route `/p/:slug` nằm trong `CustomerLayout`. Trang gọi `GET /api/products/{slug}`. Slug cũ được `fetch` đi theo 301, rồi `navigate` với `replace` sang slug mới và giữ query string.
+- Mã `PRODUCT_NOT_FOUND` hiện "Không tìm thấy sản phẩm" kèm link về trang chủ. Lỗi khác hiện bằng `ErrorAlert`.
+- SKU đang chọn nằm trên URL ở `?sku=`, ghi bằng `replace`. Mặc định là SKU trong `?sku=`, rồi SKU còn hàng đầu tiên, rồi SKU đầu tiên.
+- Bộ chọn biến thể dùng `fieldset`, `legend` và radio gốc. Chỉ giá trị không có trong SKU đang bật nào mới bị tắt. SKU hết hàng vẫn chọn được và hiện "Hết hàng".
+- Giá trị có SKU nhưng không ghép được với lựa chọn hiện tại vẫn bấm được, viền nét đứt và có chữ ẩn cho trình đọc màn hình. Khi bấm, trang chọn SKU giữ được nhiều giá trị đang chọn nhất. Hòa thì ưu tiên SKU còn hàng, rồi SKU đứng trước trong `skus`.
+- Khách chỉ thấy "Còn hàng" hoặc "Hết hàng", vì API không trả số tồn. Sản phẩm `discontinued` không hiện nhãn tồn kho. Giá niêm yết cao hơn giá bán thì gạch ngang kèm phần trăm giảm.
+- Ảnh riêng của một SKU hiện cho mọi biến thể cùng màu. Tùy chọn màu là tùy chọn có tên bắt đầu bằng "Màu". Không có tùy chọn màu thì ảnh riêng chỉ hiện cho đúng SKU đó.
+- Mô tả được đọc bằng hàm tự viết, không dùng schema nghiêm ngặt. Nút và mark lạ bị bỏ cùng nội dung con, phần còn lại vẫn hiện. Chữ đi qua React dưới dạng chuỗi.
+- Quy tắc ESLint `no-restricted-syntax` chặn `dangerouslySetInnerHTML` trong `src/features/catalog/`. Fixture lỗi là chuỗi code được lint bằng API `ESLint`, nên `pnpm lint` vẫn sạch.
+- Sản phẩm `discontinued` hiện nhãn "Ngừng kinh doanh". Bộ chọn biến thể chỉ để xem. Nút thêm giỏ luôn tắt kèm "Sắp có" theo Open Question 4.
+- Nút so sánh ghi "Thêm vào so sánh" hoặc "Bỏ khỏi so sánh". Số đếm "Danh sách so sánh: n/4" nằm ở dòng riêng.
+- Danh sách so sánh nằm trong `localStorage` với khóa `pickory.compare`, tối đa 4 sản phẩm cùng danh mục. Mọi lần đọc và ghi bọc `try/catch`. UI-C3 dùng lại `compare-list.ts`.
+- Hai vùng `recommendations` và `personalized-content` là thẻ `div` rỗng, không hiện khung giữ chỗ.
+- Repo chưa có mẫu đặt `document.title`, nên trang chưa đặt tiêu đề tab theo tên sản phẩm.
+
+**Bằng chứng (2026-10-08):**
+
+- Playwright chạy trên Vite dev server (cùng lệnh với `pnpm dev`), với API E2E và DB `pickory_e2e`.
+- Vitest: 55 file, 606 test đạt. Có 9 file test mới của UI-C2. `pnpm typecheck`, `pnpm lint` và `dotnet build` sạch.
+- Spec `catalog-product-page.spec.ts`: 9 test đạt, chạy có giao diện (`--headed`). Sau review lượt 1, spec có 9 test đạt khi chạy có giao diện. Cả bộ E2E: 27 test đạt khi chạy có giao diện và 27 test đạt khi chạy ẩn.
+- Lượt đầu chạy cả bộ có 1 test (headed) và 2 test (ẩn) của UI-C2 lỗi. Nguyên nhân: API không đảm bảo thứ tự SKU tạo cùng lúc, còn test giả định SKU mặc định. Test đổi sang mở bằng `?sku=`.
+- Phép thử đột biến ở Vitest: 11 điểm, đều bị test bắt.
+  - Luôn dùng SKU đầu; ảnh riêng không lọc theo màu; tiêu đề cấp 1 thành `h1`.
+  - Nút lạ hiện nội dung con; bỏ quy tắc ESLint; `discontinued` vẫn đổi được biến thể.
+  - Danh sách so sánh nhận sản phẩm thứ 5; chuyển slug cũ làm mất query string; giá niêm yết bằng giá bán vẫn hiện.
+  - Bảng thông số giữ dòng `null`; giá trị không ghép được không bị tắt.
+- Phép thử đột biến ở E2E (`--headed`): 3 điểm, đều bị test bắt. Gồm luôn dùng SKU đầu, nút lạ hiện nội dung con và `discontinued` vẫn đổi được biến thể.
+- Review lượt 1: bộ chọn từng chặn khách tới SKU không chung giá trị nào với SKU hiện tại, ví dụ "Đen 256GB" sang "Bạc 512GB". Đã sửa và có test đơn vị, test component và test E2E với đúng ví dụ này.
+- Phép thử đột biến sau review: 7 điểm Vitest và 1 điểm E2E, đều bị test bắt.
+  - Trả lại quy tắc tắt cũ; nút lạ inline có trường `text` hiện chữ.
+  - Chọn SKU bỏ qua số giá trị giữ được; bỏ ưu tiên SKU còn hàng khi hòa.
+  - Sản phẩm `discontinued` hiện nhãn tồn kho; nhãn nút so sánh không đổi; bỏ `aria-describedby` của nút giỏ.
+- Lỗi builder tự sửa: lớp CSS `product-section` trùng với CSS trang quản trị `products.css`, nên tiêu đề mô tả bị thu về 15 px. Đã đổi thành `product-info-section`.
 
 ### UI-C3: Trang so sánh
 **Mô tả:** Danh sách so sánh lưu ở `localStorage`, tối đa 4 sản phẩm cùng danh mục. Bảng thông số đặt cạnh nhau, đánh dấu dòng khác nhau.

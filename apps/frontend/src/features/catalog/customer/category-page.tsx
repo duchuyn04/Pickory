@@ -37,7 +37,7 @@ export function CategoryPage() {
   const { slug } = useParams();
   // Route luôn có `:slug`. Kiểm ở đây để kiểu dữ liệu của `slug` là chuỗi trong phần còn lại.
   if (!slug) return null;
-  // Đổi danh mục thì dựng lại trang, để kết quả và trạng thái gập của danh mục cũ không rò sang danh mục mới.
+  // Dựng lại trang khi đổi danh mục. Kết quả và trạng thái gập của danh mục cũ không rò sang danh mục mới.
   return <CategoryContent key={slug} slug={slug} />;
 }
 

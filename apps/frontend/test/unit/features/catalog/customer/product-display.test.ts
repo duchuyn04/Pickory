@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ProductListItem } from '../../../../../src/features/catalog/customer/catalog-api';
 import {
+  formatDiscountPercent,
   formatProductPrice,
   getProductBadges,
 } from '../../../../../src/features/catalog/customer/product-display';
@@ -52,5 +53,20 @@ describe('nhãn trạng thái của thẻ sản phẩm', () => {
         (badge) => badge.label,
       ),
     ).toEqual(['Ngừng kinh doanh', 'Hết hàng']);
+  });
+});
+
+describe('formatDiscountPercent', () => {
+  it('tính phần trăm giảm làm tròn từ giá niêm yết', () => {
+    expect(formatDiscountPercent(21_000_000, 25_000_000)).toBe(16);
+  });
+
+  it('trả null khi không có giá niêm yết', () => {
+    expect(formatDiscountPercent(21_000_000, null)).toBeNull();
+  });
+
+  it('trả null khi giá niêm yết bằng hoặc thấp hơn giá bán', () => {
+    expect(formatDiscountPercent(21_000_000, 21_000_000)).toBeNull();
+    expect(formatDiscountPercent(21_000_000, 20_000_000)).toBeNull();
   });
 });

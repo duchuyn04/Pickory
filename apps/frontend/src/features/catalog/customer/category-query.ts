@@ -162,7 +162,7 @@ export function toggleAttributeValue(
   return setAttributeValues(query, key, toggleItem(query.attributes[key] ?? [], value));
 }
 
-// Đặt cả hai cận trong một lần đổi, để chỉ có một lần về trang 1 và một lần ghi URL.
+// Đặt cả hai cận trong một lần đổi. Nhờ vậy chỉ có một lần về trang 1 và một lần ghi URL.
 export function setAttributeRange(
   query: CategoryQuery,
   key: string,
@@ -205,7 +205,7 @@ export function goToPage(query: CategoryQuery, page: number): CategoryQuery {
   return { ...query, page };
 }
 
-// Xóa bộ lọc nhưng giữ cách sắp xếp và kích thước trang, vì đó là lựa chọn hiển thị, không phải bộ lọc.
+// Xóa bộ lọc và giữ cách sắp xếp, kích thước trang. Hai giá trị này là lựa chọn hiển thị, không phải bộ lọc.
 export function clearFilters(query: CategoryQuery): CategoryQuery {
   return { ...EMPTY_CATEGORY_QUERY, sort: query.sort, pageSize: query.pageSize };
 }
