@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { e2eEnvironment } from './environment';
+import {
+  collectConsoleIssues,
+  createBrand,
+  createCategory,
+  loginAdmin,
+  stubImageProvider,
+} from './catalog-admin-flow';
 
 declare global {
   interface Window {
@@ -7,68 +13,17 @@ declare global {
   }
 }
 
-// Ảnh thu nhỏ giả ngăn lỗi tải tài nguyên khi trình duyệt mở sản phẩm đã lưu.
-const tinyPng = Buffer.from(
-  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
-  'base64',
-);
-
 test('Checkpoint C2: admin tạo danh mục, sản phẩm bốn SKU, ảnh và đăng bán', async ({ page }) => {
   test.setTimeout(120000);
-  const consoleIssues: string[] = [];
-  page.on('console', (message) => {
-    // Chromium có giao diện tự tải favicon dù ứng dụng chưa cung cấp tệp này.
-    if (message.location().url.endsWith('/favicon.ico')) return;
-    if (message.type() === 'error' || message.type() === 'warning') {
-      consoleIssues.push(`${message.type()}: ${message.text()}`);
-    }
-  });
-  page.on('pageerror', (error) => consoleIssues.push(`pageerror: ${error.message}`));
-
-  // Chỉ giả lập dịch vụ ảnh bên ngoài; mọi thao tác ghi catalog vẫn đi qua giao diện thật.
-  let uploadCount = 0;
-  await page.route('https://api.cloudinary.com/**', async (route) => {
-    uploadCount += 1;
-    const publicId = `pickory/products/checkpoint-c2-${Date.now()}-${uploadCount}`;
-    await route.fulfill({
-      json: {
-        public_id: publicId,
-        secure_url: `https://res.cloudinary.com/pickory-fake/image/upload/${publicId}`,
-      },
-    });
-  });
-  await page.route('https://res.cloudinary.com/**', (route) =>
-    route.fulfill({ body: tinyPng, contentType: 'image/png' }),
-  );
-
-  await page.goto('/admin/login');
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
-  await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
-  await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
-  await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-  await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin`);
+  const consoleIssues = collectConsoleIssues(page);
+  const imageProvider = await stubImageProvider(page, 'checkpoint-c2');
+  await loginAdmin(page);
 
   // Danh mục lá có thuộc tính bắt buộc để việc đăng bán kiểm cả dữ liệu kỹ thuật.
-  await page.getByRole('link', { name: 'Danh mục', exact: true }).click();
-  await page.getByRole('button', { name: '+ Thêm danh mục gốc' }).click();
-  const categoryDialog = page.getByRole('dialog');
-  await categoryDialog.getByLabel('Tên danh mục *').fill('Điện thoại Checkpoint C2');
-  await categoryDialog.getByRole('button', { name: '+ Thêm thuộc tính' }).click();
-  await categoryDialog.getByLabel('Khóa (key) *').fill('origin');
-  await categoryDialog.getByLabel('Nhãn *').fill('Xuất xứ');
-  await categoryDialog.getByLabel('Nhóm *').fill('Thông tin');
-  await categoryDialog.getByRole('checkbox', { name: 'Bắt buộc' }).check();
-  await categoryDialog.getByRole('button', { name: 'Tạo danh mục' }).click();
-  await expect(categoryDialog).toBeHidden();
-  await expect(page.getByText('Điện thoại Checkpoint C2')).toBeVisible();
-
-  await page.getByRole('link', { name: 'Thương hiệu', exact: true }).click();
-  await page.getByRole('button', { name: '+ Thêm thương hiệu' }).click();
-  const brandDialog = page.getByRole('dialog');
-  await brandDialog.getByLabel('Tên thương hiệu *').fill('Hãng Checkpoint C2');
-  await brandDialog.getByRole('button', { name: 'Tạo thương hiệu' }).click();
-  await expect(brandDialog).toBeHidden();
+  await createCategory(page, 'Điện thoại Checkpoint C2', [
+    { key: 'origin', label: 'Xuất xứ', group: 'Thông tin', required: true },
+  ]);
+  await createBrand(page, 'Hãng Checkpoint C2');
 
   // Chọn danh mục và thương hiệu vừa tạo bằng nhãn, không lấy ID qua API.
   await page.getByRole('link', { name: 'Sản phẩm', exact: true }).click();
@@ -105,7 +60,7 @@ test('Checkpoint C2: admin tạo danh mục, sản phẩm bốn SKU, ảnh và �
     buffer: Buffer.alloc(2048),
   });
   await expect(page.locator('[data-image-id]')).toHaveCount(1);
-  expect(uploadCount).toBe(1);
+  expect(imageProvider.uploadCount()).toBe(1);
   await page.getByLabel('Mô tả ảnh 1 *').fill('Mặt trước điện thoại');
   await page.getByRole('button', { name: 'Lưu sản phẩm' }).click();
   await expect(page.getByRole('button', { name: 'Đăng bán' })).toBeEnabled();

@@ -744,10 +744,23 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### E2E-C1: Luồng E2E của catalog
 **Mô tả:** Playwright trên DB `pickory_e2e`: admin tạo danh mục có bộ thuộc tính, tạo sản phẩm 2 tùy chọn, soạn mô tả có tiêu đề và chữ đậm, tải ảnh qua provider giả, đăng bán. Khách lọc thấy sản phẩm, chọn biến thể thấy đúng giá, mô tả hiện đúng định dạng.
 **Tiêu chí nghiệm thu:**
-- [ ] `pnpm test:e2e` chạy sạch cả luồng identity cũ và luồng catalog mới
-- [ ] Chạy lại lần hai vẫn PASS, không dựa vào dữ liệu lần trước
+- [x] `pnpm test:e2e` chạy sạch cả luồng identity cũ và luồng catalog mới
+- [x] Chạy lại lần hai vẫn PASS, không dựa vào dữ liệu lần trước
 **Kiểm tra:** `pnpm test:e2e` hai lần liên tiếp
 **Phụ thuộc:** UI-C1, UI-C2, UI-C5, UI-C6, UI-C8, CAT-07 · **File:** `e2e/catalog.spec.ts`, `apps/backend/scripts/e2e-start.ts` · **Quy mô:** S
+
+**File:** `apps/frontend/e2e/catalog.spec.ts`, `apps/frontend/e2e/catalog-admin-flow.ts` (hàm dùng chung), `apps/frontend/e2e/catalog-checkpoint-c2.spec.ts` (dùng lại hàm chung), `apps/backend/src/Pickory.Api/E2e/E2eStartup.cs` (lệnh `e2e:start` có sẵn)
+
+**Bằng chứng (2026-10-08):**
+
+- Playwright chạy trên Vite dev server (cùng lệnh với `pnpm dev`), với API E2E và DB `pickory_e2e` dựng lại mỗi lần chạy.
+- Spec `catalog.spec.ts`: 1 test đi trọn luồng qua giao diện thật, chạy có giao diện (`--headed`) đạt.
+- `pnpm test:e2e --headed`, 3 lượt liên tiếp:
+  - Lần 1: 34 test đạt, 3.0 phút.
+  - Lần 2 (ngay sau lần 1): 34 test đạt, 3.0 phút.
+  - Chạy ẩn (`pnpm test:e2e`): 34 test đạt, 2.5 phút.
+- Mọi tên, slug và mã SKU của spec mang hậu tố riêng của lần chạy. Spec không đọc thư trong `DEV_OUTBOX_DIR` và không đọc dữ liệu lần trước.
+- Phép thử đột biến: 3 điểm, đều bị spec bắt (trang sản phẩm luôn hiện giá SKU đầu; mô tả hiện tiêu đề cấp 1 thành `h1`; bộ lọc danh mục bỏ tham số `attr.*`).
 
 ---
 

@@ -88,7 +88,7 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 - [x] `GET /api/products` p95 dưới 300 ms với 500 sản phẩm
 
 ### Phase 4: E2E và nghiệm thu
-- [ ] E2E-C1
+- [x] E2E-C1
 
 ### Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt
