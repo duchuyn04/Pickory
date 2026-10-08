@@ -107,6 +107,7 @@ Người dùng chốt hướng này ngày 2026-10-06. Hướng mới thay hướ
 | `.page`, `.page-head`, `.page-head-text`, `.head-actions` | Khung trang và đầu trang | `shop-retail/admin/products.html` |
 | `.stack`, `.stack-sm`, `.row-actions` | Xếp khối dọc và nhóm nút | Mọi màn |
 | `.alert`, `.empty-state`, `.empty-state-dashed` | Lỗi, đang tải, danh sách rỗng | `shop-retail/admin/products.html` |
+| `.alert-list`, `.alert-list-icon`, `.alert-list-body`, `.alert-list-title`, `.alert-list-items` | Thông báo lỗi có icon, tiêu đề đậm và danh sách lý do không chấm tròn. Dùng qua component `ErrorAlert` trong `apps/frontend/src/shared/error-alert.tsx` | Mẫu riêng của Pickory |
 | `.filters-row`, `.pager`, `.cell-sub`, `.wrap-anywhere`, `.check` | Bộ lọc, phân trang và chữ phụ trong bảng | `shop-retail/admin/products.html` |
 | `.icon-btn` | Nút chỉ có icon | `shop-retail/admin/index.html` |
 | `.dialog-backdrop`, `.dialog`, `.dialog-lg`, `.dialog-head`, `.dialog-body`, `.dialog-foot` | Hộp thoại form | `shop-retail/admin/product.html` |

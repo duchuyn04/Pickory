@@ -45,6 +45,7 @@ interface RenderOptions {
   current?: ProductImageDraft[];
   disabled?: boolean;
   altErrors?: Record<string, string>;
+  uploadErrors?: string[];
 }
 
 // Dựng component có state giống form thật, để test thấy kết quả sau mỗi thao tác.
@@ -59,7 +60,7 @@ async function renderManager(options: RenderOptions = {}) {
         variants={variants}
         disabled={options.disabled ?? false}
         isUploading={false}
-        uploadErrors={[]}
+        uploadErrors={options.uploadErrors ?? []}
         altErrors={options.altErrors ?? {}}
         onChange={(next) => {
           onChange(next);
@@ -86,6 +87,16 @@ function altValues(): string[] {
 }
 
 describe('ImageManager', () => {
+  it('lỗi tải ảnh dùng mẫu thông báo chung: icon, danh sách không chấm tròn', async () => {
+    await renderManager({ uploadErrors: ['Ảnh "a.gif" sai định dạng.', 'Ảnh "b.jpg" quá lớn.'] });
+    const alert = container.querySelector('[role="alert"]')!;
+    expect(alert.classList.contains('alert-list')).toBe(true);
+    expect(alert.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
+    expect(
+      [...alert.querySelectorAll('ul.alert-list-items li')].map((item) => item.textContent),
+    ).toEqual(['Ảnh "a.gif" sai định dạng.', 'Ảnh "b.jpg" quá lớn.']);
+  });
+
   it('hiện ảnh thu nhỏ đã biến đổi kích thước và ô alt có nhãn theo vị trí', async () => {
     await renderManager();
 

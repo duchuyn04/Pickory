@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { expectListAlertStyle } from './alert-assertions';
 import { e2eEnvironment } from './environment';
 
 // Ảnh PNG 1x1 trả cho mọi yêu cầu ảnh thu nhỏ, để trình duyệt không ghi lỗi tải ảnh vào console.
@@ -99,6 +100,12 @@ test('UI-C6: tải, kiểm, sắp xếp ảnh bằng bàn phím và lưu thứ t
     const alert = page.getByRole('alert').filter({ hasText: 'dong.gif' });
     await expect(alert).toContainText('Ảnh "dong.gif" phải có định dạng JPG, PNG hoặc WebP.');
     await expect(alert).toContainText('Ảnh "qua-lon.jpg" vượt quá 5 MB.');
+    await expectListAlertStyle(alert);
+    await alert.screenshot({ path: testInfo.outputPath('upload-errors-1280.png') });
+    // Ở 375 px dòng lý do dài phải xuống hàng thẳng với chữ, không chui dưới icon.
+    await page.setViewportSize({ width: 375, height: 812 });
+    await alert.screenshot({ path: testInfo.outputPath('upload-errors-375.png') });
+    await page.setViewportSize({ width: 1280, height: 720 });
     expect(uploadCount).toBe(0);
   });
 

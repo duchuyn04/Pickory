@@ -381,6 +381,44 @@
   font-size: var(--text-sm);
 }
 
+/* Thông báo lỗi có icon và danh sách lý do. Icon đứng cạnh khối chữ nên dòng dài xuống hàng thẳng với chữ, không chui dưới icon. */
+.alert-list {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+/* Icon cao 18px, dòng chữ cao 21px (14px x 1.5). Lề trên 1.5px đưa tâm icon về giữa dòng đầu. */
+.alert-list-icon {
+  flex: none;
+  margin-top: 1.5px;
+}
+
+.alert-list-body {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.alert-list-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+/* Không chấm tròn mặc định. Mỗi lý do một dòng, cách nhau 8px thay cho chấm. */
+.alert-list-items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alert-list-title + .alert-list-items {
+  margin-top: var(--space-2);
+}
+
 /* Thông báo thành công và cảnh báo dùng cặp nền nhạt và chữ đậm màu đạt tương phản AA. */
 .alert-ok {
   border-color: var(--color-success-soft);

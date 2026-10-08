@@ -42,6 +42,7 @@ const requiredSelectors = [
   '.stack',
   '.stack-sm',
   '.alert',
+  '.alert-list',
   '.empty-state',
   '.cell-sub',
   '.wrap-anywhere',

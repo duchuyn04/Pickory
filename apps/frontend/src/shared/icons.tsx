@@ -108,6 +108,13 @@ const iconPaths = {
       <path d="M10 12h4" />
     </>
   ),
+  alertCircle: (
+    <>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 8v4" />
+      <path d="M12 16h.01" />
+    </>
+  ),
   close: (
     <>
       <path d="M18 6 6 18" />

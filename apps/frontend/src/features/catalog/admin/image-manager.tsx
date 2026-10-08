@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { ErrorAlert } from '../../../shared/error-alert';
 import { FieldError, fieldErrorProps } from '../../../shared/field-error';
 import { Icon } from '../../../shared/icons';
 import { withCloudinaryTransform } from '../shared/image-url';
@@ -101,15 +102,7 @@ export function ImageManager({
         đầu tiên là ảnh đại diện.
       </p>
 
-      {uploadErrors.length > 0 && (
-        <div role="alert" className="alert image-upload-errors">
-          <ul>
-            {uploadErrors.map((error) => (
-              <li key={error}>{error}</li>
-            ))}
-          </ul>
-        </div>
-      )}
+      {uploadErrors.length > 0 && <ErrorAlert items={uploadErrors} />}
 
       {images.length === 0 ? (
         <p className="empty-state empty-state-dashed">Chưa có ảnh nào.</p>
