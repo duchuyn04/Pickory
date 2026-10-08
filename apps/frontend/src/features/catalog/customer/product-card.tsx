@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
-import { Icon } from '../../../shared/icons';
 import { buildCloudinarySrcSet, withCloudinaryTransform } from '../shared/image-url';
+import { ProductImage } from '../shared/product-image';
 import type { ProductListItem } from './catalog-api';
 import { formatProductPrice, getProductBadges } from './product-display';
 
@@ -14,22 +14,19 @@ export function ProductCard({ product }: { product: ProductListItem }) {
     <article className="product-card">
       <Link to={`/p/${product.slug}`} className="product-card-link">
         <div className="product-card-media">
-          {product.image ? (
-            <img
-              src={withCloudinaryTransform(product.image.url, IMAGE_FALLBACK_WIDTH)}
-              srcSet={buildCloudinarySrcSet(product.image.url)}
-              sizes={IMAGE_SIZES}
-              alt={product.image.alt}
-              width={IMAGE_FALLBACK_WIDTH}
-              height={IMAGE_FALLBACK_WIDTH}
-              loading="lazy"
-            />
-          ) : (
-            // Khung giữ chỗ cùng tỉ lệ với ảnh, để lưới không nhảy khi sản phẩm chưa có ảnh.
-            <div className="product-card-placeholder" aria-hidden="true">
-              <Icon name="image" className="icon product-card-placeholder-icon" />
-            </div>
-          )}
+          <ProductImage
+            src={
+              product.image
+                ? withCloudinaryTransform(product.image.url, IMAGE_FALLBACK_WIDTH)
+                : null
+            }
+            srcSet={product.image ? buildCloudinarySrcSet(product.image.url) : undefined}
+            sizes={IMAGE_SIZES}
+            alt={product.image?.alt ?? ''}
+            width={IMAGE_FALLBACK_WIDTH}
+            height={IMAGE_FALLBACK_WIDTH}
+            loading="lazy"
+          />
         </div>
         <p className="product-card-brand">{product.brand.name}</p>
         <h3 className="product-card-name">{product.name}</h3>

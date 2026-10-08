@@ -60,11 +60,24 @@ describe('ProductCard', () => {
     expect(container.querySelector('a')!.getAttribute('href')).toBe('/p/laptop-1');
   });
 
+  it('ảnh không tải được thì hiện khung giữ chỗ có aria-label là alt', async () => {
+    await renderCard(product);
+
+    await act(async () => {
+      container.querySelector('img')?.dispatchEvent(new Event('error'));
+    });
+
+    expect(container.querySelector('img')).toBeNull();
+    const placeholder = container.querySelector('.product-image-placeholder');
+    expect(placeholder?.getAttribute('role')).toBe('img');
+    expect(placeholder?.getAttribute('aria-label')).toBe('Mặt trước');
+  });
+
   it('không có ảnh thì hiện khung giữ chỗ thay vì thẻ img', async () => {
     await renderCard({ ...product, image: null });
 
     expect(container.querySelector('img')).toBeNull();
-    expect(container.querySelector('.product-card-placeholder')).not.toBeNull();
+    expect(container.querySelector('.product-image-placeholder')).not.toBeNull();
   });
 
   it('giá null hiện "Liên hệ" và hết hàng hiện nhãn', async () => {

@@ -206,7 +206,28 @@ describe('ProductView: trạng thái đặc biệt', () => {
   it('không có ảnh nào thì hiện khung giữ chỗ', async () => {
     await renderProduct(buildProductDetail({ images: [] }));
     expect(container.querySelector('.gallery-main img')).toBeNull();
-    expect(container.querySelector('.gallery-placeholder')).not.toBeNull();
+    expect(container.querySelector('.product-image-placeholder')).not.toBeNull();
+  });
+
+  it('ảnh chính và ảnh nhỏ không tải được thì hiện khung giữ chỗ, không còn thẻ img', async () => {
+    await renderProduct(buildProductDetail());
+
+    await act(async () => {
+      for (const image of container.querySelectorAll('img'))
+        image.dispatchEvent(new Event('error'));
+    });
+
+    expect(container.querySelector('.gallery img')).toBeNull();
+    const mainPlaceholder = container.querySelector('.gallery-main .product-image-placeholder');
+    expect(mainPlaceholder?.getAttribute('aria-label')).toBe(imageBlack.alt);
+    // Ảnh nhỏ là ảnh trang trí, nên khung của chúng ẩn khỏi trình đọc màn hình.
+    const thumbPlaceholders = container.querySelectorAll(
+      '.gallery-thumbs .product-image-placeholder',
+    );
+    expect(thumbPlaceholders).toHaveLength(2);
+    expect(
+      [...thumbPlaceholders].every((node) => node.getAttribute('aria-hidden') === 'true'),
+    ).toBe(true);
   });
 
   it('chỉ có đúng một h1 là tên sản phẩm', async () => {

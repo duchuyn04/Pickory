@@ -5,6 +5,7 @@ import { ApiError, apiRequest } from '../../../shared/api';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { Icon } from '../../../shared/icons';
 import { buildCloudinarySrcSet, withCloudinaryTransform } from '../shared/image-url';
+import { ProductImage } from '../shared/product-image';
 import type { ComparedProduct, ProductCompareResponse } from './catalog-api';
 import { buildCompareGroups, findMissingIds } from './compare-rows';
 import { formatProductPrice, getProductBadges } from './product-display';
@@ -76,22 +77,15 @@ function ProductColumnHead({ product, onRemove }: ProductColumnHeadProps) {
   return (
     <th scope="col" className="compare-product">
       <div className="compare-product-media">
-        {summary.image ? (
-          <img
-            src={withCloudinaryTransform(summary.image.url, HEAD_IMAGE_WIDTH)}
-            srcSet={buildCloudinarySrcSet(summary.image.url)}
-            sizes={HEAD_IMAGE_SIZES}
-            alt={summary.image.alt || summary.name}
-            width={96}
-            height={96}
-            loading="lazy"
-          />
-        ) : (
-          // Khung giữ chỗ cùng cỡ với ảnh, để các cột đều nhau khi sản phẩm chưa có ảnh.
-          <div className="compare-product-placeholder" aria-hidden="true">
-            <Icon name="image" className="icon" />
-          </div>
-        )}
+        <ProductImage
+          src={summary.image ? withCloudinaryTransform(summary.image.url, HEAD_IMAGE_WIDTH) : null}
+          srcSet={summary.image ? buildCloudinarySrcSet(summary.image.url) : undefined}
+          sizes={HEAD_IMAGE_SIZES}
+          alt={summary.image ? summary.image.alt || summary.name : summary.name}
+          width={96}
+          height={96}
+          loading="lazy"
+        />
       </div>
       <Link to={`/p/${summary.slug}`} className="compare-product-name">
         {summary.name}

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Icon } from '../../../shared/icons';
 import { buildCloudinarySrcSet, withCloudinaryTransform } from '../shared/image-url';
+import { ProductImage } from '../shared/product-image';
 import type { ProductImageInfo } from './catalog-api';
 
 // Ảnh chính chiếm tối đa nửa bề rộng bố cục 1200px ở màn rộng và cả bề rộng ở điện thoại.
@@ -21,22 +21,17 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   return (
     <div className="gallery">
       <div className="gallery-main">
-        {activeImage ? (
-          <img
-            src={withCloudinaryTransform(activeImage.url, MAIN_IMAGE_FALLBACK_WIDTH)}
-            srcSet={buildCloudinarySrcSet(activeImage.url)}
-            sizes={MAIN_IMAGE_SIZES}
-            alt={activeImage.alt || productName}
-            width={MAIN_IMAGE_FALLBACK_WIDTH}
-            height={MAIN_IMAGE_FALLBACK_WIDTH}
-            fetchPriority="high"
-          />
-        ) : (
-          // Khung giữ chỗ cùng tỉ lệ với ảnh, để bố cục không nhảy khi sản phẩm chưa có ảnh.
-          <div className="gallery-placeholder" aria-hidden="true">
-            <Icon name="image" className="icon gallery-placeholder-icon" />
-          </div>
-        )}
+        <ProductImage
+          src={
+            activeImage ? withCloudinaryTransform(activeImage.url, MAIN_IMAGE_FALLBACK_WIDTH) : null
+          }
+          srcSet={activeImage ? buildCloudinarySrcSet(activeImage.url) : undefined}
+          sizes={MAIN_IMAGE_SIZES}
+          alt={activeImage ? activeImage.alt || productName : productName}
+          width={MAIN_IMAGE_FALLBACK_WIDTH}
+          height={MAIN_IMAGE_FALLBACK_WIDTH}
+          fetchPriority="high"
+        />
       </div>
       {images.length > 1 && (
         <ul className="gallery-thumbs">
@@ -48,7 +43,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 aria-pressed={image === activeImage}
                 onClick={() => setActiveIndex(index)}
               >
-                <img
+                <ProductImage
                   src={withCloudinaryTransform(image.url, THUMBNAIL_WIDTH)}
                   alt=""
                   width={56}

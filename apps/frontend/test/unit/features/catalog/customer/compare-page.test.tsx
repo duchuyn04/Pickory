@@ -172,6 +172,31 @@ describe('ComparePage: bảng so sánh', () => {
     expect(osRow?.classList.contains('is-diff')).toBe(false);
   });
 
+  it('ảnh đầu cột không tải được thì hiện khung giữ chỗ có aria-label là alt', async () => {
+    stubFetch(200, {
+      data: response([
+        product(
+          'a',
+          { ram: '8' },
+          { image: { url: 'https://img.test/a.png', alt: 'Ảnh laptop a', skuId: null } },
+        ),
+      ]),
+    });
+    seedList(['a']);
+    await renderPage();
+
+    await act(async () => {
+      container.querySelector('.compare-product-media img')?.dispatchEvent(new Event('error'));
+    });
+
+    expect(container.querySelector('.compare-product-media img')).toBeNull();
+    expect(
+      container
+        .querySelector('.compare-product-media .product-image-placeholder')
+        ?.getAttribute('aria-label'),
+    ).toBe('Ảnh laptop a');
+  });
+
   it('hiện Chưa có thông tin cho giá trị null', async () => {
     stubFetch(200, {
       data: response([

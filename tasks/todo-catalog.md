@@ -718,8 +718,24 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
   - Kiểm tên DB benchmark luôn đúng; phân vị lệch chỉ số 1; seed không từ chối Production.
 
 ### Checkpoint C3
-- [ ] Khách lọc, xem chi tiết, so sánh trên dữ liệu seed
+- [x] Khách lọc, xem chi tiết, so sánh trên dữ liệu seed
 - [ ] Review với người dùng
+
+**Bằng chứng (2026-10-08):**
+
+- Seed trên DB dev: xóa sản phẩm tên cũ `razer-deathadev-v3` bằng `DELETE /api/admin/products/{id}` (204), rồi chạy `catalog:seed`. Kết quả: tạo mới 1 sản phẩm (Razer DeathAdder V3), 1 SKU, 2 ảnh, 1 lần chuyển trạng thái; bỏ qua 5 danh mục, 18 thương hiệu, 29 sản phẩm và 45 movement.
+- Script Playwright tạm (ngoài repo) chạy với `headless: false` trên API dev (:3000) và `pnpm dev` (:5173), ở 1280 x 800 và 375 x 812. Cả 26 bước đạt.
+  - Danh mục Laptop mở bằng `/c/laptop` có 6 sản phẩm.
+  - Lọc hãng ASUS ra 2 sản phẩm, lọc thêm RAM 16 GB ra 1 sản phẩm, đúng số đếm của facet.
+  - Sắp xếp giá tăng dần: 14.990.000 đến 52.990.000.
+  - Đổi ổ cứng MacBook Air từ 256GB sang 512GB: giá đổi từ 27.990.000 đ sang 32.990.000 đ. SKU Zephyrus Trắng 2TB hiện "Hết hàng".
+  - Sản phẩm `discontinued` hiện "Ngừng kinh doanh", không có nhãn tồn kho, nút giỏ tắt.
+  - Thêm 3 laptop vào so sánh: `/compare` có bảng 3 sản phẩm và 5 dòng "Khác nhau". Thêm Google Pixel 8 (khác danh mục) có thông báo, danh sách vẫn 3.
+  - Ở 375 px không cuộn ngang ở trang lọc, trang sản phẩm và trang so sánh.
+- Lỗi console: 0 lỗi từ `res.cloudinary.com`, 1 lỗi khác là `favicon.ico` 404 của Vite dev. Không có lỗi trang.
+- Ảnh seed không tải được ở dev. Component `ProductImage` thay ảnh bằng khung giữ chỗ khi ảnh lỗi. Trên lưới, gallery và bảng so sánh không còn ảnh vỡ.
+- Ảnh chụp từng bước nằm trong thư mục `C3-shots/` của scratchpad reviewer.
+- Vitest: 59 file, 649 test đạt. `pnpm test:e2e --headed`: 33 test đạt. `pnpm typecheck`, `pnpm lint` và `pnpm build` sạch.
 
 ---
 

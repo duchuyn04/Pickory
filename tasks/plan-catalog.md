@@ -84,7 +84,7 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 - [x] CAT-09 · [x] UI-C1 · [x] CAT-10 · [x] UI-C2 · [x] UI-C3 · [x] CAT-11 · [x] CAT-12
 
 ### Checkpoint C3
-- [ ] Khách lọc, xem chi tiết, so sánh trên dữ liệu seed
+- [x] Khách lọc, xem chi tiết, so sánh trên dữ liệu seed
 - [x] `GET /api/products` p95 dưới 300 ms với 500 sản phẩm
 
 ### Phase 4: E2E và nghiệm thu
