@@ -637,11 +637,40 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ### CAT-11: Thẻ meta SEO
 **Mô tả:** Hàm `renderPageMeta(template, meta)` chèn `title`, `description`, Open Graph (`og:title`, `og:description`, `og:image`, `og:url`) vào `index.html`. Route trả HTML cho `/products/:slug` và `/categories/:slug`. Bước gắn vào server production chờ quyết định deploy.
 **Tiêu chí nghiệm thu:**
-- [ ] Tên và mô tả sản phẩm được escape HTML trong thẻ meta
-- [ ] Slug không tồn tại trả 404 với thẻ meta mặc định
-- [ ] Slug cũ trả 301 giống API
+- [x] Tên và mô tả sản phẩm được escape HTML trong thẻ meta
+- [x] Slug không tồn tại trả 404 với thẻ meta mặc định
+- [x] Slug cũ trả 301 giống API
 **Kiểm tra:** unit `renderPageMeta`; integration route bằng Supertest
 **Phụ thuộc:** CAT-10 · **File:** `modules/catalog/services/page-meta.ts`, `modules/catalog/routes/page-meta.ts` · **Quy mô:** S
+
+**File:** `apps/backend/src/Pickory.Modules.Catalog/Features/Storefront/{PageMetaRenderer,PageMetaFactory,WebPageTemplate,PublicPageEndpoints}.cs`, `apps/backend/src/Pickory.Modules.Catalog/CatalogModule.cs`, `apps/backend/src/Pickory.Shared/Configuration/AppConfig.cs` (biến `WEB_INDEX_HTML_PATH`), `.env.example`; test: `apps/backend/tests/Pickory.UnitTests/Modules/Catalog/Storefront/{PageMetaRendererTests,PageMetaFactoryTests}.cs`, `apps/backend/tests/Pickory.IntegrationTests/Api/Catalog/PublicPageMetaTests.cs`
+
+**Quyết định (2026-10-08):**
+
+- Bản .NET dùng route `GET /p/{slug}` và `GET /c/{slug}`, khớp route thật của SPA. Decision 13 ghi `/products/:slug` và `/categories/:slug` vì viết trước khi SPA chốt route. Link khách chia sẻ là `/p/` và `/c/`.
+- `PageMetaRenderer.Render(template, meta)` là hàm thuần. Hàm thay nội dung thẻ `<title>`, rồi chèn các thẻ sau trước `</head>`:
+  - `description` và `canonical`;
+  - `og:type`, `og:title`, `og:description`;
+  - `og:url`, `og:image` (nếu có ảnh), `og:site_name`.
+- Mọi giá trị đi qua `HtmlEncoder` (cho phép chữ Unicode ra nguyên dạng). Template thiếu `<title>` hoặc `</head>` thì ném `InvalidOperationException`, vì đó là lỗi cấu hình.
+- Sản phẩm: title `"{tên} | Pickory"`, description lấy `shortDesc`, rỗng thì lấy text thuần của mô tả, cắt tối đa 160 ký tự ở ranh giới từ. `og:image` là ảnh đầu, chèn `f_auto,q_auto,w_1200`.
+- Danh mục: description là câu cố định `"Mua {tên} chính hãng tại Pickory."`, `og:type` là `website`. `canonical` và `og:url` ghép `WebOrigin` với đường dẫn, không kèm query string.
+- Meta mặc định cho 404: title "Không tìm thấy | Pickory", description chung, không có `og:image`, kèm `robots noindex`.
+- Sản phẩm `active` và `discontinued` trả 200. Slug cũ trả 301 tới `/p/{slug mới}` và giữ query string, dùng lại `ProductDetailService.LookupBySlugAsync`. `draft`, `hidden` và slug lạ trả 404 kèm HTML để SPA hiện trang "Không tìm thấy sản phẩm".
+- Template đọc từ biến môi trường `WEB_INDEX_HTML_PATH`, một lần khi khởi động. Không đặt biến thì không gắn hai route, và log `Information` một dòng. Đường dẫn trỏ tới file không tồn tại thì dừng khởi động.
+- Hai route công khai, nên không thêm dòng vào ma trận quyền back-office.
+- Bước gắn vào server production chờ quyết định deploy: ai phục vụ `index.html` (API hay máy chủ web) và đặt `WEB_INDEX_HTML_PATH` thế nào.
+
+**Bằng chứng (2026-10-08):**
+
+- Unit test `PageMetaRendererTests` và `PageMetaFactoryTests`: 27 test đạt. `Pickory.UnitTests` toàn project: 546 test đạt.
+- Integration test `PublicPageMetaTests`: 17 test đạt, trên template tạm trỏ bằng `UseSetting("WEB_INDEX_HTML_PATH")` của `PickoryWebApplicationFactory`.
+- `dotnet test` toàn solution: 3 test kiến trúc, 546 test đơn vị và 788 test tích hợp đạt; 4 test bỏ qua, 0 lỗi. `dotnet build`: 0 lỗi, 0 cảnh báo.
+- Phép thử đột biến: 8 điểm, đều bị test bắt.
+  - Bỏ escape tiêu đề; bỏ escape trong thuộc tính `content`.
+  - Slug lạ trả 200; slug cũ trả 302; slug cũ bỏ query string.
+  - Bỏ `noindex` ở meta mặc định; không cắt description dài; bỏ biến đổi Cloudinary của `og:image`.
+- Task không có UI, nên không chạy Playwright.
 
 ### CAT-12: Dữ liệu seed và đo hiệu năng
 **Mô tả:** `pnpm db:seed` tạo khoảng 30 sản phẩm thật trong 5 danh mục: Laptop, Điện thoại, Tai nghe, Màn hình, Phụ kiện. Có sản phẩm nhiều biến thể, hết hàng và ngừng kinh doanh. Script đo p95 sinh 500 sản phẩm trên DB riêng.

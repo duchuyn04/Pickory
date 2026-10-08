@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Pickory.Modules.Catalog.Features.Brands;
 using Pickory.Modules.Catalog.Features.Categories;
 using Pickory.Modules.Catalog.Features.Inventory;
@@ -42,6 +43,12 @@ public static class CatalogModule
         services.AddScoped<ProductSummaryReader>();
         services.AddScoped<ProductComparisonService>();
         services.AddScoped<ICatalogReader, CatalogReader>();
+        // Template trang web chỉ đọc khi có cấu hình. Đọc một lần vì bản build của web không đổi khi API đang chạy.
+        if (config.WebIndexHtmlPath.Length > 0)
+        {
+            services.AddSingleton(WebPageTemplate.Load(config.WebIndexHtmlPath, config.WebOrigin));
+        }
+
         // Tồn kho: handler cho API quản trị, và `IStockService` cho module `commerce`.
         services.AddScoped<InventoryHandler>();
         services.AddScoped<IStockService, StockService>();
@@ -67,8 +74,23 @@ public static class CatalogModule
         ProductsEndpoints.Map(endpoints);
         PublicProductsEndpoints.Map(endpoints);
         PublicProductDetailEndpoints.Map(endpoints);
+        MapPublicPagesWhenConfigured(endpoints);
         UploadSignatureEndpoint.Map(endpoints);
         InventoryEndpoints.Map(endpoints);
         return endpoints;
+    }
+
+    // Hai route HTML cần template. Thiếu `WEB_INDEX_HTML_PATH` thì không gắn route, và log để người triển khai biết.
+    private static void MapPublicPagesWhenConfigured(IEndpointRouteBuilder endpoints)
+    {
+        var services = endpoints.ServiceProvider;
+        if (services.GetService<WebPageTemplate>() is not null)
+        {
+            PublicPageEndpoints.Map(endpoints);
+            return;
+        }
+
+        services.GetRequiredService<ILoggerFactory>().CreateLogger("Pickory.Modules.Catalog")
+            .LogInformation("WEB_INDEX_HTML_PATH chưa đặt, nên /p/{{slug}} và /c/{{slug}} không trả thẻ meta SEO.");
     }
 }

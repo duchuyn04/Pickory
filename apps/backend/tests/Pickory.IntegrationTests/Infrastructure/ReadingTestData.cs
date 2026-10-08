@@ -22,7 +22,10 @@ public sealed class ReadingTestData(IntegrationDatabaseFixture database, string 
         IReadOnlyDictionary<string, object>? Specs = null,
         IReadOnlyList<SkuSeed>? Skus = null,
         IReadOnlyList<ImageSeed>? Images = null,
-        string? BrandId = null);
+        string? BrandId = null,
+        string? Name = null,
+        string? ShortDesc = null,
+        string? DescriptionJson = null);
 
     public sealed record SeededProduct(string Id, string Slug, IReadOnlyList<string> SkuIds);
 
@@ -87,8 +90,8 @@ public sealed class ReadingTestData(IntegrationDatabaseFixture database, string 
         var product = new Product
         {
             Id = seed.Id, CategoryId = seed.CategoryId, BrandId = seed.BrandId ?? BrandId,
-            Name = $"Sản phẩm {seed.Id}", Slug = slug, ShortDesc = "Mô tả ngắn",
-            Description = JsonDocument.Parse("""{"type":"doc","content":[{"type":"paragraph"}]}"""),
+            Name = seed.Name ?? $"Sản phẩm {seed.Id}", Slug = slug, ShortDesc = seed.ShortDesc ?? "Mô tả ngắn",
+            Description = JsonDocument.Parse(seed.DescriptionJson ?? """{"type":"doc","content":[{"type":"paragraph"}]}"""),
             Specs = JsonDocument.Parse(JsonSerializer.Serialize(seed.Specs ?? new Dictionary<string, object>())),
             Options = JsonDocument.Parse("""[{"name":"Màu","values":["Đỏ","Xanh"]}]"""),
             WarrantyMonths = 12, Status = seed.Status, MinPrice = display.MinPrice, InStock = display.InStock,

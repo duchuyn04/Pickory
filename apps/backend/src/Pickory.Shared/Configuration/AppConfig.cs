@@ -18,6 +18,9 @@ public record AppConfig
     // Chuỗi kết nối tới cơ sở dữ liệu PostgreSQL.
     public string DatabaseUrl { get; init; } = string.Empty;
 
+    // Đường dẫn tới `index.html` đã build của SPA, nơi API chèn thẻ meta SEO cho `/p/{slug}` và `/c/{slug}`. Rỗng nghĩa là tắt.
+    public string WebIndexHtmlPath { get; init; } = string.Empty;
+
     // Cấu hình tin cậy proxy trung gian cho request chuyển tiếp.
     public string TrustProxy { get; init; } = "false";
 
@@ -179,6 +182,7 @@ public record AppConfig
             WebOrigin = webOrigin,
             ApiBaseUrl = apiBaseUrl,
             DatabaseUrl = databaseUrl,
+            WebIndexHtmlPath = (configuration["WEB_INDEX_HTML_PATH"] ?? string.Empty).Trim(),
             TrustProxy = trustProxy,
             GoogleClientId = string.IsNullOrWhiteSpace(googleClientId) ? "mock_google_client_id" : googleClientId,
             GoogleClientSecret = string.IsNullOrWhiteSpace(googleClientSecret) ? "mock_google_client_secret" : googleClientSecret,
