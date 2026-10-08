@@ -91,9 +91,9 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 - [x] E2E-C1
 
 ### Checkpoint cuối
-- [ ] Mọi dòng Traceability đạt
-- [ ] Coverage `services/*.ts` và `domain/*.ts` của `catalog` ít nhất 80% dòng
-- [ ] `pnpm test:e2e` pass cả luồng identity cũ và luồng catalog mới
+- [x] Mọi dòng Traceability đạt
+- [x] Coverage `services/*.ts` và `domain/*.ts` của `catalog` ít nhất 80% dòng
+- [x] `pnpm test:e2e` pass cả luồng identity cũ và luồng catalog mới
 - [ ] Review với người dùng, rồi mới bắt đầu `shipping` hoặc `commerce`
 
 ## Traceability: Success Criteria → Task

@@ -765,7 +765,60 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ---
 
 ## Checkpoint cuối
-- [ ] Mọi dòng Traceability trong `plan-catalog.md` đạt
-- [ ] Coverage `services/*.ts` và `domain/*.ts` của `catalog` ít nhất 80% dòng
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` sạch
+- [x] Mọi dòng Traceability trong `plan-catalog.md` đạt
+- [x] Coverage `services/*.ts` và `domain/*.ts` của `catalog` ít nhất 80% dòng
+  - Cách đo của bản .NET: coverage dòng của assembly `Pickory.Modules.Catalog`, gộp test đơn vị và test tích hợp, bỏ `Persistence/Migrations/`. Xem đoạn bằng chứng bên dưới.
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` sạch
 - [ ] Review với người dùng, rồi mới bắt đầu `shipping` hoặc `commerce`
+
+**Bằng chứng (2026-10-08):**
+
+#### 1. Bảng Traceability
+
+| Success Criteria | Bằng chứng | Trạng thái |
+| --- | --- | --- |
+| Lọc theo danh mục, thương hiệu, giá, còn hàng, ít nhất 3 thuộc tính; kết quả và `facets` đúng với seed | Tích hợp `PublicProductListTests`: `Combined_filters_return_exactly_the_matching_products`, `Each_filter_narrows_the_parent_category_on_its_own`, `Facets_ignore_the_filter_of_their_own_group_and_apply_every_other_filter`, `Facet_entries_carry_key_label_type_unit_and_skip_zero_counts`. Seed: `CatalogSeedTests.Seed_ProductsAppearInThePublicList_WithFacetCounts`. E2E: `catalog-category-page.spec.ts` (mở lại URL đã lọc, facet có số đếm), `catalog.spec.ts`. Checkpoint C3: lọc trên dữ liệu seed khớp số đếm facet | Đạt |
+| Trang sản phẩm đổi giá, tồn kho, ảnh theo biến thể | E2E `catalog-product-page.spec.ts`: "chọn biến thể khác thì giá, giá niêm yết, tồn kho và ảnh đổi đúng"; `catalog.spec.ts` kiểm giá của cả 4 SKU. Vitest `product-view.test.tsx`, `gallery-images.test.ts`, `variant-selection.test.ts` | Đạt |
+| So sánh 4 sản phẩm cùng danh mục; khác danh mục trả 400 | Tích hợp `PublicProductDetailTests`: `Compare_FourProductsOfSameCategory_ReturnsEverySpecInRequestedOrder`, `Compare_ProductsOfDifferentCategories_Returns400CategoryMismatch`, `Compare_MoreThanFourIds_Returns400ValidationError`. E2E `catalog-compare-page.spec.ts` | Đạt |
+| Thiếu thông số bắt buộc, sai kiểu, không có ảnh, SKU bật thiếu cân nặng và kích thước thì không `active` được | Đơn vị `ProductPublishingTests`: `CheckPublishable_RequiresSpecs`, `CheckPublishable_RequiresImage`, `CheckPublishable_RequiresShippingDimensions`, `SpecValidatorTests`. Tích hợp `ProductStatusTests`: `Activate_WithoutImage_Returns422WithReason`, `Activate_MissingRequiredSpec_Returns422WithReason`, `Activate_EnabledSkuWithoutWeight_Returns422WithSkuCode`. Seed: `CatalogSeedTests.Seed_ProductThatCannotBePublished_FailsWithTheReasons` | Đạt |
+| 20 request giữ hàng đồng thời không bán vượt tồn kho | Tích hợp `StockServiceTests.Reserve_TwentyConcurrentOrdersForFiveInStock_SucceedsExactlyFiveTimes`, cùng `StockInvariant` kiểm tồn kho bằng tổng movement ở các test tồn kho | Đạt |
+| `sales` xem được nháp nhưng sửa nhận 403 | Tích hợp `ProductManagementTests.Sales_CanGetProducts_CannotCreateOrPatchProduct`, `GetProducts_Sales_ReturnsEveryProductStatus`; `ProductStatusTests.Status_Sales_Returns403AndKeepsStatus`, `Delete_Sales_Returns403AndKeepsProduct`; `InventoryTests.Adjust_Sales_Returns403AndChangesNothing`. Đơn vị `CatalogPermissionsTests` | Đạt |
+| Mô tả có tiêu đề 1 đến 3, chữ đậm, chữ nghiêng: soạn, lưu, hiện đúng; nút lạ bị API từ chối | Đơn vị `DescriptionSchemaTests`. Tích hợp `ProductManagementTests`: `CreateProduct_DescriptionWithScriptNode_Returns400DescriptionInvalid`, `CreateProduct_DescriptionWithImageNode_Returns400DescriptionInvalid`. Vitest `description-editor.test.tsx`, `description-view.test.tsx`. E2E `catalog.spec.ts` (soạn bằng thanh công cụ, khách thấy `h2`, `h3`, `strong`) và `catalog-product-page.spec.ts` (nút lạ không chạy script) | Đạt |
+| Đổi slug thì link cũ trả 301 | Tích hợp `PublicProductDetailTests.Detail_OfOldSlug_Redirects301ToCurrentSlug`, `Detail_OfOldSlug_KeepsTheQueryString`; `PublicPageMetaTests.ProductPage_OfOldSlug_Redirects301ToCurrentSlug`; `ProductManagementTests` về lịch sử slug (`UpdateProduct_SlugSelfHistoryReclaim_AndAvoidsOtherProductsActiveAndHistorySlugs`). E2E `catalog-product-page.spec.ts`: "slug cũ chuyển sang slug mới và giữ query string" | Đạt |
+| Đổi giá, đổi trạng thái, điều chỉnh tồn kho có đúng 1 dòng audit | Tích hợp `ProductManagementTests.UpdateProduct_ChangePrice_RecordsAuditPriceChangeWithBeforeAndAfter`, `UpdateProduct_UnchangedPriceOrCompareAtOnly_DoesNotRecordPriceAudit`; `ProductStatusTests.Activate_CompleteProduct_Returns200WithAuditAndEvent`, `Status_SameStatus_Returns200WithoutAuditOrEvent`; `InventoryTests.Adjust_Manual_RecordsMovementAuditAndEvent` | Đạt |
+| `onProductChanged` phát đúng 1 lần sau khi lưu thành công, không phát khi lỗi | Tích hợp `ProductManagementTests`: `UpdateProduct_Success_EmitsExactlyOneUpdatedEvent`, `CreateProduct_EmitsEventAfterCommit_HandlerObservesPersistedState`, `UpdateProduct_InvalidInput_PreservesDatabaseAndEmitsZeroEvents`, `UpdateProduct_RollbackOnAuditWriterFailure_PreservesDatabaseAndEmitsZeroEvents`; `ProductStatusTests.Activate_CompleteProduct_Returns200WithAuditAndEvent` | Đạt |
+| `GET /api/products` p95 dưới 300 ms với 500 sản phẩm | Output `catalog:benchmark` ghi trong CAT-12: p95 17.9 ms và 19.7 ms với 500 sản phẩm `active` | Đạt |
+| Coverage `service.ts` ít nhất 80% | Mục 2: coverage dòng gộp 96.1% | Đạt |
+| E2E: tạo danh mục, tạo sản phẩm 2 tùy chọn, đăng bán, khách lọc thấy, chọn biến thể thấy đúng giá | `catalog.spec.ts` (E2E-C1), 34 test của cả bộ đạt | Đạt |
+
+Mọi tên test trong bảng được kiểm là có trong repo và nằm trong các lượt chạy xanh ở mục 3.
+
+#### 2. Coverage
+
+- Cách đo của bản .NET: coverage dòng của assembly `Pickory.Modules.Catalog`, gộp hai lệnh `dotnet test ... --collect:"XPlat Code Coverage"` cho `tests/Pickory.UnitTests` và `tests/Pickory.IntegrationTests`.
+- Script Python gộp hai file `coverage.cobertura.xml`. Một dòng tính là đã chạy khi ít nhất một lượt chạm tới dòng đó.
+- Phép đo bỏ `Persistence/Migrations/`, vì đó là code sinh tự động.
+- Chung: 4470/4650 dòng = **96.1%** (riêng test đơn vị 28.3%, riêng test tích hợp 90.9%).
+- Theo thư mục cấp 1:
+  - `Features/`: 97.0% (2549/2629)
+  - `Products/`: 97.0% (162/167)
+  - `Stock/`: 97.3% (249/256)
+  - `Reading/`: 100% (174/174)
+  - `Seeding/`: 98.3% (526/535)
+  - `Specs/`: 100% (50/50)
+  - `Descriptions/`: 98.2% (166/169)
+  - `Attributes/`: 96.8% (91/94)
+  - `Persistence/`: 96.9% (217/224), `Entities/`: 95.4% (83/87), `Events/`: 100% (10/10)
+  - `Images/`: 71.1% (140/197)
+  - gốc module (`CatalogModule.cs`...): 91.4% (53/58)
+- Ba file dưới 60%. Không thêm test cho chúng, vì tổng đã vượt 80% và chúng không chứa luật nghiệp vụ:
+  - `Images/CloudinaryImageStorage.cs` (2.6%): gọi Cloudinary thật, nên test dùng kho ảnh giả.
+  - `Images/ImageDeletionWorker.cs` (0%): test tích hợp bỏ worker nền và gọi `ImageDeletionProcessor` trực tiếp.
+  - `Persistence/CatalogDbContextFactory.cs` (0%): chỉ dùng khi chạy lệnh migration.
+
+#### 3. Lệnh tổng
+
+- `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` (chạy ẩn) trong `apps/frontend`: sạch. Vitest 59 file, 649 test đạt; `pnpm build` thành công; E2E 34 test đạt trong 2.6 phút.
+- `pnpm test:e2e --headed`: 34 test đạt trong 3.0 phút.
+- `dotnet build` trong `apps/backend`: 0 lỗi, 0 cảnh báo.
+- `dotnet test` toàn solution: 3 test kiến trúc, 578 test đơn vị và 796 test tích hợp đạt; 4 test bỏ qua, 0 lỗi.
