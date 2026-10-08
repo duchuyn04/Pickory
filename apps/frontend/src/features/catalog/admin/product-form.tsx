@@ -492,14 +492,23 @@ export function ProductFormPage() {
   });
   if (categoriesQuery.isPending || brandsQuery.isPending || (id && productQuery.isPending))
     return <p role="status">Đang tải sản phẩm...</p>;
+  // Giữ đường về danh sách khi một truy vấn thất bại để quản trị viên không kẹt ở trang sửa.
   if (categoriesQuery.isError || brandsQuery.isError || productQuery.isError)
     return (
-      <p role="alert">
-        {toCatalogErrorMessage(
-          categoriesQuery.error || brandsQuery.error || productQuery.error,
-          'Không tải được dữ liệu sản phẩm.',
-        )}
-      </p>
+      <div className="page">
+        <ErrorAlert
+          message={toCatalogErrorMessage(
+            categoriesQuery.error || brandsQuery.error || productQuery.error,
+            'Không tải được dữ liệu sản phẩm.',
+          )}
+        />
+        {/* Giữ liên kết theo bề rộng nội dung, vì `.page` kéo dãn phần tử con. */}
+        <div className="row-actions">
+          <Link className="btn" to="/admin/products">
+            Về danh sách
+          </Link>
+        </div>
+      </div>
     );
 
   async function save(payload: Record<string, unknown>) {

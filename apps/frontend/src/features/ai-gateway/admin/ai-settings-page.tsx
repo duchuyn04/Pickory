@@ -4,6 +4,7 @@ import { apiRequest } from '../../../shared/api';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { useCan } from '../../identity/hooks/use-actor';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { WarningAlert } from '../../../shared/warning-alert';
 import './ai-settings.css';
 
 export interface AiSettingsData {
@@ -197,12 +198,12 @@ export function AiSettingsPage() {
         </div>
       </div>
 
-      {/* Cảnh báo ngân sách khi chi tiêu tháng hiện tại vượt 80% */}
+      {/* Cảnh báo ngân sách dùng icon riêng để không bị hiểu nhầm là lỗi tải trang. */}
       {usage?.budgetWarning && (
-        <p role="alert" className="alert alert-warn">
+        <WarningAlert>
           <strong>Cảnh báo ngân sách tháng:</strong> Chi tiêu AI trong tháng đã chạm hoặc vượt 80%
           ngân sách cấu hình.
-        </p>
+        </WarningAlert>
       )}
 
       <ul className="kpis" aria-label="Tổng quan sử dụng AI">

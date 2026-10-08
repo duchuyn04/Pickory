@@ -96,8 +96,11 @@ describe('AiSettingsPage: thông báo trên đầu trang', () => {
     // Chữ của trang không được chứa thẻ HTML viết ra thành chữ.
     expect(warning.textContent).not.toContain('<strong>');
     expect(warning.textContent).toContain('Chi tiêu AI trong tháng đã chạm hoặc vượt 80%');
-    expect(warning.classList.contains('alert-list')).toBe(false);
-    expect(warning.querySelector('svg')).toBeNull();
+    expect(warning.classList.contains('alert-list')).toBe(true);
+    const warningIcon = warning.querySelector('svg.alert-list-icon');
+    expect(warningIcon).not.toBeNull();
+    expect(warningIcon?.querySelector('path[d="M12 9v4"]')).not.toBeNull();
+    expect(warningIcon?.querySelector('circle[cx="12"][cy="12"]')).toBeNull();
   });
 
   it('không vượt ngân sách thì không hiện cảnh báo', async () => {

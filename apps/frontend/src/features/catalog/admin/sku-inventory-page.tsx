@@ -109,9 +109,12 @@ export function SkuInventoryPage() {
         <ErrorAlert
           message={toCatalogErrorMessage(productQuery.error, 'Không tải được sản phẩm.')}
         />
-        <Link className="btn" to="/admin/inventory">
-          Về danh sách tồn kho
-        </Link>
+        {/* `.page` kéo dãn phần tử con, nên nhóm hành động giữ nút theo bề rộng nội dung. */}
+        <div className="row-actions">
+          <Link className="btn" to="/admin/inventory">
+            Về danh sách tồn kho
+          </Link>
+        </div>
       </div>
     );
   }
@@ -119,9 +122,12 @@ export function SkuInventoryPage() {
     return (
       <div className="page">
         <ErrorAlert message="Không tìm thấy biến thể trong sản phẩm này." />
-        <Link className="btn" to="/admin/inventory">
-          Về danh sách tồn kho
-        </Link>
+        {/* Nhánh thiếu SKU dùng cùng bề rộng nút với nhánh lỗi tải sản phẩm. */}
+        <div className="row-actions">
+          <Link className="btn" to="/admin/inventory">
+            Về danh sách tồn kho
+          </Link>
+        </div>
       </div>
     );
   }

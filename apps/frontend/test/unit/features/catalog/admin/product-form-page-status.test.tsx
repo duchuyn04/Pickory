@@ -56,6 +56,8 @@ interface ServerOptions {
   statusFailure?: Response;
   // Trả lỗi này cho lần xóa thay vì 204.
   deleteFailure?: Response;
+  // Lỗi đọc sản phẩm phải hiện khung lỗi và đường về danh sách thay vì chặn trang.
+  productFailure?: Response;
   // Sau khi đổi trạng thái, mọi lần đọc lại không bao giờ trả về. Chứng minh nhãn đổi nhờ ghi cache.
   hangReadsAfterStatusChange?: boolean;
 }
@@ -106,6 +108,7 @@ function createServer(options: ServerOptions = {}) {
       return jsonResponse({ data: [{ id: 'brand', name: 'Apple' }] });
     }
     if (url.pathname === '/api/admin/products/p1' && method === 'GET') {
+      if (options.productFailure) return options.productFailure;
       return jsonResponse({ data: state.product });
     }
     if (url.pathname === '/api/admin/products/p1' && method === 'PATCH') {
@@ -171,6 +174,23 @@ const postsToStatus = (fetchMock: ReturnType<typeof createServer>) =>
   fetchMock.mock.calls.filter(
     ([input, init]) => String(input).endsWith('/status') && init?.method === 'POST',
   );
+
+describe('ProductFormPage: lỗi tải sản phẩm', () => {
+  it('hiện khung lỗi có icon và liên kết về danh sách khi API trả lỗi', async () => {
+    createServer({ productFailure: errorResponse('PRODUCT_FAILURE', 'Máy chủ tạm ngừng.', 500) });
+    await renderPage(writerActor);
+
+    const page = container.querySelector('.page')!;
+    const alert = page.querySelector<HTMLElement>('[role="alert"]')!;
+    expect(alert.classList.contains('alert-list')).toBe(true);
+    expect(alert.querySelector('svg.alert-list-icon')).not.toBeNull();
+    expect(alert.textContent).toContain('Máy chủ tạm ngừng.');
+    const returnLink = page.querySelector<HTMLAnchorElement>('a[href="/admin/products"]')!;
+    expect(returnLink.textContent).toBe('Về danh sách');
+    await act(async () => returnLink.click());
+    expect(container.textContent).toContain('Danh sách sản phẩm giả');
+  });
+});
 
 describe('ProductFormPage: khối trạng thái', () => {
   it('trang sửa hiện khối trạng thái, trang tạo mới thì không', async () => {

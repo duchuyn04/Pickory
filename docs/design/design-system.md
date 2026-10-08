@@ -107,11 +107,11 @@ Người dùng chốt hướng này ngày 2026-10-06. Hướng mới thay hướ
 | `.page`, `.page-head`, `.page-head-text`, `.head-actions` | Khung trang và đầu trang | `shop-retail/admin/products.html` |
 | `.stack`, `.stack-sm`, `.row-actions` | Xếp khối dọc và nhóm nút | Mọi màn |
 | `.alert`, `.empty-state`, `.empty-state-dashed` | Lỗi, đang tải, danh sách rỗng | `shop-retail/admin/products.html` |
-| `.alert-list`, `.alert-list-icon`, `.alert-list-body`, `.alert-list-title`, `.alert-list-heading`, `.alert-list-items` | Mọi thông báo lỗi dùng component `ErrorAlert` trong `apps/frontend/src/shared/error-alert.tsx`. Có icon, nội dung chính và danh sách lý do không chấm tròn. Dòng chính chỉ đậm khi có danh sách. Class bố cục riêng truyền qua prop `className`. Test `error-alert-usage.test.ts` chặn `role="alert"` kèm class `alert` ngoài `ErrorAlert` | Mẫu riêng của Pickory |
+| `.alert-list`, `.alert-list-icon`, `.alert-list-body`, `.alert-list-title`, `.alert-list-heading`, `.alert-list-items` | `ErrorAlert` và `WarningAlert` dùng chung bố cục icon cạnh chữ. Chữ xuống hàng thẳng với dòng đầu. `ErrorAlert` hiện danh sách lý do không chấm tròn. `WarningAlert` giữ phần tử con như thẻ `<strong>`. `error-alert-usage.test.ts` chặn thông báo tự khai báo ngoài các ngoại lệ có lý do. | Mẫu riêng của Pickory |
 | `.filters-row`, `.pager`, `.cell-sub`, `.wrap-anywhere`, `.check` | Bộ lọc, phân trang và chữ phụ trong bảng | `shop-retail/admin/products.html` |
 | `.icon-btn` | Nút chỉ có icon | `shop-retail/admin/index.html` |
 | `.dialog-backdrop`, `.dialog`, `.dialog-lg`, `.dialog-head`, `.dialog-body`, `.dialog-foot` | Hộp thoại form | `shop-retail/admin/product.html` |
-| `.alert-ok`, `.alert-warn` | Thông báo thành công và cảnh báo | `shop-retail/admin/settings.html` |
+| `.alert-ok`, `.alert-warn` | Thông báo thành công dùng `.alert-ok`. `WarningAlert` dùng `.alert-warn` và icon `alertTriangle` để phân biệt với lỗi. | `shop-retail/admin/settings.html` |
 | `.kpis`, `.kpi`, `.kpi-value`, `.kpi-ok`, `.kpi-bad` | Thẻ số liệu | `shop-retail/admin/index.html` |
 | `.link-btn` | Nút dạng link màu xanh | `shop-retail/admin/index.html` |
 | `.role-picker` | Nhóm checkbox chọn vai trò, dùng với `fieldset` và `legend` | `shop-retail/admin/settings.html` |
