@@ -1,11 +1,13 @@
+// Nạp CSS dùng chung trước `App`. CSS riêng của từng màn nạp sau nên ghi đè được lớp chung cùng độ ưu tiên.
+import './shared/styles/tokens.css';
+import './shared/styles/base.css';
+import './shared/styles/components.css';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import { App } from './app';
 import { ApiError } from './shared/api';
-import './shared/styles/tokens.css';
-import './shared/styles/base.css';
 
 // Một QueryClient cho cả ứng dụng: cache và gọi lại dữ liệu từ API do TanStack Query quản lý.
 // Phiên có thể hết hạn khi actor còn trong cache, nên lỗi 401 phải nạp lại actor để layout chuyển về trang đăng nhập.

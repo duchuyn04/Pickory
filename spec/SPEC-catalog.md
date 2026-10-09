@@ -34,7 +34,7 @@ Quản lý và hiển thị sản phẩm điện tử: danh mục, thương hi�
 - Mỗi danh mục có danh sách **thuộc tính thông số**. Danh mục con kế thừa thuộc tính của danh mục cha và thêm của riêng nó.
 
 ```ts
-// packages/shared/src/catalog/attributes.ts
+// apps/frontend/src/shared/catalog/attributes.ts
 export type AttributeDefinition = {
   key: string;                 // 'ram_gb', khóa cố định, không đổi sau khi đã có dữ liệu
   label: string;               // 'RAM'
@@ -52,7 +52,7 @@ export type AttributeDefinition = {
 
 ### Sản phẩm và biến thể
 
-- **Sản phẩm**: tên, slug, thương hiệu, danh mục, mô tả ngắn, mô tả chi tiết (Markdown), thông số, số tháng bảo hành, trạng thái, ảnh.
+- **Sản phẩm**: tên, slug, thương hiệu, danh mục, mô tả ngắn, mô tả chi tiết (tài liệu JSON của trình soạn thảo), thông số, số tháng bảo hành, trạng thái, ảnh.
 - **Tùy chọn**: tối đa 3 trục, ví dụ `Dung lượng: 128GB, 256GB` và `Màu: Đen, Trắng`. Sản phẩm không có tùy chọn vẫn có đúng 1 biến thể mặc định.
 - **Biến thể (SKU)**: mã SKU duy nhất, tổ hợp giá trị tùy chọn, giá bán, giá niêm yết (để hiện giảm giá), tồn kho, ảnh riêng (tùy chọn), trạng thái bật/tắt.
 - **Cân nặng và kích thước đóng gói** của mỗi SKU (gram, cm). Bắt buộc với SKU đang bật, vì `shipping` dùng để tính phí vận chuyển. *(bổ sung khi tách module `shipping`)*
@@ -88,25 +88,38 @@ export type AttributeDefinition = {
 
 **Interface giữ hàng cho `commerce`:**
 
-```ts
-// apps/backend/src/modules/catalog/index.ts
-export const stock: {
-  /** Giữ hàng cho đơn. Tất cả hoặc không: thiếu 1 SKU thì không giữ SKU nào. */
-  reserve(orderId: string, items: { skuId: string; quantity: number }[], tx?: Tx): Promise<ReserveResult>;
-  /** Trả lại hàng đã giữ (đơn hủy, quá hạn thanh toán). Gọi lặp lại không trả hàng 2 lần. */
-  release(orderId: string, tx?: Tx): Promise<void>;
-};
+Interface nằm trong project `Pickory.Modules.Catalog.Contracts` (thư mục `Stock/`). Module `commerce` gọi qua `IStockService`.
 
-export type ReserveResult =
-  | { ok: true }
-  | { ok: false; shortages: { skuId: string; requested: number; available: number }[] };
+```csharp
+public interface IStockService
+{
+    // Giữ hàng cho đơn. Tất cả hoặc không: thiếu 1 SKU thì không giữ SKU nào.
+    Task<ReserveResult> ReserveAsync(
+        string orderId, IReadOnlyList<StockItem> items, StockCallerTransaction? caller, CancellationToken cancellationToken);
+
+    // Trả lại hàng đã giữ (đơn hủy, quá hạn thanh toán). Gọi lặp lại không trả hàng 2 lần.
+    Task ReleaseAsync(string orderId, StockCallerTransaction? caller, CancellationToken cancellationToken);
+}
+
+public sealed record StockItem(string SkuId, int Quantity);
+public sealed record StockShortage(string SkuId, int Requested, int Available);
+public sealed record ReserveResult(bool Ok, IReadOnlyList<StockShortage> Shortages);
+
+// Transaction của bên gọi. Catalog ghi trong transaction này và gom StockChangedEvent vào Events.
+public sealed record StockCallerTransaction(DbTransaction Transaction, DomainEventCollector Events);
 ```
 
-- `reserve` dùng câu lệnh cập nhật có điều kiện (`stock >= quantity`) trong 1 transaction, nên 2 người mua cùng lúc không bán vượt tồn kho.
-- `reserve` và `release` idempotent theo `orderId`.
+- `caller` bằng `null`: catalog tự mở transaction và tự phát sự kiện sau commit.
+- `caller` có giá trị: bên gọi tự commit rồi gọi `Events.FlushAsync`. Bên gọi rollback thì gọi `Events.Discard`, và không có sự kiện nào được phát.
+- `Quantity` phải lớn hơn 0. Mục trùng `SkuId` được cộng số lượng. Số lượng không dương làm `ReserveAsync` ném `ArgumentException`.
+- `reserve` khóa dòng SKU theo thứ tự `id`, kiểm đủ hàng rồi mới ghi, và dùng câu lệnh cập nhật có điều kiện (`stock + delta >= 0`). Thiếu hàng thì catalog chưa ghi gì, nên 2 người mua cùng lúc không bán vượt tồn kho.
+- `reserve` và `release` idempotent theo `orderId`. Đầu mỗi hàm lấy khóa `pg_advisory_xact_lock` theo `orderId`, nên hai lời gọi cùng đơn chạy nối tiếp.
+- Đơn đã `release` mà gọi `reserve` lại cùng `orderId` nhận `Ok` nhưng không giữ hàng, vì đã có movement `order_reserve`. Module `commerce` phải dùng `orderId` mới khi đặt lại.
 - Hàng đã giao không cần bước riêng: khi đã giữ thì tồn kho đã trừ. Đổi trả hàng nhập lại bằng điều chỉnh tay (loại `return`).
 
 ### Interface đọc cho các module khác
+
+Khối code dưới đây là interface của bản Node. Bản .NET chưa có, sẽ thêm vào project `Pickory.Modules.Catalog.Contracts` ở các task catalog sau.
 
 ```ts
 export const catalogReader: {
@@ -130,15 +143,31 @@ export { catalogPermissions } from './permissions';
 ### Ảnh (Cloudinary)
 
 - Trình duyệt tải ảnh thẳng lên Cloudinary bằng chữ ký do backend cấp (`POST /api/admin/uploads/signature`, cần `products:write`). Ảnh không đi qua server API.
+- Chữ ký ký cả `folder=pickory/products` và `allowed_formats=jpg,png,webp`. Phản hồi không chứa `CLOUDINARY_API_SECRET`.
 - Backend chỉ lưu `publicId`, alt text, thứ tự, và biến thể gắn với ảnh (nếu có).
-- Giới hạn: JPG, PNG, WebP; tối đa 5 MB mỗi ảnh; tối đa 10 ảnh mỗi sản phẩm.
+- Ảnh gửi kèm trường `images` của `POST` và `PATCH /api/admin/products`. Thứ tự trong danh sách là thứ tự hiển thị. `PATCH` không gửi `images` thì giữ ảnh cũ.
+- Mỗi ảnh trong phản hồi sản phẩm có `url` giao ảnh gốc. Giao diện chèn `f_auto,q_auto,w_<rộng>` sau `/image/upload/` để lấy ảnh vừa kích thước.
+- Ảnh gắn riêng cho biến thể qua `skuId` của một SKU đã lưu. Trang sản phẩm hiện ảnh này cho các biến thể cùng giá trị màu.
+- Giới hạn: JPG, PNG, WebP; tối đa 5 MB mỗi ảnh; tối đa 10 ảnh mỗi sản phẩm; alt text bắt buộc.
+- Cloudinary không giới hạn kích thước file qua chữ ký. Khi gắn ảnh mới, backend hỏi Cloudinary kích thước và định dạng thật. Ảnh sai bị từ chối và được xếp lịch xóa.
 - Hiển thị qua URL biến đổi của Cloudinary (`f_auto,q_auto`, các chiều rộng 200/400/800/1200) để trình duyệt chọn ảnh vừa kích thước.
 - Xóa ảnh khỏi sản phẩm thì xóa luôn trên Cloudinary (qua job nền, lỗi thì thử lại).
+- Job xóa ảnh nằm trong `image_deletion_jobs`, ghi cùng transaction với việc bỏ ảnh. Lỗi thì chờ 1, 2, 4 phút và tiếp tục nhân đôi, tối đa 6 giờ. Lỗi lần thứ 8 thì job dừng và API ghi log lỗi.
+- Thiếu `CLOUDINARY_*` ở dev và test thì API dùng kho ảnh giả. Production thiếu khóa thì API dừng khi khởi động.
+- Kho ảnh giả ở dev và E2E coi mọi ảnh trong thư mục `pickory/products` là JPG nhỏ hợp lệ, vì trình duyệt không tải được ảnh thật. Test tích hợp dùng kho giả nghiêm ngặt.
 
 ### Mô tả sản phẩm
 
-- Lưu Markdown, render ra HTML ở frontend và lọc qua sanitizer (chỉ cho phép thẻ định dạng cơ bản, link, ảnh từ domain Cloudinary).
-- Không lưu HTML thô từ người nhập.
+Admin soạn mô tả chi tiết bằng trình soạn thảo trực quan. Backend lưu tài liệu JSON, không lưu HTML.
+
+- **Thư viện:** Tiptap (dựa trên ProseMirror). Người dùng duyệt ngày 2026-10-05. Chỉ cài các extension cần dùng.
+- **Chức năng bật:** đoạn văn, tiêu đề 3 cấp, chữ đậm, chữ nghiêng. Danh sách, link và ảnh trong mô tả chưa làm ở MVP.
+- **Schema (`apps/frontend/src/shared/catalog/description-schema.ts`):** Zod chỉ nhận các nút `doc`, `paragraph`, `heading` (cấp 1 đến 3) và `text`. Nút `text` chỉ có mark `bold` hoặc `italic`. Nút hoặc mark lạ, hoặc thuộc tính thừa, bị từ chối.
+- **Giới hạn:** tối đa 20.000 ký tự text và 500 nút mỗi mô tả. Con số này là mặc định, đổi ở một hằng số.
+- **Kiểm tra hai phía:** backend kiểm tra bằng schema mỗi lần lưu. Trình soạn thảo cũng kiểm tra bằng cùng schema, và bỏ nội dung dán vào nếu ngoài danh sách bật.
+- **Hiển thị:** frontend đổi từng nút thành thẻ React. Không dùng `dangerouslySetInnerHTML`. Quy tắc ESLint chặn thuộc tính này trong `features/catalog/`.
+- **Cấp tiêu đề:** trang sản phẩm đã có H1 là tên sản phẩm. Tiêu đề cấp 1, 2, 3 của trình soạn thảo hiện thành thẻ H2, H3, H4.
+- **Text thuần:** hàm `descriptionToPlainText(doc)` trong `apps/frontend/src/shared/catalog/description-text.ts` lấy text từ tài liệu. `smart-search` dùng hàm này để tạo embedding. Hàm `plainTextToDescription(text)` đổi text thường thành tài liệu, mỗi dòng trống tách một đoạn văn, dùng cho dữ liệu seed.
 
 ## API
 
@@ -169,17 +198,18 @@ sort=newest|price_asc|price_desc                     page=1  pageSize=24 (tối 
 
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
-| GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, tìm theo tên hoặc SKU |
+| GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, tìm theo tên hoặc SKU. Lọc bằng `status`, `categoryId` (gồm danh mục con), `lowStock=true` (SKU bật có `stock <= 5`). |
 | GET | `/api/admin/products/:id` | `products:read` | Chi tiết để sửa |
-| POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể |
-| POST | `/api/admin/products/:id/status` | `products:write` | Đổi trạng thái |
-| DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng (chỉ khi chưa từng có đơn) |
+| POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể, ảnh (`images`) |
+| POST | `/api/admin/products/:id/status` | `products:write` | Đổi trạng thái. Body `{ "status": "draft" \| "active" \| "hidden" \| "discontinued" }`. Lỗi: 400 `VALIDATION_ERROR`, 404 `PRODUCT_NOT_FOUND`, 409 `INVALID_STATUS_TRANSITION`, 422 `PRODUCT_NOT_PUBLISHABLE` (danh sách lý do trong `details`). Đổi sang đúng trạng thái hiện tại trả 200, không ghi audit. |
+| DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng (chỉ khi chưa từng có đơn). Trả 204. Lỗi: 404 `PRODUCT_NOT_FOUND`, 409 `PRODUCT_HAS_ORDERS`. |
+| GET | `/api/admin/categories` | `products:read` | Danh sách phẳng, mỗi danh mục kèm đủ thuộc tính riêng |
 | POST · PATCH · DELETE | `/api/admin/categories[/:id]` | `products:write` | Quản lý danh mục và bộ thuộc tính |
 | POST · PATCH · DELETE | `/api/admin/brands[/:id]` | `products:write` | Quản lý thương hiệu |
-| POST | `/api/admin/uploads/signature` | `products:write` | Chữ ký tải ảnh lên Cloudinary |
-| POST | `/api/admin/skus/:id/adjust-stock` | `inventory:write` | Điều chỉnh tồn kho, bắt buộc lý do |
-| GET | `/api/admin/skus/:id/movements` | `products:read` | Lịch sử tồn kho |
-| GET | `/api/admin/inventory/low-stock` | `products:read` | SKU dưới ngưỡng |
+| POST | `/api/admin/uploads/signature` | `products:write` | Chữ ký tải ảnh lên Cloudinary: `cloudName`, `apiKey`, `uploadUrl`, `timestamp`, `folder`, `allowedFormats`, `maxFileBytes`, `signature` |
+| POST | `/api/admin/skus/:id/adjust-stock` | `inventory:write` | Điều chỉnh tồn kho. Body `{ "delta": int, "reason": string, "type": "manual" \| "return" }`, `type` mặc định `manual`. `delta` khác 0, `reason` từ 1 đến 500 ký tự, `return` cần `delta` dương. Trả 200 với `skuId`, `stock` mới và `movement`. Lỗi: 400 `VALIDATION_ERROR`, 404 `SKU_NOT_FOUND`, 409 `INSUFFICIENT_STOCK` (tồn kho sẽ âm). |
+| GET | `/api/admin/skus/:id/movements` | `products:read` | Lịch sử tồn kho, mới nhất trước, phân trang `page` và `limit`. Mỗi dòng có `id`, `delta`, `type`, `orderId`, `actorId`, `reason`, `createdAt`. Lỗi: 404 `SKU_NOT_FOUND`. |
+| GET | `/api/admin/inventory/low-stock` | `products:read` | SKU đang bật có `stock <= 5`, sắp theo `stock` tăng dần rồi theo `code`, phân trang `page` và `limit`. Mỗi dòng có `skuId`, `code`, `productId`, `productName`, `optionValues`, `stock`. |
 
 ## Data Model (Prisma, rút gọn)
 
@@ -203,7 +233,7 @@ model Product {
   name           String
   slug           String        @unique
   shortDesc      String
-  descriptionMd  String
+  description    Json          // tài liệu của trình soạn thảo, xem mục Mô tả sản phẩm
   specs          Json          // { ram_gb: 16, cpu: 'Intel Core i7-13650HX', ... }
   options        Json          // [{ name: 'Dung lượng', values: ['512GB', '1TB'] }]
   warrantyMonths Int           @default(12)
@@ -244,13 +274,13 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 
 *Khách hàng* (`features/catalog/`)
 - Trang danh mục: lưới sản phẩm, bộ lọc sinh từ thuộc tính `filterable`, sắp xếp, phân trang. Trạng thái lọc nằm trên URL để chia sẻ được.
-- Trang sản phẩm: gallery ảnh (đổi theo màu), chọn biến thể, giá và tồn kho theo biến thể, bảng thông số chia nhóm, nút thêm giỏ (gọi `commerce`), nút thêm vào so sánh.
+- Trang sản phẩm: gallery ảnh (đổi theo màu), chọn biến thể, giá và tồn kho theo biến thể, bảng thông số chia nhóm, mô tả chi tiết, nút thêm giỏ (gọi `commerce`), nút thêm vào so sánh.
 - Trang so sánh: tối đa 4 sản phẩm, đánh dấu dòng thông số khác nhau.
 - Chừa sẵn vị trí cho khối của các module sau: gợi ý (`recommendations`), tóm tắt review (`personalized-content`).
 
 *Back-office* (`features/catalog/admin/`)
 - Danh sách sản phẩm có lọc trạng thái, danh mục, sắp hết hàng.
-- Form sản phẩm: ô thông số sinh động theo danh mục; bảng biến thể sinh từ tổ hợp tùy chọn; kéo thả sắp xếp ảnh.
+- Form sản phẩm: ô thông số sinh động theo danh mục; trình soạn thảo mô tả có thanh công cụ (tiêu đề 1, 2, 3, đậm, nghiêng); bảng biến thể sinh từ tổ hợp tùy chọn; kéo thả sắp xếp ảnh.
 - Quản lý danh mục kèm trình soạn bộ thuộc tính; quản lý thương hiệu.
 - Màn hình tồn kho: điều chỉnh có lý do, lịch sử movement.
 - Nút và menu ẩn hoặc hiện theo `useCan(...)`.
@@ -261,7 +291,7 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 
 ## Testing
 
-- Unit: validate thông số theo bộ thuộc tính (kể cả kế thừa từ danh mục cha); sinh tổ hợp biến thể; sinh slug bỏ dấu tiếng Việt; tính `minPrice` và `inStock`; quy tắc chuyển trạng thái.
+- Unit: validate thông số theo bộ thuộc tính (kể cả kế thừa từ danh mục cha); sinh tổ hợp biến thể; sinh slug bỏ dấu tiếng Việt; tính `minPrice` và `inStock`; quy tắc chuyển trạng thái; schema tài liệu mô tả (nhận nút hợp lệ, từ chối nút lạ, giới hạn kích thước) và `descriptionToPlainText`.
 - Integration:
   - Mọi endpoint ở bảng API, kèm 401/403 theo quyền.
   - Lọc kết hợp nhiều điều kiện và `facets` đúng số.
@@ -278,7 +308,7 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 
 - **Always:** validate thông số theo bộ thuộc tính trước khi lưu; ghi movement cho mọi thay đổi tồn kho; ghi audit log khi đổi giá, đổi trạng thái, điều chỉnh tồn kho.
 - **Ask first:** thêm kho thứ hai; thêm trục tùy chọn thứ 4; đổi cách tính giá hiển thị.
-- **Never:** sửa trực tiếp cột `stock` mà không có movement; cho tồn kho âm; lưu HTML thô từ người nhập; để Cloudinary API secret ra frontend.
+- **Never:** sửa trực tiếp cột `stock` mà không có movement; cho tồn kho âm; lưu HTML thô từ người nhập; dùng `dangerouslySetInnerHTML` cho nội dung do người nhập; để Cloudinary API secret ra frontend.
 
 ## Success Criteria
 
@@ -292,11 +322,14 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 - [ ] Mỗi lần đổi giá, đổi trạng thái hoặc điều chỉnh tồn kho có đúng 1 dòng audit log.
 - [ ] `onProductChanged` phát đúng 1 lần sau mỗi lần lưu thành công, không phát khi lưu lỗi.
 - [ ] `GET /api/products` có p95 dưới 300 ms với 500 sản phẩm trên máy dev.
+- [ ] Mô tả có tiêu đề cấp 1 đến 3, chữ đậm và chữ nghiêng: soạn được trong trình soạn thảo, lưu được, hiện đúng trên trang sản phẩm; tài liệu có nút lạ (ví dụ `script`) bị API từ chối.
 - [ ] Coverage `service.ts` ≥ 80%.
 
 ## Open Questions
 
 > Đã duyệt ngày 2026-10-03, áp dụng phương án mặc định cho cả 4 câu. SEO chọn hướng (b): server trả sẵn thẻ meta và Open Graph cho trang sản phẩm và danh mục.
+>
+> Ngày 2026-10-05: mô tả chi tiết đổi từ Markdown sang trình soạn thảo trực quan lưu JSON (Tiptap). Lý do: admin không cần học cú pháp, và whitelist nằm trong schema nên không cần bộ lọc HTML.
 
 1. **SEO cho trang sản phẩm.** React + Vite là SPA, nên Google và khi chia sẻ link lên Facebook, Zalo có thể không thấy tên, giá, ảnh sản phẩm. Cần chọn một trong ba hướng:
    - (a) Prerender trang sản phẩm và danh mục.

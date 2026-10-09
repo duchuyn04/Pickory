@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
+import { Icon } from '../../../shared/icons';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import { PermissionGrid, type PermissionItem } from './permission-grid';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 export interface RoleData {
   // Không có id nghĩa là role chưa được tạo.
@@ -83,114 +85,30 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
   }
 
   return (
-    <div
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        backgroundColor: 'rgba(0, 0, 0, 0.4)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 'var(--space-4)',
-        zIndex: 10000,
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
+    <div className="dialog-backdrop">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="role-form-title"
         tabIndex={-1}
-        style={{
-          width: '100%',
-          maxWidth: 800,
-          maxHeight: '90vh',
-          backgroundColor: 'var(--color-surface)',
-          borderRadius: 'var(--radius-card)',
-          border: '1px solid var(--color-border)',
-          display: 'flex',
-          flexDirection: 'column',
-          boxShadow: '0 8px 30px rgba(0, 0, 0, 0.15)',
-          outline: 'none',
-        }}
+        className="dialog dialog-lg"
       >
-        <div
-          style={{
-            padding: 'var(--space-4) var(--space-6)',
-            borderBottom: '1px solid var(--color-border)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <h2
-            id="role-form-title"
-            style={{
-              fontSize: 'var(--text-lg)',
-              fontWeight: 700,
-              margin: 0,
-              color: 'var(--color-ink)',
-            }}
-          >
-            {isEditing ? `Sửa Role: ${role?.name}` : 'Thêm Role Mới'}
-          </h2>
-          <button
-            type="button"
-            aria-label="Đóng"
-            onClick={onClose}
-            style={{
-              background: 'none',
-              border: 'none',
-              fontSize: 'var(--text-lg)',
-              cursor: 'pointer',
-            }}
-          >
-            ✕
+        <div className="dialog-head">
+          <h2 id="role-form-title">{isEditing ? `Sửa Role: ${role?.name}` : 'Thêm Role Mới'}</h2>
+          <button type="button" className="icon-btn" aria-label="Đóng" onClick={onClose}>
+            <Icon name="close" />
           </button>
         </div>
 
-        <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--space-6)' }}>
-          {error && (
-            <div
-              role="alert"
-              style={{
-                backgroundColor: '#fee4e2',
-                border: '1px solid var(--color-danger)',
-                color: 'var(--color-danger)',
-                padding: 'var(--space-3)',
-                borderRadius: 'var(--radius-control)',
-                fontSize: 'var(--text-sm)',
-                marginBottom: 'var(--space-4)',
-              }}
-            >
-              {error}
-            </div>
-          )}
+        <div className="dialog-body">
+          <form id="role-form" noValidate onSubmit={handleSubmit} className="stack">
+            {error && <ErrorAlert message={error} />}
 
-          <form
-            id="role-form"
-            noValidate
-            onSubmit={handleSubmit}
-            style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
-          >
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-4)' }}>
-              <div>
-                <label
-                  htmlFor="role-code"
-                  style={{
-                    display: 'block',
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: 600,
-                    color: 'var(--color-ink)',
-                    marginBottom: 'var(--space-1)',
-                  }}
-                >
-                  Mã Role (code) *
-                </label>
+            <div className="form-grid form-grid-2">
+              {/* Mã role khóa khi sửa, vì server không cho đổi mã sau khi tạo. */}
+              <div className="field">
+                <label htmlFor="role-code">Mã Role (code) *</label>
                 <input
                   id="role-code"
                   type="text"
@@ -199,33 +117,11 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="vi_du: warehouse_manager"
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: 'var(--space-3)',
-                    borderRadius: 'var(--radius-control)',
-                    border: '1px solid var(--color-border)',
-                    fontSize: 'var(--text-md)',
-                    backgroundColor: isEditing
-                      ? 'var(--color-surface-muted)'
-                      : 'var(--color-surface)',
-                  }}
                 />
               </div>
 
-              <div>
-                <label
-                  htmlFor="role-name"
-                  style={{
-                    display: 'block',
-                    fontSize: 'var(--text-sm)',
-                    fontWeight: 600,
-                    color: 'var(--color-ink)',
-                    marginBottom: 'var(--space-1)',
-                  }}
-                >
-                  Tên hiển thị *
-                </label>
+              <div className="field">
+                <label htmlFor="role-name">Tên hiển thị *</label>
                 <input
                   id="role-name"
                   type="text"
@@ -233,29 +129,12 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Quản lý kho"
-                  style={{
-                    width: '100%',
-                    boxSizing: 'border-box',
-                    padding: 'var(--space-3)',
-                    borderRadius: 'var(--radius-control)',
-                    border: '1px solid var(--color-border)',
-                    fontSize: 'var(--text-md)',
-                  }}
                 />
               </div>
             </div>
 
-            <div style={{ marginTop: 'var(--space-4)' }}>
-              <label
-                style={{
-                  display: 'block',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 600,
-                  marginBottom: 'var(--space-2)',
-                }}
-              >
-                Phân quyền theo nhóm chức năng:
-              </label>
+            <div className="stack-sm">
+              <h3 className="role-form-permissions-title">Phân quyền theo nhóm chức năng</h3>
               <PermissionGrid
                 permissions={allPermissions}
                 selected={selectedPermissions}
@@ -265,45 +144,12 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
           </form>
         </div>
 
-        <div
-          style={{
-            padding: 'var(--space-4) var(--space-6)',
-            borderTop: '1px solid var(--color-border)',
-            display: 'flex',
-            justifyContent: 'flex-end',
-            gap: 'var(--space-3)',
-          }}
-        >
-          <button
-            type="button"
-            onClick={onClose}
-            style={{
-              padding: 'var(--space-2) var(--space-4)',
-              border: '1px solid var(--color-border)',
-              backgroundColor: 'transparent',
-              borderRadius: 'var(--radius-control)',
-              fontSize: 'var(--text-sm)',
-              cursor: 'pointer',
-            }}
-          >
+        <div className="dialog-foot">
+          <button type="button" className="btn" onClick={onClose}>
             Hủy
           </button>
-          <button
-            type="submit"
-            form="role-form"
-            disabled={loading}
-            style={{
-              padding: 'var(--space-2) var(--space-5)',
-              backgroundColor: 'var(--color-brand)',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: 'var(--radius-control)',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.7 : 1,
-            }}
-          >
+          {/* Khóa nút lưu khi đang gửi để một lần bấm không tạo hai role. */}
+          <button type="submit" form="role-form" className="btn btn-primary" disabled={loading}>
             {loading ? 'Đang lưu...' : isEditing ? 'Lưu thay đổi' : 'Tạo Role'}
           </button>
         </div>

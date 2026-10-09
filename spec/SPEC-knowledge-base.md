@@ -63,6 +63,8 @@ Dữ liệu sản phẩm và review **không** nằm ở đây. Hai nguồn đó
 
 ### Truy xuất
 
+Đường dẫn và mã TypeScript dưới đây thuộc bản Node. Module này sẽ viết bằng .NET.
+
 ```ts
 // apps/backend/src/modules/knowledge-base/index.ts
 export const knowledge: {

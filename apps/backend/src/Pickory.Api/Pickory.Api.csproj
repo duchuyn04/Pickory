@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Swashbuckle.AspNetCore.SwaggerUI" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pickory.Shared\Pickory.Shared.csproj" />
+    <ProjectReference Include="..\Pickory.Modules.Identity\Pickory.Modules.Identity.csproj" />
+    <ProjectReference Include="..\Pickory.Modules.AiGateway\Pickory.Modules.AiGateway.csproj" />
+    <ProjectReference Include="..\Pickory.Modules.Catalog\Pickory.Modules.Catalog.csproj" />
+  </ItemGroup>
+
+</Project>

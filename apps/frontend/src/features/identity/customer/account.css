@@ -1,0 +1,78 @@
+/* Màn tài khoản và quyền riêng tư của khách: các thẻ xếp dọc, rộng tối đa 720px và canh giữa. */
+.account-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4) var(--space-7);
+  font-size: var(--text-sm);
+}
+
+.account-page h1 {
+  margin: 0;
+  font-size: var(--text-title);
+}
+
+.account-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.account-section h2 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.account-section p {
+  margin: 0;
+}
+
+/* Thẻ có chữ bên trái và một nút bên phải. Nút xuống dòng khi màn hẹp. */
+.account-row {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Vùng nguy hiểm có viền màu lỗi, để khách nhận ra thao tác không hoàn tác được. */
+.account-danger {
+  border-color: var(--color-danger-soft);
+}
+
+.account-danger h2 {
+  color: var(--color-danger);
+}
+
+.account-danger-title {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+/* Mỗi nhóm đồng ý là một khối có viền, ô tick canh đầu dòng để mô tả dài không đẩy ô tick xuống giữa. */
+.consent-option {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  font-size: var(--text-sm);
+}
+
+label.consent-option {
+  justify-content: flex-start;
+}
+
+.consent-option input {
+  margin-top: 2px;
+}
+
+.consent-option-title {
+  display: block;
+  font-weight: 600;
+}

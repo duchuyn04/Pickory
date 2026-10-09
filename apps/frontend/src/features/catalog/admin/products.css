@@ -1,0 +1,222 @@
+/*
+ * Kiểu riêng của danh sách và form sản phẩm.
+ * Nút, ô nhập, thẻ, bảng và badge dùng lớp chung trong `components.css`.
+ */
+
+.product-section h2,
+.product-list-head h2 {
+  margin: 0 0 var(--space-3);
+  font-size: 15px;
+}
+
+.product-section p {
+  margin: 0 0 var(--space-3);
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}
+
+.product-form textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+/* Ô chọn sắp hết hàng cao bằng ô nhập để thẳng hàng với các bộ lọc khác. */
+.product-low-stock {
+  min-height: 38px;
+}
+
+.product-list-head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: baseline;
+  justify-content: space-between;
+  padding: var(--space-3) 14px 0;
+}
+
+.product-list-alert {
+  margin: 0 14px 14px;
+}
+
+/* Bảng giữ bề rộng tối thiểu và cuộn ngang trên điện thoại, để tên và mã SKU không bị ép xuống dòng từng chữ. */
+.product-list-table {
+  min-width: 640px;
+}
+
+.product-list-table th[scope='row'] {
+  min-width: 220px;
+}
+
+/* Mỗi trục tùy chọn nằm trên một hàng: tên, giá trị và nút bỏ trục. */
+.product-option {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+  margin-block: var(--space-3);
+}
+
+.product-option .field {
+  flex: 1 1 180px;
+  margin: 0;
+}
+
+/* Ô nhập trong bảng biến thể thấp hơn ô của form để một dòng biến thể vừa một hàng. */
+.product-table input:not([type='checkbox']) {
+  width: 100%;
+  min-width: 110px;
+  min-height: 32px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+}
+
+.product-table input:focus {
+  outline: none;
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+/* Giữ tổ hợp trên một dòng để nhãn biến thể không bị tách thành nhiều dòng ở màn 1280 px. */
+.product-table th[scope='row'] {
+  min-width: 150px;
+  white-space: nowrap;
+}
+
+/* Giữ mã SKU dài đọc đủ trong 260 px, ưu tiên tồn kho và trạng thái trước cột đóng gói. */
+.product-table input[name^='variant-code-'] {
+  min-width: 260px;
+}
+
+/* Thu hẹp ô số ít dùng để bảng vẫn có vùng cuộn riêng trên màn hẹp. */
+.product-table input[type='number'] {
+  min-width: 80px;
+}
+
+.product-table input[name^='variant-price-'] {
+  min-width: 100px;
+}
+
+.product-table .form-error {
+  display: block;
+  margin-top: var(--space-1);
+}
+
+/* Danh sách ảnh: ảnh thu nhỏ, ô alt và biến thể, cột nút sắp xếp. */
+.image-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  padding: 0;
+  list-style: none;
+}
+
+.image-item {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) auto;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+/* Ảnh đang được kéo mờ đi để người dùng thấy vị trí cũ trong lúc kéo. */
+.image-item[data-dragging='true'] {
+  opacity: 0.5;
+}
+
+.image-thumb {
+  width: 80px;
+  height: 80px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  object-fit: cover;
+}
+
+.image-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 var(--space-3);
+}
+
+.image-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.image-remove {
+  color: var(--color-danger);
+}
+
+/* Ô chọn file ẩn bằng mắt, nên viền focus hiện trên nhãn đóng vai nút. */
+.image-upload-button:focus-within {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  /* Lề trong nhỏ hơn để ô nhập còn đủ rộng trong bề ngang 375 px. */
+  .product-section {
+    padding: var(--space-3);
+  }
+
+  /* Màn hẹp: ảnh và nút nằm trên một hàng, ô nhập xuống hàng dưới để đủ chiều rộng. */
+  .image-item {
+    grid-template-columns: 80px minmax(0, 1fr);
+  }
+
+  .image-fields {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .image-actions {
+    flex-direction: row;
+    justify-content: flex-end;
+  }
+}
+
+/* Khối trạng thái: nhãn hiện tại, nhóm nút chuyển trạng thái, rồi vùng xóa tách riêng bằng đường kẻ. */
+.status-current {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  margin-bottom: var(--space-3);
+}
+
+.status-panel .muted {
+  margin-bottom: var(--space-3);
+}
+
+.status-current .muted {
+  margin-bottom: 0;
+}
+
+.status-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.status-panel [role='alert'],
+.status-panel .alert-ok {
+  margin-top: var(--space-3);
+}
+
+.status-danger {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.delete-product-text {
+  margin: 0;
+}

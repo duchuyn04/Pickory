@@ -2,6 +2,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import { ErrorAlert } from '../../../shared/error-alert';
+import '../customer/account.css';
+import '../customer/customer-auth.css';
 
 // Khối xóa tài khoản trong trang tài khoản, có bước xác nhận bằng mật khẩu trước khi xóa.
 export function DeleteAccountDialog() {
@@ -44,176 +47,62 @@ export function DeleteAccountDialog() {
   }
 
   return (
-    <div
-      style={{
-        backgroundColor: 'var(--color-surface)',
-        borderRadius: 'var(--radius-card)',
-        border: '1px solid var(--color-danger)',
-        padding: 'var(--space-6)',
-      }}
-    >
-      <h2
-        style={{
-          fontSize: 'var(--text-lg)',
-          fontWeight: 700,
-          margin: '0 0 var(--space-2) 0',
-          color: 'var(--color-danger)',
-        }}
-      >
-        Khu vực nguy hiểm: Xóa tài khoản
-      </h2>
-      <p
-        style={{
-          fontSize: 'var(--text-sm)',
-          color: 'var(--color-ink-muted)',
-          margin: '0 0 var(--space-4) 0',
-        }}
-      >
+    <section className="card account-section account-danger">
+      <h2>Khu vực nguy hiểm: Xóa tài khoản</h2>
+      <p className="muted small">
         Khi xóa tài khoản, mọi thông tin cá nhân (tên, email, số điện thoại) sẽ được ẩn danh vĩnh
         viễn và không thể phục hồi.
       </p>
 
+      {/* Bước xác nhận chỉ hiện sau lần bấm đầu, để khách không xóa nhầm bằng một cú bấm. */}
       {!open ? (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          style={{
-            backgroundColor: 'transparent',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            padding: 'var(--space-2) var(--space-4)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Yêu cầu xóa tài khoản
-        </button>
+        <div>
+          <button type="button" className="btn btn-danger" onClick={() => setOpen(true)}>
+            Yêu cầu xóa tài khoản
+          </button>
+        </div>
       ) : (
-        <div
-          style={{
-            backgroundColor: '#fffbfa',
-            border: '1px solid #fecdca',
-            borderRadius: 'var(--radius-control)',
-            padding: 'var(--space-4)',
-          }}
-        >
-          <div
-            style={{
-              fontWeight: 600,
-              color: 'var(--color-danger)',
-              marginBottom: 'var(--space-2)',
-            }}
-          >
-            Xác nhận xóa tài khoản vĩnh viễn
-          </div>
-          <p
-            style={{
-              fontSize: 'var(--text-sm)',
-              color: 'var(--color-ink)',
-              margin: '0 0 var(--space-3) 0',
-            }}
-          >
+        <div className="stack-sm">
+          <h3 className="account-danger-title">Xác nhận xóa tài khoản vĩnh viễn</h3>
+          <p className="small">
             Hành động này không thể hoàn tác. Để tiếp tục, vui lòng nhập mật khẩu tài khoản của bạn.
             Nếu tài khoản đăng nhập bằng Google (không có mật khẩu), vui lòng đăng nhập lại Google
             trong vòng 5 phút gần nhất rồi để trống mật khẩu và bấm Xác nhận.
           </p>
 
-          {error && (
-            <div
-              style={{
-                backgroundColor: '#fee4e2',
-                border: '1px solid var(--color-danger)',
-                color: 'var(--color-danger)',
-                padding: 'var(--space-2) var(--space-3)',
-                borderRadius: 'var(--radius-control)',
-                fontSize: 'var(--text-xs)',
-                marginBottom: 'var(--space-3)',
-              }}
-            >
-              {error}
-            </div>
-          )}
+          {error && <ErrorAlert message={error} />}
 
-          <form
-            noValidate
-            onSubmit={handleDelete}
-            style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-3)' }}
-          >
-            <div>
-              <label
-                htmlFor="del-pw"
-                style={{
-                  display: 'block',
-                  fontSize: 'var(--text-xs)',
-                  fontWeight: 600,
-                  color: 'var(--color-ink)',
-                  marginBottom: 'var(--space-1)',
-                }}
-              >
-                Mật khẩu xác nhận
-              </label>
+          <form noValidate onSubmit={handleDelete} className="stack">
+            <div className="field">
+              <label htmlFor="del-pw">Mật khẩu xác nhận</label>
               <input
                 id="del-pw"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Nhập mật khẩu của bạn"
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: 'var(--space-2) var(--space-3)',
-                  borderRadius: 'var(--radius-control)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: 'var(--text-sm)',
-                  outline: 'none',
-                }}
               />
-              <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
+              <small>
                 Tài khoản Google?{' '}
-                <a
-                  href="/api/auth/google/start?returnTo=/me"
-                  style={{ color: 'var(--color-brand)', textDecoration: 'underline' }}
-                >
+                <a href="/api/auth/google/start?returnTo=/me" className="auth-link">
                   Đăng nhập lại bằng Google để xác nhận
                 </a>
-              </div>
+              </small>
             </div>
 
-            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-              <button
-                type="submit"
-                disabled={loading}
-                style={{
-                  backgroundColor: 'var(--color-danger)',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: 'var(--space-2) var(--space-4)',
-                  borderRadius: 'var(--radius-control)',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 600,
-                  cursor: loading ? 'not-allowed' : 'pointer',
-                  opacity: loading ? 0.7 : 1,
-                }}
-              >
+            <div className="row-actions">
+              {/* Nút xác nhận nền đỏ vì đây là hành động chính và không hoàn tác được. */}
+              <button type="submit" className="btn btn-primary" disabled={loading}>
                 {loading ? 'Đang xóa...' : 'Xác nhận xóa ngay'}
               </button>
               <button
                 type="button"
+                className="btn"
                 onClick={() => {
                   setOpen(false);
                   setPassword('');
                   setError(null);
-                }}
-                style={{
-                  backgroundColor: 'transparent',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-ink)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  borderRadius: 'var(--radius-control)',
-                  fontSize: 'var(--text-sm)',
-                  cursor: 'pointer',
                 }}
               >
                 Hủy bỏ
@@ -222,6 +111,6 @@ export function DeleteAccountDialog() {
           </form>
         </div>
       )}
-    </div>
+    </section>
   );
 }

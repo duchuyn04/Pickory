@@ -1,0 +1,636 @@
+﻿// EF Core sinh ảnh chụp model để migration sau mốc so sánh với schema hiện có.
+using System;
+using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using Pickory.Modules.Catalog.Entities;
+using Pickory.Modules.Catalog.Persistence;
+
+#nullable disable
+
+namespace Pickory.Modules.Catalog.Persistence.Migrations
+{
+    [DbContext(typeof(CatalogDbContext))]
+    partial class CatalogDbContextModelSnapshot : ModelSnapshot
+    {
+        protected override void BuildModel(ModelBuilder modelBuilder)
+        {
+#pragma warning disable 612, 618
+            modelBuilder
+                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("Relational:MaxIdentifierLength", 63);
+
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "InventoryMovementType", new[] { "manual", "order_reserve", "order_release", "return" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "ProductStatus", new[] { "draft", "active", "hidden", "discontinued" });
+            NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Brand", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("LogoPublicId")
+                        .HasColumnType("text")
+                        .HasColumnName("logoPublicId");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("slug");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("updatedAt");
+
+                    b.HasKey("Id")
+                        .HasName("brands_pkey");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("brands_slug_key");
+
+                    b.ToTable("brands", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Category", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<JsonDocument>("Attributes")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("attributes");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<string>("ParentId")
+                        .HasColumnType("text")
+                        .HasColumnName("parentId");
+
+                    b.Property<int>("Position")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("position");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("slug");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("updatedAt");
+
+                    b.HasKey("Id")
+                        .HasName("categories_pkey");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("categories_slug_key");
+
+                    b.ToTable("categories", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ImageDeletionJob", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Attempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("attempts");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("LastError")
+                        .HasColumnType("text")
+                        .HasColumnName("lastError");
+
+                    b.Property<int>("MaxAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(8)
+                        .HasColumnName("maxAttempts");
+
+                    b.Property<DateTime>("NextRetryAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("nextRetryAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("publicId");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasDefaultValue("pending")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("updatedAt");
+
+                    b.HasKey("Id")
+                        .HasName("image_deletion_jobs_pkey");
+
+                    b.HasIndex("Status", "NextRetryAt")
+                        .HasDatabaseName("image_deletion_jobs_status_nextRetryAt_idx");
+
+                    b.ToTable("image_deletion_jobs", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.InventoryMovement", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActorId")
+                        .HasColumnType("text")
+                        .HasColumnName("actorId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("Delta")
+                        .HasColumnType("integer")
+                        .HasColumnName("delta");
+
+                    b.Property<string>("OrderId")
+                        .HasColumnType("text")
+                        .HasColumnName("orderId");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("SkuId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("skuId");
+
+                    b.Property<InventoryMovementType>("Type")
+                        .HasColumnType("\"InventoryMovementType\"")
+                        .HasColumnName("type");
+
+                    b.HasKey("Id")
+                        .HasName("inventory_movements_pkey");
+
+                    b.HasIndex("SkuId", "CreatedAt")
+                        .HasDatabaseName("inventory_movements_skuId_createdAt_idx");
+
+                    b.HasIndex("OrderId", "SkuId", "Type")
+                        .IsUnique()
+                        .HasDatabaseName("inventory_movements_orderId_skuId_type_key");
+
+                    b.ToTable("inventory_movements", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Product", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BrandId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("brandId");
+
+                    b.Property<string>("CategoryId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("categoryId");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<JsonDocument>("Description")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("InStock")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("inStock");
+
+                    b.Property<int?>("MinPrice")
+                        .HasColumnType("integer")
+                        .HasColumnName("minPrice");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<JsonDocument>("Options")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("options");
+
+                    b.Property<string>("ShortDesc")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("shortDesc");
+
+                    b.Property<string>("Slug")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("slug");
+
+                    b.Property<JsonDocument>("Specs")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("specs");
+
+                    b.Property<ProductStatus>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("\"ProductStatus\"")
+                        .HasDefaultValue(ProductStatus.Draft)
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("updatedAt");
+
+                    b.Property<int>("WarrantyMonths")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(12)
+                        .HasColumnName("warrantyMonths");
+
+                    b.HasKey("Id")
+                        .HasName("products_pkey");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("products_createdAt_idx");
+
+                    b.HasIndex("MinPrice")
+                        .HasDatabaseName("products_minPrice_idx");
+
+                    b.HasIndex("Slug")
+                        .IsUnique()
+                        .HasDatabaseName("products_slug_key");
+
+                    b.HasIndex("Specs")
+                        .HasDatabaseName("products_specs_gin_idx");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Specs"), "gin");
+
+                    b.HasIndex("CategoryId", "Status")
+                        .HasDatabaseName("products_categoryId_status_idx");
+
+                    b.ToTable("products", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ProductImage", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Alt")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("alt");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("Position")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("position");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("productId");
+
+                    b.Property<string>("PublicId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("publicId");
+
+                    b.Property<string>("SkuId")
+                        .HasColumnType("text")
+                        .HasColumnName("skuId");
+
+                    b.HasKey("Id")
+                        .HasName("product_images_pkey");
+
+                    b.HasIndex("ProductId", "Position")
+                        .HasDatabaseName("product_images_productId_position_idx");
+
+                    b.ToTable("product_images", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ProductSlugHistory", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("OldSlug")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("oldSlug");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("productId");
+
+                    b.HasKey("Id")
+                        .HasName("product_slug_history_pkey");
+
+                    b.HasIndex("OldSlug")
+                        .IsUnique()
+                        .HasDatabaseName("product_slug_history_oldSlug_key");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("product_slug_history_productId_idx");
+
+                    b.ToTable("product_slug_history", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Sku", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<int?>("CompareAtPrice")
+                        .HasColumnType("integer")
+                        .HasColumnName("compareAtPrice");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<bool>("Enabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("enabled");
+
+                    b.Property<int?>("HeightCm")
+                        .HasColumnType("integer")
+                        .HasColumnName("heightCm");
+
+                    b.Property<int?>("LengthCm")
+                        .HasColumnType("integer")
+                        .HasColumnName("lengthCm");
+
+                    b.Property<JsonDocument>("OptionValues")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("optionValues");
+
+                    b.Property<int>("Price")
+                        .HasColumnType("integer")
+                        .HasColumnName("price");
+
+                    b.Property<string>("ProductId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("productId");
+
+                    b.Property<int>("Stock")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("stock");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("updatedAt");
+
+                    b.Property<int?>("WeightGrams")
+                        .HasColumnType("integer")
+                        .HasColumnName("weightGrams");
+
+                    b.Property<int?>("WidthCm")
+                        .HasColumnType("integer")
+                        .HasColumnName("widthCm");
+
+                    b.HasKey("Id")
+                        .HasName("skus_pkey");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("skus_code_key");
+
+                    b.HasIndex("ProductId")
+                        .HasDatabaseName("skus_productId_idx");
+
+                    b.ToTable("skus", null, t =>
+                        {
+                            t.HasCheckConstraint("skus_stock_non_negative", "\"stock\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Category", b =>
+                {
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Category", "Parent")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("categories_parentId_fkey");
+
+                    b.Navigation("Parent");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.InventoryMovement", b =>
+                {
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Sku", "Sku")
+                        .WithMany("Movements")
+                        .HasForeignKey("SkuId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("inventory_movements_skuId_fkey");
+
+                    b.Navigation("Sku");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Product", b =>
+                {
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Brand", "Brand")
+                        .WithMany("Products")
+                        .HasForeignKey("BrandId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("products_brandId_fkey");
+
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Category", "Category")
+                        .WithMany("Products")
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("products_categoryId_fkey");
+
+                    b.Navigation("Brand");
+
+                    b.Navigation("Category");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ProductImage", b =>
+                {
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Product", "Product")
+                        .WithMany("Images")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("product_images_productId_fkey");
+
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Sku", "Sku")
+                        .WithMany("Images")
+                        .HasForeignKey("SkuId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("product_images_skuId_fkey");
+
+                    b.Navigation("Product");
+
+                    b.Navigation("Sku");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.ProductSlugHistory", b =>
+                {
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Product", "Product")
+                        .WithMany("SlugHistory")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("product_slug_history_productId_fkey");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Sku", b =>
+                {
+                    b.HasOne("Pickory.Modules.Catalog.Entities.Product", "Product")
+                        .WithMany("Skus")
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("skus_productId_fkey");
+
+                    b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Brand", b =>
+                {
+                    b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Category", b =>
+                {
+                    b.Navigation("Children");
+
+                    b.Navigation("Products");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Product", b =>
+                {
+                    b.Navigation("Images");
+
+                    b.Navigation("Skus");
+
+                    b.Navigation("SlugHistory");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Catalog.Entities.Sku", b =>
+                {
+                    b.Navigation("Images");
+
+                    b.Navigation("Movements");
+                });
+#pragma warning restore 612, 618
+        }
+    }
+}

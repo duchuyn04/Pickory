@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { APP_NAME } from '@pickory/shared';
+import { APP_NAME } from './app-name';
 import { apiRequest } from './api';
 
 // Trang placeholder: hiển thị trạng thái `/api/health` để xác nhận web nối được với API.

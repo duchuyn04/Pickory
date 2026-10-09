@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { useCan } from '../hooks/use-actor';
+import { ErrorAlert } from '../../../shared/error-alert';
+import './identity-admin.css';
 
 // Một dòng nhật ký như API trả về; actorEmail và actorName do server tra thêm để hiển thị người làm thay vì chuỗi UUID.
 export interface AuditLogRow {
@@ -68,20 +71,7 @@ export function AuditLogPage() {
 
   // Hook ở trên phải chạy hết trước lệnh return sớm này; backend vẫn chặn mọi request thật sự.
   if (!canReadAudit) {
-    return (
-      <div
-        style={{
-          padding: 'var(--space-6)',
-          backgroundColor: 'var(--color-surface)',
-          borderRadius: 'var(--radius-card)',
-        }}
-      >
-        <h2 style={{ color: 'var(--color-danger)', margin: 0 }}>403 - Không có quyền truy cập</h2>
-        <p style={{ color: 'var(--color-ink-muted)' }}>
-          Bạn cần quyền <code>audit-logs:read</code> để xem nhật ký thao tác back-office.
-        </p>
-      </div>
-    );
+    return <ForbiddenNotice permission="audit-logs:read" subject="nhật ký thao tác back-office" />;
   }
 
   function handleFilterSubmit(e: React.FormEvent) {
@@ -127,360 +117,156 @@ export function AuditLogPage() {
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 'var(--space-6)',
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
-      <div>
-        <h1
-          style={{
-            fontSize: 'var(--text-xl)',
-            fontWeight: 700,
-            margin: '0 0 var(--space-1) 0',
-            color: 'var(--color-ink)',
-          }}
-        >
-          Nhật ký thao tác (Audit Logs)
-        </h1>
-        <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', margin: 0 }}>
-          Theo dõi toàn bộ hành động thay đổi dữ liệu, cấu hình và phân quyền trong hệ thống.
-        </p>
+    <div className="page">
+      <div className="page-head">
+        <div className="page-head-text">
+          <h1>Nhật ký thao tác (Audit Logs)</h1>
+          <p>Theo dõi toàn bộ hành động thay đổi dữ liệu, cấu hình và phân quyền trong hệ thống.</p>
+        </div>
       </div>
 
-      {/* Biểu mẫu lọc và tìm kiếm nhật ký thao tác */}
-      <form
-        noValidate
-        onSubmit={handleFilterSubmit}
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: 'var(--space-3)',
-          backgroundColor: 'var(--color-surface)',
-          padding: 'var(--space-4)',
-          borderRadius: 'var(--radius-card)',
-          border: '1px solid var(--color-border)',
-          alignItems: 'center',
-        }}
-      >
-        <input
-          type="text"
-          value={filterAction}
-          onChange={(e) => setFilterAction(e.target.value)}
-          placeholder="Lọc theo hành động (ví dụ: role.create)"
-          aria-label="Lọc theo hành động"
-          style={{
-            padding: 'var(--space-2) var(--space-3)',
-            borderRadius: 'var(--radius-control)',
-            border: '1px solid var(--color-border)',
-            fontSize: 'var(--text-sm)',
-            minWidth: 220,
-          }}
-        />
+      <section className="card card-flush">
+        {/* Biểu mẫu lọc nằm trong thẻ bảng, để bộ lọc và kết quả đọc thành một khối. */}
+        <form noValidate onSubmit={handleFilterSubmit} className="filters-row">
+          <div className="field">
+            <label htmlFor="audit-filter-action">Hành động</label>
+            <input
+              id="audit-filter-action"
+              type="text"
+              value={filterAction}
+              onChange={(e) => setFilterAction(e.target.value)}
+              placeholder="role.create"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="audit-filter-actor">Actor ID</label>
+            <input
+              id="audit-filter-actor"
+              type="text"
+              value={filterActor}
+              onChange={(e) => setFilterActor(e.target.value)}
+              placeholder="Mã người thực hiện"
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="audit-filter-target">Loại đối tượng</label>
+            <input
+              id="audit-filter-target"
+              type="text"
+              value={filterTargetType}
+              onChange={(e) => setFilterTargetType(e.target.value)}
+              placeholder="role, user..."
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="audit-filter-start-date">Từ ngày</label>
+            <input
+              id="audit-filter-start-date"
+              type="date"
+              value={filterStartDate}
+              onChange={(e) => setFilterStartDate(e.target.value)}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="audit-filter-end-date">Đến ngày</label>
+            <input
+              id="audit-filter-end-date"
+              type="date"
+              value={filterEndDate}
+              onChange={(e) => setFilterEndDate(e.target.value)}
+            />
+          </div>
+          <div className="head-actions">
+            <button type="submit" className="btn btn-primary">
+              Lọc
+            </button>
+            <button type="button" className="btn" onClick={handleReset}>
+              Đặt lại
+            </button>
+          </div>
+        </form>
 
-        <input
-          type="text"
-          value={filterActor}
-          onChange={(e) => setFilterActor(e.target.value)}
-          placeholder="Lọc theo Actor ID"
-          aria-label="Lọc theo Actor ID"
-          style={{
-            padding: 'var(--space-2) var(--space-3)',
-            borderRadius: 'var(--radius-control)',
-            border: '1px solid var(--color-border)',
-            fontSize: 'var(--text-sm)',
-            minWidth: 180,
-          }}
-        />
-
-        <input
-          type="text"
-          value={filterTargetType}
-          onChange={(e) => setFilterTargetType(e.target.value)}
-          placeholder="Loại đối tượng (role, user...)"
-          aria-label="Loại đối tượng"
-          style={{
-            padding: 'var(--space-2) var(--space-3)',
-            borderRadius: 'var(--radius-control)',
-            border: '1px solid var(--color-border)',
-            fontSize: 'var(--text-sm)',
-            minWidth: 160,
-          }}
-        />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <label
-            htmlFor="audit-filter-start-date"
-            style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}
-          >
-            Từ ngày:
-          </label>
-          <input
-            id="audit-filter-start-date"
-            type="date"
-            value={filterStartDate}
-            onChange={(e) => setFilterStartDate(e.target.value)}
-            style={{
-              padding: 'var(--space-2) var(--space-3)',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--color-border)',
-              fontSize: 'var(--text-sm)',
-            }}
+        {isLoading ? (
+          <p role="status" className="empty-state">
+            Đang nạp dữ liệu nhật ký...
+          </p>
+        ) : isError ? (
+          <ErrorAlert
+            message={error instanceof Error ? error.message : 'Tải nhật ký thao tác thất bại.'}
+            className="identity-table-alert"
           />
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-          <label
-            htmlFor="audit-filter-end-date"
-            style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}
-          >
-            Đến ngày:
-          </label>
-          <input
-            id="audit-filter-end-date"
-            type="date"
-            value={filterEndDate}
-            onChange={(e) => setFilterEndDate(e.target.value)}
-            style={{
-              padding: 'var(--space-2) var(--space-3)',
-              borderRadius: 'var(--radius-control)',
-              border: '1px solid var(--color-border)',
-              fontSize: 'var(--text-sm)',
-            }}
-          />
-        </div>
-
-        <button
-          type="submit"
-          style={{
-            padding: 'var(--space-2) var(--space-4)',
-            backgroundColor: 'var(--color-brand)',
-            color: '#ffffff',
-            border: 'none',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Lọc
-        </button>
-
-        <button
-          type="button"
-          onClick={handleReset}
-          style={{
-            padding: 'var(--space-2) var(--space-3)',
-            backgroundColor: 'transparent',
-            border: '1px solid var(--color-border)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-            cursor: 'pointer',
-          }}
-        >
-          Đặt lại
-        </button>
-      </form>
-
-      {/* Bảng hiển thị chi tiết các bản ghi kiểm toán */}
-      {isLoading ? (
-        <div>Đang nạp dữ liệu nhật ký...</div>
-      ) : isError ? (
-        <div
-          role="alert"
-          style={{
-            backgroundColor: '#fee4e2',
-            border: '1px solid var(--color-danger)',
-            color: 'var(--color-danger)',
-            padding: 'var(--space-4)',
-            borderRadius: 'var(--radius-control)',
-            fontSize: 'var(--text-sm)',
-          }}
-        >
-          {error instanceof Error ? error.message : 'Tải nhật ký thao tác thất bại.'}
-        </div>
-      ) : (
-        <div
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--radius-card)',
-            border: '1px solid var(--color-border)',
-            overflow: 'hidden',
-          }}
-        >
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
-            <thead>
-              <tr
-                style={{
-                  backgroundColor: 'var(--color-surface-muted)',
-                  borderBottom: '1px solid var(--color-border)',
-                }}
-              >
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Thời gian
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Hành động
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Người thực hiện
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Đối tượng
-                </th>
-                <th
-                  style={{
-                    padding: 'var(--space-3) var(--space-4)',
-                    fontSize: 'var(--text-xs)',
-                    fontWeight: 600,
-                  }}
-                >
-                  Trước & Sau
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.items && data.items.length > 0 ? (
-                data.items.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-xs)',
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {new Date(log.createdAt).toLocaleString('vi-VN')}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-sm)',
-                        fontFamily: 'monospace',
-                        fontWeight: 600,
-                      }}
-                    >
-                      {log.action}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-xs)',
-                      }}
-                    >
-                      {log.actorName ? (
-                        <div>
-                          <strong>{log.actorName}</strong>
-                          <div style={{ color: 'var(--color-ink-muted)', fontSize: '11px' }}>
-                            {log.actorEmail || log.actorId}
-                          </div>
-                        </div>
-                      ) : (
-                        <span>{log.actorEmail || log.actorId}</span>
-                      )}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-xs)',
-                      }}
-                    >
-                      <strong>{log.targetType}</strong>: {log.targetId}
-                    </td>
-                    <td
-                      style={{
-                        padding: 'var(--space-3) var(--space-4)',
-                        fontSize: 'var(--text-xs)',
-                      }}
-                    >
-                      <details>
-                        <summary style={{ cursor: 'pointer', color: 'var(--color-brand)' }}>
-                          Chi tiết dữ liệu
-                        </summary>
-                        <div
-                          style={{
-                            marginTop: 'var(--space-2)',
-                            fontSize: '11px',
-                            fontFamily: 'monospace',
-                          }}
-                        >
+        ) : (
+          <div className="table-wrap">
+            <table className="tbl identity-table audit-table">
+              <thead>
+                <tr>
+                  <th scope="col">Thời gian</th>
+                  <th scope="col">Hành động</th>
+                  <th scope="col">Người thực hiện</th>
+                  <th scope="col">Đối tượng</th>
+                  <th scope="col">Trước &amp; Sau</th>
+                </tr>
+              </thead>
+              <tbody>
+                {data?.items && data.items.length > 0 ? (
+                  data.items.map((log) => (
+                    <tr key={log.id}>
+                      <td className="audit-time">
+                        {new Date(log.createdAt).toLocaleString('vi-VN')}
+                      </td>
+                      <td>
+                        <span className="badge mono">{log.action}</span>
+                      </td>
+                      <td>
+                        {log.actorName ? (
+                          <>
+                            <strong>{log.actorName}</strong>
+                            <span className="cell-sub wrap-anywhere">
+                              {log.actorEmail || log.actorId}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="wrap-anywhere">{log.actorEmail || log.actorId}</span>
+                        )}
+                      </td>
+                      <td>
+                        <strong>{log.targetType}</strong>
+                        <span className="cell-sub mono wrap-anywhere">{log.targetId}</span>
+                      </td>
+                      <td>
+                        <details className="audit-details">
+                          <summary>Chi tiết dữ liệu</summary>
+                          {/* JSON dài nằm trong khối cuộn riêng, để cột không đẩy bảng rộng ra. */}
                           {log.before ? (
                             <div>
-                              <strong>Trước:</strong>
-                              <pre
-                                style={{
-                                  margin: 0,
-                                  backgroundColor: 'var(--color-surface-muted)',
-                                  padding: '4px',
-                                }}
-                              >
+                              <strong className="small">Trước:</strong>
+                              <pre className="audit-json">
                                 {JSON.stringify(log.before, null, 2)}
                               </pre>
                             </div>
                           ) : null}
                           {log.after ? (
-                            <div style={{ marginTop: '4px' }}>
-                              <strong>Sau:</strong>
-                              <pre
-                                style={{
-                                  margin: 0,
-                                  backgroundColor: 'var(--color-surface-muted)',
-                                  padding: '4px',
-                                }}
-                              >
-                                {JSON.stringify(log.after, null, 2)}
-                              </pre>
+                            <div>
+                              <strong className="small">Sau:</strong>
+                              <pre className="audit-json">{JSON.stringify(log.after, null, 2)}</pre>
                             </div>
                           ) : null}
-                        </div>
-                      </details>
+                        </details>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={5} className="empty-state">
+                      Chưa có dòng nhật ký nào phù hợp.
                     </td>
                   </tr>
-                ))
-              ) : (
-                <tr>
-                  <td
-                    colSpan={5}
-                    style={{
-                      padding: 'var(--space-6)',
-                      textAlign: 'center',
-                      color: 'var(--color-ink-muted)',
-                    }}
-                  >
-                    Chưa có dòng nhật ký nào phù hợp.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

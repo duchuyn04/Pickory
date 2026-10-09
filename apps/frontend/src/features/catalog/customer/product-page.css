@@ -1,0 +1,396 @@
+/*
+ * Kiểu riêng của trang sản phẩm cho khách, theo `shop-retail/p/kaze-air-14.html`.
+ * Đường dẫn, thẻ không tìm thấy, nút và badge dùng lại lớp của trang danh mục và `components.css`.
+ */
+
+.product-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  margin: var(--space-3) 0 var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.product-brand {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: var(--text-label);
+}
+
+.product-title h1 {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+/* Hai cột: ảnh bên trái rộng hơn, mua hàng bên phải. Cột nhận `min-width: 0` để ảnh không đẩy trang tràn ngang. */
+.product-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.gallery {
+  min-width: 0;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+/* Khung 4:3 giữ chỗ cố định. Ảnh nằm tuyệt đối trong khung nên tỉ lệ ảnh gốc không làm khung cao thêm. */
+.gallery-main {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+}
+
+.gallery-main img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* Khung giữ chỗ giữ `display: grid` của lớp chung để icon nằm giữa khung. */
+.gallery-main .product-image-placeholder {
+  position: absolute;
+  inset: 0;
+}
+
+.gallery-thumbs {
+  display: flex;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0 0 var(--space-1);
+  overflow-x: auto;
+  list-style: none;
+}
+
+.gallery-thumbs button {
+  display: block;
+  padding: var(--space-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.gallery-thumbs button[aria-pressed='true'] {
+  border-color: var(--color-brand);
+  box-shadow: 0 0 0 1px var(--color-brand);
+}
+
+.gallery-thumbs img {
+  display: block;
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+}
+
+.gallery-thumbs .product-image-placeholder {
+  width: 56px;
+  height: 56px;
+}
+
+.product-buy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.product-buy > p {
+  margin: 0;
+}
+
+.product-price {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+}
+
+.product-price strong {
+  color: var(--color-price);
+  font-size: var(--text-xl);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.product-price .product-price-contact {
+  color: var(--color-ink-muted);
+}
+
+.product-price-list {
+  color: var(--color-ink-muted);
+  font-size: var(--text-md);
+}
+
+.product-discount {
+  padding: 2px 8px;
+  border-radius: var(--radius-control);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-size: var(--text-label);
+  font-weight: 700;
+}
+
+.variant-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.variant-group {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.variant-group legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.variant-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* Radio gốc nằm đè lên nhãn và trong suốt: bàn phím và trình đọc màn hình dùng radio, mắt thấy nhãn dạng nút. */
+.variant-choice {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.variant-choice input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.variant-choice:hover {
+  border-color: var(--color-ink-muted);
+}
+
+.variant-choice:has(input:checked) {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  box-shadow: 0 0 0 1px var(--color-brand);
+  font-weight: 600;
+}
+
+.variant-choice:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Giá trị không ghép được thành SKU: chữ mờ và gạch ngang để khách thấy là không chọn được. */
+.variant-choice:has(input:disabled:not(:checked)) {
+  background: var(--color-surface-muted);
+  color: var(--color-ink-muted);
+  text-decoration: line-through;
+  cursor: not-allowed;
+}
+
+/* Sản phẩm ngừng kinh doanh: mọi giá trị chỉ để xem, nên không gạch ngang như giá trị không ghép được. */
+.variant-picker[data-readonly] .variant-choice:has(input:disabled:not(:checked)) {
+  text-decoration: none;
+  cursor: default;
+}
+
+/* Lựa chọn đang chọn vẫn thấy rõ nhưng con trỏ báo không đổi được. */
+.variant-choice:has(input:disabled:checked) {
+  cursor: default;
+}
+
+.product-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.product-actions p {
+  margin: 0;
+}
+
+.compare-control {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.compare-button[aria-pressed='true'] {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 600;
+}
+
+/* Link tới trang so sánh dùng màu link chung, để khách nhận ra đây là chỗ bấm được. */
+.compare-control a {
+  color: var(--color-link);
+}
+
+.compare-control p {
+  margin: 0;
+}
+
+.compare-mismatch {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.product-info-section {
+  margin-top: var(--space-5);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.product-info-title {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+}
+
+.description-body {
+  max-width: 75ch;
+  overflow-wrap: anywhere;
+}
+
+.description-body h2 {
+  margin: var(--space-4) 0 var(--space-2);
+  font-size: var(--text-md);
+}
+
+/* Ba cấp giảm dần theo cỡ chữ và màu, để khách thấy thứ bậc khi mô tả dùng cả ba cấp. */
+.description-body h3 {
+  margin: var(--space-3) 0 var(--space-2);
+  font-size: var(--text-sm);
+}
+
+.description-body h4 {
+  margin: var(--space-3) 0 var(--space-1);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.description-body p {
+  margin: 0 0 var(--space-3);
+}
+
+.description-body > :first-child {
+  margin-top: 0;
+}
+
+.spec-groups {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+}
+
+.spec-group {
+  min-width: 0;
+}
+
+.spec-group h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+}
+
+.spec-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.spec-table th,
+.spec-table td {
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border-subtle);
+  text-align: left;
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
+
+.spec-table th {
+  width: 40%;
+  background: var(--color-surface-muted);
+  color: var(--color-ink-secondary);
+  font-weight: 600;
+}
+
+/* Vùng cho module sau. Khi chưa có nội dung, vùng không chiếm chỗ. */
+.product-slot:empty {
+  display: none;
+}
+
+.product-skeleton-title {
+  height: 32px;
+  max-width: 480px;
+  margin: var(--space-4) 0;
+  border-radius: var(--radius-control);
+  background: var(--color-neutral-soft);
+}
+
+.gallery-skeleton {
+  aspect-ratio: 4 / 3;
+  background: var(--color-neutral-soft);
+}
+
+.product-buy-skeleton {
+  min-height: 240px;
+  border-radius: var(--radius-card);
+  background: var(--color-neutral-soft);
+}
+
+@media (max-width: 767px) {
+  .product-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .spec-groups {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .product-title h1 {
+    font-size: var(--text-lg);
+  }
+}
+
+/* Giá trị có SKU nhưng phải đổi lựa chọn khác mới tới được: viền nét đứt để phân biệt với giá trị ghép thẳng. */
+.variant-choice.is-switching {
+  border-color: var(--color-ink-muted);
+  border-style: dashed;
+}

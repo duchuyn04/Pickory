@@ -1,0 +1,423 @@
+/*
+ * Kiểu riêng của trang danh mục cho khách, theo `shop-retail/c/laptop.html`.
+ * Nút, ô nhập, badge và thông báo lỗi dùng lớp chung trong `components.css`.
+ */
+
+.catalog-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-3) var(--space-4) var(--space-7);
+}
+
+/* Đường dẫn: các mục xuống dòng khi màn hẹp, không đẩy trang tràn ngang. */
+.catalog-crumbs ol {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  list-style: none;
+}
+
+.catalog-crumbs li {
+  display: flex;
+  gap: var(--space-1);
+  align-items: center;
+}
+
+.catalog-crumbs a {
+  color: var(--color-link);
+}
+
+.catalog-crumbs [aria-current='page'] {
+  color: var(--color-ink);
+}
+
+.catalog-crumbs-separator {
+  width: 14px;
+  height: 14px;
+}
+
+.catalog-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  align-items: baseline;
+  margin: var(--space-3) 0 var(--space-4);
+}
+
+.catalog-head h1 {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: 700;
+}
+
+.catalog-head p {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.catalog-alert {
+  margin-bottom: var(--space-3);
+}
+
+.catalog-alert-action {
+  margin-bottom: var(--space-3);
+}
+
+/* Lưới hai vùng: bộ lọc bên trái chiếm cả hai hàng, thanh công cụ và kết quả bên phải. */
+.catalog-body {
+  display: grid;
+  grid-template-areas:
+    'filters toolbar'
+    'filters results';
+  grid-template-columns: 248px minmax(0, 1fr);
+  grid-template-rows: auto 1fr;
+  gap: 0 var(--space-4);
+  align-items: start;
+}
+
+.catalog-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  grid-area: toolbar;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: flex-end;
+  margin-bottom: var(--space-3);
+}
+
+/* Nút gập chỉ hiện ở màn hẹp, nơi bộ lọc không đủ chỗ đứng cạnh lưới. */
+.catalog-filter-toggle {
+  display: none;
+}
+
+.catalog-sort {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+.catalog-sort .input-sm {
+  width: auto;
+  min-height: 38px;
+  color: var(--color-ink);
+}
+
+/* Header dính che đầu khối khi focus hoặc cuộn tới. Lề cuộn chừa chỗ cho header cao 64px. */
+.catalog-filters,
+.catalog-results {
+  scroll-margin-top: 80px;
+}
+
+.catalog-filters {
+  grid-area: filters;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.catalog-filters:focus-visible {
+  outline-offset: 0;
+}
+
+.catalog-filters-head {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.catalog-filters-head h2 {
+  margin: 0;
+  font-size: var(--text-md);
+}
+
+.catalog-filters-close {
+  display: none;
+}
+
+.catalog-filter-groups {
+  padding: 0 var(--space-4);
+}
+
+.catalog-filter-group {
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-3) 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.catalog-filter-group:last-child {
+  border-bottom: 0;
+}
+
+.catalog-filter-group legend {
+  float: left;
+  width: 100%;
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+/* Nội dung nhóm nằm dưới tiêu đề đã nổi trái, nên phải xóa float trước dòng đầu. */
+.catalog-filter-group legend + * {
+  clear: both;
+}
+
+.catalog-option {
+  display: flex;
+  min-height: 32px;
+  padding: 2px 0;
+}
+
+.catalog-option span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.catalog-range {
+  display: grid;
+  /* Một cột: cột lọc 248px quá hẹp để đặt hai ô cạnh nhau mà vẫn hiện đủ 9 chữ số. */
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.catalog-range .field {
+  margin-bottom: 0;
+}
+
+/* Ẩn nút tăng giảm: bước 1 đồng vô ích cho giá, và nút này chiếm chỗ của chữ số. */
+.catalog-range input[type='number'] {
+  appearance: textfield;
+}
+
+.catalog-range input[type='number']::-webkit-inner-spin-button,
+.catalog-range input[type='number']::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
+.catalog-results {
+  grid-area: results;
+  min-width: 0;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.catalog-grid > li {
+  min-width: 0;
+}
+
+/* Lưới mờ nhẹ khi đang tải kết quả mới, để khách biết dữ liệu sắp đổi mà không bị nháy trắng. */
+.catalog-grid.is-refreshing {
+  opacity: 0.55;
+  transition: opacity 0.15s;
+}
+
+.catalog-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.catalog-empty p {
+  margin: 0;
+}
+
+.catalog-pager {
+  justify-content: center;
+  margin-top: var(--space-4);
+  border-top: 0;
+}
+
+.catalog-not-found {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin-top: var(--space-4);
+}
+
+.catalog-not-found h1 {
+  margin: 0;
+  font-size: var(--text-title);
+}
+
+.catalog-not-found p {
+  margin: 0;
+}
+
+/* Thẻ sản phẩm: cả thẻ là một link tới trang chi tiết. */
+.product-card {
+  height: 100%;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  transition: border-color 0.15s;
+}
+
+.product-card:hover {
+  border-color: var(--color-border-strong);
+}
+
+/* Link ngoài cùng đã có viền focus riêng ở thẻ, nên bỏ viền mặc định để không vẽ hai vòng. */
+.product-card:focus-within {
+  border-color: var(--color-focus);
+  box-shadow: 0 0 0 3px var(--color-focus-ring);
+}
+
+.product-card-link {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  height: 100%;
+  padding: var(--space-3);
+  border-radius: var(--radius-card);
+  color: inherit;
+  text-decoration: none;
+}
+
+.product-card-link:focus-visible {
+  outline: none;
+}
+
+.product-card-media {
+  aspect-ratio: 1;
+  margin-bottom: var(--space-2);
+  overflow: hidden;
+  border-radius: var(--radius-control);
+}
+
+.product-card-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.product-card-brand {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+/* Tên giữ chiều cao hai dòng để các thẻ cùng hàng thẳng nhau dù tên dài ngắn khác nhau. */
+.product-card-name {
+  display: -webkit-box;
+  min-height: 2.7em;
+  margin: 0;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+}
+
+/* Giá đứng ngay dưới tên, nên giá của các thẻ cùng hàng thẳng nhau dù thẻ có nhãn trạng thái hay không. */
+.product-card-price {
+  margin: 0;
+  padding-top: var(--space-1);
+  color: var(--color-price);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.product-card-price-contact {
+  color: var(--color-ink-muted);
+  font-weight: 600;
+}
+
+.product-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+}
+
+@media (max-width: 1199px) {
+  .catalog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1023px) {
+  .catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Màn hẹp: một cột. Bộ lọc gập sau nút "Bộ lọc" và hiện ngay dưới thanh công cụ. */
+@media (max-width: 767px) {
+  .catalog-page {
+    padding-bottom: var(--space-6);
+  }
+
+  /* Ở màn hẹp header xuống hai dòng và cao khoảng 104px. */
+  .catalog-filters,
+  .catalog-results {
+    scroll-margin-top: 120px;
+  }
+
+  .catalog-body {
+    grid-template-areas:
+      'toolbar'
+      'filters'
+      'results';
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .catalog-toolbar {
+    justify-content: space-between;
+  }
+
+  .catalog-filter-toggle {
+    display: inline-flex;
+  }
+
+  .catalog-filters {
+    display: none;
+    margin-bottom: var(--space-3);
+  }
+
+  .catalog-filters.is-open {
+    display: block;
+  }
+
+  .catalog-filters-close {
+    display: inline-flex;
+    width: calc(100% - 2 * var(--space-4));
+    margin: var(--space-3) var(--space-4) var(--space-4);
+  }
+
+  .catalog-grid {
+    gap: var(--space-2);
+  }
+
+  .product-card-link {
+    padding: var(--space-2);
+  }
+}

@@ -1,3 +1,12 @@
+import { lazy, Suspense } from 'react';
+import { AiSettingsPage } from './features/ai-gateway/admin/ai-settings-page';
+import { BrandsPage } from './features/catalog/admin/brands-page';
+import { CategoriesPage } from './features/catalog/admin/categories-page';
+import { CategoryPage } from './features/catalog/customer/category-page';
+import { ComparePage } from './features/catalog/customer/compare-page';
+import { ProductPage } from './features/catalog/customer/product-page';
+import { InventoryPage } from './features/catalog/admin/inventory-page';
+import { SkuInventoryPage } from './features/catalog/admin/sku-inventory-page';
 import { Outlet, Route, Routes } from 'react-router-dom';
 import { AccountPage } from './features/identity/customer/account-page';
 import { AdminDashboardPage } from './features/identity/admin/dashboard-page';
@@ -16,6 +25,17 @@ import { ResetPasswordPage } from './features/identity/customer/reset-password-p
 import { VerifyEmailPage } from './features/identity/customer/verify-email-page';
 import { HealthPage } from './shared/health-page';
 import { Header } from './shared/header';
+// Tách trình soạn mô tả khỏi bundle trang khách, chỉ tải khi nhân viên mở trang sản phẩm.
+const ProductsPage = lazy(() =>
+  import('./features/catalog/admin/products-page').then((module) => ({
+    default: module.ProductsPage,
+  })),
+);
+const ProductFormPage = lazy(() =>
+  import('./features/catalog/admin/product-form').then((module) => ({
+    default: module.ProductFormPage,
+  })),
+);
 
 function CustomerLayout() {
   // Header thuộc layout để trang chủ và mọi luồng tài khoản cùng phản ánh phiên hiện tại.
@@ -27,20 +47,12 @@ function CustomerLayout() {
   );
 }
 
+// Trang giữ chỗ cho module chưa làm, để mục menu đã có route không mở ra trang trắng.
 function AdminPlaceholderPage({ title }: { title: string }) {
   return (
-    <div
-      style={{
-        padding: 'var(--space-6)',
-        backgroundColor: 'var(--color-surface)',
-        borderRadius: 'var(--radius-card)',
-        border: '1px solid var(--color-border)',
-      }}
-    >
-      <h2 style={{ margin: '0 0 var(--space-2) 0', color: 'var(--color-ink)' }}>{title}</h2>
-      <p style={{ margin: 0, color: 'var(--color-ink-muted)' }}>
-        Chức năng đang được phát triển trong module kế tiếp.
-      </p>
+    <div className="card">
+      <h2 className="admin-placeholder-title">{title}</h2>
+      <p className="muted">Chức năng đang được phát triển trong module kế tiếp.</p>
     </div>
   );
 }
@@ -58,6 +70,9 @@ export function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/privacy" element={<PrivacySettingsPage />} />
+          <Route path="/c/:slug" element={<CategoryPage />} />
+          <Route path="/p/:slug" element={<ProductPage />} />
+          <Route path="/compare" element={<ComparePage />} />
         </Route>
         <Route path="/admin/login" element={<StaffLoginPage />} />
         <Route path="/admin" element={<AdminLayout />}>
@@ -67,12 +82,39 @@ export function App() {
           <Route path="customers" element={<CustomersPage />} />
           <Route path="audit-logs" element={<AuditLogPage />} />
           <Route path="orders" element={<AdminPlaceholderPage title="Quản lý đơn hàng" />} />
-          <Route path="products" element={<AdminPlaceholderPage title="Quản lý sản phẩm" />} />
+          <Route
+            path="products"
+            element={
+              <Suspense fallback={<p role="status">Đang tải sản phẩm...</p>}>
+                <ProductsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="products/new"
+            element={
+              <Suspense fallback={<p role="status">Đang tải biểu mẫu...</p>}>
+                <ProductFormPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="products/:id"
+            element={
+              <Suspense fallback={<p role="status">Đang tải biểu mẫu...</p>}>
+                <ProductFormPage />
+              </Suspense>
+            }
+          />
+          <Route path="inventory" element={<InventoryPage />} />
+          <Route path="products/:productId/skus/:skuId/inventory" element={<SkuInventoryPage />} />
+          <Route path="categories" element={<CategoriesPage />} />
+          <Route path="brands" element={<BrandsPage />} />
           <Route
             path="conversations"
             element={<AdminPlaceholderPage title="Chăm sóc khách hàng" />}
           />
-          <Route path="ai" element={<AdminPlaceholderPage title="Cấu hình AI" />} />
+          <Route path="ai" element={<AiSettingsPage />} />
         </Route>
       </Routes>
       <ConsentBanner />

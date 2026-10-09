@@ -1,0 +1,119 @@
+{
+  "description": "Bộ dữ liệu mẫu cho hàm validate thông số. Frontend (TypeScript) và backend (C#) cùng chạy bộ này, nên hai phía không lệch luật validate.",
+  "attributes": [
+    {
+      "key": "ram_gb",
+      "label": "Dung lượng RAM",
+      "group": "Bộ nhớ",
+      "type": "number",
+      "unit": "GB",
+      "required": true,
+      "filterable": true
+    },
+    {
+      "key": "color",
+      "label": "Màu sắc",
+      "group": "Thiết kế",
+      "type": "enum",
+      "options": ["Đen", "Bạc", "Xanh"],
+      "required": false,
+      "filterable": true
+    },
+    {
+      "key": "touchscreen",
+      "label": "Màn hình cảm ứng",
+      "group": "Màn hình",
+      "type": "boolean",
+      "required": false,
+      "filterable": true
+    },
+    {
+      "key": "cpu_model",
+      "label": "Vi xử lý",
+      "group": "Hiệu năng",
+      "type": "text",
+      "required": true,
+      "filterable": false
+    }
+  ],
+  "cases": [
+    {
+      "name": "bộ thông số đầy đủ và hợp lệ",
+      "specs": { "ram_gb": 16, "color": "Bạc", "touchscreen": false, "cpu_model": "Intel Core i7-13650HX" },
+      "valid": true,
+      "errorKeys": []
+    },
+    {
+      "name": "bỏ qua thuộc tính không bắt buộc",
+      "specs": { "ram_gb": 32, "cpu_model": "Apple M3 Pro" },
+      "valid": true,
+      "errorKeys": []
+    },
+    {
+      "name": "thiếu thuộc tính bắt buộc",
+      "specs": { "color": "Đen" },
+      "valid": false,
+      "errorKeys": ["ram_gb", "cpu_model"]
+    },
+    {
+      "name": "thuộc tính bắt buộc có giá trị null",
+      "specs": { "ram_gb": null, "cpu_model": null },
+      "valid": false,
+      "errorKeys": ["ram_gb", "cpu_model"]
+    },
+    {
+      "name": "số gửi dạng chuỗi",
+      "specs": { "ram_gb": "16", "cpu_model": "Core i5" },
+      "valid": false,
+      "errorKeys": ["ram_gb"]
+    },
+    {
+      "name": "boolean gửi dạng chuỗi",
+      "specs": { "ram_gb": 16, "cpu_model": "Core i5", "touchscreen": "true" },
+      "valid": false,
+      "errorKeys": ["touchscreen"]
+    },
+    {
+      "name": "enum nhận giá trị ngoài options",
+      "specs": { "ram_gb": 16, "cpu_model": "Core i5", "color": "Đỏ" },
+      "valid": false,
+      "errorKeys": ["color"]
+    },
+    {
+      "name": "text là chuỗi rỗng",
+      "specs": { "ram_gb": 16, "cpu_model": "" },
+      "valid": false,
+      "errorKeys": ["cpu_model"]
+    },
+    {
+      "name": "text chỉ có khoảng trắng",
+      "specs": { "ram_gb": 16, "cpu_model": "   " },
+      "valid": false,
+      "errorKeys": ["cpu_model"]
+    },
+    {
+      "name": "khóa không có trong bộ thuộc tính",
+      "specs": { "ram_gb": 16, "cpu_model": "Core i5", "unknown_field": "Giá trị lạ" },
+      "valid": false,
+      "errorKeys": ["unknown_field"]
+    },
+    {
+      "name": "thông số là null",
+      "specs": null,
+      "valid": false,
+      "errorKeys": ["specs"]
+    },
+    {
+      "name": "thông số là mảng",
+      "specs": [],
+      "valid": false,
+      "errorKeys": ["specs"]
+    },
+    {
+      "name": "thông số là chuỗi",
+      "specs": "chuỗi",
+      "valid": false,
+      "errorKeys": ["specs"]
+    }
+  ]
+}

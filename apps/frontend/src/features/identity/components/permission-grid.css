@@ -1,0 +1,55 @@
+/* Lưới tick quyền theo nhóm module, dùng ở form role. */
+.permission-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.permission-group {
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.permission-group-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+/* Cột tối thiểu 260px nhưng không vượt 100%, để lưới còn một cột và không tràn hộp thoại ở 375px. */
+.permission-group-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+/* Ô tick canh đầu dòng, để mô tả nhiều dòng không đẩy ô tick xuống giữa. */
+.permission-item {
+  align-items: flex-start;
+  font-size: var(--text-sm);
+}
+
+.permission-item input {
+  margin-top: 2px;
+}
+
+.permission-name {
+  display: block;
+  font-weight: 500;
+}
+
+/* Tiêu đề phần phân quyền trong form role, nhỏ hơn tiêu đề hộp thoại. */
+.role-form-permissions-title {
+  margin: 0;
+  font-size: var(--text-sm);
+}

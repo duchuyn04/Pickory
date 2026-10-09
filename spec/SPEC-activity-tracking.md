@@ -38,7 +38,7 @@ Ghi lại hành vi mua sắm của người dùng (đã đồng ý) và dựng *
 | `personalization = true` | Ghi sự kiện đầy đủ, gắn với `anonymousId` và `userId` |
 | `personalization = false` | Không ghi sự kiện cá nhân. Chỉ tăng bộ đếm tổng hợp theo ngày (lượt xem sản phẩm, lượt hiển thị và click gợi ý theo `source`), không có định danh |
 
-- Câu tìm kiếm lưu sau khi qua `redactPII()` (hàm dùng chung ở `apps/backend/src/shared/privacy.ts`, `ai-gateway` cũng dùng), vì khách có thể gõ SĐT hay email vào ô tìm.
+- Câu tìm kiếm lưu sau khi qua `PiiRedactor` (`apps/backend/src/Pickory.Shared/Privacy/PiiRedactor.cs`), vì khách có thể gõ SĐT hay email vào ô tìm.
 - **Rút lại đồng ý:** xóa ngay sự kiện và hồ sơ của `anonymousId` và `userId` đó.
 - **`UserDeletedEvent`:** xóa sự kiện và hồ sơ của người dùng.
 - **`UserLinkedEvent`:** gắn sự kiện của `anonymousId` vào `userId` và gộp hồ sơ. Chỉ gộp khi cả hai phía đều đã đồng ý; phía chưa đồng ý không có dữ liệu để gộp.
@@ -54,6 +54,8 @@ Ghi lại hành vi mua sắm của người dùng (đã đồng ý) và dựng *
 - Backend tự lấy `anonymousId`, `userId`, trạng thái đồng ý từ `req.actor`, không tin giá trị client gửi.
 
 ### Hồ sơ sở thích
+
+Đường dẫn và mã TypeScript dưới đây thuộc bản Node. Module này sẽ viết bằng .NET.
 
 ```ts
 // apps/backend/src/modules/activity-tracking/index.ts

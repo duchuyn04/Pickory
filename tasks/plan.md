@@ -107,7 +107,26 @@ Chi tiết từng task ở `tasks/todo.md`. Hai track A và B chạy song song �
 - [ ] ID-11 · [ ] UI-06 · [ ] ID-12 · [ ] ID-13 · [ ] UI-07 · [ ] ID-14 · [ ] UI-08
 
 ### Phase 5: E2E và nghiệm thu
-- [ ] E2E-01: Playwright + hai luồng E2E của `identity`
+- [x] E2E-01: Playwright + hai luồng E2E của `identity`
+
+Cách chạy E2E-01:
+
+1. Chạy `docker compose up -d db` để khởi động PostgreSQL cho E2E.
+2. Không dùng cơ sở dữ liệu dev hoặc integration.
+   Startup xóa dữ liệu cũ khi chạy suite. Startup chỉ chấp nhận `pickory_e2e`.
+3. Cấu hình thông tin kết nối trong `.env` hoặc biến môi trường.
+   Khi `E2E_DATABASE_URL` trống, startup dùng kết nối `DATABASE_URL` với tên cơ sở dữ liệu `pickory_e2e`.
+4. Giữ port 3101 cho API E2E.
+5. Giữ port 4173 cho web E2E.
+   Playwright không tái sử dụng server đang chạy. Playwright mở hai server khi chạy suite.
+6. Chạy `pnpm exec playwright install chromium` trên máy chưa cài Chromium của Playwright.
+7. Chạy `pnpm test:e2e`.
+   Startup tạo `pickory_e2e` nếu cần. Startup áp dụng migration đã commit.
+   Startup xóa dữ liệu cũ. Startup seed role của `identity` trước khi tạo admin fixture.
+   Startup chỉ seed admin. Test tạo customer và sales qua giao diện thật.
+8. Đọc thư mời từ outbox tại `apps/backend/.dev-outbox/e2e-identity/`.
+   Test đọc link đặt mật khẩu từ thư mời. Suite chỉ xóa thư gửi tới địa chỉ của suite.
+   Suite giữ nguyên thư dev khác. Playwright dừng hai server sau khi chạy suite.
 
 ### Checkpoint cuối
 - [ ] Mọi tiêu chí trong bảng Traceability đạt, trừ các mục ghi "hoãn"
@@ -134,8 +153,8 @@ Chi tiết từng task ở `tasks/todo.md`. Hai track A và B chạy song song �
 | `Origin` lạ bị 403 | ID-02 |
 | Xóa tài khoản khách thì không đăng nhập lại được, email gốc mất | ID-10 |
 | Coverage `service.ts` ≥ 80% | mọi task ID-*, kiểm ở Checkpoint cuối |
-| E2E: khách đăng ký → đăng xuất → đăng nhập | E2E-01 |
-| E2E: admin mời `sales` → đặt mật khẩu → đăng nhập chỉ thấy menu đơn hàng | E2E-01, **một phần**: kiểm menu không có mục ngoài quyền; phần "menu đơn hàng" hoãn tới `commerce`/`admin-console` |
+| E2E: khách đăng ký → đăng xuất → đăng nhập | E2E-01: PASS qua `e2e/auth.spec.ts`, cả hai lượt suite |
+| E2E: admin mời `sales` → đặt mật khẩu → đăng nhập chỉ thấy menu đơn hàng | E2E-01, **một phần**: `e2e/staff-invite.spec.ts` PASS kiểm menu không có mục ngoài quyền ở cả hai lượt; phần "thấy menu đơn hàng" vẫn hoãn tới `commerce`/`admin-console` |
 
 **`SPEC-ai-gateway.md`**
 

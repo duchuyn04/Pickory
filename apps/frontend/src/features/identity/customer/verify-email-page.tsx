@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import { AuthCard } from './auth-ui';
+import { ErrorAlert } from '../../../shared/error-alert';
 
 // Trang xác thực email, mở từ link trong thư đăng ký.
 export function VerifyEmailPage() {
@@ -57,139 +59,38 @@ export function VerifyEmailPage() {
   }, [token]);
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: 'var(--color-surface-muted)',
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          padding: 'var(--space-7) var(--space-4)',
-        }}
-      >
-        <div
-          style={{
-            width: '100%',
-            maxWidth: 420,
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--radius-card)',
-            border: '1px solid var(--color-border)',
-            padding: 'var(--space-6)',
-            boxShadow: '0 4px 20px rgba(0,0,0,0.06)',
-            textAlign: 'center',
-          }}
-        >
-          <h1
-            style={{
-              fontSize: 'var(--text-xl)',
-              color: 'var(--color-ink)',
-              margin: '0 0 var(--space-2) 0',
-              fontWeight: 700,
-            }}
-          >
-            Xác thực email
-          </h1>
+    <AuthCard title="Xác thực email">
+      <div className="auth-result">
+        {!token && (
+          <ErrorAlert message="Liên kết xác thực thiếu mã token. Vui lòng kiểm tra lại liên kết trong email của bạn." />
+        )}
 
-          {!token && (
-            <div
-              role="alert"
-              style={{
-                backgroundColor: '#fee4e2',
-                border: '1px solid var(--color-danger)',
-                color: 'var(--color-danger)',
-                padding: 'var(--space-4)',
-                borderRadius: 'var(--radius-control)',
-                fontSize: 'var(--text-sm)',
-                margin: 'var(--space-4) 0',
-              }}
-            >
-              Liên kết xác thực thiếu mã token. Vui lòng kiểm tra lại liên kết trong email của bạn.
-            </div>
-          )}
+        {loading && (
+          <p role="status" className="empty-state">
+            Đang xác thực địa chỉ email của bạn...
+          </p>
+        )}
 
-          {loading && (
-            <div
-              role="status"
-              style={{
-                color: 'var(--color-ink-muted)',
-                fontSize: 'var(--text-sm)',
-                margin: 'var(--space-5) 0',
-              }}
-            >
-              Đang xác thực địa chỉ email của bạn...
-            </div>
-          )}
+        {!loading && success && (
+          <>
+            <p role="status" className="alert alert-ok">
+              Chúc mừng! Địa chỉ email của bạn đã được xác thực thành công.
+            </p>
+            <Link to="/" className="btn btn-primary">
+              Về trang chủ mua sắm
+            </Link>
+          </>
+        )}
 
-          {!loading && success && (
-            <div>
-              <div
-                role="status"
-                style={{
-                  backgroundColor: '#e6f4ea',
-                  border: '1px solid var(--color-success)',
-                  color: 'var(--color-success)',
-                  padding: 'var(--space-4)',
-                  borderRadius: 'var(--radius-control)',
-                  fontSize: 'var(--text-sm)',
-                  margin: 'var(--space-5) 0',
-                }}
-              >
-                Chúc mừng! Địa chỉ email của bạn đã được xác thực thành công.
-              </div>
-              <Link
-                to="/"
-                style={{
-                  display: 'inline-block',
-                  backgroundColor: 'var(--color-brand)',
-                  color: '#ffffff',
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                  fontSize: 'var(--text-sm)',
-                  padding: 'var(--space-3) var(--space-5)',
-                  borderRadius: 'var(--radius-control)',
-                }}
-              >
-                Về trang chủ mua sắm
-              </Link>
-            </div>
-          )}
-
-          {!loading && error && (
-            <div>
-              <div
-                role="alert"
-                style={{
-                  backgroundColor: '#fee4e2',
-                  border: '1px solid var(--color-danger)',
-                  color: 'var(--color-danger)',
-                  padding: 'var(--space-4)',
-                  borderRadius: 'var(--radius-control)',
-                  fontSize: 'var(--text-sm)',
-                  margin: 'var(--space-5) 0',
-                }}
-              >
-                {error}
-              </div>
-              <Link
-                to="/"
-                style={{
-                  color: 'var(--color-brand)',
-                  textDecoration: 'none',
-                  fontWeight: 600,
-                  fontSize: 'var(--text-sm)',
-                }}
-              >
-                ← Quay lại trang chủ
-              </Link>
-            </div>
-          )}
-        </div>
+        {!loading && error && (
+          <>
+            <ErrorAlert message={error} />
+            <Link to="/" className="auth-link">
+              ← Quay lại trang chủ
+            </Link>
+          </>
+        )}
       </div>
-    </div>
+    </AuthCard>
   );
 }

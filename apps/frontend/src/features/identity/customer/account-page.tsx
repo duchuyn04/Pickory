@@ -2,9 +2,18 @@ import { useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import {
+  FieldError,
+  fieldErrorProps,
+  hasFieldErrors,
+  type FieldErrors,
+} from '../../../shared/field-error';
+import { getNameError, getPhoneError } from '../../../shared/identity-validation';
 import { ChangePasswordForm } from '../components/change-password-form';
 import { DeleteAccountDialog } from '../components/delete-account-dialog';
 import { useActor } from '../hooks/use-actor';
+import { ErrorAlert } from '../../../shared/error-alert';
+import './account.css';
 
 // Trang tài khoản của khách: sửa hồ sơ, đổi mật khẩu, quyền riêng tư, xóa tài khoản.
 export function AccountPage() {
@@ -18,6 +27,8 @@ export function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Lỗi theo từng ô hiện ngay dưới ô sai. `error` chỉ giữ lỗi trả về từ API.
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'name' | 'phone'>>({});
 
   useEffect(() => {
     // Điền sẵn form bằng thông tin hiện tại, vì /api/me trả về tên và số điện thoại.
@@ -27,22 +38,18 @@ export function AccountPage() {
     }
   }, [actor]);
 
-  // Đang hỏi server xem ai đang đăng nhập; chưa biết thì chưa quyết định chuyển hướng, nếu không khách đã đăng nhập bị đẩy ra login oan.
+  // Server chưa trả kết quả thì chưa chuyển hướng. Nếu không, khách đã đăng nhập bị đẩy ra trang login oan.
   if (isLoading) {
     return (
-      <div
-        style={{
-          minHeight: '100vh',
-          backgroundColor: 'var(--color-surface-muted)',
-          fontFamily: 'var(--font-sans)',
-        }}
-      >
-        <div style={{ textAlign: 'center', padding: 'var(--space-7)' }}>Đang nạp thông tin...</div>
-      </div>
+      <main className="account-page">
+        <p role="status" className="empty-state">
+          Đang nạp thông tin...
+        </p>
+      </main>
     );
   }
 
-  // Nhân viên có khu vực /admin riêng và việc xóa tài khoản ở đây chỉ dành cho khách, nên chỉ khách đã đăng nhập mới vào được.
+  // Nhân viên có khu vực /admin riêng. Trang này chỉ dành cho khách đã đăng nhập.
   if (!actor || actor.kind !== 'customer') {
     return <Navigate to="/login" replace />;
   }
@@ -50,19 +57,33 @@ export function AccountPage() {
   async function handleUpdateProfile(e: React.FormEvent) {
     // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
+    // Giá trị `null` đã lưu tính là chuỗi trống. So sánh sau khi bỏ khoảng trắng hai đầu.
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+    const isNameChanged = trimmedName !== (actor?.name ?? '').trim();
+    const isPhoneChanged = trimmedPhone !== (actor?.phone ?? '').trim();
+    // Chỉ kiểm ô đã đổi. Số cũ sai dạng trong DB không chặn việc sửa tên.
+    const nextFieldErrors = {
+      name: isNameChanged ? getNameError(name) : null,
+      phone: isPhoneChanged ? getPhoneError(phone) : null,
+    };
+    setFieldErrors(nextFieldErrors);
+    // Dữ liệu sai thì không gọi API và không khóa nút lưu.
+    if (hasFieldErrors(nextFieldErrors)) return;
     setSaving(true);
-    // Xóa kết quả của lần lưu trước để thông báo cũ không còn hiển thị cùng lúc với kết quả mới.
+    // Xóa kết quả của lần lưu trước. Thông báo cũ không hiện cùng kết quả mới.
     setError(null);
     setSuccess(false);
+
+    // Chỉ gửi ô đã đổi, vì server cũng chỉ kiểm trường được gửi. Ô đổi thành trống gửi null để xóa giá trị.
+    const changes: { name?: string | null; phone?: string | null } = {};
+    if (isNameChanged) changes.name = trimmedName === '' ? null : trimmedName;
+    if (isPhoneChanged) changes.phone = trimmedPhone === '' ? null : trimmedPhone;
 
     try {
       await apiRequest('/api/me', {
         method: 'PATCH',
-        // Ô để trống gửi null để người dùng xóa được thông tin; gửi chuỗi rỗng thì backend cũng coi là xóa nhưng null rõ ràng hơn.
-        body: JSON.stringify({
-          name: name.trim() === '' ? null : name.trim(),
-          phone: phone.trim() === '' ? null : phone.trim(),
-        }),
+        body: JSON.stringify(changes),
       });
       // Nạp lại actor để header và các nơi khác hiển thị tên mới, thay vì giữ bản cũ trong cache.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
@@ -81,223 +102,78 @@ export function AccountPage() {
   }
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        backgroundColor: 'var(--color-surface-muted)',
-        fontFamily: 'var(--font-sans)',
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 680,
-          margin: '0 auto',
-          padding: 'var(--space-6) var(--space-4)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 'var(--space-6)',
-        }}
-      >
-        <h1
-          style={{
-            fontSize: 'var(--text-xl)',
-            color: 'var(--color-ink)',
-            margin: 0,
-            fontWeight: 700,
-          }}
-        >
-          Tài khoản của tôi
-        </h1>
+    <main className="account-page">
+      <h1>Tài khoản của tôi</h1>
 
-        {/* Khu vực cập nhật thông tin định danh cá nhân */}
-        <div
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--radius-card)',
-            border: '1px solid var(--color-border)',
-            padding: 'var(--space-6)',
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 'var(--text-lg)',
-              fontWeight: 700,
-              margin: '0 0 var(--space-4) 0',
-              color: 'var(--color-ink)',
-            }}
-          >
-            Thông tin cá nhân
-          </h2>
+      {/* Khu vực cập nhật thông tin định danh cá nhân */}
+      <section className="card account-section">
+        <h2>Thông tin cá nhân</h2>
 
-          {success && (
-            <div
-              style={{
-                backgroundColor: '#e6f4ea',
-                border: '1px solid var(--color-success)',
-                color: 'var(--color-success)',
-                padding: 'var(--space-3)',
-                borderRadius: 'var(--radius-control)',
-                fontSize: 'var(--text-sm)',
-                marginBottom: 'var(--space-4)',
-              }}
-            >
-              Cập nhật thông tin thành công!
-            </div>
-          )}
+        {success && (
+          <p role="status" className="alert alert-ok">
+            Cập nhật thông tin thành công!
+          </p>
+        )}
 
-          {error && (
-            <div
-              style={{
-                backgroundColor: '#fee4e2',
-                border: '1px solid var(--color-danger)',
-                color: 'var(--color-danger)',
-                padding: 'var(--space-3)',
-                borderRadius: 'var(--radius-control)',
-                fontSize: 'var(--text-sm)',
-                marginBottom: 'var(--space-4)',
-              }}
-            >
-              {error}
-            </div>
-          )}
+        {error && <ErrorAlert message={error} />}
 
-          <form
-            noValidate
-            onSubmit={handleUpdateProfile}
-            style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}
-          >
-            <div>
-              <label
-                htmlFor="acc-name"
-                style={{
-                  display: 'block',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 600,
-                  color: 'var(--color-ink)',
-                  marginBottom: 'var(--space-1)',
-                }}
-              >
-                Họ và tên
-              </label>
+        <form noValidate onSubmit={handleUpdateProfile} className="stack">
+          <div className="form-grid form-grid-2">
+            <div className="field">
+              <label htmlFor="acc-name">Họ và tên</label>
               <input
                 id="acc-name"
                 type="text"
+                autoComplete="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nhập họ và tên"
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: 'var(--space-3)',
-                  borderRadius: 'var(--radius-control)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: 'var(--text-md)',
-                  outline: 'none',
-                }}
+                {...fieldErrorProps('acc-name', fieldErrors.name)}
               />
+              <FieldError inputId="acc-name" message={fieldErrors.name} />
             </div>
 
-            <div>
-              <label
-                htmlFor="acc-phone"
-                style={{
-                  display: 'block',
-                  fontSize: 'var(--text-sm)',
-                  fontWeight: 600,
-                  color: 'var(--color-ink)',
-                  marginBottom: 'var(--space-1)',
-                }}
-              >
-                Số điện thoại
-              </label>
+            <div className="field">
+              <label htmlFor="acc-phone">Số điện thoại</label>
               <input
                 id="acc-phone"
                 type="tel"
+                autoComplete="tel"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="0912 345 678"
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  padding: 'var(--space-3)',
-                  borderRadius: 'var(--radius-control)',
-                  border: '1px solid var(--color-border)',
-                  fontSize: 'var(--text-md)',
-                  outline: 'none',
-                }}
+                {...fieldErrorProps('acc-phone', fieldErrors.phone)}
               />
+              <FieldError inputId="acc-phone" message={fieldErrors.phone} />
             </div>
+          </div>
 
-            <button
-              type="submit"
-              disabled={saving}
-              style={{
-                alignSelf: 'flex-start',
-                backgroundColor: 'var(--color-brand)',
-                color: '#ffffff',
-                border: 'none',
-                padding: 'var(--space-3) var(--space-5)',
-                borderRadius: 'var(--radius-control)',
-                fontSize: 'var(--text-md)',
-                fontWeight: 600,
-                cursor: saving ? 'not-allowed' : 'pointer',
-                opacity: saving ? 0.7 : 1,
-              }}
-            >
+          <div>
+            <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving ? 'Đang lưu...' : 'Lưu thay đổi'}
             </button>
-          </form>
-        </div>
-
-        {/* Khu vực thay đổi mật khẩu đăng nhập */}
-        <ChangePasswordForm />
-
-        {/* Khu vực điều hướng tới cài đặt quyền riêng tư và xử lý dữ liệu */}
-        <div
-          style={{
-            backgroundColor: 'var(--color-surface)',
-            borderRadius: 'var(--radius-card)',
-            border: '1px solid var(--color-border)',
-            padding: 'var(--space-6)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <div>
-            <h2
-              style={{
-                fontSize: 'var(--text-lg)',
-                fontWeight: 700,
-                margin: '0 0 var(--space-1) 0',
-                color: 'var(--color-ink)',
-              }}
-            >
-              Quyền riêng tư & Cookie
-            </h2>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', margin: 0 }}>
-              Tùy chỉnh sự cho phép tính năng cá nhân hóa và thông báo tiếp thị.
-            </p>
           </div>
-          <Link
-            to="/privacy"
-            style={{
-              padding: 'var(--space-2) var(--space-4)',
-              border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-control)',
-              color: 'var(--color-ink)',
-              textDecoration: 'none',
-              fontSize: 'var(--text-sm)',
-              fontWeight: 600,
-            }}
-          >
-            Quản lý
-          </Link>
-        </div>
+        </form>
+      </section>
 
-        {/* Khu vực thao tác xóa tài khoản và ẩn danh hóa dữ liệu */}
-        <DeleteAccountDialog />
-      </div>
-    </div>
+      {/* Khu vực thay đổi mật khẩu đăng nhập */}
+      <ChangePasswordForm />
+
+      {/* Khu vực điều hướng tới cài đặt quyền riêng tư và dữ liệu cá nhân */}
+      <section className="card account-section account-row">
+        <div>
+          <h2>Quyền riêng tư &amp; Cookie</h2>
+          <p className="muted small">
+            Tùy chỉnh sự cho phép tính năng cá nhân hóa và thông báo tiếp thị.
+          </p>
+        </div>
+        <Link to="/privacy" className="btn">
+          Quản lý
+        </Link>
+      </section>
+
+      {/* Khu vực thao tác xóa tài khoản và ẩn danh hóa dữ liệu */}
+      <DeleteAccountDialog />
+    </main>
   );
 }

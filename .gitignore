@@ -29,9 +29,16 @@ Thumbs.db
 # Logs
 *.log
 
-# Prisma client sinh tu dong (pnpm db:generate)
-apps/backend/src/generated/
 .playwright-mcp/
 
 # Dev outbox
 **/.dev-outbox/
+
+# Báo cáo nộp giảng viên và file mẫu đặt ở gốc repo, không đưa vào mã nguồn.
+/*.docx
+/*.pdf
+
+# .NET
+**/bin/
+**/obj/
+.vs/

@@ -1,0 +1,356 @@
+/*
+ * Khung quản trị theo bản mẫu `shop-retail/admin/`: sidebar sáng có icon, nhóm menu, khối người dùng ở đáy.
+ * Màn hẹp đổi sidebar thành ngăn kéo. Chỉ dùng token trong `tokens.css`.
+ */
+.admin-shell {
+  --admin-sidebar-width: 252px;
+  display: grid;
+  grid-template-columns: var(--admin-sidebar-width) minmax(0, 1fr);
+  min-height: 100vh;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+}
+
+/* Dải icon 68px vừa một icon 18px cùng lề, nhường thêm chỗ cho bảng rộng. */
+.admin-shell[data-collapsed='true'] {
+  --admin-sidebar-width: 68px;
+}
+
+.admin-loading {
+  padding: var(--space-6);
+  font-family: var(--font-sans);
+  text-align: center;
+}
+
+/* Sidebar dính đầu trang và tự cuộn, để menu dài không kéo theo nội dung chính. */
+.admin-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100vh;
+  padding: var(--space-3) 10px 10px;
+  overflow: hidden;
+  border-right: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-ink-secondary);
+}
+
+.admin-brand {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+}
+
+.admin-brand-text,
+.admin-user-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.admin-brand-text b,
+.admin-user-text b {
+  overflow: hidden;
+  color: var(--color-dark);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-brand-text small,
+.admin-user-text small {
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+.admin-nav {
+  flex: 1;
+  margin: 0 -4px;
+  padding: var(--space-1) var(--space-1) var(--space-2);
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.admin-nav-group-label {
+  margin: 14px 10px var(--space-1);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-nav-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.admin-nav-link {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 10px;
+  border-radius: 9px;
+  color: var(--color-ink-secondary);
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.admin-nav-link .icon {
+  color: var(--color-ink-muted);
+}
+
+.admin-nav-link:hover {
+  background: var(--color-neutral-soft);
+  color: var(--color-dark);
+}
+
+/* Mục đang mở nổi lên như thẻ trắng, icon đỏ chỉ ra khu vực hiện tại. */
+.admin-nav-link[aria-current='page'] {
+  background: var(--color-surface);
+  box-shadow: var(--shadow-nav-active);
+  color: var(--color-dark);
+  font-weight: 650;
+}
+
+.admin-nav-link[aria-current='page'] .icon {
+  color: var(--color-brand);
+}
+
+.admin-nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-side-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.admin-user {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 6px var(--space-1) 6px var(--space-2);
+}
+
+.admin-avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--color-dark);
+  color: var(--color-on-dark);
+  font-size: var(--text-label);
+  font-weight: 700;
+}
+
+/* Nút chỉ có icon vẫn rộng 40px để đủ vùng bấm trên màn cảm ứng. */
+.admin-icon-button {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+
+.admin-icon-button:hover {
+  background: var(--color-neutral-soft);
+  color: var(--color-dark);
+}
+
+.admin-collapse {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-ink-muted);
+  font: inherit;
+  font-size: var(--text-xs);
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.admin-collapse:hover {
+  background: var(--color-neutral-soft);
+  color: var(--color-ink-secondary);
+}
+
+/* Mũi tên quay ngược khi thu gọn, báo rằng bấm lần nữa sẽ mở rộng. */
+.admin-shell[data-collapsed='true'] .admin-collapse .icon {
+  transform: rotate(180deg);
+}
+
+.admin-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+/* Thanh trên chỉ dùng ở màn hẹp, nơi nó chứa nút mở ngăn kéo. */
+.admin-top {
+  display: none;
+}
+
+.admin-main {
+  width: 100%;
+  max-width: 1400px;
+  padding: 20px var(--space-5) var(--space-7);
+}
+
+.admin-scrim {
+  display: none;
+}
+
+@media (min-width: 768px) {
+  /* Ẩn chữ bằng mắt nhưng giữ cho trình đọc màn hình. Link vẫn có tên khi sidebar thu gọn. */
+  .admin-shell[data-collapsed='true'] .admin-nav-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+
+  .admin-shell[data-collapsed='true'] .admin-sidebar {
+    padding: var(--space-3) var(--space-2) 10px;
+  }
+
+  .admin-shell[data-collapsed='true'] .admin-brand {
+    justify-content: center;
+    padding: 6px;
+    border-color: transparent;
+    background: none;
+    box-shadow: none;
+  }
+
+  .admin-shell[data-collapsed='true'] .admin-nav-link,
+  .admin-shell[data-collapsed='true'] .admin-collapse {
+    justify-content: center;
+    padding: 0;
+  }
+
+  /* Nhãn nhóm thành đường kẻ mảnh, vẫn tách nhóm khi không còn chỗ cho chữ. */
+  .admin-shell[data-collapsed='true'] .admin-nav-group-label {
+    height: 1px;
+    margin: 10px var(--space-2);
+    overflow: hidden;
+    background: var(--color-border);
+    font-size: 0;
+  }
+
+  /* Dải hẹp chỉ đủ chỗ cho nút đăng xuất. Ảnh đại diện ẩn đi để nút không bị tràn. */
+  .admin-shell[data-collapsed='true'] .admin-user {
+    justify-content: center;
+    padding: 6px 0;
+  }
+
+  .admin-shell[data-collapsed='true'] .admin-avatar {
+    display: none;
+  }
+}
+
+/* 767px tách điện thoại khỏi máy tính bảng dọc 768px. */
+@media (max-width: 767px) {
+  .admin-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* Ngăn kéo dùng `visibility` khi đóng, để link không nhận focus bàn phím khi nằm ngoài màn. */
+  .admin-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    width: min(272px, 85vw);
+    box-shadow: var(--shadow-drawer);
+    transform: translateX(-100%);
+    visibility: hidden;
+  }
+
+  /* Chỉ chạy hiệu ứng khi mở. Đóng hoặc đổi từ màn rộng sang màn hẹp thì ẩn ngay, không trượt ngang qua nội dung. */
+  .admin-sidebar[data-open='true'] {
+    transform: none;
+    visibility: visible;
+    transition:
+      transform 0.2s ease,
+      visibility 0.2s;
+  }
+
+  /* Ở ngăn kéo, sidebar luôn đủ rộng nên không cần nút thu gọn. */
+  .admin-collapse {
+    display: none;
+  }
+
+  .admin-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 45;
+    display: block;
+    background: var(--color-overlay);
+  }
+
+  .admin-top {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    height: 56px;
+    padding: 0 var(--space-2);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+
+  .admin-top-brand {
+    display: flex;
+    gap: var(--space-2);
+    align-items: center;
+    color: var(--color-dark);
+    font-size: var(--text-md);
+  }
+
+  .admin-main {
+    padding: var(--space-4);
+  }
+}
+
+/* Người dùng tắt hiệu ứng chuyển động thì ngăn kéo mở ngay. */
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar,
+  .admin-sidebar[data-open='true'] {
+    transition: none;
+  }
+}
