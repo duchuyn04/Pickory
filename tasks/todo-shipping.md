@@ -1,0 +1,189 @@
+# Task List: shipping
+
+Plan và quyết định thiết kế: `tasks/plan-shipping.md`. Spec: `spec/SPEC-shipping.md`. Quy ước chung: `spec/SPEC.md`, `tasks/plan-dotnet.md`, `CLAUDE.md`.
+
+Quy ước:
+- Mỗi task backend phải qua `dotnet build` và `dotnet test` trong `apps/backend` trước khi báo xong.
+- Mỗi task frontend phải qua `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`.
+- Task back-office thêm endpoint mới vào `apps/backend/tests/Pickory.IntegrationTests/Api/PermissionMatrixTests.cs`.
+- Mỗi test mới đi qua ít nhất một phép thử đột biến trên luật nó bảo vệ.
+- Kích thước: XS 1 file, S 1-2, M 3-5. Số file không tính file test.
+
+---
+
+## Phase 0: Xác minh GHN
+
+### SHIP-00: Xác minh GHN sandbox
+**Mô tả:** Gọi GHN sandbox bằng token thật để chốt các điểm tài liệu chưa nói rõ. Ghi kết quả vào `docs/adr/0003-ghn-shipping-integration.md`. Task này cần `GHN_TOKEN` và `GHN_SHOP_ID` do người dùng cung cấp.
+**Trạng thái:** chờ token. Ngày 2026-10-09 người dùng chưa có token. Các task khác không chờ task này.
+**Tiêu chí nghiệm thu:**
+- [ ] API báo phí: xác định cách gửi địa chỉ 2 cấp (tỉnh/thành và phường/xã mới), kèm request và response thật đã che token
+- [ ] Danh sách mã trạng thái vận đơn của GHN, đối chiếu với bảng ánh xạ trong spec
+- [ ] Gửi lại cùng `client_order_code` trả cùng `order_code`, không tạo đơn thứ hai
+- [ ] API thời gian giao dự kiến (`leadtime`) nhận địa chỉ 2 cấp hay không
+- [ ] Trạng thái nào còn hủy được
+- [ ] Token có giới hạn IP hay không, và IP nào cần đăng ký
+**Kiểm tra:** script tạm ngoài repo, output thật trong ADR
+**Phụ thuộc:** không · **Quy mô:** S
+**File:** `docs/adr/0003-ghn-shipping-integration.md`
+
+---
+
+## Phase 1: Nền tảng
+
+### SHIP-01: Logic thuần
+**Mô tả:** Ba hàm thuần, không gọi DB và không gọi HTTP.
+- `ParcelBuilder.Build(items)`: gộp nhiều SKU thành một kiện theo spec.
+- `ShipmentStatusMapper.Map(rawStatus)`: trả trạng thái chuẩn, hoặc "không biết" với trạng thái lạ.
+- `GhnOrderCode.For(ref, cancelledCount)`: mã `client_order_code` theo quyết định 4 của plan.
+**Tiêu chí nghiệm thu:**
+- [ ] Cân nặng bằng tổng cân nặng nhân số lượng. Dài và rộng lấy giá trị lớn nhất. Cao bằng tổng chiều cao nhân số lượng
+- [ ] Danh sách rỗng, số lượng nhỏ hơn 1 hoặc kích thước âm bị từ chối
+- [ ] Mọi trạng thái GHN trong bảng của spec ánh xạ đúng trạng thái chuẩn
+- [ ] Trạng thái lạ trả "không biết", không ném lỗi
+- [ ] `IsTerminal` đúng với `delivered`, `returned`, `cancelled`
+- [ ] Mã lần đầu là `ref`. Sau n lần hủy là `ref-(n+1)`. Mã dài hơn 50 ký tự bị từ chối
+**Kiểm tra:** unit test
+**Phụ thuộc:** không · **Quy mô:** S
+**File:** `apps/backend/src/Pickory.Modules.Shipping/{Parcels/ParcelBuilder.cs, Shipments/ShipmentStatusMapper.cs, Shipments/GhnOrderCode.cs}`, test trong `apps/backend/tests/Pickory.UnitTests/Modules/Shipping/`
+
+### SHIP-02: Khung module, Contracts, schema và cấu hình
+**Mô tả:** Tạo `Pickory.Modules.Shipping` và `Pickory.Modules.Shipping.Contracts`. Thêm `ShippingDbContext`, migration đầu tiên, `ShippingModule.cs`, sự kiện `ShipmentStatusChangedEvent`. Thêm biến `GHN_API_BASE`, `GHN_TOKEN`, `GHN_SHOP_ID`, `GHN_WEBHOOK_SECRET`, `GHN_LIVE_TESTS` vào `AppConfig` và `.env.example`.
+**Tiêu chí nghiệm thu:**
+- [ ] Bảng `shipments`, `shipment_events`, `address_provinces`, `address_wards`, `shipping_settings` theo Data Model của spec, không có cột quận/huyện
+- [ ] `shipments.ref` và `shipments.tracking_code` có ràng buộc unique
+- [ ] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
+- [ ] `Pickory.ArchitectureTests` chặn `Shipping` tham chiếu module khác ngoài project Contracts
+- [ ] Production thiếu `GHN_TOKEN`, `GHN_SHOP_ID` hoặc `GHN_WEBHOOK_SECRET` thì dừng khi khởi động. Dev và test thiếu token vẫn chạy
+- [ ] `Program.cs` chỉ gọi `AddShippingModule` và `MapShippingEndpoints`
+**Kiểm tra:** build, test kiến trúc, test tích hợp schema
+**Phụ thuộc:** SHIP-01 · **Quy mô:** M
+
+### SHIP-03: Adapter GHN
+**Mô tả:** `IGhnClient` với các hàm: lấy tỉnh/thành, lấy phường/xã, báo phí, tạo đơn, hủy đơn, tra chi tiết. `GhnHttpClient` gọi GHN bằng `HttpClient`. `FakeGhnClient` dùng khi thiếu token. Lỗi GHN quy về `SHIPPING_UNAVAILABLE` hoặc `SHIPPING_REJECTED`.
+**Tiêu chí nghiệm thu:**
+- [ ] Mỗi request có header `Token` và `ShopId`
+- [ ] Test HTTP mock cho từng hàm: thành công, GHN từ chối (400), 5xx, timeout 5 giây
+- [ ] 400 của GHN thành `SHIPPING_REJECTED` (422) kèm thông báo tiếng Việt. 5xx và timeout thành `SHIPPING_UNAVAILABLE` (503)
+- [ ] Báo phí retry đúng 1 lần khi lỗi mạng hoặc 5xx. Tạo đơn không retry
+- [ ] Log và lỗi trả về không chứa giá trị token
+- [ ] Contract test với sandbox chỉ chạy khi `GHN_LIVE_TESTS=1`
+**Kiểm tra:** unit test với `HttpMessageHandler` giả
+**Phụ thuộc:** SHIP-02 · **Quy mô:** M
+
+### Checkpoint S1
+- [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
+- [ ] Test kiến trúc chặn `Shipping` tham chiếu module khác ngoài Contracts
+
+---
+
+## Phase 2: Tính năng
+
+### SHIP-04: Danh mục địa chỉ
+**Mô tả:** Job đồng bộ tỉnh/thành và phường/xã từ GHN mỗi ngày. Lệnh `shipping:sync-addresses` chạy đồng bộ một lần. `GET /api/addresses/provinces` và `GET /api/addresses/wards?provinceCode=` công khai.
+**Tiêu chí nghiệm thu:**
+- [ ] Đồng bộ ghi tỉnh/thành và phường/xã cùng `syncedAt`. Chạy lại không tạo trùng
+- [ ] Đơn vị GHN báo `status` khác `1` không hiện cho khách
+- [ ] Đọc hết phường/xã khi một tỉnh có hơn 200 dòng (phân trang)
+- [ ] GHN lỗi khi đồng bộ thì giữ dữ liệu cũ và ghi log
+- [ ] `wards` thiếu `provinceCode` trả 400. Mã tỉnh không có trả danh sách rỗng
+- [ ] Danh sách sắp theo tên tiếng Việt
+**Kiểm tra:** test tích hợp với client giả
+**Phụ thuộc:** SHIP-03 · **Quy mô:** M
+
+### UI-S1: Ô chọn địa chỉ
+**Mô tả:** Component `AddressPicker` trong `apps/frontend/src/features/shipping/`. Khách chọn tỉnh/thành, rồi chọn phường/xã của tỉnh đó, rồi nhập số nhà. `commerce` dùng component này ở checkout.
+**Tiêu chí nghiệm thu:**
+- [ ] Đổi tỉnh/thành thì xóa phường/xã đã chọn và nạp danh sách mới
+- [ ] Ô phường/xã tắt khi chưa chọn tỉnh/thành
+- [ ] Lọc được theo tên không dấu, ví dụ gõ "ha noi" thấy "Hà Nội"
+- [ ] Dùng được bằng bàn phím. Có `label` cho từng ô. Lỗi hiện dưới ô bằng `FieldError`
+- [ ] Theo `docs/design/design-system.md`. Không tràn ngang ở 375 px
+**Kiểm tra:** Vitest; ảnh chụp 1280 px và 375 px
+**Phụ thuộc:** SHIP-04 · **Quy mô:** M
+
+### SHIP-06: Cấu hình shipping
+**Mô tả:** `GET` và `PUT /api/admin/shipping/settings` với quyền `shipping-settings:manage`. Cấu hình gồm địa chỉ lấy hàng (tên, số điện thoại, địa chỉ có mã) và gói dịch vụ mặc định. `GHN_SHOP_ID` lấy từ biến môi trường, theo spec.
+**Tiêu chí nghiệm thu:**
+- [ ] `support` và `sales` nhận 403. Endpoint mới có trong ma trận quyền
+- [ ] Mã tỉnh/thành và phường/xã phải có trong danh mục đã đồng bộ, nếu không trả 400
+- [ ] Số điện thoại kiểm bằng luật của PROFILE-VAL và lưu dạng `0xxxxxxxxx`
+- [ ] Mỗi lần sửa ghi đúng 1 dòng audit `shipping.settings.update` trong cùng transaction
+- [ ] Response không chứa token GHN
+**Kiểm tra:** test tích hợp
+**Phụ thuộc:** SHIP-04 · **Quy mô:** M
+
+### UI-S2: Màn cấu hình shipping
+**Mô tả:** Màn `/admin/shipping/settings` trong back-office, dùng `AddressPicker`. Menu chỉ hiện với người có `shipping-settings:manage`.
+**Tiêu chí nghiệm thu:**
+- [ ] Lưu thành công hiện thông báo. Lỗi hiện dưới đúng ô
+- [ ] Người thiếu quyền không thấy menu. Mở thẳng URL thấy trang không đủ quyền
+- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang
+**Kiểm tra:** Vitest; E2E `--headed`
+**Phụ thuộc:** SHIP-06, UI-S1 · **Quy mô:** M
+
+### SHIP-05: Báo phí
+**Mô tả:** `IShippingService.QuoteAsync(to, parcel, codAmount, insuredValue)` trả phí, mã gói dịch vụ và ngày giao dự kiến. Task này không có route HTTP. Route báo phí cho giỏ hàng thuộc `commerce` (quyết định 19).
+**Tiêu chí nghiệm thu:**
+- [ ] Chưa cấu hình địa chỉ lấy hàng thì trả lỗi rõ ràng, không gọi GHN
+- [ ] `insuredValue` lớn hơn 5.000.000 đ thì gửi GHN 5.000.000 đ
+- [ ] GHN không trả ngày giao dự kiến thì `ExpectedDeliveryDate` là `null`, không lỗi
+- [ ] Retry đúng 1 lần khi lỗi mạng hoặc 5xx, rồi trả `SHIPPING_UNAVAILABLE`
+**Kiểm tra:** unit test và test tích hợp với client giả
+**Phụ thuộc:** SHIP-06 · **Quy mô:** S
+
+### SHIP-07: Tạo, hủy và tra vận đơn
+**Mô tả:** `CreateShipmentAsync`, `CancelShipmentAsync`, `GetShipmentAsync` của `IShippingService`. `commerce` sẽ gọi các hàm này từ endpoint của nó (quyền `orders:fulfill`).
+**Tiêu chí nghiệm thu:**
+- [ ] Tạo vận đơn lưu `trackingCode`, phí, kiện hàng, trạng thái `pending_pickup` và một dòng `shipment_events`
+- [ ] Lỗi mạng khi tạo: không lưu vận đơn, trả `SHIPPING_UNAVAILABLE`. Gọi lại với cùng `ref` gửi cùng `client_order_code`, và DB chỉ có 1 vận đơn còn hiệu lực
+- [ ] `ref` đã có vận đơn còn hiệu lực thì trả vận đơn đó, không gọi GHN
+- [ ] Hủy chuyển vận đơn sang `cancelled`, đổi `ref` thành `{ref}#cancelled#{n}`, phát sự kiện 1 lần
+- [ ] GHN báo không hủy được thì trả `SHIPPING_REJECTED`, trạng thái không đổi
+- [ ] Tạo lại sau khi hủy dùng `client_order_code` mới
+- [ ] Gửi GHN `required_note = CHOXEMHANGKHONGTHU`, `is_new_to_address = true`, tên tỉnh/thành và phường/xã đúng như danh mục
+**Kiểm tra:** test tích hợp với client giả có chế độ lỗi mạng
+**Phụ thuộc:** SHIP-06 · **Quy mô:** M
+
+### SHIP-08: Webhook GHN và job đồng bộ dự phòng
+**Mô tả:** `POST /api/webhooks/ghn` nhận cập nhật. Job chạy mỗi 30 phút tra lại vận đơn chưa kết thúc. Chuyển `RateLimiter` từ Identity sang `Pickory.Shared` theo quyết định 17.
+**Tiêu chí nghiệm thu:**
+- [ ] Thiếu hoặc sai header `X-Pickory-Webhook-Secret` trả 401, không đổi DB
+- [ ] Route không cần `Origin` của web, vì GHN gọi từ server. Các route khác vẫn giữ luật kiểm `Origin`
+- [ ] `OrderCode` không có trong DB trả 200 và không làm gì, để GHN không thử lại
+- [ ] Module bỏ qua `Status` trong payload. Module gọi API chi tiết của GHN và dùng trạng thái trả về
+- [ ] Gửi cùng webhook 2 lần: phát `ShipmentStatusChangedEvent` đúng 1 lần
+- [ ] Trạng thái GHN lạ: ghi log cảnh báo, giữ trạng thái cũ, trả 200
+- [ ] GHN lỗi khi tra chi tiết: trả 503 để GHN thử lại
+- [ ] Quá giới hạn tần suất theo IP trả 429
+- [ ] Test của Identity vẫn xanh sau khi chuyển `RateLimiter`
+- [ ] Job bỏ qua vận đơn đã kết thúc. Job cập nhật vận đơn bị lỡ webhook và phát sự kiện đúng 1 lần
+- [ ] Chu kỳ job là 30 phút
+**Kiểm tra:** test tích hợp; test gọi processor trực tiếp
+**Phụ thuộc:** SHIP-07 · **Quy mô:** M
+
+### Checkpoint S2
+- [ ] Admin cấu hình địa chỉ lấy hàng trên giao diện, khách chọn được tỉnh/thành và phường/xã
+- [ ] Webhook và job đồng bộ phát sự kiện đúng 1 lần cho mỗi lần đổi trạng thái
+- [ ] Review với người dùng
+
+---
+
+## Phase 3: Nghiệm thu
+
+### SHIP-09: Nghiệm thu shipping
+**Mô tả:** Kiểm toàn module trước khi sang `commerce`.
+**Tiêu chí nghiệm thu:**
+- [ ] Ma trận quyền có mọi endpoint back-office của `shipping`
+- [ ] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
+- [ ] Khi có token: contract test sandbox đạt (danh mục địa chỉ, báo phí, tạo rồi hủy 1 vận đơn)
+- [ ] Khi có token: đo p95 báo phí trên sandbox, dưới 2 giây
+- [ ] Không có token: ghi rõ hai tiêu chí sandbox còn mở và lý do
+**Kiểm tra:** `dotnet test`, script gộp coverage, output đo p95
+**Phụ thuộc:** SHIP-08 · **Quy mô:** S
+
+## Checkpoint cuối
+- [ ] Mọi dòng Traceability đạt
+- [ ] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, bỏ `Persistence/Migrations/`
+- [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+- [ ] Review với người dùng, rồi mới bắt đầu `commerce`

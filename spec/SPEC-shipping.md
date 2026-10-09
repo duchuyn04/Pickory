@@ -53,7 +53,7 @@ export { shippingPermissions } from './permissions';  // ['shipping-settings:man
 ```
 
 - Mọi lỗi từ GHN quy về `ShippingUnavailableError` (GHN lỗi, timeout) hoặc `ShippingRejectedError` (GHN từ chối, ví dụ địa chỉ không phục vụ). Lỗi kèm thông báo tiếng Việt cho người dùng.
-- `quote` timeout 5 giây, retry 1 lần với lỗi mạng hoặc 5xx. `createShipment` **không retry tự động** để tránh tạo trùng vận đơn. Nếu lỗi mạng, hệ thống tra lại GHN theo `ref` trước khi cho bấm tạo lại.
+- `quote` timeout 5 giây, retry 1 lần với lỗi mạng hoặc 5xx. `createShipment` **không retry tự động** để tránh tạo trùng vận đơn. Nếu lỗi mạng, người dùng bấm tạo lại. Module gửi lại cùng `client_order_code`, và GHN trả vận đơn đã tạo thay vì tạo vận đơn mới (cập nhật 2026-10-09, xem `tasks/plan-shipping.md`).
 
 ### Gộp kiện hàng
 
@@ -115,11 +115,12 @@ GHN_LIVE_TESTS=0
 |---|---|---|---|
 | GET | `/api/addresses/provinces` | công khai | Tỉnh/thành |
 | GET | `/api/addresses/wards?provinceCode=` | công khai | Phường/xã (và quận/huyện nếu cần) |
-| POST | `/api/shipping/quote` | công khai | Báo phí cho giỏ hàng hiện tại và địa chỉ, giới hạn 20 lần/phút mỗi khách |
 | POST | `/api/webhooks/ghn` | GHN | Nhận cập nhật trạng thái |
 | GET · PUT | `/api/admin/shipping/settings` | `shipping-settings:manage` | Cấu hình |
 
 Tạo và hủy vận đơn cho đơn hàng đi qua endpoint của `commerce` (quyền `orders:fulfill`). `commerce` gọi `shipping.createShipment`.
+
+Route báo phí cho giỏ hàng hiện tại thuộc `commerce`, vì giỏ hàng thuộc `commerce`. Route giới hạn 20 lần mỗi phút cho mỗi khách và gọi `shipping.quote`. Người dùng chốt ngày 2026-10-09.
 
 ## Data Model (Prisma, rút gọn)
 
@@ -151,7 +152,7 @@ model ShippingSettings { /* pickup address, ghnShopId, defaultServiceId */ }
 
 - Unit: `buildParcel`; bảng ánh xạ trạng thái (kể cả trạng thái lạ); xử lý webhook idempotent.
 - Adapter GHN test bằng HTTP mock: thành công, GHN từ chối địa chỉ, 5xx, timeout.
-- Integration: webhook chỉ phát sự kiện khi trạng thái thật sự đổi; job đồng bộ cập nhật vận đơn khi webhook bị mất; quote bị giới hạn tần suất.
+- Integration: webhook chỉ phát sự kiện khi trạng thái thật sự đổi; job đồng bộ cập nhật vận đơn khi webhook bị mất; webhook bị giới hạn tần suất.
 - `createShipment` lỗi mạng: không tạo trùng khi bấm lại (tra theo `ref` trước).
 - Contract test với GHN sandbox chỉ chạy khi `GHN_LIVE_TESTS=1`: lấy danh mục địa chỉ, báo phí, tạo rồi hủy 1 vận đơn.
 
@@ -174,5 +175,8 @@ model ShippingSettings { /* pickup address, ghnShopId, defaultServiceId */ }
 ## Open Questions
 
 1. **Địa giới hành chính mới:** từ 01/07/2025 Việt Nam bỏ cấp quận/huyện. Cần kiểm tra trong tài liệu GHN hiện tại xem API địa chỉ và báo phí đang dùng 2 cấp hay vẫn cần mã quận/huyện. Spec để `districtCode` tùy chọn cho tới khi xác minh.
+   - Cập nhật 2026-10-09: GHN đã có API danh mục 2 cấp, và API tạo vận đơn nhận địa chỉ 2 cấp. Tài liệu API báo phí chưa nói rõ. Task `SHIP-00` xác minh khi có token sandbox.
 2. Có mua bảo hiểm hàng hóa GHN theo giá trị đơn không? Đồ điện tử giá trị cao nên mình đề xuất có. Mặc định: có, `insuredValue` bằng giá trị hàng.
+   - Chốt 2026-10-09: có mua. GHN nhận tối đa 5.000.000 đ, nên module gửi giá trị nhỏ hơn giữa giá trị hàng và 5.000.000 đ.
 3. Có cho khách xem hàng trước khi nhận (cho xem, không cho thử) không? Mặc định: cho xem, không cho thử.
+   - Chốt 2026-10-09: dùng mặc định. Module gửi `required_note = CHOXEMHANGKHONGTHU`.
