@@ -597,6 +597,55 @@ test.describe('UI-C1: trang danh mục của khách', () => {
     expect(issues).toEqual([]);
   });
 
+  for (const viewport of [
+    { width: 1280, height: 800 },
+    { width: 375, height: 812 },
+  ]) {
+    test(`ô khoảng giá và khoảng thuộc tính hiện đủ 9 chữ số ở ${viewport.width} px`, async ({
+      page,
+    }) => {
+      const issues = collectConsoleIssues(page);
+      await stubProductImages(page);
+      await page.setViewportSize(viewport);
+      await page.goto(`/c/${catalog.childSlug}`);
+      const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
+      if (await consent.isVisible()) await consent.click();
+      await expect(page.locator('.catalog-grid .product-card')).toHaveCount(7);
+
+      // Màn hẹp giấu bộ lọc sau nút "Bộ lọc". Mở nút này trước khi nhập.
+      const toggle = page.getByRole('button', { name: /^Bộ lọc/ });
+      if (await toggle.isVisible()) await toggle.click();
+      const panel = page.getByRole('complementary', { name: 'Bộ lọc sản phẩm' });
+      await expect(panel).toBeVisible();
+
+      for (const legend of ['Mức giá (đ)', 'Màn hình']) {
+        const group = panel.getByRole('group', {
+          name: new RegExp(`^${legend.replace('(', '\\(').replace(')', '\\)')}`),
+        });
+        for (const label of ['Từ', 'Đến']) {
+          const input = group.getByLabel(label);
+          await input.fill('999999999');
+          // Chữ số bị cắt khi nội dung rộng hơn phần nhìn thấy của ô.
+          const widths = await input.evaluate((element) => ({
+            scrollWidth: element.scrollWidth,
+            clientWidth: element.clientWidth,
+          }));
+          expect(widths.scrollWidth, `${legend} / ${label}`).toBeLessThanOrEqual(
+            widths.clientWidth,
+          );
+        }
+        if (screenshotDirectory) {
+          const shotName = legend === 'Mức giá (đ)' ? 'price' : 'attribute';
+          await group.screenshot({
+            path: `${screenshotDirectory}/range-${shotName}-${viewport.width}.png`,
+          });
+        }
+      }
+
+      expect(issues).toEqual([]);
+    });
+  }
+
   test('viewport 375 px: không cuộn ngang và bộ lọc dùng được bằng bàn phím (tiêu chí 3)', async ({
     page,
   }) => {

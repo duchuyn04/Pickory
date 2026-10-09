@@ -187,7 +187,8 @@
 
 .catalog-range {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  /* Một cột: cột lọc 248px quá hẹp để đặt hai ô cạnh nhau mà vẫn hiện đủ 9 chữ số. */
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-2);
   align-items: start;
 }
@@ -196,8 +197,15 @@
   margin-bottom: 0;
 }
 
-.catalog-range-apply {
-  grid-column: 1 / -1;
+/* Ẩn nút tăng giảm: bước 1 đồng vô ích cho giá, và nút này chiếm chỗ của chữ số. */
+.catalog-range input[type='number'] {
+  appearance: textfield;
+}
+
+.catalog-range input[type='number']::-webkit-inner-spin-button,
+.catalog-range input[type='number']::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
 }
 
 .catalog-results {
