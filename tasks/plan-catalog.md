@@ -95,6 +95,7 @@ Chi tiết từng task ở `tasks/todo-catalog.md`.
 - [x] Coverage `services/*.ts` và `domain/*.ts` của `catalog` ít nhất 80% dòng
 - [x] `pnpm test:e2e` pass cả luồng identity cũ và luồng catalog mới
 - [ ] Review với người dùng, rồi mới bắt đầu `shipping` hoặc `commerce`
+  - Ngày 2026-10-09 người dùng cho phép bắt đầu `shipping` trước mục này. Người dùng sẽ tự test catalog sau, nên mục này vẫn mở.
 
 ## Traceability: Success Criteria → Task
 

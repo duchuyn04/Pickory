@@ -770,6 +770,7 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
   - Cách đo của bản .NET: coverage dòng của assembly `Pickory.Modules.Catalog`, gộp test đơn vị và test tích hợp, bỏ `Persistence/Migrations/`. Xem đoạn bằng chứng bên dưới.
 - [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` sạch
 - [ ] Review với người dùng, rồi mới bắt đầu `shipping` hoặc `commerce`
+  - Ngày 2026-10-09 người dùng cho phép bắt đầu `shipping` trước mục này. Người dùng sẽ tự test catalog sau, nên mục này vẫn mở.
 
 **Bằng chứng (2026-10-08):**
 
