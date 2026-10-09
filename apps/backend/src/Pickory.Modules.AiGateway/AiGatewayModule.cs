@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -70,8 +72,10 @@ public static class AiGatewayModule
 
     public static IEndpointRouteBuilder MapAiGatewayEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        AdminUsageEndpoint.Map(endpoints);
-        AdminSettingsEndpoints.Map(endpoints);
+        // Nhóm không thêm tiền tố. Nhóm chỉ gắn tag `AI Gateway` cho mọi route của module trong tài liệu OpenAPI.
+        var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("AI Gateway");
+        AdminUsageEndpoint.Map(moduleRoutes);
+        AdminSettingsEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 

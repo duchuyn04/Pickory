@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Builder;
 using FluentValidation;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
@@ -78,14 +80,17 @@ public static class CatalogModule
 
     public static IEndpointRouteBuilder MapCatalogEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        CategoriesEndpoints.Map(endpoints);
-        BrandsEndpoints.Map(endpoints);
-        ProductsEndpoints.Map(endpoints);
-        PublicProductsEndpoints.Map(endpoints);
-        PublicProductDetailEndpoints.Map(endpoints);
-        MapPublicPagesWhenConfigured(endpoints);
-        UploadSignatureEndpoint.Map(endpoints);
-        InventoryEndpoints.Map(endpoints);
+        // Nhóm không thêm tiền tố. Nhóm chỉ gắn tag `Catalog` cho mọi route của module trong tài liệu OpenAPI.
+        var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("Catalog");
+        CategoriesEndpoints.Map(moduleRoutes);
+        BrandsEndpoints.Map(moduleRoutes);
+        ProductsEndpoints.Map(moduleRoutes);
+        PublicProductsEndpoints.Map(moduleRoutes);
+        PublicProductDetailEndpoints.Map(moduleRoutes);
+        // Hai route trang SEO trả HTML, nên không thuộc tài liệu API.
+        MapPublicPagesWhenConfigured(endpoints.MapGroup(string.Empty).ExcludeFromDescription());
+        UploadSignatureEndpoint.Map(moduleRoutes);
+        InventoryEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 

@@ -1,3 +1,5 @@
+using Microsoft.OpenApi;
+using Pickory.Api;
 using Pickory.Api.Benchmark;
 using Pickory.Api.E2e;
 using Pickory.Api.Middleware;
@@ -75,6 +77,23 @@ builder.Services.AddAiGatewayModule(databaseConnectionString);
 // Catalog cần biết môi trường để dừng production khi thiếu khóa Cloudinary.
 builder.Services.AddCatalogModule(databaseConnectionString, config, builder.Environment.IsProduction());
 
+// Tài liệu OpenAPI chỉ sinh ở Development. Các môi trường khác không đăng ký dịch vụ sinh tài liệu.
+if (builder.Environment.IsDevelopment())
+{
+    builder.Services.AddOpenApi(ApiDocumentation.DocumentName, options =>
+    {
+        // Tiêu đề mặc định lấy từ tên assembly. Tên này không giúp người đọc nhận ra API.
+        options.AddDocumentTransformer((document, _, _) =>
+        {
+            document.Info.Title = ApiDocumentation.Title;
+            document.Info.Version = ApiDocumentation.DocumentName;
+            // Mặc định tài liệu ghi địa chỉ tuyệt đối của API. Địa chỉ `/` giữ origin của trang web, để "Try it out" qua proxy Vite không bị chặn CORS.
+            document.Servers = [new OpenApiServer { Url = "/" }];
+            return Task.CompletedTask;
+        });
+    });
+}
+
 // Chuẩn hóa cấu hình JSON của Minimal API theo camelCase và ISO 8601 UTC.
 builder.Services.ConfigureHttpJsonOptions(options =>
 {
@@ -115,7 +134,7 @@ app.UseMiddleware<ExceptionHandlingMiddleware>();
 app.UseIdentityActor();
 
 // Endpoint kiểm tra sức khỏe của dịch vụ phục vụ giám sát và kiểm thử.
-app.MapGet("/api/health", () => Results.Ok(new ApiResponse<object>(new { status = "ok" })));
+app.MapGet("/api/health", () => Results.Ok(new ApiResponse<object>(new { status = "ok" }))).WithTags("System");
 
 // Mỗi module tự gắn route của mình để `Program.cs` không cần biết danh sách endpoint.
 app.MapIdentityEndpoints();
@@ -126,6 +145,12 @@ app.MapCatalogEndpoints();
 if (isBenchmarkCommand)
 {
     return await CatalogBenchmark.RunAsync(app, config);
+}
+
+// Tài liệu lộ toàn bộ route admin, nên chỉ gắn ở Development. Đặt sau các nhánh lệnh để lệnh seed và benchmark không bị ảnh hưởng.
+if (app.Environment.IsDevelopment())
+{
+    ApiDocumentation.Map(app);
 }
 
 app.Run();

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -105,24 +106,26 @@ public static class IdentityModule
 
     public static IEndpointRouteBuilder MapIdentityEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        GetMeEndpoint.Map(endpoints);
-        RegisterEndpoint.Map(endpoints);
-        CustomerLoginEndpoint.Map(endpoints);
-        StaffLoginEndpoint.Map(endpoints);
-        LogoutEndpoint.Map(endpoints);
-        VerifyEmailEndpoint.Map(endpoints);
-        ForgotPasswordEndpoint.Map(endpoints);
-        ResetPasswordEndpoint.Map(endpoints);
-        GoogleStartEndpoint.Map(endpoints);
-        GoogleCallbackEndpoint.Map(endpoints);
-        SaveConsentEndpoint.Map(endpoints);
-        UpdateProfileEndpoint.Map(endpoints);
-        ChangePasswordEndpoint.Map(endpoints);
-        DeleteAccountEndpoint.Map(endpoints);
-        AdminRolesEndpoints.Map(endpoints);
-        AdminStaffEndpoints.Map(endpoints);
-        AdminCustomersEndpoints.Map(endpoints);
-        AdminAuditLogsEndpoints.Map(endpoints);
+        // Nhóm không thêm tiền tố. Nhóm chỉ gắn tag `Identity` cho mọi route của module trong tài liệu OpenAPI.
+        var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("Identity");
+        GetMeEndpoint.Map(moduleRoutes);
+        RegisterEndpoint.Map(moduleRoutes);
+        CustomerLoginEndpoint.Map(moduleRoutes);
+        StaffLoginEndpoint.Map(moduleRoutes);
+        LogoutEndpoint.Map(moduleRoutes);
+        VerifyEmailEndpoint.Map(moduleRoutes);
+        ForgotPasswordEndpoint.Map(moduleRoutes);
+        ResetPasswordEndpoint.Map(moduleRoutes);
+        GoogleStartEndpoint.Map(moduleRoutes);
+        GoogleCallbackEndpoint.Map(moduleRoutes);
+        SaveConsentEndpoint.Map(moduleRoutes);
+        UpdateProfileEndpoint.Map(moduleRoutes);
+        ChangePasswordEndpoint.Map(moduleRoutes);
+        DeleteAccountEndpoint.Map(moduleRoutes);
+        AdminRolesEndpoints.Map(moduleRoutes);
+        AdminStaffEndpoints.Map(moduleRoutes);
+        AdminCustomersEndpoints.Map(moduleRoutes);
+        AdminAuditLogsEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 

@@ -73,6 +73,19 @@ pnpm build                        # build frontend
 
 Khi dev, mở hai terminal: một terminal chạy API bằng `dotnet run`, một terminal chạy `pnpm dev` trong `apps/frontend`.
 
+### Swagger UI
+
+Swagger UI và tài liệu OpenAPI chỉ có khi `ASPNETCORE_ENVIRONMENT` là `Development`. Ở môi trường khác, `/api/docs` và `/api/openapi/v1.json` trả 404.
+
+1. Chạy API và `pnpm dev` như mục trên.
+2. Mở `http://localhost:5173/api/docs`.
+3. Đăng nhập trên web trước khi gọi route cần phiên.
+4. Chọn một route.
+5. Bấm "Try it out".
+6. Bấm "Execute".
+
+Mở qua cổng 5173, không mở qua cổng 3000. Request từ cổng 5173 mang `Origin` của web, nên route ghi (POST, PUT, PATCH, DELETE) qua được bước kiểm tra nguồn.
+
 ## Project Structure
 
 ```
