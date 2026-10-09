@@ -2,6 +2,13 @@ import { useQueryClient } from '@tanstack/react-query';
 import React, { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import {
+  FieldError,
+  fieldErrorProps,
+  hasFieldErrors,
+  type FieldErrors,
+} from '../../../shared/field-error';
+import { getNameError, getPhoneError } from '../../../shared/identity-validation';
 import { ChangePasswordForm } from '../components/change-password-form';
 import { DeleteAccountDialog } from '../components/delete-account-dialog';
 import { useActor } from '../hooks/use-actor';
@@ -20,6 +27,8 @@ export function AccountPage() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Lỗi theo từng ô hiện ngay dưới ô sai. `error` chỉ giữ lỗi trả về từ API.
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'name' | 'phone'>>({});
 
   useEffect(() => {
     // Điền sẵn form bằng thông tin hiện tại, vì /api/me trả về tên và số điện thoại.
@@ -29,7 +38,7 @@ export function AccountPage() {
     }
   }, [actor]);
 
-  // Đang hỏi server xem ai đang đăng nhập; chưa biết thì chưa quyết định chuyển hướng, nếu không khách đã đăng nhập bị đẩy ra login oan.
+  // Server chưa trả kết quả thì chưa chuyển hướng. Nếu không, khách đã đăng nhập bị đẩy ra trang login oan.
   if (isLoading) {
     return (
       <main className="account-page">
@@ -40,7 +49,7 @@ export function AccountPage() {
     );
   }
 
-  // Nhân viên có khu vực /admin riêng và việc xóa tài khoản ở đây chỉ dành cho khách, nên chỉ khách đã đăng nhập mới vào được.
+  // Nhân viên có khu vực /admin riêng. Trang này chỉ dành cho khách đã đăng nhập.
   if (!actor || actor.kind !== 'customer') {
     return <Navigate to="/login" replace />;
   }
@@ -48,19 +57,33 @@ export function AccountPage() {
   async function handleUpdateProfile(e: React.FormEvent) {
     // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
+    // Giá trị `null` đã lưu tính là chuỗi trống. So sánh sau khi bỏ khoảng trắng hai đầu.
+    const trimmedName = name.trim();
+    const trimmedPhone = phone.trim();
+    const isNameChanged = trimmedName !== (actor?.name ?? '').trim();
+    const isPhoneChanged = trimmedPhone !== (actor?.phone ?? '').trim();
+    // Chỉ kiểm ô đã đổi. Số cũ sai dạng trong DB không chặn việc sửa tên.
+    const nextFieldErrors = {
+      name: isNameChanged ? getNameError(name) : null,
+      phone: isPhoneChanged ? getPhoneError(phone) : null,
+    };
+    setFieldErrors(nextFieldErrors);
+    // Dữ liệu sai thì không gọi API và không khóa nút lưu.
+    if (hasFieldErrors(nextFieldErrors)) return;
     setSaving(true);
-    // Xóa kết quả của lần lưu trước để thông báo cũ không còn hiển thị cùng lúc với kết quả mới.
+    // Xóa kết quả của lần lưu trước. Thông báo cũ không hiện cùng kết quả mới.
     setError(null);
     setSuccess(false);
+
+    // Chỉ gửi ô đã đổi, vì server cũng chỉ kiểm trường được gửi. Ô đổi thành trống gửi null để xóa giá trị.
+    const changes: { name?: string | null; phone?: string | null } = {};
+    if (isNameChanged) changes.name = trimmedName === '' ? null : trimmedName;
+    if (isPhoneChanged) changes.phone = trimmedPhone === '' ? null : trimmedPhone;
 
     try {
       await apiRequest('/api/me', {
         method: 'PATCH',
-        // Ô để trống gửi null để người dùng xóa được thông tin; gửi chuỗi rỗng thì backend cũng coi là xóa nhưng null rõ ràng hơn.
-        body: JSON.stringify({
-          name: name.trim() === '' ? null : name.trim(),
-          phone: phone.trim() === '' ? null : phone.trim(),
-        }),
+        body: JSON.stringify(changes),
       });
       // Nạp lại actor để header và các nơi khác hiển thị tên mới, thay vì giữ bản cũ trong cache.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
@@ -105,7 +128,9 @@ export function AccountPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nhập họ và tên"
+                {...fieldErrorProps('acc-name', fieldErrors.name)}
               />
+              <FieldError inputId="acc-name" message={fieldErrors.name} />
             </div>
 
             <div className="field">
@@ -117,7 +142,9 @@ export function AccountPage() {
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="0912 345 678"
+                {...fieldErrorProps('acc-phone', fieldErrors.phone)}
               />
+              <FieldError inputId="acc-phone" message={fieldErrors.phone} />
             </div>
           </div>
 
@@ -132,7 +159,7 @@ export function AccountPage() {
       {/* Khu vực thay đổi mật khẩu đăng nhập */}
       <ChangePasswordForm />
 
-      {/* Khu vực điều hướng tới cài đặt quyền riêng tư và xử lý dữ liệu */}
+      {/* Khu vực điều hướng tới cài đặt quyền riêng tư và dữ liệu cá nhân */}
       <section className="card account-section account-row">
         <div>
           <h2>Quyền riêng tư &amp; Cookie</h2>

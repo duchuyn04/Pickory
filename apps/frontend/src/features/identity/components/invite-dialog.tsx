@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { Icon } from '../../../shared/icons';
-import { getEmailError } from '../../../shared/identity-validation';
+import { FieldError, fieldErrorProps } from '../../../shared/field-error';
+import { getEmailError, getNameError } from '../../../shared/identity-validation';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import type { RoleData } from './role-form';
 import { ErrorAlert } from '../../../shared/error-alert';
@@ -22,6 +23,8 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
   const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Lỗi của ô tên hiện ngay dưới ô. Các lỗi còn lại hiện ở thông báo chung đầu form.
+  const [nameError, setNameError] = useState<string | null>(null);
 
   // Ẩn role customer vì tài khoản khách và nhân viên tách riêng, server cũng từ chối gán.
   const staffAssignableRoles = availableRoles.filter((r) => r.code !== 'customer');
@@ -39,6 +42,7 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
     // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
+    setNameError(null);
 
     // Kiểm tra ở trình duyệt để báo lỗi tiếng Việt ngay; server vẫn kiểm tra lại mọi thứ.
     const emailErr = getEmailError(email);
@@ -47,8 +51,10 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
       return;
     }
 
-    if (!name.trim()) {
-      setError('Họ và tên không được để trống.');
+    // Tên bắt buộc khi mời nhân viên, khác với hồ sơ khách. Luật độ dài và ký tự dùng chung với backend.
+    const nextNameError = name.trim() ? getNameError(name) : 'Họ và tên không được để trống.';
+    if (nextNameError) {
+      setNameError(nextNameError);
       return;
     }
 
@@ -132,7 +138,9 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Nguyễn Văn A"
+                {...fieldErrorProps('inv-name', nameError)}
               />
+              <FieldError inputId="inv-name" message={nameError} />
             </div>
 
             {/* `fieldset` và `legend` đặt tên cho cả nhóm checkbox, để trình đọc màn hình đọc đúng câu hỏi. */}

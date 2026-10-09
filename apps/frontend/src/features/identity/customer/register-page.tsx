@@ -8,7 +8,12 @@ import {
   hasFieldErrors,
   type FieldErrors,
 } from '../../../shared/field-error';
-import { getEmailError, getPasswordError } from '../../../shared/identity-validation';
+import {
+  getEmailError,
+  getNameError,
+  getPasswordError,
+  getPhoneError,
+} from '../../../shared/identity-validation';
 import { useActor } from '../hooks/use-actor';
 import { AuthCard, AuthDivider, GoogleSignInLink, PasswordInput } from './auth-ui';
 import { ErrorAlert } from '../../../shared/error-alert';
@@ -22,7 +27,9 @@ export function RegisterPage() {
   // Giá trị của ô bẫy bot (honeypot): người thật không thấy ô này nên luôn rỗng.
   const [website, setWebsite] = useState('');
   // Lỗi theo từng ô hiện ngay dưới ô sai; `error` chỉ còn giữ lỗi trả về từ API.
-  const [fieldErrors, setFieldErrors] = useState<FieldErrors<'email' | 'password'>>({});
+  const [fieldErrors, setFieldErrors] = useState<
+    FieldErrors<'email' | 'password' | 'name' | 'phone'>
+  >({});
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -42,8 +49,13 @@ export function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    // Kiểm tra ở trình duyệt để báo lỗi tiếng Việt ngay và không tốn một trong 5 lượt đăng ký mỗi giờ của IP này.
-    const nextFieldErrors = { email: getEmailError(email), password: getPasswordError(password) };
+    // Kiểm ở trình duyệt để báo lỗi ngay. Lỗi nhập liệu không tốn một trong 5 lượt đăng ký mỗi giờ của IP.
+    const nextFieldErrors = {
+      email: getEmailError(email),
+      password: getPasswordError(password),
+      name: getNameError(name),
+      phone: getPhoneError(phone),
+    };
     setFieldErrors(nextFieldErrors);
     if (hasFieldErrors(nextFieldErrors)) return;
 
@@ -52,8 +64,7 @@ export function RegisterPage() {
     try {
       await apiRequest('/api/auth/register', {
         method: 'POST',
-        // Trường để trống không gửi (undefined) thay vì gửi chuỗi rỗng.
-        // website luôn rỗng với người thật; có giá trị thì server nhận ra là bot và từ chối.
+        // Trường để trống không gửi (undefined). `website` luôn rỗng với người thật, nên server từ chối khi nó có giá trị.
         body: JSON.stringify({
           email,
           password,
@@ -120,7 +131,9 @@ export function RegisterPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Nguyễn Văn A"
+            {...fieldErrorProps('reg-name', fieldErrors.name)}
           />
+          <FieldError inputId="reg-name" message={fieldErrors.name} />
         </div>
 
         <div className="field">
@@ -132,7 +145,9 @@ export function RegisterPage() {
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
             placeholder="0912 345 678"
+            {...fieldErrorProps('reg-phone', fieldErrors.phone)}
           />
+          <FieldError inputId="reg-phone" message={fieldErrors.phone} />
         </div>
 
         {/* Honeypot: ô ẩn để bẫy bot tự động điền form, ẩn hoàn toàn với người dùng và trình đọc */}

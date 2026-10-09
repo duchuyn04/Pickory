@@ -5,12 +5,15 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from '../../../../../src/app';
+import { InviteDialog } from '../../../../../src/features/identity/components/invite-dialog';
 import type { ActorData } from '../../../../../src/features/identity/hooks/use-actor';
 
 let container: HTMLDivElement;
 let root: Root;
 let client: QueryClient;
 let postRequests: string[];
+// Body của các request ghi, cùng thứ tự với `postRequests`. Test đọc body để biết form gửi trường nào.
+let requestBodies: string[];
 
 const guest: ActorData = {
   anonymousId: 'test-anonymous',
@@ -37,6 +40,7 @@ beforeEach(() => {
   root = createRoot(container);
   client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   postRequests = [];
+  requestBodies = [];
   localStorage.clear();
 });
 
@@ -52,7 +56,10 @@ async function renderPage(url: string, actor: ActorData = guest) {
   vi.stubGlobal(
     'fetch',
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      if (init?.method && init.method !== 'GET') postRequests.push(String(input));
+      if (init?.method && init.method !== 'GET') {
+        postRequests.push(String(input));
+        requestBodies.push(String(init.body ?? ''));
+      }
       return new Response(JSON.stringify({ data: actor }));
     }),
   );
@@ -160,5 +167,101 @@ describe('lỗi nhập liệu ở màn tài khoản khách', () => {
     expectNoFieldError('#new-pw');
     expectFieldError('#confirm-new-pw', 'Mật khẩu xác nhận không khớp.');
     expect(postRequests).toEqual([]);
+  });
+
+  it('đăng ký: số điện thoại và tên sai hiện dưới từng ô, không gọi API', async () => {
+    await renderPage('/register');
+    await type('#reg-email', 'khach@example.com');
+    await type('#reg-password', 'matkhau12345');
+    await type('#reg-phone', 'abc');
+    await type('#reg-name', 'a'.repeat(101));
+    await submitFormOf('#reg-email');
+    expectFieldError('#reg-phone', 'Số điện thoại không đúng định dạng.');
+    expectFieldError('#reg-name', 'Họ và tên tối đa 100 ký tự.');
+    expectNoFieldError('#reg-email');
+    expect(postRequests).toEqual([]);
+
+    // Sửa số về dạng hợp lệ thì lỗi của ô đó biến mất.
+    await type('#reg-phone', '0912 345 678');
+    await submitFormOf('#reg-email');
+    expectNoFieldError('#reg-phone');
+    expectFieldError('#reg-name', 'Họ và tên tối đa 100 ký tự.');
+    expect(postRequests).toEqual([]);
+  });
+
+  it('tài khoản: số điện thoại sai và tên có ký tự điều khiển hiện dưới từng ô', async () => {
+    await renderPage('/me', customer);
+    await type('#acc-phone', '12345');
+    await type('#acc-name', 'Tên\u0000x');
+    await submitFormOf('#acc-name');
+    expectFieldError('#acc-phone', 'Số điện thoại không đúng định dạng.');
+    expectFieldError('#acc-name', 'Họ và tên chứa ký tự không hợp lệ.');
+    expect(postRequests).toEqual([]);
+  });
+
+  it('tài khoản: ô để trống không báo lỗi và vẫn gửi PATCH', async () => {
+    await renderPage('/me', customer);
+    await type('#acc-phone', '');
+    await type('#acc-name', '');
+    await submitFormOf('#acc-name');
+    expectNoFieldError('#acc-phone');
+    expectNoFieldError('#acc-name');
+    expect(postRequests).toEqual(['/api/me']);
+  });
+
+  it('mời nhân viên: tên quá dài hiện dưới ô tên, không gọi API', async () => {
+    await act(async () => {
+      root.render(<InviteDialog availableRoles={[]} onSuccess={() => {}} onClose={() => {}} />);
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        if (init?.method && init.method !== 'GET') postRequests.push(String(input));
+        return new Response(JSON.stringify({ data: {} }));
+      }),
+    );
+    await type('#inv-email', 'nv@pickory.local');
+    await type('#inv-name', 'a'.repeat(101));
+    await submitFormOf('#inv-email');
+    expectFieldError('#inv-name', 'Họ và tên tối đa 100 ký tự.');
+    expect(postRequests).toEqual([]);
+
+    // Ô nhập một dòng tự bỏ ký tự xuống dòng, nên test dùng ký tự chuông U+0007.
+    await type('#inv-name', 'Tên\u0007x');
+    await submitFormOf('#inv-email');
+    expectFieldError('#inv-name', 'Họ và tên chứa ký tự không hợp lệ.');
+    expect(postRequests).toEqual([]);
+  });
+
+  it('tài khoản: số cũ sai dạng không chặn việc sửa tên, và PATCH không gửi `phone`', async () => {
+    await renderPage('/me', { ...customer, phone: 'abc' });
+    await type('#acc-name', 'Tên Mới');
+    await submitFormOf('#acc-name');
+    expectNoFieldError('#acc-phone');
+    expectNoFieldError('#acc-name');
+    expect(postRequests).toEqual(['/api/me']);
+    expect(JSON.parse(requestBodies[0] ?? '')).toEqual({ name: 'Tên Mới' });
+  });
+
+  it('tài khoản: sửa số đã lưu thành số sai dạng thì hiện lỗi và không gọi API', async () => {
+    await renderPage('/me', { ...customer, phone: '0912345678' });
+    await type('#acc-phone', '12345');
+    await submitFormOf('#acc-phone');
+    expectFieldError('#acc-phone', 'Số điện thoại không đúng định dạng.');
+    expect(postRequests).toEqual([]);
+  });
+
+  it('tài khoản: xóa trống ô đã đổi gửi null, ô không đổi không có trong body', async () => {
+    await renderPage('/me', { ...customer, phone: '0912345678' });
+    await type('#acc-phone', '');
+    await submitFormOf('#acc-phone');
+    expect(JSON.parse(requestBodies[0] ?? '')).toEqual({ phone: null });
+  });
+
+  it('tài khoản: không đổi ô nào vẫn gửi PATCH với body rỗng', async () => {
+    await renderPage('/me', { ...customer, phone: '0912345678' });
+    await submitFormOf('#acc-name');
+    expect(postRequests).toEqual(['/api/me']);
+    expect(JSON.parse(requestBodies[0] ?? '')).toEqual({});
   });
 });

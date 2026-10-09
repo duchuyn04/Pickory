@@ -1,4 +1,5 @@
 using FluentValidation;
+using Pickory.Modules.Identity.Users;
 using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.Register;
@@ -20,5 +21,9 @@ public sealed class RegisterRequestValidator : AbstractValidator<RegisterRequest
             .NotNull().WithMessage(RequestValidation.RequiredMessage)
             .MinimumLength(8).WithMessage("Mật khẩu phải chứa tối thiểu 8 ký tự.")
             .MaximumLength(128).WithMessage("Mật khẩu không được vượt quá 128 ký tự.");
+
+        // Tên và số điện thoại không bắt buộc. Giá trị trống vẫn qua, vì nó nghĩa là không điền.
+        RuleFor(request => request.Name).AddProfileNameRule();
+        RuleFor(request => request.Phone).AddProfilePhoneRule();
     }
 }

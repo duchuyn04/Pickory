@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FluentValidation;
 using FluentValidation.Results;
+using Pickory.Modules.Identity.Users;
 
 namespace Pickory.Modules.Identity.Features.UpdateProfile;
 
@@ -16,8 +17,8 @@ public sealed record UpdateProfileRequest(ProfileFieldUpdate Name, ProfileFieldU
         }
 
         var failures = new List<ValidationFailure>();
-        var name = ReadField(jsonObject, "name", failures);
-        var phone = ReadField(jsonObject, "phone", failures);
+        var name = ReadField(jsonObject, "name", ProfileFieldRules.GetNameError, failures);
+        var phone = ReadField(jsonObject, "phone", ProfileFieldRules.GetPhoneError, failures);
         // Báo mọi trường sai trong một lỗi. Người dùng sửa được tất cả trong một lần gửi.
         if (failures.Count > 0)
         {
@@ -27,7 +28,11 @@ public sealed record UpdateProfileRequest(ProfileFieldUpdate Name, ProfileFieldU
         return new UpdateProfileRequest(name, phone);
     }
 
-    private static ProfileFieldUpdate ReadField(JsonElement jsonObject, string propertyName, List<ValidationFailure> failures)
+    private static ProfileFieldUpdate ReadField(
+        JsonElement jsonObject,
+        string propertyName,
+        Func<string?, string?> getError,
+        List<ValidationFailure> failures)
     {
         if (!jsonObject.TryGetProperty(propertyName, out var value))
         {
@@ -38,6 +43,14 @@ public sealed record UpdateProfileRequest(ProfileFieldUpdate Name, ProfileFieldU
         switch (value.ValueKind)
         {
             case JsonValueKind.String:
+                // Chỉ kiểm trường được gửi. Giá trị cũ sai dạng trong DB không chặn việc sửa trường khác.
+                var error = getError(value.GetString());
+                if (error is not null)
+                {
+                    failures.Add(new ValidationFailure(propertyName, error));
+                    return ProfileFieldUpdate.Missing;
+                }
+
                 return new ProfileFieldUpdate(IsProvided: true, value.GetString());
             case JsonValueKind.Null:
                 return new ProfileFieldUpdate(IsProvided: true, Value: null);

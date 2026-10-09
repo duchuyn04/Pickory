@@ -1,4 +1,5 @@
 using FluentValidation;
+using Pickory.Modules.Identity.Users;
 using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.AdminStaff;
@@ -19,6 +20,9 @@ public sealed class InviteStaffRequestValidator : AbstractValidator<InviteStaffR
             .Cascade(CascadeMode.Stop)
             .NotNull().WithMessage(RequestValidation.RequiredMessage)
             .Must(name => name!.Trim().Length > 0).WithMessage("Họ và tên không được để trống.");
+
+        // Luật độ dài và ký tự điều khiển dùng chung với đăng ký và cập nhật hồ sơ.
+        RuleFor(request => request.Name).AddProfileNameRule();
 
         RuleFor(request => request.RoleCodes)
             .Cascade(CascadeMode.Stop)

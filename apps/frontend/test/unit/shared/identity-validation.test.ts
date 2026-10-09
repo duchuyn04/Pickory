@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   getConfirmPasswordError,
   getEmailError,
+  getNameError,
   getPasswordError,
+  getPhoneError,
 } from '../../../src/shared/identity-validation';
 
 describe('validation form identity', () => {
@@ -39,5 +41,57 @@ describe('validation form identity', () => {
 
   it('ô xác nhận trùng mật khẩu mới thì hợp lệ', () => {
     expect(getConfirmPasswordError('matkhaumoi123', 'matkhaumoi123')).toBeNull();
+  });
+
+  it.each(['', '   ', 'Nguyễn Văn A', '  Nguyễn Văn A  '])('chấp nhận tên %j', (name) => {
+    expect(getNameError(name)).toBeNull();
+  });
+
+  it('chấp nhận tên đúng 100 ký tự có dấu và từ chối tên 101 ký tự', () => {
+    expect(getNameError('Ệ'.repeat(100))).toBeNull();
+    expect(getNameError('Ệ'.repeat(101))).toBe('Họ và tên tối đa 100 ký tự.');
+  });
+
+  it('đếm chữ có dấu viết dạng tổ hợp là một ký tự', () => {
+    expect(getNameError('E\u0323\u0302'.repeat(100))).toBeNull();
+  });
+
+  it('không tính khoảng trắng hai đầu vào độ dài tên', () => {
+    expect(getNameError(`  ${'a'.repeat(100)}  `)).toBeNull();
+  });
+
+  it.each(['Tên\u0000x', 'Tên\nxuống dòng', 'Tên\ttab', 'Tên\u007Fx'])(
+    'từ chối tên có ký tự điều khiển %j',
+    (name) => {
+      expect(getNameError(name)).toBe('Họ và tên chứa ký tự không hợp lệ.');
+    },
+  );
+
+  it.each([
+    '',
+    '   ',
+    '0912345678',
+    '0912 345 678',
+    '091.234.5678',
+    '091-234-5678',
+    '+84912345678',
+  ])('chấp nhận số điện thoại %j', (phone) => {
+    expect(getPhoneError(phone)).toBeNull();
+  });
+
+  it.each([
+    'abc',
+    '12345',
+    '0123456789',
+    '+8412345678',
+    '0212345678',
+    '091234567',
+    '09123456789',
+    '+840912345678',
+    '84912345678',
+    '0912a45678',
+    '٠٩١٢٣٤٥٦٧٨',
+  ])('từ chối số điện thoại %j', (phone) => {
+    expect(getPhoneError(phone)).toBe('Số điện thoại không đúng định dạng.');
   });
 });

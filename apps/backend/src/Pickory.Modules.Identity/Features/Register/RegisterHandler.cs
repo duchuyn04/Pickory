@@ -46,7 +46,8 @@ public sealed class RegisterHandler(
             EmailVerified = false,
             PasswordHash = PasswordHasher.Hash(request.Password!),
             Name = UserInputNormalizer.TrimToNull(request.Name),
-            Phone = UserInputNormalizer.TrimToNull(request.Phone),
+            // Validator đã kiểm định dạng. Lưu về dạng `0xxxxxxxxx` để các module sau dùng một dạng số.
+            Phone = ProfileFieldRules.NormalizePhone(request.Phone),
             Kind = UserKind.Customer,
             UpdatedAt = now,
         };

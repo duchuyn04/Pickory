@@ -21,7 +21,8 @@ public sealed class UpdateProfileHandler(IdentityDbContext database, TimeProvide
 
         if (request.Phone.IsProvided)
         {
-            user.Phone = UserInputNormalizer.TrimToNull(request.Phone.Value);
+            // `FromJson` đã kiểm định dạng. Lưu về dạng `0xxxxxxxxx`, còn chuỗi trống thì xóa số.
+            user.Phone = ProfileFieldRules.NormalizePhone(request.Phone.Value);
         }
 
         // Prisma tự cập nhật `updatedAt` mỗi khi sửa user. Bản .NET ghi cùng cột để dữ liệu không lệch.
