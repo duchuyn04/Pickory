@@ -148,24 +148,24 @@ Quy ước:
 ### SHIP-08: Webhook GHN và job đồng bộ dự phòng
 **Mô tả:** `POST /api/webhooks/ghn` nhận cập nhật. Job chạy mỗi 30 phút tra lại vận đơn chưa kết thúc. Chuyển `RateLimiter` từ Identity sang `Pickory.Shared` theo quyết định 17.
 **Tiêu chí nghiệm thu:**
-- [ ] Thiếu hoặc sai header `X-Pickory-Webhook-Secret` trả 401, không đổi DB
-- [ ] Route không cần `Origin` của web, vì GHN gọi từ server. Các route khác vẫn giữ luật kiểm `Origin`
-- [ ] `OrderCode` không có trong DB trả 200 và không làm gì, để GHN không thử lại
-- [ ] Module bỏ qua `Status` trong payload. Module gọi API chi tiết của GHN và dùng trạng thái trả về
-- [ ] Gửi cùng webhook 2 lần: phát `ShipmentStatusChangedEvent` đúng 1 lần
-- [ ] Trạng thái GHN lạ: ghi log cảnh báo, giữ trạng thái cũ, trả 200
-- [ ] GHN lỗi khi tra chi tiết: trả 503 để GHN thử lại
-- [ ] Quá giới hạn tần suất theo IP trả 429
-- [ ] Test của Identity vẫn xanh sau khi chuyển `RateLimiter`
-- [ ] Job bỏ qua vận đơn đã kết thúc. Job cập nhật vận đơn bị lỡ webhook và phát sự kiện đúng 1 lần
-- [ ] Chu kỳ job là 30 phút
-- [ ] Webhook hoặc job chuyển vận đơn sang `cancelled` thì đổi `ref` thành `{ref}#cancelled#{n}`, giống `CancelShipmentAsync`. Sau đó `CreateShipmentAsync` với `ref` gốc tạo vận đơn mới
+- [x] Thiếu hoặc sai header `X-Pickory-Webhook-Secret` trả 401, không đổi DB
+- [x] Route không cần `Origin` của web, vì GHN gọi từ server. Các route khác vẫn giữ luật kiểm `Origin`
+- [x] `OrderCode` không có trong DB trả 200 và không làm gì, để GHN không thử lại
+- [x] Module bỏ qua `Status` trong payload. Module gọi API chi tiết của GHN và dùng trạng thái trả về
+- [x] Gửi cùng webhook 2 lần: phát `ShipmentStatusChangedEvent` đúng 1 lần
+- [x] Trạng thái GHN lạ: ghi log cảnh báo, giữ trạng thái cũ, trả 200
+- [x] GHN lỗi khi tra chi tiết: trả 503 để GHN thử lại
+- [x] Quá giới hạn tần suất theo IP trả 429
+- [x] Test của Identity vẫn xanh sau khi chuyển `RateLimiter`
+- [x] Job bỏ qua vận đơn đã kết thúc. Job cập nhật vận đơn bị lỡ webhook và phát sự kiện đúng 1 lần
+- [x] Chu kỳ job là 30 phút
+- [x] Webhook hoặc job chuyển vận đơn sang `cancelled` thì đổi `ref` thành `{ref}#cancelled#{n}`, giống `CancelShipmentAsync`. Sau đó `CreateShipmentAsync` với `ref` gốc tạo vận đơn mới
 **Kiểm tra:** test tích hợp; test gọi processor trực tiếp
 **Phụ thuộc:** SHIP-07 · **Quy mô:** M
 
 ### Checkpoint S2
 - [ ] Admin cấu hình địa chỉ lấy hàng trên giao diện, khách chọn được tỉnh/thành và phường/xã
-- [ ] Webhook và job đồng bộ phát sự kiện đúng 1 lần cho mỗi lần đổi trạng thái
+- [x] Webhook và job đồng bộ phát sự kiện đúng 1 lần cho mỗi lần đổi trạng thái
 - [ ] Review với người dùng
 
 ---

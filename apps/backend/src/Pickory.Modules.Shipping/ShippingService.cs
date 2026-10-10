@@ -30,9 +30,6 @@ internal sealed class ShippingService : IShippingService
     // Trạng thái gốc GHN trả cho đơn vừa tạo, theo bảng ánh xạ trong spec.
     private const string NewShipmentRawStatus = "ready_to_pick";
 
-    // Trạng thái gốc GHN dùng cho đơn đã hủy, theo bảng ánh xạ trong spec.
-    private const string CancelledRawStatus = "cancel";
-
     // Lý do gửi kèm mã `GHN-CANCEL-OTHER`. Không chứa dữ liệu khách hàng.
     private const string CancelReasonText = "Cửa hàng hủy vận đơn";
 
@@ -42,14 +39,12 @@ internal sealed class ShippingService : IShippingService
     // GHN bắt buộc `content` khi không gửi `items`. Giới hạn 2000 ký tự là của GHN.
     private const int MaxContentLength = 2000;
 
-    // Vận đơn đã hủy có `ref` dạng `{ref}#cancelled#{n}`, theo quyết định 6 của plan.
-    private const string CancelledRefMarker = "#cancelled#";
-
     private readonly ShippingSettingsStore _settingsStore;
     private readonly ShippingDbContext _database;
     private readonly IGhnClient _ghnClient;
     private readonly IEventDispatcher _eventDispatcher;
     private readonly TimeProvider _timeProvider;
+    private readonly ShipmentStatusUpdater _statusUpdater;
     private readonly ILogger<ShippingService> _logger;
 
     public ShippingService(
@@ -58,6 +53,7 @@ internal sealed class ShippingService : IShippingService
         IGhnClient ghnClient,
         IEventDispatcher eventDispatcher,
         TimeProvider timeProvider,
+        ShipmentStatusUpdater statusUpdater,
         ILogger<ShippingService> logger)
     {
         _settingsStore = settingsStore;
@@ -65,6 +61,7 @@ internal sealed class ShippingService : IShippingService
         _ghnClient = ghnClient;
         _eventDispatcher = eventDispatcher;
         _timeProvider = timeProvider;
+        _statusUpdater = statusUpdater;
         _logger = logger;
     }
 
@@ -248,8 +245,9 @@ internal sealed class ShippingService : IShippingService
         // Mã vận đơn rỗng là lỗi lập trình của bên gọi, không phải vận đơn không tồn tại.
         ArgumentException.ThrowIfNullOrWhiteSpace(shipmentId);
 
-        // Đọc có theo dõi vì bước sau sửa chính entity này.
+        // Đọc không theo dõi vì lớp áp trạng thái ghi bằng câu lệnh có điều kiện, không sửa entity này.
         var shipment = await _database.Shipments
+            .AsNoTracking()
             .FirstOrDefaultAsync(candidate => candidate.Id == shipmentId, cancellationToken);
         if (shipment is null)
         {
@@ -275,7 +273,8 @@ internal sealed class ShippingService : IShippingService
 
         try
         {
-            await SaveCancellationAsync(shipment);
+            // Ghi bằng lớp dùng chung với webhook và job. Nếu webhook đã ghi trước thì kết quả là `LostRace`, nên không đổi `ref` hay phát sự kiện lần hai.
+            await _statusUpdater.ApplyAsync(shipment, ShipmentStatusMapper.CancelledRawStatus, ShipmentEventSource.Manual);
         }
         catch (Exception exception)
         {
@@ -298,43 +297,6 @@ internal sealed class ShippingService : IShippingService
             .AsNoTracking()
             .FirstOrDefaultAsync(candidate => candidate.Id == shipmentId, cancellationToken);
         return shipment is null ? null : ToContract(shipment);
-    }
-
-    // Đổi trạng thái, `ref` và lịch sử trong một transaction rồi mới phát sự kiện. GHN đã hủy đơn nên mọi bước dùng `CancellationToken.None`.
-    private async Task SaveCancellationAsync(ShipmentEntity shipment)
-    {
-        var now = _timeProvider.GetUtcNow();
-        var previousStatus = shipment.Status;
-        var originalRef = shipment.Ref;
-        var events = new DomainEventCollector(_eventDispatcher);
-
-        await using (var transaction = await _database.Database.BeginTransactionAsync(CancellationToken.None))
-        {
-            // Đổi `ref` để mã gốc rảnh cho vận đơn mới. Số thứ tự là số vận đơn đã hủy của `ref` gốc cộng 1.
-            var cancelledCount = await CountCancelledShipmentsAsync(originalRef, CancellationToken.None);
-            shipment.Ref = $"{originalRef}{CancelledRefMarker}{cancelledCount + 1}";
-            shipment.Status = ShipmentStatus.Cancelled;
-            shipment.RawStatus = CancelledRawStatus;
-            shipment.UpdatedAt = now.UtcDateTime;
-            _database.ShipmentEvents.Add(new ShipmentEvent
-            {
-                ShipmentId = shipment.Id,
-                Status = ShipmentStatus.Cancelled,
-                RawStatus = CancelledRawStatus,
-                OccurredAt = now.UtcDateTime,
-                // Nhân viên bấm hủy, nên nguồn là `Manual`.
-                Source = ShipmentEventSource.Manual,
-            });
-            await _database.SaveChangesAsync(CancellationToken.None);
-
-            // Sự kiện mang `ref` gốc, vì bên nhận biết đơn theo mã đó chứ không biết hậu tố nội bộ.
-            events.Emit(new ShipmentStatusChangedEvent(
-                shipment.Id, originalRef, ShipmentStatus.Cancelled, previousStatus, now));
-            await transaction.CommitAsync(CancellationToken.None);
-        }
-
-        // Phát sau commit để bên nhận không thấy trạng thái chưa lưu.
-        await events.FlushAsync(CancellationToken.None);
     }
 
     public Parcel BuildParcel(IReadOnlyList<ParcelItem> items) => ParcelBuilder.Build(items);
@@ -447,13 +409,8 @@ internal sealed class ShippingService : IShippingService
     }
 
     // Đếm vận đơn có `ref` bắt đầu bằng `{ref}#cancelled#` cho ra số lần hủy của `ref` gốc.
-    private async Task<int> CountCancelledShipmentsAsync(string reference, CancellationToken cancellationToken)
-    {
-        var prefix = $"{reference}{CancelledRefMarker}";
-        return await _database.Shipments
-            .AsNoTracking()
-            .CountAsync(shipment => shipment.Ref.StartsWith(prefix), cancellationToken);
-    }
+    private Task<int> CountCancelledShipmentsAsync(string reference, CancellationToken cancellationToken) =>
+        CancelledShipmentRef.CountAsync(_database, reference, cancellationToken);
 
     private static Shipment ToContract(ShipmentEntity shipment) =>
         new(shipment.Id, shipment.Ref, shipment.TrackingCode, shipment.Fee, shipment.Status);

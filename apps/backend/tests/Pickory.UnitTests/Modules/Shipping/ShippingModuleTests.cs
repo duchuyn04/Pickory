@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting;
 using Pickory.Modules.Shipping;
 using Pickory.Modules.Shipping.Addresses;
 using Pickory.Modules.Shipping.Persistence;
+using Pickory.Modules.Shipping.Sync;
 using Pickory.Shared.Configuration;
 using Xunit;
 
@@ -31,6 +32,21 @@ public sealed class ShippingModuleTests
         services.AddShippingModule(ConnectionString, new AppConfig(), isProduction: false);
 
         Assert.Contains(services, descriptor => descriptor.ServiceType == typeof(ShippingDbContext));
+    }
+
+    [Fact]
+    // SHIP-08: API phải chạy worker tra lại trạng thái vận đơn. Thiếu đăng ký này thì webhook bị mất không được bù.
+    public void AddShippingModule_RegistersShipmentStatusSyncWorkerAndProcessor()
+    {
+        var services = new ServiceCollection();
+
+        services.AddShippingModule(ConnectionString, new AppConfig(), isProduction: false);
+
+        Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(IHostedService) && descriptor.ImplementationType == typeof(ShipmentStatusSyncWorker));
+        Assert.Contains(services, descriptor =>
+            descriptor.ServiceType == typeof(IShipmentStatusSyncProcessor)
+            && descriptor.ImplementationType == typeof(ShipmentStatusSyncProcessor));
     }
 
     [Fact]

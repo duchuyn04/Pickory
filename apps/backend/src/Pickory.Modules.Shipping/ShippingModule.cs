@@ -10,7 +10,10 @@ using Pickory.Modules.Shipping.Contracts;
 using Pickory.Modules.Shipping.Features.AdminSettings;
 using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Shipping.Persistence;
+using Pickory.Modules.Shipping.Shipments;
 using Pickory.Modules.Shipping.Settings;
+using Pickory.Modules.Shipping.Sync;
+using Pickory.Modules.Shipping.Webhooks;
 using Pickory.Shared.Configuration;
 
 namespace Pickory.Modules.Shipping;
@@ -36,6 +39,16 @@ public static class ShippingModule
         // Worker nền đồng bộ danh mục địa chỉ mỗi 24 giờ. Lệnh `shipping:sync-addresses` dùng cùng bộ đồng bộ.
         services.AddScoped<IAddressSyncProcessor, AddressSyncProcessor>();
         services.AddHostedService<AddressSyncWorker>();
+
+        // Job tra lại trạng thái vận đơn mỗi 30 phút để bù webhook bị mất. Webhook và job dùng chung `ShipmentStatusUpdater`.
+        services.AddScoped<IShipmentStatusSyncProcessor, ShipmentStatusSyncProcessor>();
+        services.AddHostedService<ShipmentStatusSyncWorker>();
+
+        // Bộ đếm tần suất của webhook nằm trong bộ nhớ, nên phải là singleton để mọi request dùng chung một bộ đếm.
+        services.AddSingleton<GhnWebhookRateLimiter>();
+
+        // Lớp áp trạng thái GHN dùng chung cho webhook và job đồng bộ. Vòng đời scoped vì lớp giữ `ShippingDbContext` của request.
+        services.AddScoped<ShipmentStatusUpdater>();
 
         // Hai lớp cấu hình dùng `ShippingDbContext` theo request, nên đăng ký scoped.
         services.AddScoped<ShippingSettingsValidator>();
@@ -81,6 +94,7 @@ public static class ShippingModule
         var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("Shipping");
         AddressEndpoints.Map(moduleRoutes);
         ShippingSettingsEndpoints.Map(moduleRoutes);
+        GhnWebhookEndpoint.Map(moduleRoutes);
         return endpoints;
     }
 }

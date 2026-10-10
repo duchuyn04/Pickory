@@ -10,7 +10,9 @@ using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Identity.Emails;
 using Pickory.Modules.Shipping.Addresses;
+using Pickory.Modules.Shipping.Contracts.Events;
 using Pickory.Modules.Shipping.Ghn;
+using Pickory.Modules.Shipping.Sync;
 using Pickory.Modules.Identity.GoogleOAuth;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.Events;
@@ -124,6 +126,7 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             services.AddSingleton<IDomainEventHandler<UserDeletedEvent>, RecordingDomainEventHandler<UserDeletedEvent>>();
             services.AddSingleton<IDomainEventHandler<ProductChangedEvent>, RecordingDomainEventHandler<ProductChangedEvent>>();
             services.AddSingleton<IDomainEventHandler<StockChangedEvent>, RecordingDomainEventHandler<StockChangedEvent>>();
+            services.AddSingleton<IDomainEventHandler<ShipmentStatusChangedEvent>, RecordingDomainEventHandler<ShipmentStatusChangedEvent>>();
 
             // Test không gọi GHN thật, kể cả khi máy chạy test có đặt biến `GHN_*`. Biến môi trường thắng cấu hình trong bộ nhớ, nên phải thay `AppConfig` đã nạp.
             var loadedConfig = (AppConfig)services.Single(descriptor => descriptor.ServiceType == typeof(AppConfig)).ImplementationInstance!;
@@ -158,6 +161,14 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             if (addressWorkerRegistration is not null)
             {
                 services.Remove(addressWorkerRegistration);
+            }
+
+            // Bỏ worker tra lại trạng thái vận đơn. Test gọi `ShipmentStatusSyncProcessor` trực tiếp, để job không đổi trạng thái giữa lúc test đang kiểm.
+            var shipmentSyncWorkerRegistration = services.SingleOrDefault(descriptor =>
+                descriptor.ServiceType == typeof(IHostedService) && descriptor.ImplementationType == typeof(ShipmentStatusSyncWorker));
+            if (shipmentSyncWorkerRegistration is not null)
+            {
+                services.Remove(shipmentSyncWorkerRegistration);
             }
         });
     }

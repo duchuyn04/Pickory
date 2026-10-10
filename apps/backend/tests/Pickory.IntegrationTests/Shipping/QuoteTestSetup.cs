@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Database;
@@ -11,6 +12,8 @@ using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Shipping.Persistence;
 using Pickory.Modules.Shipping.Settings;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
+using Pickory.Modules.Shipping.Shipments;
 using Pickory.Shared.Events;
 
 namespace Pickory.IntegrationTests.Shipping;
@@ -25,7 +28,7 @@ internal static class QuoteTestSetup
     public static readonly ShippingAddress ActiveAddress =
         new("79", "Hồ Chí Minh", "7901", "Phường Bến Nghé", "12 Phố Test");
 
-    public static async Task ResetAsync(PickoryWebApplicationFactory factory)
+    public static async Task ResetAsync(WebApplicationFactory<Program> factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
@@ -35,7 +38,7 @@ internal static class QuoteTestSetup
         await AddressTestDatabase.ClearAsync(shipping);
     }
 
-    public static async Task SeedCatalogAsync(PickoryWebApplicationFactory factory)
+    public static async Task SeedCatalogAsync(WebApplicationFactory<Program> factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
@@ -50,7 +53,7 @@ internal static class QuoteTestSetup
         await shipping.SaveChangesAsync();
     }
 
-    public static async Task SeedSettingsAsync(PickoryWebApplicationFactory factory, int? defaultServiceTypeId)
+    public static async Task SeedSettingsAsync(WebApplicationFactory<Program> factory, int? defaultServiceTypeId)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
@@ -77,18 +80,25 @@ internal static class QuoteTestSetup
         ILogger<ShippingService> logger,
         IEventDispatcher? eventDispatcher = null)
     {
+        // Bộ cập nhật trạng thái dùng cùng bộ phát với dịch vụ, để test thấy mọi sự kiện ở một chỗ.
+        var dispatcher = eventDispatcher ?? new RecordingEventDispatcher();
         return new ShippingService(
             scopedServices.GetRequiredService<ShippingSettingsStore>(),
             scopedServices.GetRequiredService<ShippingDbContext>(),
             ghnClient,
-            eventDispatcher ?? new RecordingEventDispatcher(),
+            dispatcher,
             TimeProvider.System,
+            new ShipmentStatusUpdater(
+                scopedServices.GetRequiredService<ShippingDbContext>(),
+                dispatcher,
+                TimeProvider.System,
+                NullLogger<ShipmentStatusUpdater>.Instance),
             logger);
     }
 
     // Dựng dịch vụ từ scope thật để có `ShippingDbContext` và `ShippingSettingsStore` đúng như ứng dụng.
     public static async Task<Quote> QuoteAsync(
-        PickoryWebApplicationFactory factory,
+        WebApplicationFactory<Program> factory,
         IGhnClient ghnClient,
         ILogger<ShippingService> logger,
         ShippingAddress? to = null,

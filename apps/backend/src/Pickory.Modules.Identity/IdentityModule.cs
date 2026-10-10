@@ -34,6 +34,7 @@ using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Identity.Setup;
 using Pickory.Modules.Identity.Throttling;
 using Pickory.Shared.Events;
+using Pickory.Shared.Http;
 
 namespace Pickory.Modules.Identity;
 
@@ -100,8 +101,11 @@ public static class IdentityModule
 
     public static IApplicationBuilder UseIdentityActor(this IApplicationBuilder app)
     {
-        // Mọi route cần actor, kể cả route của module khác. Middleware này phải đứng trước mọi route.
-        return app.UseMiddleware<ActorMiddleware>();
+        // Mọi route cần actor, trừ route webhook. Middleware này phải đứng trước mọi route khác.
+        return app.UseWhen(
+            // Hệ thống bên ngoài gọi webhook từ server, không có `Origin`, cookie hay actor. Webhook tự xác thực bằng secret riêng.
+            context => !context.Request.Path.StartsWithSegments(WebhookRoutes.PathPrefix),
+            branch => branch.UseMiddleware<ActorMiddleware>());
     }
 
     public static IEndpointRouteBuilder MapIdentityEndpoints(this IEndpointRouteBuilder endpoints)

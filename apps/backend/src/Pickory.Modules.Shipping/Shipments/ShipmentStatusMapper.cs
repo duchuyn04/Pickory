@@ -5,6 +5,9 @@ namespace Pickory.Modules.Shipping.Shipments;
 // Ánh xạ trạng thái của GHN sang trạng thái chuẩn của Pickory theo bảng trong spec.
 public static class ShipmentStatusMapper
 {
+    // Trạng thái gốc GHN dùng cho đơn đã hủy. Hủy tay, webhook và bản giả cùng dùng hằng này.
+    public const string CancelledRawStatus = "cancel";
+
     // So khớp đúng chuỗi chữ thường của bảng spec. Chuỗi khác dạng viết có thể là trạng thái chưa được xác minh.
     private static readonly Dictionary<string, ShipmentStatus> StatusByGhnStatus = new(StringComparer.Ordinal)
     {
@@ -24,7 +27,7 @@ public static class ShipmentStatusMapper
         ["return_sorting"] = ShipmentStatus.Returning,
         ["returning"] = ShipmentStatus.Returning,
         ["returned"] = ShipmentStatus.Returned,
-        ["cancel"] = ShipmentStatus.Cancelled,
+        [CancelledRawStatus] = ShipmentStatus.Cancelled,
         ["exception"] = ShipmentStatus.Exception,
         ["damage"] = ShipmentStatus.Exception,
         ["lost"] = ShipmentStatus.Exception,

@@ -1,6 +1,6 @@
 using Pickory.Shared.Exceptions;
 
-namespace Pickory.Modules.Identity.Throttling;
+namespace Pickory.Shared.Throttling;
 
 // Giới hạn số lần gọi theo một khóa (IP hoặc email) trong một cửa sổ thời gian.
 // Bộ đếm nằm trong bộ nhớ, nên giới hạn chỉ đúng khi API chạy một instance.

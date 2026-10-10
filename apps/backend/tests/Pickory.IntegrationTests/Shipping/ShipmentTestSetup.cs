@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Infrastructure;
@@ -38,7 +39,7 @@ internal static class ShipmentTestSetup
             note);
 
     // Xóa lịch sử trước vì khóa ngoại chặn xóa vận đơn còn lịch sử. Sau đó dọn cấu hình và danh mục.
-    public static async Task ResetAsync(PickoryWebApplicationFactory factory)
+    public static async Task ResetAsync(WebApplicationFactory<Program> factory)
     {
         await using (var scope = factory.Services.CreateAsyncScope())
         {
@@ -49,7 +50,7 @@ internal static class ShipmentTestSetup
         }
     }
 
-    public static async Task UpdateServiceTypeAsync(PickoryWebApplicationFactory factory, int? serviceTypeId)
+    public static async Task UpdateServiceTypeAsync(WebApplicationFactory<Program> factory, int? serviceTypeId)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
@@ -57,7 +58,7 @@ internal static class ShipmentTestSetup
             setters => setters.SetProperty(row => row.DefaultServiceTypeId, serviceTypeId));
     }
 
-    public static async Task DeleteSettingsAsync(PickoryWebApplicationFactory factory)
+    public static async Task DeleteSettingsAsync(WebApplicationFactory<Program> factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
@@ -66,7 +67,7 @@ internal static class ShipmentTestSetup
 
     // Chèn thẳng một vận đơn còn hiệu lực để dựng tình huống mã vận đơn GHN trùng mà không đi qua service.
     public static async Task InsertShipmentAsync(
-        PickoryWebApplicationFactory factory, string reference, string trackingCode)
+        WebApplicationFactory<Program> factory, string reference, string trackingCode)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
@@ -85,14 +86,14 @@ internal static class ShipmentTestSetup
         await shipping.SaveChangesAsync();
     }
 
-    public static async Task<List<ShipmentEntity>> ReadShipmentsAsync(PickoryWebApplicationFactory factory)
+    public static async Task<List<ShipmentEntity>> ReadShipmentsAsync(WebApplicationFactory<Program> factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
         return await shipping.Shipments.AsNoTracking().OrderBy(shipment => shipment.Ref).ToListAsync();
     }
 
-    public static async Task<List<ShipmentEvent>> ReadEventsAsync(PickoryWebApplicationFactory factory)
+    public static async Task<List<ShipmentEvent>> ReadEventsAsync(WebApplicationFactory<Program> factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();

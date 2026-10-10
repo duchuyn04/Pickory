@@ -1,5 +1,6 @@
 using System.Globalization;
 using Pickory.Modules.Shipping.Contracts.Errors;
+using Pickory.Modules.Shipping.Shipments;
 
 namespace Pickory.Modules.Shipping.Ghn;
 
@@ -36,6 +37,7 @@ internal sealed class FakeGhnClient : IGhnClient
     private readonly Dictionary<string, FakeOrder> _ordersByCode = new(StringComparer.Ordinal);
     private readonly Dictionary<string, string> _orderCodeByClientCode = new(StringComparer.Ordinal);
     private int _orderCounter;
+    private int _orderDetailCallCount;
 
     // Bật lỗi cho một hàm cho tới khi gọi `ClearFailures`. SHIP-07 dùng `UnavailableAfterProcessing` để thử bấm tạo lại sau lỗi mạng.
     public void SetFailure(FakeGhnOperation operation, FakeGhnFailure failure)
@@ -55,6 +57,23 @@ internal sealed class FakeGhnClient : IGhnClient
             {
                 return _ordersByCode.Count;
             }
+        }
+    }
+
+    // Số lần tra chi tiết đơn, kể cả lần bị đặt lỗi. Test dùng để chứng minh webhook và job không gọi GHN khi không cần.
+    public int OrderDetailCallCount => Volatile.Read(ref _orderDetailCallCount);
+
+    // Đặt trạng thái gốc của một đơn đã tạo, như GHN đổi trạng thái sau khi shipper lấy hàng. Mã đơn lạ thì ném lỗi để test không đặt nhầm.
+    public void SetOrderStatus(string orderCode, string rawStatus)
+    {
+        lock (_gate)
+        {
+            if (!_ordersByCode.TryGetValue(orderCode, out var order))
+            {
+                throw new InvalidOperationException($"Đơn giả {orderCode} chưa được tạo.");
+            }
+
+            order.Status = rawStatus;
         }
     }
 
@@ -160,7 +179,7 @@ internal sealed class FakeGhnClient : IGhnClient
                 throw new ShippingRejectedException("Đơn không thể hủy ở trạng thái hiện tại");
             }
 
-            order.Status = "cancel";
+            order.Status = ShipmentStatusMapper.CancelledRawStatus;
         }
 
         if (failure == FakeGhnFailure.UnavailableAfterProcessing)
@@ -173,6 +192,7 @@ internal sealed class FakeGhnClient : IGhnClient
 
     public Task<GhnOrderDetail> GetOrderDetailAsync(string orderCode, CancellationToken cancellationToken)
     {
+        Interlocked.Increment(ref _orderDetailCallCount);
         ThrowIfFailing(FakeGhnOperation.GetOrderDetail);
 
         lock (_gate)

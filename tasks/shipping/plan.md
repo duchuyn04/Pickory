@@ -89,7 +89,7 @@ Chi tiết từng task ở `tasks/shipping/todo.md`.
 - [x] Test kiến trúc chặn `Shipping` tham chiếu module khác ngoài Contracts
 
 ### Phase 2: Tính năng
-- [x] SHIP-04 · [x] UI-S1 · [x] SHIP-06 · [x] UI-S2 · [x] SHIP-05 · [x] SHIP-07 · [ ] SHIP-08
+- [x] SHIP-04 · [x] UI-S1 · [x] SHIP-06 · [x] UI-S2 · [x] SHIP-05 · [x] SHIP-07 · [x] SHIP-08
 
 ### Checkpoint S2
 - [ ] Admin cấu hình địa chỉ lấy hàng trên giao diện, khách chọn được tỉnh/thành và phường/xã
