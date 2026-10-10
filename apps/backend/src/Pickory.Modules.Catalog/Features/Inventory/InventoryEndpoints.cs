@@ -15,10 +15,11 @@ public static class InventoryEndpoints
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        // Điều chỉnh tồn kho dùng quyền riêng, vì sai số ở đây làm lệch hàng bán được.
-        endpoints.MapPost("/api/admin/skus/{id}/adjust-stock", AdjustStockAsync)
+        // Mỗi lần điều chỉnh tạo một dòng biến động, nên route là `POST` trên tập hợp `movements`.
+        // Điều chỉnh dùng quyền riêng, vì sai số ở đây làm lệch hàng bán được.
+        endpoints.MapPost("/api/admin/skus/{id}/movements", AdjustStockAsync)
             .RequirePermission(Permissions.InventoryWrite);
-        // Xem lịch sử và danh sách sắp hết hàng chỉ đọc, nên dùng quyền đọc sản phẩm.
+        // Xem lịch sử và danh sách sắp hết hàng chỉ đọc, nên dùng quyền đọc sản phẩm. `GET` và `POST` cùng đường dẫn có quyền khác nhau.
         endpoints.MapGet("/api/admin/skus/{id}/movements", GetMovementsAsync)
             .RequirePermission(Permissions.ProductsRead);
         endpoints.MapGet("/api/admin/inventory/low-stock", GetLowStockAsync)
@@ -35,7 +36,8 @@ public static class InventoryEndpoints
         // Kiểm body trước khi mở transaction, để body sai không giữ khóa dòng SKU.
         var validRequest = await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
         var adjusted = await handler.AdjustStockAsync(context.GetActor(), id, validRequest, context.RequestAborted);
-        return Results.Ok(new ApiResponse<AdjustStockResponse>(adjusted));
+        // Route vừa tạo một dòng biến động mới, nên trả 201 thay cho 200.
+        return Results.Json(new ApiResponse<AdjustStockResponse>(adjusted), statusCode: StatusCodes.Status201Created);
     }
 
     private static async Task<IResult> GetMovementsAsync(HttpContext context, string id, InventoryHandler handler)

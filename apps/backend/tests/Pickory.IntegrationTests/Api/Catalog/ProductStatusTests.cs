@@ -159,7 +159,7 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
 
     private async Task<HttpResponseMessage> ChangeStatusAsync(string productId, object body, string? cookie = null) =>
         await _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, $"/api/admin/products/{productId}/status", body, cookie ?? _adminCookie));
+            HttpMethod.Put, $"/api/admin/products/{productId}/status", body, cookie ?? _adminCookie));
 
     private async Task<HttpResponseMessage> DeleteAsync(string productId, string? cookie = null) =>
         await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Delete, $"/api/admin/products/{productId}", null, cookie ?? _adminCookie));
@@ -194,6 +194,33 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
         Assert.Equal(expectedStatus, await StoredStatusAsync(productId));
         Assert.Equal(0, await StatusAuditCountAsync(productId));
         Assert.Empty(EventsOf(productId));
+    }
+
+    [Fact]
+    // Route cũ dùng `POST` không còn đăng ký. Test tách đường dẫn để lệnh grep route cũ không báo nhầm.
+    public async Task OldPostStatusRoute_IsNoLongerRegistered()
+    {
+        var productId = await SeedProductAsync();
+
+        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(
+            HttpMethod.Post, $"/api/admin/products/{productId}/" + "sta" + "tus", new { status = "active" }, _adminCookie));
+
+        Assert.Contains(response.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
+        await AssertNothingChangedAsync(productId, ProductStatus.Draft);
+    }
+
+    [Fact]
+    // `PUT` đặt trạng thái mới và trả sản phẩm đã đổi trong body.
+    public async Task PutStatus_ReturnsUpdatedProduct()
+    {
+        var productId = await SeedProductAsync();
+
+        var response = await ChangeStatusAsync(productId, new { status = "active" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        Assert.Equal("active", json.RootElement.GetProperty("data").GetProperty("status").GetString());
+        Assert.Equal(ProductStatus.Active, await StoredStatusAsync(productId));
     }
 
     [Theory]

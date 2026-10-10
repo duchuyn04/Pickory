@@ -28,8 +28,9 @@ public static class ProductsEndpoints
         // Quyền ghi sản phẩm bảo vệ thông tin giá và thông số kỹ thuật khỏi can thiệp trái phép.
         endpoints.MapPatch("/api/admin/products/{id}", UpdateProductAsync)
             .RequirePermission(Permissions.ProductsWrite);
+        // Trạng thái là tài nguyên con của sản phẩm, và `PUT` đặt cả giá trị nên gửi lại cùng giá trị không đổi kết quả.
         // Đổi trạng thái là thao tác ghi, nên dùng chung quyền ghi sản phẩm.
-        endpoints.MapPost("/api/admin/products/{id}/status", ChangeProductStatusAsync)
+        endpoints.MapPut("/api/admin/products/{id}/status", ChangeProductStatusAsync)
             .RequirePermission(Permissions.ProductsWrite);
         // Xóa cứng làm mất dữ liệu bán hàng, nên chỉ nhân viên có quyền ghi sản phẩm được gọi.
         endpoints.MapDelete("/api/admin/products/{id}", DeleteProductAsync)

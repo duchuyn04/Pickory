@@ -172,18 +172,18 @@ async function createProduct(
   for (const variantSeed of input.variants) {
     if (variantSeed.stock === 0) continue;
     const skuId = skuIdOf(product.variants, variantSeed.optionValues);
-    const adjusted = await page.request.post(`/api/admin/skus/${skuId}/adjust-stock`, {
+    const adjusted = await page.request.post(`/api/admin/skus/${skuId}/movements`, {
       headers: adminHeaders,
       data: { delta: variantSeed.stock, reason: 'Nhập kho E2E trang sản phẩm' },
     });
-    expect(adjusted.status(), await adjusted.text()).toBe(200);
+    expect(adjusted.status(), await adjusted.text()).toBe(201);
   }
   return product;
 }
 
 async function changeStatus(page: Page, productId: string, statuses: string[]) {
   for (const status of statuses) {
-    const changed = await page.request.post(`/api/admin/products/${productId}/status`, {
+    const changed = await page.request.put(`/api/admin/products/${productId}/status`, {
       headers: adminHeaders,
       data: { status },
     });

@@ -72,15 +72,15 @@ Quy ước:
 ### REST-04: Catalog
 **Mô tả:** Đổi trạng thái sản phẩm sang `PUT` và điều chỉnh tồn kho sang `POST .../movements`. Route đổi: dòng 13 và 14 của bảng trong plan.
 **Tiêu chí nghiệm thu:**
-- [ ] `PUT /api/admin/products/{id}/status` giữ body `{ "status": ... }`, trả 200 với sản phẩm đã đổi
-- [ ] Lỗi không thể công khai (`notPublishable`) giữ nguyên mã và danh sách thiếu
-- [ ] `POST /api/admin/skus/{id}/movements` giữ body `delta`, `reason`, `type`, trả 201 với kết quả điều chỉnh
-- [ ] Hai request điều chỉnh đồng thời vẫn không làm tồn kho âm. Test `ProductStockConcurrencyTests` đạt
-- [ ] Quyền giữ nguyên: `products:write` và `inventory:write`. `PermissionMatrixTests` cập nhật
-- [ ] `POST /api/admin/products/{id}/status` và `POST /api/admin/skus/{id}/adjust-stock` trả 404 hoặc 405
-- [ ] Frontend gọi route mới ở `product-form.tsx` và `adjust-stock-dialog.tsx`. Vitest `adjust-stock-dialog`, `product-form-page-status`, `sku-inventory-page` cập nhật
-- [ ] E2E `catalog-inventory.spec.ts` và `catalog-product-status.spec.ts` đạt
-- [ ] `spec/SPEC-catalog.md` (dòng 204, 210) dùng route mới
+- [x] `PUT /api/admin/products/{id}/status` giữ body `{ "status": ... }`, trả 200 với sản phẩm đã đổi
+- [x] Lỗi không thể công khai (`notPublishable`) giữ nguyên mã và danh sách thiếu
+- [x] `POST /api/admin/skus/{id}/movements` giữ body `delta`, `reason`, `type`, trả 201 với kết quả điều chỉnh
+- [x] Hai request điều chỉnh đồng thời vẫn không làm tồn kho âm. Test `ProductStockConcurrencyTests` đạt
+- [x] Quyền giữ nguyên: `products:write` và `inventory:write`. `PermissionMatrixTests` cập nhật
+- [x] `POST /api/admin/products/{id}/status` và `POST /api/admin/skus/{id}/adjust-stock` trả 404 hoặc 405
+- [x] Frontend gọi route mới ở `product-form.tsx` và `adjust-stock-dialog.tsx`. Vitest `adjust-stock-dialog`, `product-form-page-status`, `sku-inventory-page` cập nhật
+- [x] E2E `catalog-inventory.spec.ts` và `catalog-product-status.spec.ts` đạt
+- [x] `spec/SPEC-catalog.md` (dòng 204, 210) dùng route mới
 **Kiểm tra:** test tích hợp `ProductStatusTests`, `InventoryTests`, `ProductStockConcurrencyTests`, `PermissionMatrixTests`; Vitest; E2E
 **Phụ thuộc:** REST-03 · **Quy mô:** S
 **File:** `Pickory.Modules.Catalog/Features/{Products,Inventory}/*Endpoints.cs`, `apps/frontend/src/features/catalog/admin/{product-form.tsx,adjust-stock-dialog.tsx}`

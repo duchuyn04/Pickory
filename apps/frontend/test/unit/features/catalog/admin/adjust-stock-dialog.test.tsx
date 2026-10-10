@@ -166,7 +166,7 @@ describe('AdjustStockDialog', () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe('/api/admin/skus/sku-1/adjust-stock');
+    expect(url).toBe('/api/admin/skus/sku-1/movements');
     expect(init.method).toBe('POST');
     expect(JSON.parse(init.body as string)).toEqual({
       delta: 7,

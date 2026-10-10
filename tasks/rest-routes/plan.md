@@ -125,7 +125,7 @@ REST-01 đến REST-04 không phụ thuộc nhau về code. Làm tuần tự đ�
 Chi tiết từng task ở `tasks/rest-routes/todo.md`.
 
 ### Phase 1: Đổi route theo nhóm
-- [x] REST-01 · [x] REST-02 · [x] REST-03 · [ ] REST-04
+- [x] REST-01 · [x] REST-02 · [x] REST-03 · [x] REST-04
 
 ### Checkpoint R1
 - [ ] Mỗi nhóm route đổi xong, `dotnet test` và `pnpm test` xanh

@@ -90,7 +90,7 @@ test('UI-C7: điều chỉnh tồn kho, danh sách sắp hết hàng và quyền
     // Trình duyệt tự ghi dòng "Failed to load resource" cho phản hồi 409 của bước giảm quá tồn kho.
     if (
       message.type() === 'error' &&
-      message.location().url.endsWith('/adjust-stock') &&
+      message.location().url.endsWith('/movements') &&
       message.text().includes('status of 409')
     ) {
       expected409Logs += 1;
@@ -104,7 +104,7 @@ test('UI-C7: điều chỉnh tồn kho, danh sách sắp hết hàng và quyền
   // Đếm request điều chỉnh để chứng minh lỗi nhập liệu không gửi gì lên máy chủ.
   let adjustRequests = 0;
   page.on('request', (request) => {
-    if (request.method() === 'POST' && request.url().endsWith('/adjust-stock')) adjustRequests += 1;
+    if (request.method() === 'POST' && request.url().endsWith('/movements')) adjustRequests += 1;
   });
 
   await loginAdmin(page);

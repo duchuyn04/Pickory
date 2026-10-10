@@ -143,12 +143,12 @@ async function createActiveProduct(
     variants: { id: string }[];
   };
   const skuId = product.variants[0]?.id;
-  const adjusted = await page.request.post(`/api/admin/skus/${skuId}/adjust-stock`, {
+  const adjusted = await page.request.post(`/api/admin/skus/${skuId}/movements`, {
     headers: adminHeaders,
     data: { delta: 3, reason: 'Nhập kho E2E trang so sánh' },
   });
-  expect(adjusted.status(), await adjusted.text()).toBe(200);
-  const activated = await page.request.post(`/api/admin/products/${product.id}/status`, {
+  expect(adjusted.status(), await adjusted.text()).toBe(201);
+  const activated = await page.request.put(`/api/admin/products/${product.id}/status`, {
     headers: adminHeaders,
     data: { status: 'active' },
   });

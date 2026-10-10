@@ -109,7 +109,8 @@ function createServer(options: ServerOptions = {}) {
         },
       });
     }
-    if (url.pathname === '/api/admin/skus/sku-1/movements') {
+    // `GET` và `POST` dùng chung đường dẫn, nên nhánh đọc lịch sử phải kiểm cả method.
+    if (url.pathname === '/api/admin/skus/sku-1/movements' && (init?.method ?? 'GET') === 'GET') {
       const page = Number(url.searchParams.get('page') ?? '1');
       return jsonResponse({
         data: {
@@ -120,7 +121,7 @@ function createServer(options: ServerOptions = {}) {
         },
       });
     }
-    if (url.pathname === '/api/admin/skus/sku-1/adjust-stock' && init?.method === 'POST') {
+    if (url.pathname === '/api/admin/skus/sku-1/movements' && init?.method === 'POST') {
       const body = JSON.parse(init.body as string) as { delta: number; reason: string };
       const movement: InventoryMovement = {
         id: 'mv-new',
