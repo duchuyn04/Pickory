@@ -39,12 +39,12 @@ Backend có 62 route trong `apps/backend/src`. Mỗi module gắn route qua `Map
 | 6 | `POST /api/auth/forgot-password` | `.../Features/ForgotPassword/ForgotPasswordEndpoint.cs:15` | `POST /api/auth/password-resets` | 200 | Mỗi lần gọi tạo một yêu cầu đặt lại |
 | 7 | `POST /api/auth/reset-password` | `.../Features/ResetPassword/ResetPasswordEndpoint.cs:16` | `PUT /api/auth/password` | 200 | Đặt mật khẩu bằng token. `PUT` idempotent |
 | 8 | `POST /api/me/password` | `.../Features/ChangePassword/ChangePasswordEndpoint.cs:20` | `PUT /api/me/password` | 200 | Thay giá trị mật khẩu của chính người gọi |
-| 9 | `POST /api/admin/customers/{id}/lock` | `.../Features/AdminCustomers/AdminCustomersEndpoints.cs:21` | `PATCH /api/admin/customers/{id}` với `{ "locked": true }` | 200 | Khóa là đổi một trường của khách |
-| 10 | `POST /api/admin/customers/{id}/unlock` | `.../AdminCustomersEndpoints.cs:22` | `PATCH /api/admin/customers/{id}` với `{ "locked": false }` | 200 | Gộp với dòng 9 |
-| 11 | `POST /api/admin/staff/{id}/lock` | `.../Features/AdminStaff/AdminStaffEndpoints.cs:21` | `PATCH /api/admin/staff/{id}` với `{ "locked": true }` | 200 | Giống dòng 9 |
-| 12 | `POST /api/admin/staff/{id}/unlock` | `.../AdminStaffEndpoints.cs:22` | `PATCH /api/admin/staff/{id}` với `{ "locked": false }` | 200 | Gộp với dòng 11 |
-| 13 | `POST /api/admin/products/{id}/status` | `Pickory.Modules.Catalog/Features/Products/ProductsEndpoints.cs:32` | `PUT /api/admin/products/{id}/status` | 200 | `status` là tài nguyên con. `PUT` idempotent |
-| 14 | `POST /api/admin/skus/{id}/adjust-stock` | `.../Features/Inventory/InventoryEndpoints.cs:19` | `POST /api/admin/skus/{id}/movements` | 201 | Mỗi lần điều chỉnh tạo một dòng biến động. `GET` cùng đường dẫn đã có ở dòng 22 |
+| 9 | `POST /api/admin/customers/{id}/lock` | `.../Features/AdminCustomers/AdminCustomersEndpoints.cs:23` | `PATCH /api/admin/customers/{id}` với `{ "locked": true }` | 200 | Khóa là đổi một trường của khách |
+| 10 | `POST /api/admin/customers/{id}/unlock` | `.../AdminCustomersEndpoints.cs:23` | `PATCH /api/admin/customers/{id}` với `{ "locked": false }` | 200 | Gộp với dòng 9 |
+| 11 | `POST /api/admin/staff/{id}/lock` | `.../Features/AdminStaff/AdminStaffEndpoints.cs:23` | `PATCH /api/admin/staff/{id}` với `{ "locked": true }` | 200 | Giống dòng 9 |
+| 12 | `POST /api/admin/staff/{id}/unlock` | `.../AdminStaffEndpoints.cs:23` | `PATCH /api/admin/staff/{id}` với `{ "locked": false }` | 200 | Gộp với dòng 11 |
+| 13 | `POST /api/admin/products/{id}/status` | `Pickory.Modules.Catalog/Features/Products/ProductsEndpoints.cs:33` | `PUT /api/admin/products/{id}/status` | 200 | `status` là tài nguyên con. `PUT` idempotent |
+| 14 | `POST /api/admin/skus/{id}/adjust-stock` | `.../Features/Inventory/InventoryEndpoints.cs:20` | `POST /api/admin/skus/{id}/movements` | 201 | Mỗi lần điều chỉnh tạo một dòng biến động. `GET` cùng đường dẫn đã có ở dòng 23 |
 
 Mã lỗi, body và thông báo lỗi giữ nguyên. Quyền (`RequirePermission`, `RequireAuth`) giữ nguyên. Mã thành công chỉ đổi ở dòng 1, 2 và 14 (200 sang 201).
 
@@ -56,15 +56,15 @@ Mã lỗi, body và thông báo lỗi giữ nguyên. Quyền (`RequirePermission
 | `GET`, `PUT /api/admin/ai/settings`, `GET /api/admin/ai/usage` | `AdminSettingsEndpoints.cs:18,20`, `AdminUsageEndpoint.cs:15` | Danh từ |
 | `GET`, `POST /api/brands`, `/api/admin/brands`, `PATCH`, `DELETE /api/admin/brands/{id}` | `BrandsEndpoints.cs:18-23` | Danh từ, đúng method |
 | `/api/categories`, `/api/admin/categories`, `/api/admin/categories/{id}` | `CategoriesEndpoints.cs:17-24` | Danh từ, đúng method |
-| `/api/admin/products`, `/api/admin/products/{id}` (GET, POST, PATCH, DELETE) | `ProductsEndpoints.cs:20,23,26,29,35` | Danh từ, đúng method |
-| `GET /api/admin/skus/{id}/movements`, `GET /api/admin/inventory/low-stock` | `InventoryEndpoints.cs:22,24` | Danh từ |
+| `/api/admin/products`, `/api/admin/products/{id}` (GET, POST, PATCH, DELETE) | `ProductsEndpoints.cs:20,23,26,29,36` | Danh từ, đúng method |
+| `GET /api/admin/skus/{id}/movements`, `GET /api/admin/inventory/low-stock` | `InventoryEndpoints.cs:23,25` | Danh từ |
 | `GET /api/products`, `/api/products/{slug}`, `/api/products/compare` | `PublicProductsEndpoints.cs:13`, `PublicProductDetailEndpoints.cs:15,16` | `compare` chỉ đọc. Xem Câu hỏi mở 3 |
 | `POST /api/admin/uploads/signature` | `UploadSignatureEndpoint.cs:28` | Danh từ. `POST` tạo một chữ ký ngắn hạn. Xem Câu hỏi mở 4 |
 | `GET /api/me`, `PATCH /api/me`, `DELETE /api/me` | `GetMeEndpoint.cs:16`, `UpdateProfileEndpoint.cs:18`, `DeleteAccountEndpoint.cs:20` | Đúng method |
 | `PUT /api/me/consent` | `SaveConsentEndpoint.cs:18` | Danh từ, `PUT` idempotent |
-| `GET /api/admin/audit-logs`, `/api/admin/customers`, `/api/admin/customers/{id}` | `AdminAuditLogsEndpoints.cs:14`, `AdminCustomersEndpoints.cs:19,20` | Danh từ |
+| `GET /api/admin/audit-logs`, `/api/admin/customers`, `/api/admin/customers/{id}` | `AdminAuditLogsEndpoints.cs:14`, `AdminCustomersEndpoints.cs:21,22` | Danh từ |
 | `/api/admin/roles`, `/api/admin/permissions`, `/api/admin/roles/{id}` | `AdminRolesEndpoints.cs:20-25` | Danh từ, đúng method |
-| `GET /api/admin/staff`, `POST /api/admin/staff/invitations`, `PUT /api/admin/staff/{id}/roles` | `AdminStaffEndpoints.cs:18,19,20` | Danh từ |
+| `GET /api/admin/staff`, `POST /api/admin/staff/invitations`, `PUT /api/admin/staff/{id}/roles` | `AdminStaffEndpoints.cs:20,21,22` | Danh từ |
 | `GET /api/addresses/provinces`, `/api/addresses/wards` | `AddressEndpoints.cs:24,25` | Danh từ |
 | `GET`, `PUT /api/admin/shipping/settings` | `ShippingSettingsEndpoints.cs:22,23` | Danh từ |
 | `POST /api/webhooks/ghn` | `GhnWebhookEndpoint.cs:34` | Danh từ |
@@ -75,9 +75,9 @@ Mã lỗi, body và thông báo lỗi giữ nguyên. Quyền (`RequirePermission
 
 | Loại | Vị trí | Nhóm route bị ảnh hưởng |
 | --- | --- | --- |
-| Frontend, client API | `apps/frontend/src/features/identity/customer/{login-page,register-page,forgot-password-page,reset-password-page,verify-email-page}.tsx`, `src/shared/header.tsx:21`, `src/features/identity/admin/{admin-layout.tsx:77,login-page.tsx:43}` | REST-01, REST-02 |
-| Frontend, đổi mật khẩu | `src/features/identity/components/change-password-form.tsx:48` | REST-02 |
-| Frontend, khóa và mở khóa | `src/features/identity/admin/customers-page.tsx:80-81`, `src/features/identity/admin/staff-page.tsx:67-68` | REST-03 |
+| Frontend, client API | `apps/frontend/src/features/identity/customer/{login-page,register-page,forgot-password-page,reset-password-page,verify-email-page}.tsx`, `src/shared/header.tsx:21`, `src/features/identity/admin/{admin-layout.tsx:76,login-page.tsx:43}` | REST-01, REST-02 |
+| Frontend, đổi mật khẩu | `src/features/identity/components/change-password-form.tsx:47` | REST-02 |
+| Frontend, khóa và mở khóa | `src/features/identity/admin/customers-page.tsx:80`, `src/features/identity/admin/staff-page.tsx:67` | REST-03 |
 | Frontend, catalog | `src/features/catalog/admin/product-form.tsx:529`, `src/features/catalog/admin/adjust-stock-dialog.tsx:58` | REST-04 |
 | Frontend, Vitest | `apps/frontend/test/unit/features/identity/customer/reset-password-page.test.tsx`, `test/unit/features/catalog/admin/{adjust-stock-dialog,product-form-page-status,sku-inventory-page}.test.tsx` | REST-02, REST-04 |
 | E2E Playwright | `apps/frontend/e2e/{catalog-category-page,catalog-compare-page,catalog-inventory,catalog-product-page,catalog-product-status,profile-validation}.spec.ts` (các file dùng route cũ khi đăng nhập hoặc gọi API trực tiếp) | REST-01, REST-04 |
@@ -128,15 +128,15 @@ Chi tiết từng task ở `tasks/rest-routes/todo.md`.
 - [x] REST-01 · [x] REST-02 · [x] REST-03 · [x] REST-04
 
 ### Checkpoint R1
-- [ ] Mỗi nhóm route đổi xong, `dotnet test` và `pnpm test` xanh
+- [x] Mỗi nhóm route đổi xong, `dotnet test` và `pnpm test` xanh
 - [ ] Review với người dùng
 
 ### Phase 2: Kiểm cuối
-- [ ] REST-05
+- [x] REST-05
 
 ### Checkpoint cuối
-- [ ] Lệnh grep route cũ trong `apps`, `spec`, `docs` ra 0 kết quả
-- [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+- [x] Lệnh grep route cũ trong `apps`, `spec`, `docs` ra 0 kết quả
+- [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
 - [ ] Review với người dùng, rồi mới bắt đầu `commerce`
 
 ## Rủi ro

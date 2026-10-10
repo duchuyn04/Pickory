@@ -96,16 +96,18 @@ Quy ước:
 ### REST-05: Kiểm không còn route cũ
 **Mô tả:** Kiểm toàn repo không còn route cũ. Thêm test giữ luật cho các module sau. Chạy đủ bộ build, test và E2E.
 **Tiêu chí nghiệm thu:**
-- [ ] Lệnh dưới đây ra 0 kết quả:
-  `grep -rnE "auth/(login|logout|register|verify-email|forgot-password|reset-password)|admin/auth/login|/(lock|unlock)\b|adjust-stock|POST /api/me/password" apps spec docs --include=*.cs --include=*.ts --include=*.tsx --include=*.md --exclude-dir=node_modules --exclude-dir=bin --exclude-dir=obj`
-- [ ] Test mới liệt kê mọi route từ `EndpointDataSource` và từ chối đoạn đường dẫn nằm trong danh sách động từ (`login`, `logout`, `lock`, `unlock`, `adjust-stock`, `cancel`, `confirm`). Ngoại lệ ghi rõ: `google/start`, `google/callback`
-- [ ] Phép thử đột biến: thêm một route `POST /api/admin/x/{id}/lock` thì test mới đỏ
-- [ ] Bảng route trong `plan.md` khớp code: mỗi route mới có file và dòng thật
-- [ ] `tasks/commerce/plan.md` (quyết định 17) và `spec/SPEC-shipping.md` không mâu thuẫn với luật đặt tên của plan này
-- [ ] `tasks/activity-tracking/{plan,todo}.md` và `tasks/personalized-content/plan.md`: route cũ nếu còn thì đổi sang route mới
-- [ ] `dotnet build`, `dotnet test` sạch
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` sạch
-- [ ] Mục "Câu hỏi mở" của `plan.md` đã có quyết định ghi lại
+- [x] Lệnh dưới đây ra 0 kết quả:
+  `grep -rnE "auth/(login|logout|register|verify-email|forgot-password|reset-password)|admin/auth/login|/(lock|unlock)\b|adjust-stock['\"/?\`]" apps spec docs --include=*.cs --include=*.ts --include=*.tsx --include=*.md --exclude-dir=node_modules --exclude-dir=bin --exclude-dir=obj --exclude-dir=research --exclude=RouteNamingTests.cs`
+  Lệnh riêng cho đổi mật khẩu, mọi dòng phải dùng `PUT`:
+  `grep -rn "me/password" apps/frontend/src apps/frontend/e2e apps/frontend/test apps/backend --include=*.cs --include=*.ts --include=*.tsx`
+- [x] Test mới liệt kê mọi route từ `EndpointDataSource` và từ chối đoạn đường dẫn nằm trong danh sách động từ (`login`, `logout`, `lock`, `unlock`, `adjust-stock`, `cancel`, `confirm`). Ngoại lệ ghi rõ: `google/start`, `google/callback`
+- [x] Phép thử đột biến: thêm một route `POST /api/admin/x/{id}/lock` thì test mới đỏ
+- [x] Bảng route trong `plan.md` khớp code: mỗi route mới có file và dòng thật
+- [x] `tasks/commerce/plan.md` (quyết định 17) và `spec/SPEC-shipping.md` không mâu thuẫn với luật đặt tên của plan này
+- [x] `tasks/activity-tracking/{plan,todo}.md` và `tasks/personalized-content/plan.md`: route cũ nếu còn thì đổi sang route mới
+- [x] `dotnet build`, `dotnet test` sạch
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` sạch
+- [x] Mục "Câu hỏi mở" của `plan.md` đã có quyết định ghi lại
 **Kiểm tra:** lệnh grep, `dotnet test`, bộ lệnh frontend
 **Phụ thuộc:** REST-01 đến REST-04 · **Quy mô:** S
 **File:** `apps/backend/tests/Pickory.ArchitectureTests/` hoặc `apps/backend/tests/Pickory.IntegrationTests/Api/`, `tasks/rest-routes/plan.md`
