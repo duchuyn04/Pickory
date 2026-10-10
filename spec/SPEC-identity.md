@@ -176,8 +176,8 @@ ordersRouter.patch(
 
 ### Chống spam đăng ký và yêu cầu đặt lại mật khẩu
 
-- **Đăng ký (`POST /api/auth/register`)**: Giới hạn tối đa 5 lần / giờ / IP. Vượt ngưỡng trả lỗi 429 `TOO_MANY_REQUESTS` với thông báo tiếng Việt, không tạo tài khoản và không gửi email xác thực.
-- **Quên mật khẩu (`POST /api/auth/forgot-password`)**: Giới hạn tối đa 3 lần / 15 phút / email và 10 lần / giờ / IP. Vượt ngưỡng vẫn trả phản hồi chung thành công giống hệt bình thường (chống dò email), nhưng không tạo token trong DB và không gửi email.
+- **Đăng ký (`POST /api/auth/registrations`)**: Giới hạn tối đa 5 lần / giờ / IP. Vượt ngưỡng trả lỗi 429 `TOO_MANY_REQUESTS` với thông báo tiếng Việt, không tạo tài khoản và không gửi email xác thực.
+- **Quên mật khẩu (`POST /api/auth/password-resets`)**: Giới hạn tối đa 3 lần / 15 phút / email và 10 lần / giờ / IP. Vượt ngưỡng vẫn trả phản hồi chung thành công giống hệt bình thường (chống dò email), nhưng không tạo token trong DB và không gửi email.
 - **Honeypot form đăng ký**: Form đăng ký chứa trường ẩn (`website`, ẩn khỏi màn hình và trình đọc bằng CSS, `tabIndex=-1`, `autoComplete="off"`, `aria-hidden="true"`). Request có dữ liệu honeypot bị từ chối với lỗi 400 chung, không tạo tài khoản, không gửi email.
 - **Cấu hình Trust Proxy**: Biến môi trường `TRUST_PROXY` nhận số hop (số nguyên >= 0, ví dụ 1) hoặc danh sách IP/subnet proxy phân tách bằng dấu phẩy (mặc định tắt: 0 / false). Khi bật, ứng dụng truyền số hop hoặc danh sách IP vào `app.set('trust proxy', ...)`, tuyệt đối không dùng giá trị `true` để ngăn chặn kẻ xấu tự tạo header `X-Forwarded-For` giả mạo nhằm vượt qua các bộ đếm tần suất theo IP.
 - **Bộ đếm trong bộ nhớ**: Bộ đếm tần suất tự cài đặt trong bộ nhớ (hỗ trợ tham số thời gian phục vụ kiểm thử), không dùng thư viện ngoài.
@@ -226,17 +226,17 @@ ordersRouter.patch(
 
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
-| POST | `/api/auth/register` | công khai | Đăng ký khách |
+| POST | `/api/auth/registrations` | công khai | Đăng ký khách. Trả 201 |
 | POST | `/api/auth/sessions` | công khai | Đăng nhập khách. Trả 201 |
 | DELETE | `/api/auth/sessions/current` | công khai | Đăng xuất khách và nhân viên. Không có phiên vẫn trả 200 |
 | GET | `/api/auth/google/start` | công khai | Chuyển hướng sang Google |
 | GET | `/api/auth/google/callback` | công khai | Nhận kết quả từ Google |
-| POST | `/api/auth/verify-email` | công khai | Xác thực email |
-| POST | `/api/auth/forgot-password` | công khai | Gửi link đặt lại mật khẩu |
-| POST | `/api/auth/reset-password` | công khai | Đặt mật khẩu mới bằng token (dùng cả cho lời mời nhân viên) |
+| POST | `/api/auth/email-verifications` | công khai | Xác thực email. Token nằm trong body |
+| POST | `/api/auth/password-resets` | công khai | Gửi link đặt lại mật khẩu |
+| PUT | `/api/auth/password` | công khai | Đặt mật khẩu mới bằng token trong body (dùng cả cho lời mời nhân viên) |
 | GET | `/api/me` | công khai | Actor hiện tại, gồm role và danh sách quyền |
 | PATCH | `/api/me` | đã đăng nhập | Sửa tên, SĐT |
-| POST | `/api/me/password` | đã đăng nhập | Đổi mật khẩu |
+| PUT | `/api/me/password` | đã đăng nhập | Đổi mật khẩu |
 | PUT | `/api/me/consent` | công khai | Lưu lựa chọn đồng ý |
 | DELETE | `/api/me` | khách đã đăng nhập | Xóa tài khoản |
 

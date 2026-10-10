@@ -36,18 +36,18 @@ Quy ước:
 ### REST-02: Vòng đời tài khoản
 **Mô tả:** Đổi 5 route đăng ký, xác thực email, đặt lại mật khẩu và đổi mật khẩu. Route đổi: dòng 4 đến 8 của bảng trong plan.
 **Tiêu chí nghiệm thu:**
-- [ ] `POST /api/auth/registrations` trả 201, body giống route cũ, đăng nhập luôn
-- [ ] `POST /api/auth/email-verifications` nhận token trong body và trả 200
-- [ ] `POST /api/auth/password-resets` trả 200 với cùng thông báo cho email có và không có tài khoản
-- [ ] `PUT /api/auth/password` nhận `token` và mật khẩu mới trong body, trả 200. Token dùng cho cả link quên mật khẩu và link mời nhân viên
-- [ ] `PUT /api/me/password` thay `POST /api/me/password`, yêu cầu đăng nhập, trả 200
-- [ ] Giới hạn tần suất giữ nguyên: đăng ký 5 lần mỗi giờ mỗi IP, quên mật khẩu 3 lần mỗi 15 phút mỗi email. Test hiện có đạt không cần sửa số
-- [ ] Token không xuất hiện trong đường dẫn. Test kiểm log truy cập không chứa token
-- [ ] Link trong email vẫn trỏ tới trang `/verify-email` và `/reset-password` của frontend. Không đổi
-- [ ] Mọi route cũ trong nhóm trả 404 hoặc 405
-- [ ] Frontend gọi route mới ở 5 trang `customer/*-page.tsx` và `components/change-password-form.tsx`. Vitest `reset-password-page.test.tsx` cập nhật
-- [ ] E2E đăng ký, xác thực email, quên mật khẩu, đặt lại mật khẩu và đổi mật khẩu đạt
-- [ ] `spec/SPEC-identity.md` (dòng 179, 180, 229-240) và `docs/testing/identity-manual-test-cases.md` (dòng 131, 163, 164) dùng route mới
+- [x] `POST /api/auth/registrations` trả 201, body giống route cũ, đăng nhập luôn
+- [x] `POST /api/auth/email-verifications` nhận token trong body và trả 200
+- [x] `POST /api/auth/password-resets` trả 200 với cùng thông báo cho email có và không có tài khoản
+- [x] `PUT /api/auth/password` nhận `token` và mật khẩu mới trong body, trả 200. Token dùng cho cả link quên mật khẩu và link mời nhân viên
+- [x] `PUT /api/me/password` thay `POST /api/me/password`, yêu cầu đăng nhập, trả 200
+- [x] Giới hạn tần suất giữ nguyên: đăng ký 5 lần mỗi giờ mỗi IP, quên mật khẩu 3 lần mỗi 15 phút mỗi email. Test hiện có đạt không cần sửa số
+- [x] Token không xuất hiện trong đường dẫn. Test kiểm log truy cập không chứa token
+- [x] Link trong email vẫn trỏ tới trang `/verify-email` và `/reset-password` của frontend. Không đổi
+- [x] Mọi route cũ trong nhóm trả 404 hoặc 405
+- [x] Frontend gọi route mới ở 5 trang `customer/*-page.tsx` và `components/change-password-form.tsx`. Vitest `reset-password-page.test.tsx` cập nhật
+- [x] E2E đăng ký, xác thực email, quên mật khẩu, đặt lại mật khẩu và đổi mật khẩu đạt
+- [x] `spec/SPEC-identity.md` (dòng 179, 180, 229-240) và `docs/testing/identity-manual-test-cases.md` (dòng 131, 163, 164) dùng route mới
 **Kiểm tra:** test tích hợp `RegisterTests`, `EmailTokenTests`, `AccountTests`; Vitest; E2E
 **Phụ thuộc:** REST-01 · **Quy mô:** M
 **File:** `Pickory.Modules.Identity/Features/{Register,VerifyEmail,ForgotPassword,ResetPassword,ChangePassword}/*Endpoint.cs`, `apps/frontend/src/features/identity/customer/*`, `apps/frontend/src/features/identity/components/change-password-form.tsx`

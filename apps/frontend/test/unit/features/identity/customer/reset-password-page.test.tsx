@@ -97,7 +97,7 @@ describe('reset mật khẩu và phiên cũ', () => {
       'fetch',
       vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         if (String(input) === '/api/me') return actorResponse;
-        if (String(input) === '/api/auth/reset-password') {
+        if (String(input) === '/api/auth/password' && init?.method === 'PUT') {
           const body = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
           return body?.token === 'retained-token'
             ? new Response(JSON.stringify({ data: { success: true, userKind: kind } }))

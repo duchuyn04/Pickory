@@ -25,18 +25,18 @@ export function ForgotPasswordPage() {
     // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
-    // Kiểm tra định dạng ngay ở trình duyệt để báo lỗi tiếng Việt tức thì, không tốn một lượt gọi API (và một lượt trong giới hạn tần suất).
+    // Kiểm tra định dạng ở trình duyệt để báo lỗi ngay. Lượt gọi API sai không tốn giới hạn tần suất.
     const nextFieldErrors = { email: getEmailError(email) };
     setFieldErrors(nextFieldErrors);
     if (hasFieldErrors(nextFieldErrors)) return;
     setLoading(true);
 
     try {
-      await apiRequest('/api/auth/forgot-password', {
+      await apiRequest('/api/auth/password-resets', {
         method: 'POST',
         body: JSON.stringify({ email }),
       });
-      // Luôn hiện cùng một màn xác nhận, vì server cũng trả cùng một phản hồi; nếu khác nhau thì dò được email nào đã đăng ký.
+      // Luôn hiện cùng một màn xác nhận, vì server trả cùng một phản hồi. Người ngoài không dò được email đã đăng ký.
       setSubmitted(true);
     } catch (err: unknown) {
       // Chỉ lỗi thật (mạng, dữ liệu sai định dạng) mới tới đây; email không tồn tại không gây lỗi.

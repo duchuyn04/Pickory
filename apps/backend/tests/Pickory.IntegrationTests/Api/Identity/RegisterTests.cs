@@ -12,7 +12,7 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Api.Identity;
 
-// Port từ test ID-05 và ID-17 của bản Node cho `POST /api/auth/register`.
+// Port từ test ID-05 và ID-17 của bản Node cho `POST /api/auth/registrations`.
 [Collection(IntegrationDatabaseCollection.Name)]
 public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
 {
@@ -41,7 +41,7 @@ public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
         // Gửi email viết hoa, tên có khoảng trắng thừa và số điện thoại chỉ có khoảng trắng.
         var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(
             HttpMethod.Post,
-            "/api/auth/register",
+            "/api/auth/registrations",
             new { email = email.ToUpperInvariant(), password = "ValidPassword123!", name = " Khách hàng 1 ", phone = "  " },
             $"pk_anon={anonymousId}"));
 
@@ -113,7 +113,7 @@ public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
     // Email sai định dạng, email có khoảng trắng đầu và mật khẩu ngắn bị từ chối trước khi API chạm DB.
     public async Task Register_InvalidInputReturnsValidationError(string email, string password, string expectedMessage)
     {
-        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/register", new { email, password }));
+        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/registrations", new { email, password }));
 
         // Thông điệp có tên trường và câu lỗi giống bản Node, vì frontend hiển thị trực tiếp.
         await AssertErrorAsync(response, HttpStatusCode.BadRequest, "VALIDATION_ERROR", expectedMessage);
@@ -125,7 +125,7 @@ public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
     {
         // Gửi mật khẩu 129 ký tự, vượt giới hạn đúng một ký tự.
         var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, "/api/auth/register", new { email = IdentityTestData.NewEmail("long"), password = new string('a', 129) }));
+            HttpMethod.Post, "/api/auth/registrations", new { email = IdentityTestData.NewEmail("long"), password = new string('a', 129) }));
 
         // API trả lỗi kiểm tra dữ liệu với thông điệp giống bản Node.
         await AssertErrorAsync(response, HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Dữ liệu không hợp lệ (password: Mật khẩu không được vượt quá 128 ký tự.).");
@@ -155,7 +155,7 @@ public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
         var email = IdentityTestData.NewEmail("bot");
         var body = new Dictionary<string, string> { ["email"] = email, ["password"] = "ValidPassword123!", [trapField] = "https://spam-bot.site" };
 
-        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/register", body));
+        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/registrations", body));
 
         // Lỗi chung không cho bot biết ô nào là bẫy.
         await AssertErrorAsync(response, HttpStatusCode.BadRequest, "BAD_REQUEST", "Yêu cầu không hợp lệ.");
@@ -168,7 +168,7 @@ public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
     public async Task Register_EmptyHoneypotIsAllowed()
     {
         var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, "/api/auth/register", new { email = IdentityTestData.NewEmail("human"), password = "ValidPassword123!", website = "" }));
+            HttpMethod.Post, "/api/auth/registrations", new { email = IdentityTestData.NewEmail("human"), password = "ValidPassword123!", website = "" }));
 
         // API tạo tài khoản như request bình thường.
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -182,7 +182,7 @@ public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
         for (var attempt = 1; attempt <= 6; attempt++)
         {
             await _client.SendAsync(ActorHttp.CreateJsonRequest(
-                HttpMethod.Post, "/api/auth/register", new { email = IdentityTestData.NewEmail("bot"), password = "ValidPassword123!", honeypot = "x" }));
+                HttpMethod.Post, "/api/auth/registrations", new { email = IdentityTestData.NewEmail("bot"), password = "ValidPassword123!", honeypot = "x" }));
         }
 
         // Đăng ký thật sau đó vẫn thành công.
@@ -221,7 +221,7 @@ public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
         for (var attempt = 1; attempt <= 6; attempt++)
         {
             var request = ActorHttp.CreateJsonRequest(
-                HttpMethod.Post, "/api/auth/register", new { email = IdentityTestData.NewEmail("spoof"), password = "ValidPassword123!" });
+                HttpMethod.Post, "/api/auth/registrations", new { email = IdentityTestData.NewEmail("spoof"), password = "ValidPassword123!" });
             // Kẻ xấu đổi địa chỉ giả ở đầu header. Proxy tin cậy luôn ghi địa chỉ thật ở cuối header.
             request.Headers.Add("X-Forwarded-For", $"198.51.100.{attempt}, 203.0.113.195");
 
@@ -235,7 +235,7 @@ public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
     // Gửi request đăng ký hợp lệ tối thiểu. Test chỉ đổi email giữa các lần gọi.
     private Task<HttpResponseMessage> RegisterAsync(string email)
     {
-        return _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/register", new { email, password = "ValidPassword123!" }));
+        return _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/registrations", new { email, password = "ValidPassword123!" }));
     }
 
     // Kiểm tra trực tiếp trong DB. Phản hồi lỗi không đủ chứng minh API không tạo tài khoản.

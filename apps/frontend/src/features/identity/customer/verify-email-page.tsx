@@ -10,7 +10,7 @@ export function VerifyEmailPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Giữ token trong state vì effect bên dưới sẽ xóa nó khỏi URL; lấy một lần lúc khởi tạo nên không đổi theo URL nữa.
+  // Giữ token trong state vì effect bên dưới xóa token khỏi URL. State lấy token một lần lúc khởi tạo.
   const [token] = useState(() => searchParams.get('token') || '');
 
   // Ba trạng thái loại trừ nhau của lần xác thực: đang chờ, thành công, thất bại.
@@ -18,11 +18,11 @@ export function VerifyEmailPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Token chỉ dùng được một lần mà StrictMode chạy effect hai lần khi dev; ref (không mất khi effect chạy lại) giúp chỉ gửi một lần.
-  // Không dùng cờ "đã hủy" kiểu cleanup, vì lần chạy đầu bị hủy sẽ làm mất kết quả mà lần chạy thứ hai lại bị ref chặn.
+  // Token chỉ dùng được một lần, mà StrictMode chạy effect hai lần khi dev, nên ref giúp chỉ gửi một lần.
+  // Không dùng cờ hủy kiểu cleanup, vì lần chạy đầu bị hủy mất kết quả mà lần hai bị ref chặn.
   const calledTokenRef = useRef<string | null>(null);
 
-  // Xóa token khỏi thanh địa chỉ để nó không nằm lại trong lịch sử trình duyệt hay bị gửi đi qua header Referer.
+  // Xóa token khỏi thanh địa chỉ. Token không nằm lại trong lịch sử trình duyệt và không đi qua header Referer.
   useEffect(() => {
     if (searchParams.has('token')) {
       navigate(location.pathname, { replace: true });
@@ -38,7 +38,7 @@ export function VerifyEmailPage() {
     setLoading(true);
     setError(null);
 
-    apiRequest('/api/auth/verify-email', {
+    apiRequest('/api/auth/email-verifications', {
       method: 'POST',
       body: JSON.stringify({ token }),
     })

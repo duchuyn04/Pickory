@@ -103,7 +103,7 @@ public sealed class ProfileValidationTests : IClassFixture<PickoryWebApplication
         var email = IdentityTestData.NewEmail("reg-no-profile");
 
         var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, "/api/auth/register", new { email, password = IdentityTestData.DefaultPassword }));
+            HttpMethod.Post, "/api/auth/registrations", new { email, password = IdentityTestData.DefaultPassword }));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var stored = await ReadUserByEmailAsync(email);
@@ -239,7 +239,7 @@ public sealed class ProfileValidationTests : IClassFixture<PickoryWebApplication
 
     private Task<HttpResponseMessage> PostRegisterAsync(string email, string? name, string? phone) =>
         _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, "/api/auth/register", new { email, password = IdentityTestData.DefaultPassword, name, phone }));
+            HttpMethod.Post, "/api/auth/registrations", new { email, password = IdentityTestData.DefaultPassword, name, phone }));
 
     private Task<HttpResponseMessage> PatchMeAsync(string sessionToken, object body) =>
         _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Patch, "/api/me", body, $"pk_session={sessionToken}"));

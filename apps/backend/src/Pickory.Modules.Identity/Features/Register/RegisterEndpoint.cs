@@ -13,12 +13,12 @@ using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.Register;
 
-// `POST /api/auth/register` đăng ký khách và đăng nhập luôn.
+// `POST /api/auth/registrations` tạo một bản đăng ký khách và đăng nhập luôn.
 public static class RegisterEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/register", HandleAsync);
+        endpoints.MapPost("/api/auth/registrations", HandleAsync);
     }
 
     private static async Task<IResult> HandleAsync(

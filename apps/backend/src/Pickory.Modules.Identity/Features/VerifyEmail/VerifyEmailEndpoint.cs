@@ -7,12 +7,12 @@ using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.VerifyEmail;
 
-// `POST /api/auth/verify-email` xác thực email bằng token trong link.
+// `POST /api/auth/email-verifications` xác thực email bằng token trong body.
 public static class VerifyEmailEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/verify-email", HandleAsync);
+        endpoints.MapPost("/api/auth/email-verifications", HandleAsync);
     }
 
     private static async Task<IResult> HandleAsync(

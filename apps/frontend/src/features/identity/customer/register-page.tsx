@@ -62,7 +62,7 @@ export function RegisterPage() {
     setLoading(true);
 
     try {
-      await apiRequest('/api/auth/register', {
+      await apiRequest('/api/auth/registrations', {
         method: 'POST',
         // Trường để trống không gửi (undefined). `website` luôn rỗng với người thật, nên server từ chối khi nó có giá trị.
         body: JSON.stringify({

@@ -1,7 +1,10 @@
 using System.Net;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Passwords;
@@ -40,8 +43,8 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         var rawToken = await AddEmailTokenAsync(user.Id, EmailTokenPurpose.Verify, TimeSpan.FromHours(24));
 
         // Gửi cùng token hai lần liên tiếp.
-        var firstResponse = await PostAsync("/api/auth/verify-email", new { token = rawToken });
-        var secondResponse = await PostAsync("/api/auth/verify-email", new { token = rawToken });
+        var firstResponse = await PostAsync("/api/auth/email-verifications", new { token = rawToken });
+        var secondResponse = await PostAsync("/api/auth/email-verifications", new { token = rawToken });
 
         // Lần đầu thành công với body giống bản Node.
         Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
@@ -63,7 +66,7 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         // Tạo token còn hạn nhưng mục đích là `Reset`.
         var rawToken = await AddEmailTokenAsync(user.Id, EmailTokenPurpose.Reset, TimeSpan.FromMinutes(30));
 
-        var response = await PostAsync("/api/auth/verify-email", new { token = rawToken });
+        var response = await PostAsync("/api/auth/email-verifications", new { token = rawToken });
 
         // API trả cùng lỗi với token sai. Người ngoài không biết token tồn tại với mục đích khác.
         await RegisterTests.AssertErrorAsync(response, HttpStatusCode.BadRequest, "INVALID_TOKEN", InvalidVerifyTokenMessage);
@@ -80,8 +83,8 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
 
         // Gửi hai request cùng lúc. Cả hai có thể đọc thấy token còn dùng được.
         var responses = await Task.WhenAll(
-            PostAsync("/api/auth/verify-email", new { token = rawToken }),
-            PostAsync("/api/auth/verify-email", new { token = rawToken }));
+            PostAsync("/api/auth/email-verifications", new { token = rawToken }),
+            PostAsync("/api/auth/email-verifications", new { token = rawToken }));
 
         // Đúng một request trả 200. Request còn lại trả 400.
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.BadRequest], responses.Select(response => response.StatusCode).Order());
@@ -94,9 +97,9 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         var user = await CreateCustomerAsync("forgot");
 
         // Gọi quên mật khẩu với một email đã đăng ký và một email chưa đăng ký.
-        var existingResponse = await PostAsync("/api/auth/forgot-password", new { email = user.Email });
+        var existingResponse = await PostAsync("/api/auth/password-resets", new { email = user.Email });
         var unknownEmail = IdentityTestData.NewEmail("nobody");
-        var unknownResponse = await PostAsync("/api/auth/forgot-password", new { email = unknownEmail });
+        var unknownResponse = await PostAsync("/api/auth/password-resets", new { email = unknownEmail });
 
         // Hai phản hồi giống nhau. Chỉ email đã đăng ký nhận thư.
         await AssertForgotPasswordResponseAsync(existingResponse);
@@ -127,7 +130,7 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         var email = IdentityTestData.NewEmail("forgot-locked");
         await IdentityTestData.CreateUserAsync(_database, email, UserKind.Customer, "customer", locked: true);
 
-        var response = await PostAsync("/api/auth/forgot-password", new { email });
+        var response = await PostAsync("/api/auth/password-resets", new { email });
 
         // Phản hồi vẫn giống email hợp lệ, nên kẻ dò không biết tài khoản bị khóa.
         await AssertForgotPasswordResponseAsync(response);
@@ -143,7 +146,7 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         // Mọi lần gọi đều nhận cùng phản hồi thành công. API không trả 429 vì lỗi đó cho biết email đang bị gọi nhiều.
         for (var attempt = 1; attempt <= 4; attempt++)
         {
-            await AssertForgotPasswordResponseAsync(await PostAsync("/api/auth/forgot-password", new { email = user.Email }));
+            await AssertForgotPasswordResponseAsync(await PostAsync("/api/auth/password-resets", new { email = user.Email }));
         }
 
         // Giới hạn là 3 lần mỗi 15 phút. Chỉ 3 token được tạo và chỉ 3 thư được gửi.
@@ -162,7 +165,7 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         await AddSessionAsync(user.Id);
         var rawToken = await AddEmailTokenAsync(user.Id, EmailTokenPurpose.Reset, TimeSpan.FromMinutes(30));
 
-        var response = await PostAsync("/api/auth/reset-password", new { token = rawToken, newPassword = "BrandNewPassword123!" });
+        var response = await PutAsync("/api/auth/password", new { token = rawToken, newPassword = "BrandNewPassword123!" });
 
         // Body giống bản Node. Frontend dùng `userKind` để chọn trang đăng nhập phù hợp.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -189,7 +192,7 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         Assert.Equal("guest", meDocument.RootElement.GetProperty("data").GetProperty("kind").GetString());
 
         // Token đã dùng không đổi được mật khẩu lần nữa.
-        var reuseResponse = await PostAsync("/api/auth/reset-password", new { token = rawToken, newPassword = "AnotherPassword123!" });
+        var reuseResponse = await PutAsync("/api/auth/password", new { token = rawToken, newPassword = "AnotherPassword123!" });
         await RegisterTests.AssertErrorAsync(reuseResponse, HttpStatusCode.BadRequest, "INVALID_TOKEN", InvalidResetTokenMessage);
     }
 
@@ -204,7 +207,7 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         var inviteToken = await AddEmailTokenAsync(user.Id, EmailTokenPurpose.Invite, TimeSpan.FromDays(3));
         var verifyToken = await AddEmailTokenAsync(user.Id, EmailTokenPurpose.Verify, TimeSpan.FromHours(24));
 
-        await PostAsync("/api/auth/reset-password", new { token = usedToken, newPassword = "BrandNewPassword123!" });
+        await PutAsync("/api/auth/password", new { token = usedToken, newPassword = "BrandNewPassword123!" });
 
         await using var identity = _database.CreateIdentityContext();
         var tokens = await identity.EmailTokens.Where(value => value.UserId == user.Id).ToDictionaryAsync(value => value.TokenHash);
@@ -224,7 +227,7 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         var staff = await IdentityTestData.CreateUserAsync(_database, email, UserKind.Staff, "sales", password: null);
         var inviteToken = await AddEmailTokenAsync(staff.Id, EmailTokenPurpose.Invite, TimeSpan.FromDays(3));
 
-        var response = await PostAsync("/api/auth/reset-password", new { token = inviteToken, newPassword = "StaffNewPassword123!" });
+        var response = await PutAsync("/api/auth/password", new { token = inviteToken, newPassword = "StaffNewPassword123!" });
 
         // API trả `userKind` là `staff`. Frontend chuyển nhân viên sang trang đăng nhập nhân viên.
         using var document = await ActorHttp.ReadJsonAsync(response);
@@ -240,7 +243,7 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         var user = await CreateCustomerAsync("reset-rejected");
         var rawToken = await AddEmailTokenAsync(user.Id, purpose, TimeSpan.FromMinutes(minutesUntilExpiry));
 
-        var response = await PostAsync("/api/auth/reset-password", new { token = rawToken, newPassword = "NewPassword123!" });
+        var response = await PutAsync("/api/auth/password", new { token = rawToken, newPassword = "NewPassword123!" });
 
         // Hai trường hợp nhận cùng lỗi. Người ngoài không phân biệt được lý do token hỏng.
         await RegisterTests.AssertErrorAsync(response, HttpStatusCode.BadRequest, "INVALID_TOKEN", InvalidResetTokenMessage);
@@ -254,8 +257,8 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
         var rawToken = await AddEmailTokenAsync(user.Id, EmailTokenPurpose.Reset, TimeSpan.FromMinutes(30));
 
         // Gửi mật khẩu yếu trước. Sau đó gửi mật khẩu hợp lệ với cùng token.
-        var weakResponse = await PostAsync("/api/auth/reset-password", new { token = rawToken, newPassword = "short" });
-        var validResponse = await PostAsync("/api/auth/reset-password", new { token = rawToken, newPassword = "LongEnough123!" });
+        var weakResponse = await PutAsync("/api/auth/password", new { token = rawToken, newPassword = "short" });
+        var validResponse = await PutAsync("/api/auth/password", new { token = rawToken, newPassword = "LongEnough123!" });
 
         // Lần đầu nhận lỗi kiểm tra dữ liệu. Lần hai thành công vì token chưa bị dùng.
         await RegisterTests.AssertErrorAsync(
@@ -272,18 +275,18 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
 
         // Gửi hai request cùng lúc với hai mật khẩu khác nhau.
         var responses = await Task.WhenAll(
-            PostAsync("/api/auth/reset-password", new { token = rawToken, newPassword = "RacePasswordOne1!" }),
-            PostAsync("/api/auth/reset-password", new { token = rawToken, newPassword = "RacePasswordTwo2!" }));
+            PutAsync("/api/auth/password", new { token = rawToken, newPassword = "RacePasswordOne1!" }),
+            PutAsync("/api/auth/password", new { token = rawToken, newPassword = "RacePasswordTwo2!" }));
 
         // Đúng một request trả 200. Request còn lại trả 400.
         Assert.Equal([HttpStatusCode.OK, HttpStatusCode.BadRequest], responses.Select(response => response.StatusCode).Order());
     }
 
     [Theory]
-    [InlineData(EmailTokenPurpose.Verify, "/api/auth/verify-email")]
-    [InlineData(EmailTokenPurpose.Reset, "/api/auth/reset-password")]
+    [InlineData(EmailTokenPurpose.Verify, "POST", "/api/auth/email-verifications")]
+    [InlineData(EmailTokenPurpose.Reset, "PUT", "/api/auth/password")]
     // Prisma tự cập nhật `updatedAt` khi sửa user. Bản .NET phải ghi cùng cột, nếu không thì báo cáo thấy user chưa đổi.
-    public async Task TokenRoutes_RefreshUserUpdatedAt(EmailTokenPurpose purpose, string path)
+    public async Task TokenRoutes_RefreshUserUpdatedAt(EmailTokenPurpose purpose, string method, string path)
     {
         var user = await CreateCustomerAsync("updated-at");
         var rawToken = await AddEmailTokenAsync(user.Id, purpose, TimeSpan.FromMinutes(30));
@@ -294,16 +297,57 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
                 .ExecuteUpdateAsync(setters => setters.SetProperty(value => value.UpdatedAt, DateTime.UtcNow.AddDays(-1)));
         }
 
-        var response = await PostAsync(path, new { token = rawToken, newPassword = "BrandNewPassword123!" });
+        var response = await SendAsync(new HttpMethod(method), path, new { token = rawToken, newPassword = "BrandNewPassword123!" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(DateTime.UtcNow, (await ReadUserAsync(user.Id)).UpdatedAt, TimeSpan.FromMinutes(1));
     }
 
+    [Fact]
+    // Token nằm trong body, không nằm trong đường dẫn. Log của request cũng không được chứa token.
+    public async Task TokenRoutes_DoNotWriteTokenToLogs()
+    {
+        var logs = new CapturingLoggerProvider();
+        using var loggingFactory = _factory.WithWebHostBuilder(builder => builder.ConfigureLogging(logging => logging.AddProvider(logs)));
+        using var client = loggingFactory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        var verifyUser = await CreateCustomerAsync("log-verify");
+        var verifyToken = await AddEmailTokenAsync(verifyUser.Id, EmailTokenPurpose.Verify, TimeSpan.FromHours(24));
+        var resetUser = await CreateCustomerAsync("log-reset");
+        var resetToken = await AddEmailTokenAsync(resetUser.Id, EmailTokenPurpose.Reset, TimeSpan.FromMinutes(30));
+
+        var verifyResponse = await client.SendAsync(ActorHttp.CreateJsonRequest(
+            HttpMethod.Post, "/api/auth/email-verifications", new { token = verifyToken }));
+        var resetResponse = await client.SendAsync(ActorHttp.CreateJsonRequest(
+            HttpMethod.Put, "/api/auth/password", new { token = resetToken, newPassword = "LogCheckPassword123!" }));
+
+        // Cả hai request thành công, và host test có ghi log. Nếu không có log thì phép kiểm bên dưới vô nghĩa.
+        Assert.Equal(HttpStatusCode.OK, verifyResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, resetResponse.StatusCode);
+        Assert.NotEmpty(logs.Entries);
+        foreach (var entry in logs.Entries)
+        {
+            Assert.DoesNotContain(verifyToken, entry.Message);
+            Assert.DoesNotContain(resetToken, entry.Message);
+            Assert.DoesNotContain(verifyToken, entry.Exception ?? string.Empty);
+            Assert.DoesNotContain(resetToken, entry.Exception ?? string.Empty);
+        }
+    }
+
     // Gửi request ghi có `Origin` của web. Request qua được bước chống CSRF (Cross-Site Request Forgery).
     private Task<HttpResponseMessage> PostAsync(string path, object body)
     {
-        return _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, path, body));
+        return SendAsync(HttpMethod.Post, path, body);
+    }
+
+    // Đặt mật khẩu bằng token dùng `PUT`, vì route thay giá trị mật khẩu của tài khoản.
+    private Task<HttpResponseMessage> PutAsync(string path, object body)
+    {
+        return SendAsync(HttpMethod.Put, path, body);
+    }
+
+    private Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object body)
+    {
+        return _client.SendAsync(ActorHttp.CreateJsonRequest(method, path, body));
     }
 
     // Tạo khách hàng với email riêng. Thư và token của test khác không lẫn vào kết quả.
