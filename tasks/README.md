@@ -15,7 +15,8 @@ Spec của module nằm ở `spec/SPEC-<module>.md`. Thứ tự build theo `spec
 | `dotnet-migration/` | Chuyển backend từ Node.js sang .NET (mã `DN`) | Xong |
 | `design/` | Đổi design system theo `shop-retail` (mã `DS`) | Xong |
 | `catalog/` | `catalog` (mã `CAT`, `UI-C`) | Xong. Còn 3 mục chờ người dùng tự test |
-| `shipping/` | `shipping` (mã `SHIP`, `UI-S`) | Đang làm Phase 2. Còn SHIP-08 và SHIP-09 |
+| `shipping/` | `shipping` (mã `SHIP`, `UI-S`) | Xong Phase 2. Còn SHIP-09 (nghiệm thu, cần token sandbox) |
+| `rest-routes/` | Đổi route cũ đặt theo hành động sang REST (mã `REST`) | Chưa bắt đầu |
 | `commerce/` | `commerce` (mã `COM`) | Chưa bắt đầu. Cần plan đổi route sang REST xong trước |
 | `activity-tracking/` | `activity-tracking` (mã `ACT`) | Chưa bắt đầu |
 | `smart-search/` | `smart-search` (mã `SRCH`) | Chưa bắt đầu |
