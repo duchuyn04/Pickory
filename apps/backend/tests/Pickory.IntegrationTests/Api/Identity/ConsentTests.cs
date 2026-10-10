@@ -112,8 +112,8 @@ public sealed class ConsentTests : IClassFixture<PickoryWebApplicationFactory>
         var guestAnonymousId = Guid.NewGuid().ToString();
         await PutConsentAsync(new { personalization = true, marketing = true }, $"pk_anon={guestAnonymousId}");
         var loginResponse = await _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, "/api/auth/login", new { email, password = IdentityTestData.DefaultPassword }, $"pk_anon={guestAnonymousId}"));
-        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+            HttpMethod.Post, "/api/auth/sessions", new { email, password = IdentityTestData.DefaultPassword }, $"pk_anon={guestAnonymousId}"));
+        Assert.Equal(HttpStatusCode.Created, loginResponse.StatusCode);
 
         // Thiết bị khác có mã ẩn danh khác. Chỉ bản ghi gắn với tài khoản cho thiết bị này thấy lựa chọn mới.
         var otherDeviceResponse = await _client.SendAsync(ActorHttp.CreateRequest(
@@ -154,7 +154,7 @@ public sealed class ConsentTests : IClassFixture<PickoryWebApplicationFactory>
         }
 
         await _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, "/api/auth/login", new { email, password = IdentityTestData.DefaultPassword }, $"pk_anon={guestAnonymousId}"));
+            HttpMethod.Post, "/api/auth/sessions", new { email, password = IdentityTestData.DefaultPassword }, $"pk_anon={guestAnonymousId}"));
 
         // Handler không thêm bản ghi nào cho tài khoản.
         await using var identity = _database.CreateIdentityContext();

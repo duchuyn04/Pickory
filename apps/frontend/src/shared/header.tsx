@@ -18,7 +18,7 @@ export function Header() {
   async function handleLogout() {
     try {
       setLogoutError(null);
-      await apiRequest('/api/auth/logout', { method: 'POST' });
+      await apiRequest('/api/auth/sessions/current', { method: 'DELETE' });
     } catch (err: unknown) {
       setLogoutError(err instanceof Error ? err.message : 'Đăng xuất thất bại.');
     } finally {

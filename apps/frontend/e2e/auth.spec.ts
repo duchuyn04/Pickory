@@ -22,6 +22,10 @@ test('Luồng 1: khách đăng ký, đăng xuất và đăng nhập lại', asyn
     await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Tài khoản', exact: true })).toHaveCount(0);
     await expect(page.getByRole('link', { name: 'Đăng nhập', exact: true })).toBeVisible();
+    // Hỏi API trực tiếp bằng cookie của trình duyệt. Phiên đã xóa nên API nhận ra khách vãng lai.
+    const meResponse = await page.request.get('/api/me');
+    const me = (await meResponse.json()) as { data: { kind: string } };
+    expect(me.data.kind).toBe('guest');
   });
 
   await test.step('Đăng nhập lại bằng credential vừa đăng ký', async () => {

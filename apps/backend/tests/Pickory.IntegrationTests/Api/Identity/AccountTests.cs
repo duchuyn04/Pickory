@@ -126,8 +126,8 @@ public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
         using var otherDocument = await ActorHttp.ReadJsonAsync(otherDevice);
         Assert.Equal("guest", otherDocument.RootElement.GetProperty("data").GetProperty("kind").GetString());
 
-        var loginResponse = await SendAsync(HttpMethod.Post, "/api/auth/login", new { email = user.Email, password = "BrandNewPassword123!" }, sessionToken: null);
-        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        var loginResponse = await SendAsync(HttpMethod.Post, "/api/auth/sessions", new { email = user.Email, password = "BrandNewPassword123!" }, sessionToken: null);
+        Assert.Equal(HttpStatusCode.Created, loginResponse.StatusCode);
     }
 
     [Theory]
@@ -218,7 +218,7 @@ public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
         // Module khác nhận đúng một sự kiện để xóa dữ liệu riêng của người dùng.
         Assert.Single(_factory.DomainEvents.OfType<UserDeletedEvent>(), value => value.UserId == user.Id);
 
-        var loginResponse = await SendAsync(HttpMethod.Post, "/api/auth/login", new { email = user.Email, password = IdentityTestData.DefaultPassword }, sessionToken: null);
+        var loginResponse = await SendAsync(HttpMethod.Post, "/api/auth/sessions", new { email = user.Email, password = IdentityTestData.DefaultPassword }, sessionToken: null);
         Assert.Equal(HttpStatusCode.Unauthorized, loginResponse.StatusCode);
     }
 

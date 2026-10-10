@@ -148,7 +148,7 @@ public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFac
         Assert.Equal(HttpStatusCode.OK, unlockResponse.StatusCode);
         using var unlockDocument = await ActorHttp.ReadJsonAsync(unlockResponse);
         Assert.Equal("Đã mở khóa tài khoản khách hàng.", unlockDocument.RootElement.GetProperty("data").GetProperty("message").GetString());
-        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(customer.Email)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await LoginAsync(customer.Email)).StatusCode);
 
         // Hai thao tác cùng có nhật ký với người thực hiện là admin.
         await using var identity = _database.CreateIdentityContext();
@@ -194,6 +194,6 @@ public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFac
 
     private Task<HttpResponseMessage> LoginAsync(string email)
     {
-        return _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/login", new { email, password = IdentityTestData.DefaultPassword }));
+        return _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/sessions", new { email, password = IdentityTestData.DefaultPassword }));
     }
 }

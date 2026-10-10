@@ -38,7 +38,7 @@ export function LoginPage() {
     // Chặn trình duyệt tải lại trang khi gửi form.
     e.preventDefault();
     setError(null);
-    // Mật khẩu chỉ cần không rỗng (độ dài tối thiểu 1): quy tắc 8 ký tự chỉ áp khi đặt mật khẩu mới, không áp khi đăng nhập tài khoản cũ.
+    // Mật khẩu chỉ cần không rỗng. Quy tắc 8 ký tự chỉ áp khi đặt mật khẩu mới, không áp khi đăng nhập tài khoản cũ.
     const nextFieldErrors = {
       email: getEmailError(email),
       password: getPasswordError(password, 1),
@@ -48,7 +48,7 @@ export function LoginPage() {
     setLoading(true);
 
     try {
-      await apiRequest('/api/auth/login', {
+      await apiRequest('/api/auth/sessions', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });

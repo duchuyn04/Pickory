@@ -66,15 +66,14 @@ export function AdminLayout() {
     );
   }
 
-  // Khách vãng lai, khách hàng và nhân viên vừa mất phiên đều về trang đăng nhập nhân viên.
-  // Đây chỉ là tiện dụng cho người dùng. Backend vẫn chặn dữ liệu bằng kiểm tra quyền.
+  // Khách vãng lai, khách hàng và nhân viên vừa mất phiên đều về trang đăng nhập nhân viên. Backend vẫn chặn dữ liệu bằng kiểm tra quyền.
   if (!actor || actor.kind !== 'staff') {
     return <Navigate to="/admin/login" replace />;
   }
 
   async function handleLogout() {
     try {
-      await apiRequest('/api/auth/logout', { method: 'POST' });
+      await apiRequest('/api/auth/sessions/current', { method: 'DELETE' });
     } finally {
       // Lỗi mạng khi đăng xuất vẫn phải nạp lại actor và về trang đăng nhập, không kẹt ở khu vực quản trị.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });

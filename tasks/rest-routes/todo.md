@@ -20,15 +20,15 @@ Quy ước:
 ### REST-01: Phiên đăng nhập
 **Mô tả:** Đổi 3 route đăng nhập và đăng xuất sang tài nguyên `sessions`. Route đổi: dòng 1, 2, 3 của bảng trong plan.
 **Tiêu chí nghiệm thu:**
-- [ ] `POST /api/auth/sessions` đăng nhập khách và trả 201. Body và cookie `pk_session` giống route cũ
-- [ ] `POST /api/admin/auth/sessions` đăng nhập nhân viên và trả 201. Phiên vẫn có hạn 12 giờ
-- [ ] `DELETE /api/auth/sessions/current` đăng xuất khách và nhân viên, trả 200, xóa cookie `pk_session`
-- [ ] Mã lỗi giữ nguyên: sai mật khẩu, tài khoản bị khóa, vượt giới hạn tần suất trả đúng mã và thông báo như trước
-- [ ] `POST /api/auth/login`, `POST /api/admin/auth/login` và `POST /api/auth/logout` không còn đăng ký. Test tích hợp kiểm 404 hoặc 405
-- [ ] Test `RequestOriginGuard` chặn `DELETE /api/auth/sessions/current` khi thiếu `Origin` và `Referer`
-- [ ] Frontend gọi route mới ở `customer/login-page.tsx`, `admin/login-page.tsx`, `shared/header.tsx`, `admin/admin-layout.tsx`
-- [ ] E2E đăng nhập khách, đăng nhập nhân viên và đăng xuất đạt
-- [ ] `spec/SPEC-identity.md` và `docs/testing/identity-manual-test-cases.md` (dòng 76) dùng route mới
+- [x] `POST /api/auth/sessions` đăng nhập khách và trả 201. Body và cookie `pk_session` giống route cũ
+- [x] `POST /api/admin/auth/sessions` đăng nhập nhân viên và trả 201. Phiên vẫn có hạn 12 giờ
+- [x] `DELETE /api/auth/sessions/current` đăng xuất khách và nhân viên, trả 200, xóa cookie `pk_session`
+- [x] Mã lỗi giữ nguyên: sai mật khẩu, tài khoản bị khóa, vượt giới hạn tần suất trả đúng mã và thông báo như trước
+- [x] `POST /api/auth/login`, `POST /api/admin/auth/login` và `POST /api/auth/logout` không còn đăng ký. Test tích hợp kiểm 404 hoặc 405
+- [x] Test `RequestOriginGuard` chặn `DELETE /api/auth/sessions/current` khi thiếu `Origin` và `Referer`
+- [x] Frontend gọi route mới ở `customer/login-page.tsx`, `admin/login-page.tsx`, `shared/header.tsx`, `admin/admin-layout.tsx`
+- [x] E2E đăng nhập khách, đăng nhập nhân viên và đăng xuất đạt
+- [x] `spec/SPEC-identity.md` và `docs/testing/identity-manual-test-cases.md` (dòng 76) dùng route mới
 **Kiểm tra:** test tích hợp `LoginTests`, `PermissionMatrixTests`; Vitest; E2E; lệnh `grep -rnE "auth/login|auth/logout" apps spec docs --include=*.cs --include=*.ts --include=*.tsx --include=*.md` ra 0 kết quả ngoài thư mục `bin` và `node_modules`
 **Phụ thuộc:** người dùng chốt Câu hỏi mở · **Quy mô:** M
 **File:** `Pickory.Modules.Identity/Features/{Login,Logout}/*Endpoint.cs`, `apps/frontend/src/features/identity/{customer,admin}/*`, `apps/frontend/src/shared/header.tsx`, `spec/SPEC-identity.md`

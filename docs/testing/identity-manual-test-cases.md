@@ -7,13 +7,15 @@ Thiết kế: reviewer. Thực thi: builder, chạy bằng Playwright trên `pnp
 
 Lần 4 (chạy lại toàn bộ trên backend .NET) đã kết thúc: 100/100 case chạy với API ASP.NET Core, run ID `20261006-486d9l`. Tổng hợp: 96 PASS, 1 FAILED, 3 UNKNOWN.
 
-| Priority | Số case | PASS   | FAILED | UNKNOWN |
-| -------- | ------- | ------ | ------ | ------- |
-| P0       | 42      | 41     | 0      | 1       |
-| P1       | 37      | 34     | 1      | 2       |
-| P2       | 14      | 14     | 0      | 0       |
-| P3       | 7       | 7      | 0      | 0       |
-| **Tổng** | **100** | **96** | **1**  | **3**   |
+| Priority | Số case | PASS   | FAILED | UNKNOWN | Chưa chạy |
+| -------- | ------- | ------ | ------ | ------- | --------- |
+| P0       | 42      | 40     | 0      | 1       | 1         |
+| P1       | 37      | 34     | 1      | 2       | 0         |
+| P2       | 14      | 14     | 0      | 0       | 0         |
+| P3       | 7       | 7      | 0      | 0       | 0         |
+| **Tổng** | **100** | **95** | **1**  | **3**   | **1**     |
+
+Các case đổi route trong `tasks/rest-routes` chuyển về `Chưa chạy` tới khi chạy lại trên route mới. Cột PASS của bảng trên đã trừ các case này.
 
 So với lần 3: MT-ID-071 và MT-ID-079 chuyển từ UNKNOWN sang PASS. MT-ID-072 chuyển từ PASS sang FAILED.
 
@@ -73,7 +75,7 @@ Ngày chạy lần 4: 2026-10-06 · Commit/branch: `3e77662` trên feat/dotnet-b
 | --------- | ------------------ | ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | MT-ID-001 | Phiên              | Khách vãng lai nhận cookie `pk_anon`                    | 1. Context mới, mở `/`. 2. Đọc cookie. 3. Reload, đọc lại.                                                                            | `pk_anon` là UUID v4, httpOnly, SameSite=Lax, hạn khoảng 1 năm; giá trị giữ nguyên sau reload                                            | PASS | `pk_anon` là UUID v4, httpOnly, SameSite=Lax, hạn 365 ngày. Reload giữ nguyên giá trị. Ảnh: `.playwright-mcp/identity-mt/MT-ID-001-20261006-486d9l.png` |
 | MT-ID-002 | CSRF               | Request ghi có Origin lạ bị chặn                        | Gửi `PUT /api/me/consent` với header `Origin: https://evil.example`                                                                   | 403, mã `FORBIDDEN_ORIGIN`                                                                                                               | PASS | `PUT /api/me/consent` có `Origin: https://evil.example` nhận 403 `FORBIDDEN_ORIGIN`. Ảnh: `.playwright-mcp/identity-mt/MT-ID-002-20261006-486d9l.png` |
-| MT-ID-003 | CSRF               | Request ghi thiếu cả Origin và Referer bị chặn          | Gửi `POST /api/auth/logout` không có Origin, không có Referer                                                                         | 403 `FORBIDDEN_ORIGIN`; GET cùng điều kiện vẫn 200                                                                                       | PASS | `POST /api/auth/logout` thiếu Origin và Referer nhận 403 `FORBIDDEN_ORIGIN`. `GET /api/me` cùng điều kiện nhận 200. Ảnh: `.playwright-mcp/identity-mt/MT-ID-003-20261006-486d9l.png` |
+| MT-ID-003 | CSRF               | Request ghi thiếu cả Origin và Referer bị chặn          | Gửi `DELETE /api/auth/sessions/current` không có Origin, không có Referer                                                                         | 403 `FORBIDDEN_ORIGIN`; GET cùng điều kiện vẫn 200                                                                                       | Chưa chạy | Lần 4 đạt `PASS` trên route đăng xuất `POST` cũ: thiếu Origin và Referer nhận 403 `FORBIDDEN_ORIGIN`, `GET /api/me` cùng điều kiện nhận 200. Route đổi tên ngày 2026-10-10 thành `DELETE /api/auth/sessions/current`. Case chờ chạy lại trên route mới. Ảnh lần 4: `.playwright-mcp/identity-mt/MT-ID-003-20261006-486d9l.png` |
 | MT-ID-004 | Dữ liệu nhạy cảm   | API không trả `passwordHash`                            | Đăng nhập ADMIN, gọi `GET /api/me`, `GET /api/admin/staff`, `GET /api/admin/customers`, `GET /api/admin/customers/:id`                | Không response nào chứa `passwordHash` hay token                                                                                         | PASS | ADMIN gọi 4 API, cả 4 trả 200. Không response nào có khóa `passwordHash`, `password`, `token` hay `tokenHash`. Ảnh: `.playwright-mcp/identity-mt/MT-ID-004-20261006-486d9l.png` |
 | MT-ID-005 | Đăng ký            | Đăng ký khách thành công và tự đăng nhập                | Mở `/register`, nhập email mới, mật khẩu 8+ ký tự, gửi                                                                                | Được đăng nhập ngay, header hiện trạng thái đã đăng nhập; cookie `pk_session` httpOnly, SameSite=Lax; `GET /api/me` trả `kind: customer` | PASS | Đăng ký trả 201, trang chuyển về `/`. Header hiện Tài khoản và Đăng xuất. `pk_session` httpOnly, SameSite=Lax; `GET /api/me` trả `kind: customer`. Ảnh: `.playwright-mcp/identity-mt/MT-ID-005-20261006-486d9l.png` |
 | MT-ID-006 | Đăng xuất          | Đăng xuất xóa phiên                                     | Đang đăng nhập CUST, bấm Đăng xuất, mở `/me`; gửi lại cookie `pk_session` cũ tới `/api/me`                                            | Header về trạng thái khách, `/me` chuyển về `/login`; cookie cũ chỉ nhận `kind: guest`                                                   | PASS | Đăng xuất đưa header về trạng thái khách. `/me` chuyển về `/login`. Cookie `pk_session` cũ gửi tới `/api/me` chỉ nhận `kind: guest`. Ảnh: `.playwright-mcp/identity-mt/MT-ID-006-20261006-486d9l.png` |

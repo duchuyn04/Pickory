@@ -91,9 +91,9 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         Assert.Contains($"http://localhost:5173/reset-password?token={message.Metadata["token"]}", message.Text);
 
         var resetResponse = await SendAsync(HttpMethod.Post, "/api/auth/reset-password", new { token = message.Metadata["token"], newPassword = "StaffPassword123!" }, sessionToken: null);
-        var loginResponse = await SendAsync(HttpMethod.Post, "/api/admin/auth/login", new { email, password = "StaffPassword123!" }, sessionToken: null);
+        var loginResponse = await SendAsync(HttpMethod.Post, "/api/admin/auth/sessions", new { email, password = "StaffPassword123!" }, sessionToken: null);
         Assert.Equal(HttpStatusCode.OK, resetResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, loginResponse.StatusCode);
     }
 
     [Theory]

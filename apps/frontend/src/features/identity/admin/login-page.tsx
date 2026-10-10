@@ -40,7 +40,7 @@ export function StaffLoginPage() {
     setLoading(true);
 
     try {
-      await apiRequest('/api/admin/auth/login', {
+      await apiRequest('/api/admin/auth/sessions', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });

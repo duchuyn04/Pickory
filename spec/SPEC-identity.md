@@ -227,8 +227,8 @@ ordersRouter.patch(
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
 | POST | `/api/auth/register` | công khai | Đăng ký khách |
-| POST | `/api/auth/login` | công khai | Đăng nhập khách |
-| POST | `/api/auth/logout` | đã đăng nhập | Đăng xuất |
+| POST | `/api/auth/sessions` | công khai | Đăng nhập khách. Trả 201 |
+| DELETE | `/api/auth/sessions/current` | công khai | Đăng xuất khách và nhân viên. Không có phiên vẫn trả 200 |
 | GET | `/api/auth/google/start` | công khai | Chuyển hướng sang Google |
 | GET | `/api/auth/google/callback` | công khai | Nhận kết quả từ Google |
 | POST | `/api/auth/verify-email` | công khai | Xác thực email |
@@ -244,7 +244,7 @@ ordersRouter.patch(
 
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
-| POST | `/api/admin/auth/login` | công khai | Đăng nhập nhân viên |
+| POST | `/api/admin/auth/sessions` | công khai | Đăng nhập nhân viên. Trả 201 |
 | GET | `/api/admin/staff` | `staff:read` | Danh sách nhân viên |
 | POST | `/api/admin/staff/invitations` | `staff:manage` | Mời nhân viên |
 | PUT | `/api/admin/staff/:id/roles` | `staff:manage` | Gán role |

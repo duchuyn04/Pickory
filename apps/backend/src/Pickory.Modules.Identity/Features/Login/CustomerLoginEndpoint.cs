@@ -11,12 +11,12 @@ using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.Login;
 
-// `POST /api/auth/login` đăng nhập khách bằng email và mật khẩu.
+// `POST /api/auth/sessions` tạo phiên đăng nhập cho khách bằng email và mật khẩu.
 public static class CustomerLoginEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/login", HandleAsync);
+        endpoints.MapPost("/api/auth/sessions", HandleAsync);
     }
 
     private static async Task<IResult> HandleAsync(
@@ -35,6 +35,7 @@ public static class CustomerLoginEndpoint
 
         // Cookie có cùng hạn 30 ngày với phiên khách trong DB.
         SessionCookies.AppendSessionCookie(context.Response, session.RawToken, SessionCookies.CustomerSessionLifetime, environment.IsProduction());
-        return Results.Ok(new ApiResponse<UserResponse<UserProfileResponse>>(new(user)));
+        // Đăng nhập tạo một phiên mới trong DB, nên route trả 201 thay cho 200.
+        return Results.Json(new ApiResponse<UserResponse<UserProfileResponse>>(new(user)), statusCode: StatusCodes.Status201Created);
     }
 }
