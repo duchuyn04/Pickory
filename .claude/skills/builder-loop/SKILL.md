@@ -71,6 +71,7 @@ Bạn là reviewer và người điều phối. Builder là agent `omp` chạy t
 10. Khi đạt, làm đúng việc ghi trong đối số.
     - Commit và push qua builder bằng một file giao việc riêng.
     - Commit message không có `Co-Authored-By` hay `Generated with`.
+    - Viết tiêu đề ngắn, tóm tắt tổng quan thay đổi. Commit lớn có tối đa một dòng body. Không ghi mã task trong message.
     - Không dùng `--force`.
     - Sau đó tự kiểm tra hash commit, message và trạng thái remote.
 
