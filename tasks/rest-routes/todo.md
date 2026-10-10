@@ -55,16 +55,16 @@ Quy ước:
 ### REST-03: Khóa và mở khóa tài khoản
 **Mô tả:** Thay 4 route `lock` và `unlock` bằng 2 route `PATCH` với trường `locked`. Route đổi: dòng 9 đến 12 của bảng trong plan.
 **Tiêu chí nghiệm thu:**
-- [ ] `PATCH /api/admin/customers/{id}` với `{ "locked": true }` khóa khách. Với `{ "locked": false }` mở khóa. Trả 200
-- [ ] `PATCH /api/admin/staff/{id}` với `{ "locked": true }` và `{ "locked": false }` hoạt động tương tự
-- [ ] Body thiếu `locked` hoặc sai kiểu trả 400 `VALIDATION_ERROR`
-- [ ] Quyền giữ nguyên: `customers:manage` cho khách, `staff:manage` cho nhân viên. `PermissionMatrixTests` có dòng `PATCH` mới và không còn dòng `lock`, `unlock`
-- [ ] Luật nghiệp vụ giữ nguyên: không tự khóa mình, không khóa quản trị viên cuối cùng. Test hiện có đạt
-- [ ] Audit log vẫn ghi `customer.lock`, `customer.unlock`, `staff.lock`, `staff.unlock` tùy giá trị `locked`, trong cùng transaction
-- [ ] Khóa xong, phiên đang mở của tài khoản bị thu hồi như trước
-- [ ] 4 route cũ trả 404 hoặc 405
-- [ ] Frontend gọi `PATCH` ở `admin/customers-page.tsx` và `admin/staff-page.tsx`. E2E khóa và mở khóa đạt
-- [ ] `spec/SPEC-identity.md` (dòng 251, 256) và `docs/testing/identity-manual-test-cases.md` (dòng 91) dùng route mới
+- [x] `PATCH /api/admin/customers/{id}` với `{ "locked": true }` khóa khách. Với `{ "locked": false }` mở khóa. Trả 200
+- [x] `PATCH /api/admin/staff/{id}` với `{ "locked": true }` và `{ "locked": false }` hoạt động tương tự
+- [x] Body thiếu `locked` hoặc sai kiểu trả 400 `VALIDATION_ERROR`
+- [x] Quyền giữ nguyên: `customers:manage` cho khách, `staff:manage` cho nhân viên. `PermissionMatrixTests` có dòng `PATCH` mới và không còn dòng `lock`, `unlock`
+- [x] Luật nghiệp vụ giữ nguyên: không tự khóa mình, không khóa quản trị viên cuối cùng. Test hiện có đạt
+- [x] Audit log vẫn ghi `customer.lock`, `customer.unlock`, `staff.lock`, `staff.unlock` tùy giá trị `locked`, trong cùng transaction
+- [x] Khóa xong, phiên đang mở của tài khoản bị thu hồi như trước
+- [x] 4 route cũ trả 404 hoặc 405
+- [x] Frontend gọi `PATCH` ở `admin/customers-page.tsx` và `admin/staff-page.tsx`. E2E khóa và mở khóa đạt
+- [x] `spec/SPEC-identity.md` (dòng 251, 256) và `docs/testing/identity-manual-test-cases.md` (dòng 91) dùng route mới
 **Kiểm tra:** test tích hợp `AdminCustomersTests`, `AdminStaffTests`, `PermissionMatrixTests`; Vitest; E2E
 **Phụ thuộc:** REST-02 · **Quy mô:** M
 **File:** `Pickory.Modules.Identity/Features/{AdminCustomers,AdminStaff}/*`, `apps/frontend/src/features/identity/admin/{customers-page,staff-page}.tsx`

@@ -62,12 +62,10 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "GET", "/api/admin/staff", [Permissions.StaffRead] },
         { "POST", "/api/admin/staff/invitations", [Permissions.StaffManage] },
         { "PUT", "/api/admin/staff/dummy-id/roles", [Permissions.StaffManage] },
-        { "POST", "/api/admin/staff/dummy-id/lock", [Permissions.StaffManage] },
-        { "POST", "/api/admin/staff/dummy-id/unlock", [Permissions.StaffManage] },
+        { "PATCH", "/api/admin/staff/dummy-id", [Permissions.StaffManage] },
         { "GET", "/api/admin/customers", [Permissions.CustomersRead] },
         { "GET", "/api/admin/customers/dummy-id", [Permissions.CustomersRead] },
-        { "POST", "/api/admin/customers/dummy-id/lock", [Permissions.CustomersManage] },
-        { "POST", "/api/admin/customers/dummy-id/unlock", [Permissions.CustomersManage] },
+        { "PATCH", "/api/admin/customers/dummy-id", [Permissions.CustomersManage] },
         { "GET", "/api/admin/ai/usage", [Permissions.AiUsageRead] },
         { "GET", "/api/admin/ai/settings", [Permissions.AiUsageRead] },
         { "PUT", "/api/admin/ai/settings", [Permissions.AiSettingsManage] },
@@ -97,7 +95,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     public async Task Guest_Receives401Unauthorized(string method, string path, string[] requiredPermissions)
     {
         _ = requiredPermissions;
-        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, body: null, cookieHeader: null);
+        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, BodyFor(method, path), cookieHeader: null);
         var response = await _client.SendAsync(request);
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
@@ -108,7 +106,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     public async Task Customer_Receives403Forbidden(string method, string path, string[] requiredPermissions)
     {
         _ = requiredPermissions;
-        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, body: null, cookieHeader: _customerCookie);
+        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, BodyFor(method, path), cookieHeader: _customerCookie);
         var response = await _client.SendAsync(request);
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
@@ -122,7 +120,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             .Permissions.ToHashSet(StringComparer.Ordinal);
         var hasAccess = requiredPermissions.All(permission => salesPermissions.Contains(permission));
 
-        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, body: null, cookieHeader: _salesCookie);
+        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, BodyFor(method, path), cookieHeader: _salesCookie);
         var response = await _client.SendAsync(request);
 
         if (hasAccess)
@@ -130,6 +128,11 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             // Được cấp quyền thì không bị chặn bởi bộ lọc xác thực hoặc ủy quyền.
             Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
             Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+            // Dòng có body hợp lệ không được dừng ở bước kiểm body. Các dòng khác gửi body rỗng nên có thể trả 400.
+            if (BodyFor(method, path) is not null)
+            {
+                Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
+            }
         }
         else
         {
@@ -147,7 +150,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             .Permissions.ToHashSet(StringComparer.Ordinal);
         var hasAccess = requiredPermissions.All(permission => supportPermissions.Contains(permission));
 
-        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, body: null, cookieHeader: _supportCookie);
+        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, BodyFor(method, path), cookieHeader: _supportCookie);
         var response = await _client.SendAsync(request);
 
         if (hasAccess)
@@ -155,6 +158,11 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             // Được cấp quyền thì không bị chặn bởi bộ lọc xác thực hoặc ủy quyền.
             Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
             Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+            // Dòng có body hợp lệ không được dừng ở bước kiểm body. Các dòng khác gửi body rỗng nên có thể trả 400.
+            if (BodyFor(method, path) is not null)
+            {
+                Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
+            }
         }
         else
         {
@@ -169,11 +177,30 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     public async Task Admin_HasImplicitAccessToAllEndpoints(string method, string path, string[] requiredPermissions)
     {
         _ = requiredPermissions;
-        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, body: null, cookieHeader: _adminCookie);
+        var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, BodyFor(method, path), cookieHeader: _adminCookie);
         var response = await _client.SendAsync(request);
 
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
+        // Dòng có body hợp lệ không được dừng ở bước kiểm body. Các dòng khác gửi body rỗng nên có thể trả 400.
+        if (BodyFor(method, path) is not null)
+        {
+            Assert.NotEqual(HttpStatusCode.BadRequest, response.StatusCode);
+        }
+    }
+
+    [Theory]
+    [InlineData("/api/admin/staff/dummy-id")]
+    [InlineData("/api/admin/customers/dummy-id")]
+    // Kiểm quyền chạy trước kiểm body. Role thiếu quyền gửi body sai vẫn nhận 403, không nhận 400.
+    public async Task LockRoutes_ForbidWithoutPermissionBeforeBodyValidation(string path)
+    {
+        // Role support không có `staff:manage` và `customers:manage`.
+        var request = ActorHttp.CreateJsonRequest(HttpMethod.Patch, path, new { }, cookieHeader: _supportCookie);
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Fact]
@@ -289,6 +316,13 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         Assert.True(
             unknownMatrixRoutes.Count == 0,
             $"Ma trận BackofficeEndpoints chứa route catalog không tồn tại: {string.Join(", ", unknownMatrixRoutes)}");
+    }
+
+    // Route `PATCH` khóa tài khoản đọc body trước khi chạy nghiệp vụ, nên dòng ma trận cần body hợp lệ. Các route còn lại không cần body.
+    private static object? BodyFor(string method, string path)
+    {
+        var isLockRoute = method == "PATCH" && (path == "/api/admin/staff/dummy-id" || path == "/api/admin/customers/dummy-id");
+        return isLockRoute ? new { locked = true } : null;
     }
 
     // Ma trận dùng `dummy-id` trong request thử quyền nên cần cùng định dạng với route ứng dụng.

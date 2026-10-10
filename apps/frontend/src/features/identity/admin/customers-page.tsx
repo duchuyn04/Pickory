@@ -37,7 +37,7 @@ export function CustomersPage() {
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại; nếu bỏ qua thì lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
+  // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại. Nếu bỏ qua, lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
   const { data, isLoading, isError, error } = useQuery<CustomersResponse>({
     // Từ khóa nằm trong khóa truy vấn để mỗi từ khóa có cache riêng và đổi từ khóa thì tự gọi lại.
     queryKey: ['admin-customers', debouncedSearch],
@@ -76,10 +76,11 @@ export function CustomersPage() {
     // Xóa lỗi của lần thao tác trước để không hiện lẫn.
     setActionError(null);
     try {
-      const endpoint = isLocking
-        ? `/api/admin/customers/${customer.id}/lock`
-        : `/api/admin/customers/${customer.id}/unlock`;
-      await apiRequest(endpoint, { method: 'POST' });
+      // Một route cho cả hai thao tác. Trường `locked` cho API biết cần khóa hay mở khóa.
+      await apiRequest(`/api/admin/customers/${customer.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ locked: isLocking }),
+      });
       // Nạp lại danh sách (mọi từ khóa) để dòng của khách hiện trạng thái khóa mới.
       await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
     } catch (err: unknown) {

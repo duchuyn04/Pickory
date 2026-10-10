@@ -248,12 +248,12 @@ ordersRouter.patch(
 | GET | `/api/admin/staff` | `staff:read` | Danh sách nhân viên |
 | POST | `/api/admin/staff/invitations` | `staff:manage` | Mời nhân viên |
 | PUT | `/api/admin/staff/:id/roles` | `staff:manage` | Gán role |
-| POST | `/api/admin/staff/:id/lock` · `/unlock` | `staff:manage` | Khóa, mở khóa |
+| PATCH | `/api/admin/staff/:id` | `staff:manage` | Khóa, mở khóa. Body `{ "locked": true \| false }`, thiếu hoặc sai kiểu trả 400 `VALIDATION_ERROR`, trường khác cũng bị từ chối |
 | GET | `/api/admin/roles` | `roles:manage` | Danh sách role kèm quyền |
 | POST · PATCH · DELETE | `/api/admin/roles[/:id]` | `roles:manage` | Tạo, sửa, xóa role |
 | GET | `/api/admin/permissions` | `roles:manage` | Danh mục quyền (từ code) |
 | GET | `/api/admin/customers[/:id]` | `customers:read` | Tra cứu khách |
-| POST | `/api/admin/customers/:id/lock` · `/unlock` | `customers:manage` | Khóa, mở khóa khách |
+| PATCH | `/api/admin/customers/:id` | `customers:manage` | Khóa, mở khóa khách. Body `{ "locked": true \| false }`, luật giống route nhân viên |
 | GET | `/api/admin/audit-logs` | `audit-logs:read` | Nhật ký, lọc theo người, hành động, thời gian |
 
 ## Data Model (Prisma, rút gọn)
