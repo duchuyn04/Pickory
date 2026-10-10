@@ -1,0 +1,6 @@
+/* Kiểu riêng của màn cấu hình vận chuyển. Thẻ, ô nhập và nút dùng lớp chung trong `components.css`. */
+
+/* Các nhóm sau nhóm đầu cách nhóm trước một khoảng, để tiêu đề nhóm không dính vào ô phía trên. */
+.shipping-settings-section {
+  margin-top: var(--space-5);
+}

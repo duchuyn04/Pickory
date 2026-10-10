@@ -1,0 +1,77 @@
+/* Kiểu riêng của ô chọn địa chỉ. Ô nhập, nhãn, lỗi và lưới form dùng lớp chung trong `components.css`. */
+
+.address-combobox {
+  position: relative;
+}
+
+/* Danh sách nổi ngay dưới ô nhập. Panel nổi dùng bóng rõ theo design system. */
+.address-combobox-popup {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  left: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+}
+
+.address-combobox-popup[hidden] {
+  display: none;
+}
+
+/* Chiều cao tối đa để tỉnh có hàng trăm phường/xã không đẩy trang dài ra. Danh sách cuộn bên trong. */
+.address-combobox-list {
+  max-height: 280px;
+  margin: 0;
+  padding: var(--space-1) 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.address-combobox-list:empty {
+  display: none;
+}
+
+.address-combobox-option {
+  /* Vạch trái 3px luôn có chỗ, trong suốt khi dòng không được trỏ, để chữ không nhích khi trỏ vào. */
+  padding: var(--space-2) var(--space-3) var(--space-2) calc(var(--space-3) - 3px);
+  border-left: 3px solid transparent;
+  font-size: var(--text-sm);
+  cursor: pointer;
+  /* Tên dài xuống dòng trong khung thay vì làm trang tràn ngang ở màn hẹp. */
+  overflow-wrap: anywhere;
+}
+
+/* Dòng đang trỏ có nền xám và vạch xanh bên trái. Vạch xanh giữ dấu hiệu thấy được khi nền quá nhạt. */
+.address-combobox-option-active {
+  border-left-color: var(--color-focus);
+  background: var(--color-neutral-soft);
+}
+
+/* Dòng đang chọn dùng nền hồng nhạt của thương hiệu và chữ đậm, khác với dòng chỉ đang trỏ. */
+.address-combobox-option-selected {
+  background: var(--color-brand-soft);
+  font-weight: 600;
+}
+
+.address-combobox-message {
+  margin: 0;
+  padding: var(--space-3);
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* Lỗi tải danh sách nằm trong khối địa chỉ, nút "Thử lại" ngay dưới lời báo lỗi. */
+.address-picker-load-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Nút giữ bề rộng theo chữ ở mép trái, còn lời báo lỗi trải đủ bề rộng cột. */
+.address-picker-load-error > .btn {
+  align-self: flex-start;
+}

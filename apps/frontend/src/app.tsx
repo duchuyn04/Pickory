@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { AiSettingsPage } from './features/ai-gateway/admin/ai-settings-page';
+import { ShippingSettingsPage } from './features/shipping/admin/shipping-settings-page';
 import { BrandsPage } from './features/catalog/admin/brands-page';
 import { CategoriesPage } from './features/catalog/admin/categories-page';
 import { CategoryPage } from './features/catalog/customer/category-page';
@@ -115,6 +116,7 @@ export function App() {
             element={<AdminPlaceholderPage title="Chăm sóc khách hàng" />}
           />
           <Route path="ai" element={<AiSettingsPage />} />
+          <Route path="shipping/settings" element={<ShippingSettingsPage />} />
         </Route>
       </Routes>
       <ConsentBanner />
