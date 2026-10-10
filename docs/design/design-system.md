@@ -136,7 +136,7 @@ Màn đã chuyển sang design system không viết `style={{`. Test `test/unit/
 
 ## Kế hoạch áp dụng
 
-Kế hoạch chi tiết ở `tasks/plan-design.md` và `tasks/todo-design.md`.
+Kế hoạch chi tiết ở `tasks/design/plan.md` và `tasks/design/todo.md`.
 
 1. DS-01: token, lớp component chung và tài liệu này.
 2. DS-02: khung admin theo `shop-retail/admin/index.html`. Khung nằm ở `features/identity/admin/admin-layout.tsx`.

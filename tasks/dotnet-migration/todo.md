@@ -1,6 +1,6 @@
 # Todo: chuyển backend sang .NET
 
-Kế hoạch đầy đủ ở `tasks/plan-dotnet.md`. Mỗi task phải qua `dotnet build`, `dotnet test` và `pnpm lint` trước khi commit.
+Kế hoạch đầy đủ ở `tasks/dotnet-migration/plan.md`. Mỗi task phải qua `dotnet build`, `dotnet test` và `pnpm lint` trước khi commit.
 
 ## DN-00: Dựng solution .NET và hạ tầng chung
 
@@ -116,7 +116,7 @@ Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down
 
 **Tiêu chí nghiệm thu:**
 
-- [x] `tasks/plan-dotnet.md` có mục "Quy ước thư mục trong module" với cây thư mục mẫu.
+- [x] `tasks/dotnet-migration/plan.md` có mục "Quy ước thư mục trong module" với cây thư mục mẫu.
   - `<Module>Module.cs` ở gốc project module là điểm đăng ký duy nhất của module.
   - `Features/<TínhNăng>/` chứa endpoint, request, validator và handler của một tính năng.
   - `Entities/` chứa entity và enum.

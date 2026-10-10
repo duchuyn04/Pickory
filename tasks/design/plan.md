@@ -6,7 +6,7 @@ Pickory đổi giao diện từ hướng cam và kem sang hệ thiết kế củ
 
 Phạm vi gồm mọi màn hiện có: khung admin, các màn admin và các màn của khách. Pickory giữ tên và logo riêng. Màu, bo góc, nút, bảng, badge và khung sidebar lấy theo `shop-retail`.
 
-`shop-retail/` là bản mẫu HTML tĩnh. Bản mẫu này thay cho `prototype/`. Danh sách task chi tiết ở `tasks/todo-design.md`.
+`shop-retail/` là bản mẫu HTML tĩnh. Bản mẫu này thay cho `prototype/`. Danh sách task chi tiết ở `tasks/design/todo.md`.
 
 ## Quyết định (2026-10-06)
 

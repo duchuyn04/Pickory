@@ -6,10 +6,10 @@ Module `shipping` kết nối Pickory với GHN. Module cung cấp danh mục đ
 
 `shipping` chỉ phụ thuộc `identity`. `commerce` cần `shipping` để báo phí ở checkout và tạo vận đơn, nên module này đi trước `commerce`.
 
-Spec gốc: `spec/SPEC.md`, `spec/SPEC-shipping.md`. Spec còn viết theo bản Node. Plan này chuyển interface sang .NET theo `tasks/plan-dotnet.md`.
-Danh sách task chi tiết: `tasks/todo-shipping.md`.
+Spec gốc: `spec/SPEC.md`, `spec/SPEC-shipping.md`. Spec còn viết theo bản Node. Plan này chuyển interface sang .NET theo `tasks/dotnet-migration/plan.md`.
+Danh sách task chi tiết: `tasks/shipping/todo.md`.
 
-Ngày 2026-10-09 người dùng chọn làm `shipping` trước khi review catalog. Mục review của catalog vẫn mở trong `tasks/plan-catalog.md`.
+Ngày 2026-10-09 người dùng chọn làm `shipping` trước khi review catalog. Mục review của catalog vẫn mở trong `tasks/catalog/plan.md`.
 
 Nhánh làm việc: `feat/shipping`, tách từ `main` sau khi `feat/catalog` đã merge vào `main` (commit `5393daa`).
 
@@ -50,7 +50,7 @@ SHIP-01 logic thuần: gộp kiện, ánh xạ trạng thái, mã tham chiếu G
 
 ## Architecture Decisions
 
-1. **Cấu trúc theo `tasks/plan-dotnet.md`.** Hai project mới: `Pickory.Modules.Shipping` và `Pickory.Modules.Shipping.Contracts`. `ShippingModule.cs` có `AddShippingModule` và `MapShippingEndpoints`. `Pickory.ArchitectureTests` thêm luật cho module mới.
+1. **Cấu trúc theo `tasks/dotnet-migration/plan.md`.** Hai project mới: `Pickory.Modules.Shipping` và `Pickory.Modules.Shipping.Contracts`. `ShippingModule.cs` có `AddShippingModule` và `MapShippingEndpoints`. `Pickory.ArchitectureTests` thêm luật cho module mới.
 2. **Interface công khai ở Contracts.** `IShippingService` có `QuoteAsync`, `CreateShipmentAsync`, `CancelShipmentAsync`, `GetShipmentAsync`, `BuildParcel`. Contracts có thêm kiểu `ShippingAddress`, `Parcel`, `Quote`, `Shipment`, `ShipmentStatus` và sự kiện `ShipmentStatusChangedEvent`.
 3. **Địa chỉ 2 cấp.** Module lưu tỉnh/thành và phường/xã theo API mới của GHN. Mã là `_id` của GHN ở dạng chuỗi, kèm `name`. Không có cấp quận/huyện. `ShippingAddress` có `ProvinceCode`, `ProvinceName`, `WardCode`, `WardName`, `Line`. Nếu `SHIP-00` cho thấy báo phí vẫn cần mã cũ, reviewer dừng plan và hỏi người dùng.
 4. **Mã gửi GHN theo lần tạo.** `client_order_code` là `{ref}` ở lần tạo đầu. Sau mỗi lần hủy, mã thêm hậu tố, ví dụ `{ref}-2`. GHN chống trùng theo mã này, nên bấm tạo lại sau lỗi mạng trả đúng vận đơn cũ. Mã mới sau khi hủy tránh việc GHN trả lại vận đơn đã hủy. Mã tối đa 50 ký tự.
@@ -69,23 +69,27 @@ SHIP-01 logic thuần: gộp kiện, ánh xạ trạng thái, mã tham chiếu G
 17. **Giới hạn tần suất dùng chung.** `RateLimiter` đang nằm trong module Identity. `SHIP-08` chuyển lớp này sang `Pickory.Shared`, không đổi hành vi. Webhook giới hạn theo IP. `commerce` dùng lại lớp này cho route báo phí.
 18. **Audit log.** Sửa cấu hình ghi một dòng audit `shipping.settings.update` trong cùng transaction.
 19. **Route báo phí cho giỏ hàng thuộc `commerce`.** Giỏ hàng thuộc `commerce`, và `shipping` không đọc catalog. `shipping` chỉ cung cấp `IShippingService.QuoteAsync`. Người dùng chốt ngày 2026-10-09. `spec/SPEC-shipping.md` đã bỏ route `POST /api/shipping/quote`.
+20. **Route theo REST thuần, mức tài nguyên.** Người dùng chốt ngày 2026-10-10. Đường dẫn là danh từ. Hành động đi qua method HTTP và mã trạng thái chuẩn. Response giữ dạng `{ data }`, không kèm link (không có HATEOAS).
+   - Route của `shipping` đã theo luật này: `GET` và `PUT /api/admin/shipping/settings`, `GET /api/addresses/provinces`, `GET /api/addresses/wards?provinceCode=`, `POST /api/webhooks/ghn`.
+   - Route mới của mọi module từ ngày này phải theo luật này.
+   - Route cũ đặt theo hành động, ví dụ `POST /api/auth/login` và `POST /api/admin/staff/{id}/lock`, được đổi trong một plan riêng. Plan đó chạy sau Phase 2 của `shipping` và trước `commerce`.
 
 ## Task List
 
-Chi tiết từng task ở `tasks/todo-shipping.md`.
+Chi tiết từng task ở `tasks/shipping/todo.md`.
 
 ### Phase 0: Xác minh GHN
 - [ ] SHIP-00 (chờ token sandbox, không chặn các task khác)
 
 ### Phase 1: Nền tảng
-- [ ] SHIP-01 · [ ] SHIP-02 · [ ] SHIP-03
+- [x] SHIP-01 · [x] SHIP-02 · [x] SHIP-03
 
 ### Checkpoint S1
-- [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
-- [ ] Test kiến trúc chặn `Shipping` tham chiếu module khác ngoài Contracts
+- [x] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
+- [x] Test kiến trúc chặn `Shipping` tham chiếu module khác ngoài Contracts
 
 ### Phase 2: Tính năng
-- [ ] SHIP-04 · [ ] UI-S1 · [ ] SHIP-06 · [ ] UI-S2 · [ ] SHIP-05 · [ ] SHIP-07 · [ ] SHIP-08
+- [x] SHIP-04 · [x] UI-S1 · [x] SHIP-06 · [x] UI-S2 · [x] SHIP-05 · [x] SHIP-07 · [ ] SHIP-08
 
 ### Checkpoint S2
 - [ ] Admin cấu hình địa chỉ lấy hàng trên giao diện, khách chọn được tỉnh/thành và phường/xã

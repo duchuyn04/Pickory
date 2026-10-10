@@ -5,7 +5,7 @@
 Xây hai module nền đầu tiên của Pickory theo `spec/CAPABILITY-MAP.md`: `identity` (danh tính, phiên, RBAC, audit log, đồng ý thu thập dữ liệu) và `ai-gateway` (cửa duy nhất gọi DeepSeek và OpenAI, có retry, circuit breaker, ngân sách, cache embedding, chặn PII, log chi phí). Repo hiện chỉ có spec, chưa có code, nên plan bắt đầu bằng phần nền chung (monorepo, Express, Prisma, test DB, lint ranh giới module). Sau phần nền, hai module chạy song song theo hai track và gặp nhau ở API back-office của `ai-gateway`, vì API này cần `requirePermission` và `recordAudit` của `identity`.
 
 Spec gốc: `spec/SPEC.md`, `spec/SPEC-identity.md`, `spec/SPEC-ai-gateway.md`, `docs/adr/0001-ai-frameworks.md`.
-Danh sách task chi tiết (tiêu chí nghiệm thu, cách kiểm tra, file dự kiến): `tasks/todo.md`.
+Danh sách task chi tiết (tiêu chí nghiệm thu, cách kiểm tra, file dự kiến): `tasks/identity-ai-gateway/todo.md`.
 
 ## Đồ thị phụ thuộc
 
@@ -70,7 +70,7 @@ T01 workspace + tooling
 
 ## Task List
 
-Chi tiết từng task ở `tasks/todo.md`. Hai track A và B chạy song song được sau Checkpoint 0.
+Chi tiết từng task ở `tasks/identity-ai-gateway/todo.md`. Hai track A và B chạy song song được sau Checkpoint 0.
 
 ### Phase 0: Nền tảng chung
 - [x] T01: Khởi tạo pnpm workspace và tooling

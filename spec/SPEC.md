@@ -122,7 +122,7 @@ docs/adr/                 → Architecture Decision Records
 
 Frontend đặt unit test trong `apps/frontend/test/unit/` và chạy bằng Vitest. Code test import trực tiếp từ `src/`, không tạo re-export trung gian. E2E test nằm trong `apps/frontend/e2e/` và chạy bằng Playwright. Backend đặt toàn bộ test trong `apps/backend/tests/` với ba project test: `Pickory.UnitTests`, `Pickory.IntegrationTests` và `Pickory.ArchitectureTests`.
 
-Backend .NET theo mục "Quy ước thư mục trong module" của `tasks/plan-dotnet.md`. Namespace khớp đường dẫn thư mục. Không tạo thư mục `Helpers/`, `Utils/`, `Common/` hoặc `Misc/`.
+Backend .NET theo mục "Quy ước thư mục trong module" của `tasks/dotnet-migration/plan.md`. Namespace khớp đường dẫn thư mục. Không tạo thư mục `Helpers/`, `Utils/`, `Common/` hoặc `Misc/`.
 
 **Quy tắc ranh giới module:** module backend chỉ được tham chiếu `Pickory.Shared` và project `*.Contracts` của module khác. `Pickory.ArchitectureTests` kiểm tra quy tắc này. Mỗi module chỉ ghi vào bảng của chính nó.
 

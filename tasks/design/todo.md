@@ -1,6 +1,6 @@
 # Todo: đổi design system theo `shop-retail`
 
-Kế hoạch và quyết định: `tasks/plan-design.md`. Bản mẫu: `shop-retail/`. Mật khẩu trang admin mẫu là `demo`.
+Kế hoạch và quyết định: `tasks/design/plan.md`. Bản mẫu: `shop-retail/`. Mật khẩu trang admin mẫu là `demo`.
 
 Mỗi task UI chụp ảnh ở 1280 px và 375 px. Mỗi task so ảnh với màn tương ứng của bản mẫu.
 

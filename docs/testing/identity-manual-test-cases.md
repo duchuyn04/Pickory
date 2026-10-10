@@ -1,6 +1,6 @@
 # Kịch bản test thủ công module identity (Playwright)
 
-Phạm vi: Track A identity (ID-01 đến ID-17, UI-01 đến UI-08) theo `spec/SPEC-identity.md` và `tasks/todo.md`.
+Phạm vi: Track A identity (ID-01 đến ID-17, UI-01 đến UI-08) theo `spec/SPEC-identity.md` và `tasks/identity-ai-gateway/todo.md`.
 Thiết kế: reviewer. Thực thi: builder, chạy bằng Playwright trên `pnpm dev`. Reviewer chỉ đánh giá kết quả.
 
 ## Tổng hợp kết quả

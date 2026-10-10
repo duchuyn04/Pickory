@@ -7,8 +7,8 @@ Module `catalog` quản lý danh mục, thương hiệu, bộ thông số, sản
 `catalog` chỉ phụ thuộc `identity`. Module dùng `requirePermission`, `recordAudit` và event bus đã có. Plan chia công việc thành lát cắt dọc: mỗi task backend đi trọn schema, service, route và integration test. Task UI đi ngay sau task backend của nó.
 
 Spec gốc: `spec/SPEC.md`, `spec/SPEC-catalog.md`. Open Questions của spec đã chốt ngày 2026-10-03.
-Danh sách task chi tiết: `tasks/todo-catalog.md`.
-Plan cũ của `identity` và `ai-gateway` vẫn ở `tasks/plan.md`, vì còn live test, checkpoint và `SEC-01` chưa xong.
+Danh sách task chi tiết: `tasks/catalog/todo.md`.
+Plan cũ của `identity` và `ai-gateway` vẫn ở `tasks/identity-ai-gateway/plan.md`, vì còn live test, checkpoint và `SEC-01` chưa xong.
 
 ## Đồ thị phụ thuộc
 
@@ -38,7 +38,7 @@ CAT-01 bộ thuộc tính + validate thông số (packages/shared)
 
 1. **Cấu trúc thư mục theo mẫu `identity`.** Backend: `modules/catalog/{index.ts, domain/, data/, services/, routes/}`. `domain/` chứa logic thuần, không gọi DB. Frontend: `features/catalog/` cho khách và `features/catalog/admin/` cho back-office.
 2. **Kiểu và hàm validate thông số nằm ở `packages/shared/src/catalog/`.** Backend dùng hàm này để chặn dữ liệu sai. Form admin dùng cùng hàm để báo lỗi trước khi gửi. Một nguồn quy tắc tránh lệch giữa hai phía.
-3. **Quyền đã có trong danh mục của `identity`.** `products:read`, `products:write`, `inventory:write` có sẵn từ ID-01. `catalog/index.ts` re-export `catalogPermissions` từ danh mục này, theo Decision 1 của `tasks/plan.md`.
+3. **Quyền đã có trong danh mục của `identity`.** `products:read`, `products:write`, `inventory:write` có sẵn từ ID-01. `catalog/index.ts` re-export `catalogPermissions` từ danh mục này, theo Decision 1 của `tasks/identity-ai-gateway/plan.md`.
 4. **Sự kiện phát sau khi transaction commit.** Thêm `ProductChangedEvent` và `StockChangedEvent` vào `DomainEvents` trong `shared/events.ts`. Có hai trường hợp:
    - **Catalog sở hữu transaction:** `emitAfterCommit(db, (tx, events) => ...)` tự gọi `db.$transaction`. Hàm chỉ phát sự kiện sau khi `$transaction` trả kết quả. Transaction lỗi thì bỏ toàn bộ sự kiện.
    - **Bên gọi truyền `tx` vào** (ví dụ `commerce` gọi `stock.reserve(orderId, items, tx)`): catalog không biết lúc nào transaction đó commit. Hàm nhận thêm một collector do bên gọi tạo bằng `createEventCollector()`. Bên gọi gọi `flush()` sau khi commit.
@@ -62,7 +62,7 @@ CAT-01 bộ thuộc tính + validate thông số (packages/shared)
 
 ## Task List
 
-Chi tiết từng task ở `tasks/todo-catalog.md`.
+Chi tiết từng task ở `tasks/catalog/todo.md`.
 
 ### Phase 1: Nền tảng logic và dữ liệu
 - [x] CAT-01 · [x] CAT-02 · [x] CAT-03

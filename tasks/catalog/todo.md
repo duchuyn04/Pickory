@@ -1,6 +1,6 @@
 # Task List: catalog
 
-Plan và quyết định thiết kế: `tasks/plan-catalog.md`. Spec: `spec/SPEC-catalog.md`. Quy ước chung: `spec/SPEC.md`, `AGENTS.md`.
+Plan và quyết định thiết kế: `tasks/catalog/plan.md`. Spec: `spec/SPEC-catalog.md`. Quy ước chung: `spec/SPEC.md`, `AGENTS.md`.
 
 Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` trước khi commit. Lệnh test tập trung: `pnpm --filter @pickory/backend test -- <đường dẫn>`. Kích thước: XS 1 file, S 1-2, M 3-5. Số file không tính file test.
 
@@ -432,7 +432,7 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ## Phase 3: Đọc công khai và giao diện khách
 
 ### CAT-09: Danh sách sản phẩm có lọc và facets
-**Mô tả:** `GET /api/products` theo bảng tham số trong spec và Decision 11, 12 của `plan-catalog.md`. Chỉ trả sản phẩm `active` và `discontinued`. `catalogReader.listProducts` dùng cùng bộ lọc.
+**Mô tả:** `GET /api/products` theo bảng tham số trong spec và Decision 11, 12 của `plan.md`. Chỉ trả sản phẩm `active` và `discontinued`. `catalogReader.listProducts` dùng cùng bộ lọc.
 **Tiêu chí nghiệm thu:**
 - [x] Lọc kết hợp danh mục, thương hiệu, khoảng giá, `inStock` và 3 thuộc tính trả đúng tập sản phẩm
 - [x] `facets` đếm đúng theo kiểu loại trừ chính nó
@@ -765,7 +765,7 @@ Backend đạt kiến trúc 3/3, unit 391/391, tích hợp 572/576 (bỏ qua 4).
 ---
 
 ## Checkpoint cuối
-- [x] Mọi dòng Traceability trong `plan-catalog.md` đạt
+- [x] Mọi dòng Traceability trong `plan.md` đạt
 - [x] Coverage `services/*.ts` và `domain/*.ts` của `catalog` ít nhất 80% dòng
   - Cách đo của bản .NET: coverage dòng của assembly `Pickory.Modules.Catalog`, gộp test đơn vị và test tích hợp, bỏ `Persistence/Migrations/`. Xem đoạn bằng chứng bên dưới.
 - [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e` sạch

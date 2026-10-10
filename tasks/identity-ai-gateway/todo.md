@@ -1,7 +1,7 @@
 # Task List: identity + ai-gateway
 
-Plan và quyết định thiết kế: `tasks/plan.md`. Spec: `spec/SPEC-identity.md`, `spec/SPEC-ai-gateway.md`.
-Lịch 6 tuần, 6 sprint 1 tuần (chi tiết ở `tasks/plan.md`): Sprint 1: T01 đến T05, AI-00, AI-01. Sprint 2: ID-01 đến ID-04, AI-02, AI-03. Sprint 3: UI-05, ID-05, UI-01, ID-06, AI-04 đến AI-06. Sprint 4: ID-07, UI-02, ID-08, UI-03, AI-07, AI-08. Sprint 5: ID-09, ID-10, UI-04, ID-11, UI-06, AI-09. Sprint 6: ID-12, ID-13, UI-07, ID-14, UI-08, E2E-01.
+Plan và quyết định thiết kế: `tasks/identity-ai-gateway/plan.md`. Spec: `spec/SPEC-identity.md`, `spec/SPEC-ai-gateway.md`.
+Lịch 6 tuần, 6 sprint 1 tuần (chi tiết ở `tasks/identity-ai-gateway/plan.md`): Sprint 1: T01 đến T05, AI-00, AI-01. Sprint 2: ID-01 đến ID-04, AI-02, AI-03. Sprint 3: UI-05, ID-05, UI-01, ID-06, AI-04 đến AI-06. Sprint 4: ID-07, UI-02, ID-08, UI-03, AI-07, AI-08. Sprint 5: ID-09, ID-10, UI-04, ID-11, UI-06, AI-09. Sprint 6: ID-12, ID-13, UI-07, ID-14, UI-08, E2E-01.
 
 Quy ước: mỗi task phải qua `pnpm lint && pnpm typecheck && pnpm test` trước khi commit. Lệnh test tập trung: `pnpm --filter @pickory/backend test -- <đường dẫn>`. Kích thước: XS 1 file, S 1-2, M 3-5.
 

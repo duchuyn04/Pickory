@@ -21,7 +21,7 @@ Bạn là reviewer và người điều phối. Builder là agent `omp` chạy t
    - Có agent `omp` đang rảnh: đặt tên bằng `herdr agent rename <pane> builder`.
    - Không có: tách pane bằng `herdr pane split --current --direction right --cwd "$PWD" --no-focus`, rồi chạy `herdr agent start builder --kind omp --pane <pane mới>`.
    - Đặt tên pane của bạn bằng `herdr agent rename "$HERDR_PANE_ID" reviewer`. Builder dùng tên này để báo khi xong.
-3. Tìm tiêu chí của task trong `tasks/todo-*.md` và `tasks/plan-*.md`. Đọc spec và code liên quan.
+3. Tìm tiêu chí của task trong `tasks/<module>/todo.md` và `tasks/<module>/plan.md`. Đọc spec và code liên quan.
    - Ghi các điểm mơ hồ.
    - Ghi phần hạ tầng còn thiếu, ví dụ test chưa port.
    - Ghi chỗ tiêu chí còn viết theo bản Node. Backend hiện là .NET tại `apps/backend`.
@@ -33,8 +33,8 @@ Bạn là reviewer và người điều phối. Builder là agent `omp` chạy t
    - yêu cầu TDD, và phép thử đột biến cho test xanh ngay lần đầu;
    - lệnh kiểm tra và yêu cầu ghi kết quả thật;
    - bước đánh dấu tiến độ, chạy sau khi lệnh kiểm tra xanh:
-     - Tick `[x]` từng tiêu chí đã đạt trong `tasks/todo-*.md`.
-     - Tick mã task ở dòng tiến độ của `tasks/plan-*.md` khi mọi tiêu chí của task đã đạt.
+     - Tick `[x]` từng tiêu chí đã đạt trong `tasks/<module>/todo.md`.
+     - Tick mã task ở dòng tiến độ của `tasks/<module>/plan.md` khi mọi tiêu chí của task đã đạt.
      - Giữ `[ ]` cho tiêu chí chưa kiểm được. Thêm một dòng thụt lề bên dưới ghi lý do và task sẽ kiểm.
      - Không tick mục "Review với người dùng". Người dùng tự xác nhận mục này.
      - Không sửa nội dung tiêu chí khi tick.
@@ -55,7 +55,7 @@ Bạn là reviewer và người điều phối. Builder là agent `omp` chạy t
    - Đối chiếu mọi khẳng định trong code, comment và tài liệu với file thật.
    - Tiêu chí đã tick không bị viết lại thành nghĩa khác hoặc yếu hơn.
    - Mỗi tiêu chí builder đã tick có test hoặc bằng chứng chạy thật. Tick không có bằng chứng là lỗi `Bắt buộc`.
-   - Builder đã tick đủ các tiêu chí đạt trong `tasks/todo-*.md` và `tasks/plan-*.md`. Thiếu tick là lỗi `Bắt buộc`.
+   - Builder đã tick đủ các tiêu chí đạt trong `tasks/<module>/todo.md` và `tasks/<module>/plan.md`. Thiếu tick là lỗi `Bắt buộc`.
    - Comment theo `CLAUDE.md` mục 4 và 5. Chạy script kiểm tra comment nếu phiên có.
    - Không có em dash hay en dash trong các dòng thêm mới.
    - Tự chạy lại build và test sau lần sửa cuối có đổi code.
