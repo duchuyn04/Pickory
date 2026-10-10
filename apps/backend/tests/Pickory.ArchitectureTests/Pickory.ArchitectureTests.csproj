@@ -14,6 +14,7 @@
     <ProjectReference Include="..\..\src\Pickory.Modules.Identity\Pickory.Modules.Identity.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Modules.AiGateway\Pickory.Modules.AiGateway.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Modules.Catalog\Pickory.Modules.Catalog.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.Shipping\Pickory.Modules.Shipping.csproj" />
   </ItemGroup>
 
 </Project>

@@ -57,6 +57,19 @@ public record AppConfig
 
     public string CloudinaryApiSecret { get; init; } = string.Empty;
 
+    // Địa chỉ gốc của API GHN. Mặc định trỏ tới sandbox để dev và test không gọi nhầm production.
+    public string GhnApiBase { get; init; } = "https://dev-online-gateway.ghn.vn";
+
+    // Ba giá trị bí mật của GHN. Chuỗi rỗng nghĩa là chưa cấu hình, và production thiếu một giá trị thì API dừng.
+    public string GhnToken { get; init; } = string.Empty;
+
+    public string GhnShopId { get; init; } = string.Empty;
+
+    public string GhnWebhookSecret { get; init; } = string.Empty;
+
+    // Bật test gọi sandbox GHN thật. Test thường không gọi GHN.
+    public bool GhnLiveTests { get; init; }
+
     // Có đủ bộ ba khóa thì dùng Cloudinary thật. `Load` đã chặn trường hợp chỉ có một phần.
     public bool HasCloudinary => CloudinaryCloudName.Length > 0;
 
@@ -176,6 +189,17 @@ public record AppConfig
                 "Cần đủ CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY và CLOUDINARY_API_SECRET, hoặc bỏ trống cả ba.");
         }
 
+        var ghnApiBase = (configuration["GHN_API_BASE"] ?? string.Empty).Trim();
+        if (ghnApiBase.Length == 0)
+        {
+            ghnApiBase = "https://dev-online-gateway.ghn.vn";
+        }
+        else if (!IsValidAbsoluteUrl(ghnApiBase))
+        {
+            // API không gửi token GHN tới địa chỉ không hợp lệ.
+            throw new InvalidOperationException("Biến môi trường GHN_API_BASE phải là một URL tuyệt đối hợp lệ.");
+        }
+
         return new AppConfig
         {
             Port = port,
@@ -198,6 +222,11 @@ public record AppConfig
             CloudinaryCloudName = cloudinaryCloudName,
             CloudinaryApiKey = cloudinaryApiKey,
             CloudinaryApiSecret = cloudinaryApiSecret,
+            GhnApiBase = ghnApiBase,
+            GhnToken = (configuration["GHN_TOKEN"] ?? string.Empty).Trim(),
+            GhnShopId = (configuration["GHN_SHOP_ID"] ?? string.Empty).Trim(),
+            GhnWebhookSecret = (configuration["GHN_WEBHOOK_SECRET"] ?? string.Empty).Trim(),
+            GhnLiveTests = ReadZeroOrOneFlag(configuration, "GHN_LIVE_TESTS"),
         };
     }
 
@@ -240,7 +269,12 @@ public record AppConfig
 
     private static bool ReadLiveTestsFlag(IConfiguration configuration)
     {
-        var rawValue = configuration["AI_LIVE_TESTS"];
+        return ReadZeroOrOneFlag(configuration, "AI_LIVE_TESTS");
+    }
+
+    private static bool ReadZeroOrOneFlag(IConfiguration configuration, string key)
+    {
+        var rawValue = configuration[key];
         if (string.IsNullOrWhiteSpace(rawValue) || rawValue == "0")
         {
             return false;
@@ -252,7 +286,7 @@ public record AppConfig
             return true;
         }
 
-        throw new InvalidOperationException("Biến môi trường AI_LIVE_TESTS chỉ nhận giá trị 0 hoặc 1.");
+        throw new InvalidOperationException($"Biến môi trường {key} chỉ nhận giá trị 0 hoặc 1.");
     }
 
     private static bool IsValidAbsoluteUrl(string url)

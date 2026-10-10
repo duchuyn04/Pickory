@@ -7,6 +7,7 @@ using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Catalog.Seeding;
 using Pickory.Modules.Identity;
+using Pickory.Modules.Shipping;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.DependencyInjection;
 using Pickory.Shared.Http;
@@ -50,8 +51,8 @@ if (isBenchmarkCommand)
     }
 }
 
-// Lệnh seed và benchmark tự in kết quả và lỗi ra màn hình. Log JSON của EF Core sẽ làm loãng kết quả đó.
-if (isBenchmarkCommand || CatalogModule.IsCatalogSeedCommand(args))
+// Lệnh seed, benchmark và đồng bộ địa chỉ tự in kết quả và lỗi ra màn hình. Log JSON của EF Core sẽ làm loãng kết quả đó.
+if (isBenchmarkCommand || CatalogModule.IsCatalogSeedCommand(args) || ShippingModule.IsShippingCommand(args))
 {
     builder.Logging.ClearProviders();
 }
@@ -76,6 +77,8 @@ builder.Services.AddIdentityModule(databaseConnectionString);
 builder.Services.AddAiGatewayModule(databaseConnectionString);
 // Catalog cần biết môi trường để dừng production khi thiếu khóa Cloudinary.
 builder.Services.AddCatalogModule(databaseConnectionString, config, builder.Environment.IsProduction());
+// Shipping cần biết môi trường để dừng production khi thiếu biến GHN.
+builder.Services.AddShippingModule(databaseConnectionString, config, builder.Environment.IsProduction());
 
 // Tài liệu OpenAPI chỉ sinh ở Development. Các môi trường khác không đăng ký dịch vụ sinh tài liệu.
 if (builder.Environment.IsDevelopment())
@@ -114,6 +117,12 @@ if (CatalogModule.IsCatalogSeedCommand(args))
     return await CatalogModule.RunCatalogSeedCommandAsync(app.Services, builder.Environment.IsProduction());
 }
 
+// Lệnh `shipping:sync-addresses` đồng bộ danh mục địa chỉ một lần rồi thoát. Lệnh không mở cổng mạng và không chạy worker nền.
+if (ShippingModule.IsShippingCommand(args))
+{
+    return await ShippingModule.RunShippingCommandAsync(app.Services);
+}
+
 // Lệnh `e2e:start` dựng lại DB E2E rồi chạy API như bình thường. Playwright chỉ thấy API sẵn sàng sau bước chuẩn bị.
 if (E2eStartup.IsCommand(args))
 {
@@ -140,6 +149,7 @@ app.MapGet("/api/health", () => Results.Ok(new ApiResponse<object>(new { status 
 app.MapIdentityEndpoints();
 app.MapAiGatewayEndpoints();
 app.MapCatalogEndpoints();
+app.MapShippingEndpoints();
 
 // Lệnh benchmark cần đủ route để đo `GET /api/products`, nên chạy sau khi route đã gắn.
 if (isBenchmarkCommand)

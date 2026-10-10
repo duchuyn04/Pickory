@@ -53,7 +53,7 @@ export { shippingPermissions } from './permissions';  // ['shipping-settings:man
 ```
 
 - Mọi lỗi từ GHN quy về `ShippingUnavailableError` (GHN lỗi, timeout) hoặc `ShippingRejectedError` (GHN từ chối, ví dụ địa chỉ không phục vụ). Lỗi kèm thông báo tiếng Việt cho người dùng.
-- `quote` timeout 5 giây, retry 1 lần với lỗi mạng hoặc 5xx. `createShipment` **không retry tự động** để tránh tạo trùng vận đơn. Nếu lỗi mạng, người dùng bấm tạo lại. Module gửi lại cùng `client_order_code`, và GHN trả vận đơn đã tạo thay vì tạo vận đơn mới (cập nhật 2026-10-09, xem `tasks/plan-shipping.md`).
+- `quote` timeout 5 giây, retry 1 lần với lỗi mạng hoặc 5xx. `createShipment` **không retry tự động** để tránh tạo trùng vận đơn. Nếu lỗi mạng, người dùng bấm tạo lại. Module gửi lại cùng `client_order_code`, và GHN trả vận đơn đã tạo thay vì tạo vận đơn mới (cập nhật 2026-10-09, xem `tasks/shipping/plan.md`).
 
 ### Gộp kiện hàng
 
@@ -116,7 +116,7 @@ GHN_LIVE_TESTS=0
 | GET | `/api/addresses/provinces` | công khai | Tỉnh/thành |
 | GET | `/api/addresses/wards?provinceCode=` | công khai | Phường/xã (và quận/huyện nếu cần) |
 | POST | `/api/webhooks/ghn` | GHN | Nhận cập nhật trạng thái |
-| GET · PUT | `/api/admin/shipping/settings` | `shipping-settings:manage` | Cấu hình |
+| GET · PUT | `/api/admin/shipping/settings` | `shipping-settings:manage` | Cấu hình. Lỗi 400 `VALIDATION_ERROR` có `details` dạng `[{ key, message }]`. `key` là tên trường, và là `body` khi lỗi cả body. |
 
 Tạo và hủy vận đơn cho đơn hàng đi qua endpoint của `commerce` (quyền `orders:fulfill`). `commerce` gọi `shipping.createShipment`.
 
@@ -143,7 +143,7 @@ model Shipment {
 model ShipmentEvent   { /* shipmentId, status, rawStatus, occurredAt, source(webhook|poll|manual) */ }
 model AddressProvince { /* code, name, syncedAt */ }
 model AddressWard     { /* code, provinceCode, districtCode?, name, syncedAt */ }
-model ShippingSettings { /* pickup address, ghnShopId, defaultServiceId */ }
+model ShippingSettings { /* pickup address, ghnShopId, defaultServiceTypeId */ }
 ```
 
 - Đơn bị hủy vận đơn rồi tạo lại: vận đơn cũ chuyển `cancelled`, trường `ref` của nó được đổi thành `ref#cancelled#<n>` để giữ ràng buộc unique.

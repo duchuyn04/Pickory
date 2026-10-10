@@ -16,7 +16,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
     private const string DocumentPath = "/api/openapi/v1.json";
     private const string DocsPath = "/api/docs";
 
-    private static readonly string[] AllowedTags = ["System", "Identity", "AI Gateway", "Catalog"];
+    private static readonly string[] AllowedTags = ["System", "Identity", "AI Gateway", "Catalog", "Shipping"];
 
     private async Task<JsonDocument> ReadDocumentAsync()
     {
@@ -107,6 +107,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
         Assert.Equal("Identity", FirstTag(paths, "/api/me", "get"));
         Assert.Equal("Catalog", FirstTag(paths, "/api/products", "get"));
         Assert.Equal("AI Gateway", FirstTag(paths, "/api/admin/ai/usage", "get"));
+        Assert.Equal("Shipping", FirstTag(paths, "/api/addresses/provinces", "get"));
     }
 
     [Fact]
@@ -136,6 +137,10 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
             builder.UseSetting("CLOUDINARY_CLOUD_NAME", "test-cloud");
             builder.UseSetting("CLOUDINARY_API_KEY", "test-key");
             builder.UseSetting("CLOUDINARY_API_SECRET", "test-secret");
+            // Production cũng dừng khi thiếu biến GHN. Giá trị giả đủ để API khởi động, vì test không gọi GHN.
+            builder.UseSetting("GHN_TOKEN", "test-ghn-token");
+            builder.UseSetting("GHN_SHOP_ID", "test-ghn-shop");
+            builder.UseSetting("GHN_WEBHOOK_SECRET", "test-ghn-webhook-secret");
         });
 
         var response = await productionFactory.CreateClient().GetAsync(path);

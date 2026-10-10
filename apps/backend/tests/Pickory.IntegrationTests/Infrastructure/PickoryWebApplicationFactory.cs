@@ -9,7 +9,10 @@ using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Identity.Emails;
+using Pickory.Modules.Shipping.Addresses;
+using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Identity.GoogleOAuth;
+using Pickory.Shared.Configuration;
 using Pickory.Shared.Events;
 
 namespace Pickory.IntegrationTests.Infrastructure;
@@ -122,6 +125,17 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             services.AddSingleton<IDomainEventHandler<ProductChangedEvent>, RecordingDomainEventHandler<ProductChangedEvent>>();
             services.AddSingleton<IDomainEventHandler<StockChangedEvent>, RecordingDomainEventHandler<StockChangedEvent>>();
 
+            // Test không gọi GHN thật, kể cả khi máy chạy test có đặt biến `GHN_*`. Biến môi trường thắng cấu hình trong bộ nhớ, nên phải thay `AppConfig` đã nạp.
+            var loadedConfig = (AppConfig)services.Single(descriptor => descriptor.ServiceType == typeof(AppConfig)).ImplementationInstance!;
+            services.RemoveAll<AppConfig>();
+            services.AddSingleton(loadedConfig with { GhnToken = string.Empty, GhnShopId = string.Empty, GhnWebhookSecret = string.Empty });
+
+            // `AddShippingModule` chọn client GHN theo `AppConfig` gốc, nên máy test có `GHN_TOKEN` vẫn dựng client thật. Factory thay `IGhnClient` bằng bản giả, giống `IImageStorage` bên dưới.
+            services.RemoveAll<IGhnClient>();
+            services.RemoveAll<FakeGhnClient>();
+            services.AddSingleton<FakeGhnClient>();
+            services.AddSingleton<IGhnClient>(provider => provider.GetRequiredService<FakeGhnClient>());
+
             // Test không gọi Cloudinary thật, kể cả khi máy chạy test có đặt biến `CLOUDINARY_*`.
             services.RemoveAll<IImageStorage>();
             services.RemoveAll<CloudinaryCredentials>();
@@ -137,6 +151,14 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             {
                 services.Remove(workerRegistration);
             }
+
+            // Bỏ worker đồng bộ địa chỉ. Test gọi `AddressSyncProcessor` trực tiếp, để worker không ghi đè danh mục test đang dựng.
+            var addressWorkerRegistration = services.SingleOrDefault(descriptor =>
+                descriptor.ServiceType == typeof(IHostedService) && descriptor.ImplementationType == typeof(AddressSyncWorker));
+            if (addressWorkerRegistration is not null)
+            {
+                services.Remove(addressWorkerRegistration);
+            }
         });
     }
 
@@ -148,6 +170,9 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
 
     // Cung cấp danh sách sự kiện cho test. Test kiểm tra sự kiện phát đúng số lần.
     public RecordedDomainEvents DomainEvents => Services.GetRequiredService<RecordedDomainEvents>();
+
+    // Cung cấp client GHN giả cho test. Test đặt chế độ lỗi hoặc đọc đơn đã tạo.
+    internal FakeGhnClient GhnClient => Services.GetRequiredService<FakeGhnClient>();
 
     // Cung cấp kho ảnh giả cho test. Test đặt ảnh "đã tải lên" và đọc danh sách ảnh đã xóa.
     public FakeImageStorage ImageStorage => Services.GetRequiredService<FakeImageStorage>();
