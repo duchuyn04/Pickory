@@ -16,8 +16,8 @@ Spec của module nằm ở `spec/SPEC-<module>.md`. Thứ tự build theo `spec
 | `design/` | Đổi design system theo `shop-retail` (mã `DS`) | Xong |
 | `catalog/` | `catalog` (mã `CAT`, `UI-C`) | Xong. Còn 3 mục chờ người dùng tự test |
 | `shipping/` | `shipping` (mã `SHIP`, `UI-S`) | Xong Phase 2. Còn SHIP-09 (nghiệm thu, cần token sandbox) |
-| `rest-routes/` | Đổi route cũ đặt theo hành động sang REST (mã `REST`) | Chưa bắt đầu |
-| `commerce/` | `commerce` (mã `COM`) | Chưa bắt đầu. Cần plan đổi route sang REST xong trước |
+| `rest-routes/` | Đổi route cũ đặt theo hành động sang REST (mã `REST`) | Xong. Còn mục review với người dùng ở Checkpoint R1 và Checkpoint cuối |
+| `commerce/` | `commerce` (mã `COM`) | Chưa bắt đầu. Plan đổi route sang REST đã xong |
 | `activity-tracking/` | `activity-tracking` (mã `ACT`) | Chưa bắt đầu |
 | `smart-search/` | `smart-search` (mã `SRCH`) | Chưa bắt đầu |
 | `recommendations/` | `recommendations` (mã `REC`) | Chưa bắt đầu |
