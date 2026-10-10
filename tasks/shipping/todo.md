@@ -15,14 +15,15 @@ Quy ước:
 
 ### SHIP-00: Xác minh GHN sandbox
 **Mô tả:** Gọi GHN sandbox bằng token thật để chốt các điểm tài liệu chưa nói rõ. Ghi kết quả vào `docs/adr/0003-ghn-shipping-integration.md`. Task này cần `GHN_TOKEN` và `GHN_SHOP_ID` do người dùng cung cấp.
-**Trạng thái:** chờ token. Ngày 2026-10-09 người dùng chưa có token. Các task khác không chờ task này.
+**Trạng thái:** đã xác minh ngày 2026-10-11 với token sandbox. Kết quả ở ADR 0003. Còn 1 tiêu chí mở: trạng thái hủy được ngoài `ready_to_pick`.
 **Tiêu chí nghiệm thu:**
-- [ ] API báo phí: xác định cách gửi địa chỉ 2 cấp (tỉnh/thành và phường/xã mới), kèm request và response thật đã che token
-- [ ] Danh sách mã trạng thái vận đơn của GHN, đối chiếu với bảng ánh xạ trong spec
-- [ ] Gửi lại cùng `client_order_code` trả cùng `order_code`, không tạo đơn thứ hai
-- [ ] API thời gian giao dự kiến (`leadtime`) nhận địa chỉ 2 cấp hay không
+- [x] API báo phí: xác định cách gửi địa chỉ 2 cấp (tỉnh/thành và phường/xã mới), kèm request và response thật đã che token
+- [x] Danh sách mã trạng thái vận đơn của GHN, đối chiếu với bảng ánh xạ trong spec
+- [x] Gửi lại cùng `client_order_code` trả cùng `order_code`, không tạo đơn thứ hai
+- [x] API thời gian giao dự kiến (`leadtime`) nhận địa chỉ 2 cấp hay không
 - [ ] Trạng thái nào còn hủy được
-- [ ] Token có giới hạn IP hay không, và IP nào cần đăng ký
+  Chưa kiểm hết: sandbox chỉ cho thấy `ready_to_pick` hủy được và không cho đẩy đơn sang trạng thái khác. Tài liệu GHN không liệt kê trạng thái hủy được. Task SHIP-09 (contract test sandbox) và vận hành thật sẽ kiểm tiếp. Xem ADR 0003, tiêu chí 5.
+- [x] Token có giới hạn IP hay không, và IP nào cần đăng ký
 **Kiểm tra:** script tạm ngoài repo, output thật trong ADR
 **Phụ thuộc:** không · **Quy mô:** S
 **File:** `docs/adr/0003-ghn-shipping-integration.md`
