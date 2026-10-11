@@ -93,8 +93,8 @@ Chi tiết từng task ở `tasks/shipping/todo.md`.
 
 ### Checkpoint S2
 - [x] Admin cấu hình địa chỉ lấy hàng trên giao diện, khách chọn được tỉnh/thành và phường/xã
-- [ ] Webhook và job đồng bộ phát sự kiện đúng 1 lần cho mỗi lần đổi trạng thái
-- [ ] Review với người dùng
+- [x] Webhook và job đồng bộ phát sự kiện đúng 1 lần cho mỗi lần đổi trạng thái
+- [x] Review với người dùng
 
 ### Phase 3: Nghiệm thu
 - [x] SHIP-09
@@ -103,7 +103,7 @@ Chi tiết từng task ở `tasks/shipping/todo.md`.
 - [x] Mọi dòng Traceability đạt
 - [x] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, bỏ `Persistence/Migrations/`
 - [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
-- [ ] Review với người dùng, rồi mới bắt đầu `commerce`
+- [x] Review với người dùng, rồi mới bắt đầu `commerce`
 
 ## Traceability: Success Criteria → Task
 
