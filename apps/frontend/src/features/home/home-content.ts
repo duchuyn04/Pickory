@@ -1,75 +1,86 @@
 import type { IconName } from '../../shared/icons';
 
-// Hình minh họa và icon của một danh mục gốc trên trang chủ.
+// Hình minh họa, icon và sản phẩm đại diện của một danh mục gốc trên trang chủ.
 export interface CategoryVisual {
   icon: IconName;
   // Đường dẫn trong `public/`. Hình lấy từ bản mẫu `shop-retail/assets/p/`, không có chữ hay logo hãng.
   artSrc: string | null;
+  // Ảnh thật của sản phẩm này đứng trên ô danh mục. Sản phẩm bị xóa thì ô dùng sản phẩm mới nhất có ảnh.
+  tileProductSlug: string | null;
 }
 
 // Danh mục do admin tạo sau này chưa có hình riêng. Trang vẫn hiện icon chung thay vì ô trống.
-const FALLBACK_CATEGORY_VISUAL: CategoryVisual = { icon: 'package', artSrc: null };
+const FALLBACK_CATEGORY_VISUAL: CategoryVisual = {
+  icon: 'package',
+  artSrc: null,
+  tileProductSlug: null,
+};
 
+// Sản phẩm của ô danh mục khác máy trên banner, để khách không thấy một ảnh hai lần liền nhau.
 const CATEGORY_VISUALS: Record<string, CategoryVisual> = {
-  'dien-thoai': { icon: 'smartphone', artSrc: '/media/categories/dien-thoai.svg' },
-  laptop: { icon: 'laptop', artSrc: '/media/categories/laptop.svg' },
-  'man-hinh': { icon: 'monitor', artSrc: '/media/categories/man-hinh.svg' },
-  'tai-nghe': { icon: 'headphones', artSrc: '/media/categories/tai-nghe.svg' },
-  'phu-kien': { icon: 'plug', artSrc: '/media/categories/phu-kien.svg' },
+  'dien-thoai': {
+    icon: 'smartphone',
+    artSrc: '/media/categories/dien-thoai.svg',
+    tileProductSlug: 'xiaomi-14t-pro',
+  },
+  laptop: {
+    icon: 'laptop',
+    artSrc: '/media/categories/laptop.svg',
+    tileProductSlug: 'asus-rog-zephyrus-g14-ga403',
+  },
+  'man-hinh': {
+    icon: 'monitor',
+    artSrc: '/media/categories/man-hinh.svg',
+    tileProductSlug: 'asus-proart-pa278cv',
+  },
+  'tai-nghe': {
+    icon: 'headphones',
+    artSrc: '/media/categories/tai-nghe.svg',
+    tileProductSlug: 'bose-quietcomfort-45',
+  },
+  'phu-kien': {
+    icon: 'plug',
+    artSrc: '/media/categories/phu-kien.svg',
+    tileProductSlug: 'logitech-mx-keys-s',
+  },
 };
 
 export function getCategoryVisual(categorySlug: string): CategoryVisual {
   return CATEGORY_VISUALS[categorySlug] ?? FALLBACK_CATEGORY_VISUAL;
 }
 
-// Nền của banner. Hai tông xen kẽ để khách nhận ra banner đã đổi.
-export type BannerTone = 'deep' | 'dark';
+// Hiệu ứng nền của banner danh mục. Mỗi kiểu gợi đúng loại hàng: vệt sáng quét qua màn laptop, cột sóng âm cho tai nghe.
+export type PromoEffect = 'shine' | 'equalizer';
 
-export interface HeroSlideContent {
+export interface CategoryPromoContent {
   categorySlug: string;
-  // Nhãn ngắn trên tab chọn banner.
-  tabLabel: string;
-  title: string;
+  effect: PromoEffect;
+  // Câu ngắn dưới tên danh mục. Chỉ nói điều catalog có thật, không hứa khuyến mãi.
   text: string;
-  ctaLabel: string;
-  tone: BannerTone;
+  // Ảnh máy đứng trên banner. Sản phẩm bị xóa thì banner dùng sản phẩm mới nhất có ảnh của danh mục.
+  productSlug: string;
 }
 
-// Câu chữ chỉ nói điều catalog có thật. Chưa có module khuyến mãi, nên banner không hứa giảm giá hay trả góp.
-export const HERO_SLIDES: HeroSlideContent[] = [
-  {
-    categorySlug: 'dien-thoai',
-    tabLabel: 'Điện thoại',
-    title: 'Điện thoại chính hãng',
-    text: 'Nhiều hãng và nhiều tầm giá. So sánh cấu hình trước khi chọn máy.',
-    ctaLabel: 'Xem điện thoại',
-    tone: 'deep',
-  },
+// Cặp banner giữa trang, theo hai banner ngang của thegioididong.com sau khối deal.
+export const CATEGORY_PROMOS: CategoryPromoContent[] = [
   {
     categorySlug: 'laptop',
-    tabLabel: 'Laptop',
-    title: 'Laptop cho học tập và công việc',
-    text: 'Lọc theo vi xử lý, RAM và màn hình để tìm máy vừa nhu cầu.',
-    ctaLabel: 'Xem laptop',
-    tone: 'dark',
+    effect: 'shine',
+    text: 'Gaming, đồ họa và văn phòng',
+    productSlug: 'asus-rog-zephyrus-g14-ga403',
   },
   {
     categorySlug: 'tai-nghe',
-    tabLabel: 'Tai nghe',
-    title: 'Tai nghe cho mọi nhu cầu',
-    text: 'Lọc theo kiểu tai nghe, chống ồn chủ động và thời lượng pin.',
-    ctaLabel: 'Xem tai nghe',
-    tone: 'deep',
+    effect: 'equalizer',
+    text: 'Chống ồn, không dây, chụp tai và nhét tai',
+    productSlug: 'sony-wh-1000xm5',
   },
 ];
 
-export interface SideBannerContent {
-  categorySlug: string;
-  title: string;
-}
-
-// Hai danh mục còn lại nằm ở cột phải, để hero giới thiệu đủ năm danh mục.
-export const SIDE_BANNERS: SideBannerContent[] = [
-  { categorySlug: 'man-hinh', title: 'Màn hình làm việc và chơi game' },
-  { categorySlug: 'phu-kien', title: 'Chuột, bàn phím, sạc và cáp' },
-];
+// Hai máy cùng danh mục đặt cạnh nhau trên banner so sánh. Bảng thông số lấy từ API, không ghi cứng.
+export const PRODUCT_DUEL = {
+  leftSlug: 'apple-iphone-16-pro',
+  rightSlug: 'samsung-galaxy-s24',
+  // Số dòng thông số đặt cạnh nhau. Đủ để thấy điểm khác mà banner không dài như bảng so sánh.
+  specRowLimit: 4,
+};

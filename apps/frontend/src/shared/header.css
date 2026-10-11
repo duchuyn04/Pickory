@@ -30,10 +30,13 @@
   white-space: nowrap;
 }
 
-/* Trên nền đỏ, ô logo đảo màu thành nền trắng chữ đỏ như bản mẫu. */
+/* Biểu tượng có phần đỏ và xanh than, nên trên header đỏ nó nằm trong ô trắng để không chìm vào nền. */
 .site-logo-mark {
+  box-sizing: content-box;
+  height: 34px;
+  padding: 3px 5px;
+  border-radius: 9px;
   background: var(--color-on-brand);
-  color: var(--color-brand);
 }
 
 .site-nav {

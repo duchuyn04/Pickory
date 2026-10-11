@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useActor } from '../features/identity/hooks/use-actor';
 import { apiRequest } from './api';
 import { Icon } from './icons';
+import { BrandMark } from './brand-mark';
 import { ErrorAlert } from './error-alert';
 import './header.css';
 
@@ -34,9 +35,7 @@ export function Header() {
     <header className="site-header">
       <div className="site-header-inner">
         <Link to="/" className="site-logo">
-          <span className="logo-mark site-logo-mark" aria-hidden="true">
-            P
-          </span>
+          <BrandMark className="site-logo-mark" />
           Pickory
         </Link>
         <nav className="site-nav" aria-label="Điều hướng chính">

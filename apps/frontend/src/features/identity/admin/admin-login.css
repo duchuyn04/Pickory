@@ -22,11 +22,23 @@
   margin-bottom: 0;
 }
 
+/* Logo đầy đủ đứng trên, tên màn và lời dẫn căn giữa bên dưới. */
 .admin-login-brand {
   display: flex;
-  gap: 10px;
+  flex-direction: column;
+  gap: var(--space-2);
   align-items: center;
   padding-bottom: var(--space-2);
+  text-align: center;
+}
+
+.admin-login-logo {
+  width: auto;
+  height: 88px;
+}
+
+.admin-login-brand small {
+  display: block;
 }
 
 .admin-login-brand h1 {
