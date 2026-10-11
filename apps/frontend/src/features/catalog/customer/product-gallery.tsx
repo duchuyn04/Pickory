@@ -7,6 +7,8 @@ import type { ProductImageInfo } from './catalog-api';
 const MAIN_IMAGE_SIZES = '(max-width: 767px) 100vw, 600px';
 const MAIN_IMAGE_FALLBACK_WIDTH = 800;
 const THUMBNAIL_WIDTH = 200;
+// Cắt viền trơn quanh ảnh, để máy trong ảnh có khung xám vẫn lấp đầy khung xem.
+const TRIMMED = { trim: true };
 
 interface ProductGalleryProps {
   images: ProductImageInfo[];
@@ -23,9 +25,11 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
       <div className="gallery-main">
         <ProductImage
           src={
-            activeImage ? withCloudinaryTransform(activeImage.url, MAIN_IMAGE_FALLBACK_WIDTH) : null
+            activeImage
+              ? withCloudinaryTransform(activeImage.url, MAIN_IMAGE_FALLBACK_WIDTH, TRIMMED)
+              : null
           }
-          srcSet={activeImage ? buildCloudinarySrcSet(activeImage.url) : undefined}
+          srcSet={activeImage ? buildCloudinarySrcSet(activeImage.url, TRIMMED) : undefined}
           sizes={MAIN_IMAGE_SIZES}
           alt={activeImage ? activeImage.alt || productName : productName}
           width={MAIN_IMAGE_FALLBACK_WIDTH}
@@ -44,7 +48,7 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                 onClick={() => setActiveIndex(index)}
               >
                 <ProductImage
-                  src={withCloudinaryTransform(image.url, THUMBNAIL_WIDTH)}
+                  src={withCloudinaryTransform(image.url, THUMBNAIL_WIDTH, TRIMMED)}
                   alt=""
                   width={56}
                   height={56}

@@ -56,7 +56,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-// Ghi lại mọi request theo dạng `METHOD đường-dẫn`. `GET /api/me` trả actor đã chọn, `GET /api/categories` trả mảng rỗng, request khác trả `{ data: {} }`.
+// Ghi lại mọi request theo dạng `METHOD đường-dẫn`. `GET /api/me` trả actor đã chọn, `GET /api/categories` trả mảng rỗng, `GET /api/products` trả 404, request khác trả `{ data: {} }`.
 function stubFetch(actor: ActorData) {
   vi.stubGlobal(
     'fetch',
@@ -69,6 +69,16 @@ function stubFetch(actor: ActorData) {
       // Đăng nhập và đăng xuất đưa khách về trang chủ. Trang chủ cần cây danh mục dạng mảng.
       if (method === 'GET' && String(input) === '/api/categories') {
         return new Response(JSON.stringify({ data: [] }));
+      }
+      // Banner và các lưới sản phẩm của trang chủ cần dữ liệu đúng dạng. Test này không kiểm sản phẩm,
+      // nên API sản phẩm trả 404: banner bỏ máy không tìm thấy, các lưới hiện lỗi thay vì đọc dữ liệu rỗng.
+      if (method === 'GET' && String(input).startsWith('/api/products')) {
+        return new Response(
+          JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Không tìm thấy.' } }),
+          {
+            status: 404,
+          },
+        );
       }
       return new Response(JSON.stringify({ data: {} }), { status: method === 'POST' ? 201 : 200 });
     }),

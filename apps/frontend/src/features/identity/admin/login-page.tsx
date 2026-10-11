@@ -64,9 +64,14 @@ export function StaffLoginPage() {
     <main className="admin-login">
       <form noValidate onSubmit={handleSubmit} className="card admin-login-card">
         <div className="admin-login-brand">
-          <span className="logo-mark" aria-hidden="true">
-            P
-          </span>
+          {/* Màn đăng nhập rộng nên dùng logo đầy đủ: biểu tượng P và chữ Pickory xếp dọc. */}
+          <img
+            className="admin-login-logo"
+            src="/media/brand/pickory-logo.png"
+            alt=""
+            width={307}
+            height={240}
+          />
           <span>
             <h1>Pickory Back-Office</h1>
             <small>Đăng nhập dành cho nhân viên quản trị</small>

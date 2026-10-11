@@ -25,6 +25,94 @@
   --color-brand-deep: #61000b;
   --color-highlight-on-dark: #ffd84d;
   --color-on-dark-soft: rgba(255, 255, 255, 0.16);
+  /* Chữ phụ trên nền tối, ví dụ giá và tab của banner nền xanh đậm. Đạt AA trên `--color-dark`. */
+  --color-on-dark-muted: #b4bac4;
+  /*
+   * Banner sản phẩm ở đầu trang chủ. Mỗi máy có màu nền, màu nhấn và họa tiết lấy theo ảnh quảng cáo của hãng.
+   * `-accent` là chữ nhãn và viền icon. `-muted` là chữ phụ. `-cta` là nền nút, `-cta-ink` là chữ trên nút.
+   * Lớp phát sáng và đường kẻ chỉ trang trí, nên chỉ màu chữ cần đạt AA trên màu nền.
+   */
+  --color-banner-ink: #15181d;
+  --color-banner-on-dark-muted: #c4c9d2;
+  --color-banner-reflection: rgba(255, 255, 255, 0.22);
+  --color-banner-swatch-ring: rgba(0, 0, 0, 0.18);
+  --color-banner-arrow: rgba(255, 255, 255, 0.9);
+  --color-banner-iphone: #000000;
+  --color-banner-iphone-accent: #e08a9c;
+  --color-banner-duo: #f1ebe2;
+  --color-banner-duo-accent: #85582e;
+  --color-banner-duo-muted: #66553f;
+  --color-banner-duo-glow: #fffaf3;
+  --color-banner-duo-dune: #e8dccb;
+  --color-banner-duo-dune-far: #e1d2bd;
+  --color-banner-s26: #05070d;
+  --color-banner-s26-accent: #8fc3ff;
+  --color-banner-s26-cta: #1a5fd6;
+  --color-banner-s26-glow: rgba(70, 130, 255, 0.35);
+  --color-banner-s26-arc: rgba(143, 195, 255, 0.18);
+  --color-banner-s26-arc-far: rgba(143, 195, 255, 0.1);
+  --color-banner-fold: #67638f;
+  --color-banner-fold-accent: #f3e7ff;
+  --color-banner-fold-muted: #ece8f8;
+  --color-banner-fold-cta-ink: #3d2f6b;
+  --color-banner-fold-petal: #b9a7f0;
+  --color-banner-flip: #e6ecfb;
+  --color-banner-flip-accent: #2a4fd6;
+  --color-banner-flip-muted: #46506b;
+  --color-banner-flip-glow: #ffffff;
+  --color-banner-flip-glow-soft: #d9d2fb;
+  --color-banner-rog: #07070c;
+  --color-banner-rog-accent: #ff2d55;
+  --color-banner-rog-glow: rgba(150, 60, 255, 0.55);
+  --color-banner-rog-glow-soft: rgba(255, 45, 85, 0.35);
+  --color-banner-rog-slash: rgba(255, 255, 255, 0.12);
+  --color-banner-sony: #efe6da;
+  --color-banner-sony-accent: #85562a;
+  --color-banner-sony-muted: #66553f;
+  --color-banner-sony-glow: #fbf7f1;
+  --color-banner-sony-ring: #c9b293;
+  --color-banner-xiaomi: #050505;
+  --color-banner-xiaomi-accent: #e9b46b;
+  --color-banner-xiaomi-title: #f3efe8;
+  --color-banner-xiaomi-beam: rgba(233, 180, 107, 0.28);
+  --color-banner-xiaomi-glow: rgba(233, 180, 107, 0.22);
+  --color-banner-dell: #e9eef1;
+  --color-banner-dell-accent: #0a5cbc;
+  --color-banner-dell-muted: #47525f;
+  --color-banner-dell-grid: rgba(11, 106, 216, 0.07);
+  /*
+   * Cặp banner danh mục giữa trang. Laptop nền than với vệt đỏ của dòng gaming, tai nghe nền sâm panh.
+   * `-accent` là chữ nhãn và cột sóng âm, phải đạt AA trên nền của banner.
+   */
+  --color-promo-laptop: #101318;
+  --color-promo-laptop-accent: #ff4d6d;
+  --color-promo-laptop-shine: rgba(255, 255, 255, 0.14);
+  --color-promo-audio: #efe6da;
+  --color-promo-audio-accent: #85562a;
+  /* Banner so sánh đối đầu: mỗi bên một tông sáng hợp ảnh máy nền trắng, tay kéo ở giữa màu chữ đậm. */
+  --color-duel-left: #f2f2f4;
+  --color-duel-right: #e7eefb;
+  --color-duel-right-accent: #1428a0;
+  --color-duel-left-accent: #1b1f24;
+  /* Chấm màu máy trên banner. Mã màu đo từ ảnh của hãng. */
+  --color-swatch-iphone-black: #2b2b2e;
+  --color-swatch-iphone-silver: #e4e5e7;
+  --color-swatch-iphone-blue: #a9c1db;
+  --color-swatch-iphone-burgundy: #6b2333;
+  --color-swatch-s26-black: #1d1e22;
+  --color-swatch-s26-white: #eef0f2;
+  --color-swatch-s26-violet: #5a4b9b;
+  --color-swatch-s26-blue: #a9cdee;
+  --color-swatch-s26-pink: #e8c8b8;
+  --color-swatch-fold-mint: #c9dcc1;
+  --color-swatch-fold-lavender: #c7b9e6;
+  --color-swatch-fold-graphite: #3a3a3f;
+  --color-swatch-fold-cream: #efe7d8;
+  --color-swatch-flip-silver: #c9ccd2;
+  --color-swatch-flip-yellow: #f3d36e;
+  --color-swatch-flip-mint: #bfe3d1;
+  --color-swatch-rog-white: #e9e9ec;
+  --color-swatch-rog-grey: #55585e;
 
   /* Chữ: chính, phụ và chữ của badge trung tính. */
   --color-ink: #1b1f24;
@@ -66,8 +154,20 @@
   /* Bo góc */
   --radius-control: 8px;
   --radius-card: 12px;
+  /* Khối section và thẻ sản phẩm của trang chủ, theo hệ thiết kế của thegioididong.com. */
+  --radius-section: 8px;
+  --radius-product: 6px;
+  --radius-chip: 4px;
+  --radius-banner: 16px;
   --radius-dialog: 14px;
   --radius-pill: 999px;
+
+  /* Chuyển động: đường cong ra nhanh rồi chậm dần, giống chuyển động vật thể dừng lại tự nhiên. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-soft: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --duration-fast: 0.2s;
+  --duration-base: 0.45s;
+  --duration-slow: 0.9s;
 
   /* Khoảng cách: thang 4px */
   --space-1: 4px;

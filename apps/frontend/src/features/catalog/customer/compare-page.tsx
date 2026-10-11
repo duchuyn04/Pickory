@@ -16,6 +16,8 @@ import './compare-page.css';
 const MISSING_VALUE_TEXT = 'Chưa có thông tin';
 const HEAD_IMAGE_WIDTH = 200;
 const HEAD_IMAGE_SIZES = '96px';
+// Cắt viền trơn quanh ảnh, để máy trong ảnh có khung xám vẫn lấp đầy ô đầu cột.
+const TRIMMED = { trim: true };
 
 function Breadcrumb() {
   return (
@@ -78,8 +80,12 @@ function ProductColumnHead({ product, onRemove }: ProductColumnHeadProps) {
     <th scope="col" className="compare-product">
       <div className="compare-product-media">
         <ProductImage
-          src={summary.image ? withCloudinaryTransform(summary.image.url, HEAD_IMAGE_WIDTH) : null}
-          srcSet={summary.image ? buildCloudinarySrcSet(summary.image.url) : undefined}
+          src={
+            summary.image
+              ? withCloudinaryTransform(summary.image.url, HEAD_IMAGE_WIDTH, TRIMMED)
+              : null
+          }
+          srcSet={summary.image ? buildCloudinarySrcSet(summary.image.url, TRIMMED) : undefined}
           sizes={HEAD_IMAGE_SIZES}
           alt={summary.image ? summary.image.alt || summary.name : summary.name}
           width={96}
