@@ -8,6 +8,8 @@ using Pickory.Modules.Commerce.Carts;
 using Pickory.Modules.Commerce.Configuration;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Commerce.Settings;
+using Pickory.Modules.Identity.Contracts.Events;
+using Pickory.Shared.Events;
 using Pickory.Shared.Configuration;
 
 namespace Pickory.Modules.Commerce;
@@ -31,6 +33,11 @@ public static class CommerceModule
         // Giới hạn commerce đọc từ một lớp duy nhất. Giỏ hàng và đặt đơn cùng dùng nguồn giá trị này.
         services.AddScoped<CommerceSettingsProvider>();
         services.AddScoped<CartService>();
+        services.AddScoped<CartMergeService>();
+
+        // Gộp giỏ vãng lai khi khách đăng nhập, và xóa giỏ cùng sổ địa chỉ khi khách xóa tài khoản.
+        services.AddScoped<IDomainEventHandler<UserLinkedEvent>, CartLinkHandler>();
+        services.AddScoped<IDomainEventHandler<UserDeletedEvent>, UserDeletedCommerceHandler>();
         return services;
     }
 

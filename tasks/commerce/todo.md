@@ -103,10 +103,10 @@ Quy ước:
 ### COM-05: Gộp giỏ và dọn dữ liệu khi xóa tài khoản
 **Mô tả:** Handler cho `UserLinkedEvent` gộp giỏ vãng lai vào giỏ tài khoản. Handler cho `UserDeletedEvent` xóa giỏ và sổ địa chỉ. Phần đánh giá và đơn hàng của `UserDeletedEvent` thuộc COM-21.
 **Tiêu chí nghiệm thu:**
-- [ ] Cùng SKU thì cộng số lượng, nhưng không vượt giới hạn mỗi SKU
-- [ ] Gộp xong thì giỏ vãng lai bị xóa
-- [ ] Nhận cùng `UserLinkedEvent` 2 lần không cộng số lượng 2 lần
-- [ ] `UserDeletedEvent` xóa giỏ và mọi dòng `saved_addresses` của người dùng
+- [x] Cùng SKU thì cộng số lượng, nhưng không vượt giới hạn mỗi SKU
+- [x] Gộp xong thì giỏ vãng lai bị xóa
+- [x] Nhận cùng `UserLinkedEvent` 2 lần không cộng số lượng 2 lần
+- [x] `UserDeletedEvent` xóa giỏ và mọi dòng `saved_addresses` của người dùng
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-04 · **Quy mô:** S
 

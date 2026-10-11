@@ -1,6 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
-using NpgsqlTypes;
 using Pickory.Modules.Catalog.Contracts.Reading;
 using Pickory.Modules.Commerce.Contracts.Events;
 using Pickory.Modules.Commerce.Entities;
@@ -163,30 +161,12 @@ public sealed class CartService(
         return cart.Items.Select(item => new CartLineInput(item.SkuId, item.Quantity)).ToList();
     }
 
-    // Tạo giỏ nếu chưa có rồi trả id. `ON CONFLICT DO NOTHING` bỏ qua cả hai ràng buộc unique, nên hai request đầu tiên không tạo hai giỏ.
+    // Tạo giỏ nếu chưa có rồi trả id. Hai request đầu tiên không tạo hai giỏ, vì `CartInserter` dùng `ON CONFLICT DO NOTHING`.
     private async Task<string> EnsureCartAsync(CartOwner owner, CancellationToken cancellationToken)
     {
-        // Giỏ của tài khoản để `AnonymousId` là null. COM-05 gộp giỏ vãng lai vào giỏ tài khoản khi đăng nhập.
+        // Giỏ của tài khoản để `AnonymousId` là null. Giỏ vãng lai không có `UserId`.
         var anonymousId = owner.UserId is null ? owner.AnonymousId : null;
-
-        // Cột `updatedAt` là `timestamp` không múi giờ. Khai báo kiểu tường minh để Npgsql không gửi `timestamptz` theo múi giờ phiên.
-        var updatedAt = new NpgsqlParameter("updatedAt", NpgsqlDbType.Timestamp)
-        {
-            Value = DateTime.SpecifyKind(clock.GetUtcNow().UtcDateTime, DateTimeKind.Unspecified),
-        };
-        await database.Database.ExecuteSqlRawAsync(
-            """
-            INSERT INTO carts ("id", "anonymousId", "userId", "updatedAt")
-            VALUES (@id, @anonymousId, @userId, @updatedAt)
-            ON CONFLICT DO NOTHING
-            """,
-            [
-                new NpgsqlParameter("id", Guid.NewGuid().ToString()),
-                new NpgsqlParameter("anonymousId", NpgsqlDbType.Text) { Value = (object?)anonymousId ?? DBNull.Value },
-                new NpgsqlParameter("userId", NpgsqlDbType.Text) { Value = (object?)owner.UserId ?? DBNull.Value },
-                updatedAt,
-            ],
-            cancellationToken);
+        await CartInserter.InsertIfMissingAsync(database, clock, owner.UserId, anonymousId, cancellationToken);
 
         // Sau lệnh trên giỏ chắc chắn tồn tại, do request này tạo hoặc request đồng thời đã tạo.
         return await FindCartIdAsync(owner, cancellationToken)

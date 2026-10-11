@@ -53,6 +53,7 @@ internal sealed class CartTestKit
             .Where(cart => (cart.AnonymousId != null && _anonymousIds.Contains(cart.AnonymousId))
                 || (cart.UserId != null && _userIds.Contains(cart.UserId)))
             .ExecuteDeleteAsync();
+        await commerce.SavedAddresses.Where(address => _userIds.Contains(address.UserId)).ExecuteDeleteAsync();
         await commerce.Settings.ExecuteDeleteAsync();
         await _catalog.CleanupAsync();
     }
@@ -186,6 +187,54 @@ internal sealed class CartTestKit
         cart.Items.Add(new CartItem { SkuId = skuId, Quantity = quantity });
         commerce.Carts.Add(cart);
         await commerce.SaveChangesAsync();
+    }
+
+    // Dựng giỏ trực tiếp trong DB với các dòng cho trước. Dùng để chuẩn bị dữ liệu mà route giỏ không tự tạo được.
+    public async Task SeedCartAsync(string? userId, string? anonymousId, params (string SkuId, int Quantity)[] lines)
+    {
+        await using var commerce = _database.CreateCommerceContext();
+        var cart = new Cart { UserId = userId, AnonymousId = anonymousId, UpdatedAt = DateTime.UtcNow };
+        foreach (var (skuId, quantity) in lines)
+        {
+            cart.Items.Add(new CartItem { SkuId = skuId, Quantity = quantity });
+        }
+
+        commerce.Carts.Add(cart);
+        await commerce.SaveChangesAsync();
+        if (userId is not null)
+        {
+            _userIds.Add(userId);
+        }
+    }
+
+    public async Task<int> CartCountAsync(string? userId, string? anonymousId)
+    {
+        await using var commerce = _database.CreateCommerceContext();
+        return await commerce.Carts.CountAsync(cart => cart.UserId == userId && cart.AnonymousId == anonymousId);
+    }
+
+    public async Task AddSavedAddressAsync(string userId)
+    {
+        await using var commerce = _database.CreateCommerceContext();
+        commerce.SavedAddresses.Add(new SavedAddress
+        {
+            UserId = userId, Label = "Nhà", Name = "Người nhận", Phone = "0901234567",
+            Address = JsonDocument.Parse("""{"provinceCode":"79"}"""),
+        });
+        await commerce.SaveChangesAsync();
+    }
+
+    public async Task<int> SavedAddressCountAsync(string userId)
+    {
+        await using var commerce = _database.CreateCommerceContext();
+        return await commerce.SavedAddresses.CountAsync(address => address.UserId == userId);
+    }
+
+    // Xóa địa chỉ do test tạo. Test xóa tài khoản kiểm cả trường hợp dòng còn lại của người khác.
+    public async Task DeleteSavedAddressesAsync(params string[] userIds)
+    {
+        await using var commerce = _database.CreateCommerceContext();
+        await commerce.SavedAddresses.Where(address => userIds.Contains(address.UserId)).ExecuteDeleteAsync();
     }
 
     public async Task<List<Cart>> CartsOfAnonymousAsync(string anonymousId)
