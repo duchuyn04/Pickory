@@ -278,10 +278,43 @@ Lỗi này đúng như dự đoán ở phần 2. Kiểm tra cấu hình lúc kh�
 
 Bài học: một lần deploy thất bại vẫn cho thông tin. Lần này chứng minh Dockerfile build được trên Render, và chứng minh API đọc đúng biến môi trường.
 
+### Thêm khóa Cloudinary
+
+Render không lưu biến có giá trị rỗng khi tạo Blueprint. Vì vậy, ba biến Cloudinary không có trên trang Environment, và phải thêm từng dòng.
+
+1. Mở tab Environment của service `pickory-api`.
+2. Chọn Edit.
+3. Chọn Add variable ba lần.
+4. Nhập tên `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` và `CLOUDINARY_API_SECRET` vào ba dòng mới.
+5. Dán giá trị từ trang Settings > API Keys của Cloudinary.
+6. Chọn Save, rebuild, and deploy.
+
+Ở chế độ Edit, ô giá trị của biến cũ chỉ hiện dấu chấm. Biến cũ không bị xóa khi lưu. Ảnh chụp màn hình xác nhận điều này trước khi lưu.
+
+Trước khi lưu, JavaScript trong trình duyệt kiểm tra hai điều cho mỗi ô mới:
+
+- Ô có giá trị.
+- Giá trị không có khoảng trắng ở đầu hoặc cuối. Khoảng trắng thừa khi dán làm khóa sai mà khó phát hiện.
+
+### Lần deploy thứ hai
+
+Render build lại và chạy API. Log kết thúc bằng dòng `Your service is live`.
+
+Kết quả kiểm tra:
+
+| Request | Kết quả |
+|---|---|
+| `GET /api/health` | 200, `{"data":{"status":"ok"}}`, 0,6 giây |
+| `GET /api/categories` | 200 |
+| `GET /api/addresses/provinces` | 200, có danh sách tỉnh/thành |
+| `GET /c/khong-co` | 404, route SEO đã gắn |
+
+Log khởi động không có dòng `Error` hoặc `Warning`. `AddressSyncWorker` gọi GHN sandbox và nhận HTTP 200. Kết quả này cho biết `GHN_TOKEN` đúng, và GHN không chặn IP của Render.
+
 ## Trạng thái hiện tại
 
 | Phần | Trạng thái |
 |---|---|
 | Supabase | Đã tạo project `pickory`, đã có schema, đã thu hồi quyền của `anon` |
-| Render | Đã tạo service `pickory-api`. Build thành công. API chưa chạy vì thiếu khóa Cloudinary. |
+| Render | Service `pickory-api` đang chạy tại `https://pickory-api.onrender.com` |
 | Vercel | Chưa tạo |
