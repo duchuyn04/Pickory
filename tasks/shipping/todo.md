@@ -258,5 +258,6 @@ Quy ước:
 ## Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt
 - [x] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, bỏ `Persistence/Migrations/`
-- [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+- [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+  Kết quả ngày 2026-10-11: Vitest 806 test đạt, E2E 40 test đạt. `dotnet test` đạt 6 test kiến trúc, 924 test đơn vị, 1086 test tích hợp, 10 test live bỏ qua.
 - [ ] Review với người dùng, rồi mới bắt đầu `commerce`
