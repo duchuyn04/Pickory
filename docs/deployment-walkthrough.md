@@ -311,10 +311,75 @@ Kết quả kiểm tra:
 
 Log khởi động không có dòng `Error` hoặc `Warning`. `AddressSyncWorker` gọi GHN sandbox và nhận HTTP 200. Kết quả này cho biết `GHN_TOKEN` đúng, và GHN không chặn IP của Render.
 
+## Phần 4: tạo project trên Vercel
+
+### Cấp quyền repo cho Vercel
+
+Vercel cũng đọc code qua GitHub App riêng. App này chỉ có quyền với repo `MemoDeck`, giống trường hợp của Render.
+
+1. Mở trang New Project của Vercel.
+2. Chọn Adjust GitHub App Permissions.
+3. Chọn Select repositories.
+4. Tìm `Pickory`.
+5. Chọn `duchuyn04/Pickory`.
+6. Chọn Save.
+7. Tải lại trang New Project.
+
+### Import và deploy
+
+1. Chọn Import ở dòng `Pickory`.
+2. Kiểm tra Project Name là `pickory`.
+3. Kiểm tra Root Directory là `apps/frontend`.
+4. Mở Build and Output Settings.
+5. Kiểm tra lệnh build, thư mục kết quả và lệnh cài gói.
+6. Chọn Deploy.
+
+Vercel tự tìm `apps/frontend/vercel.json`, nên tự chọn Root Directory là `apps/frontend`. Các ô sau bị khóa với nhãn "Set by vercel.json":
+
+| Ô | Giá trị |
+|---|---|
+| Application Preset | Vite |
+| Build Command | `pnpm build` |
+| Output Directory | `dist` |
+| Install Command | `pnpm install --frozen-lockfile` |
+
+Cấu hình nằm trong repo thay vì trên Dashboard. Người khác đọc repo là biết Vercel build thế nào.
+
+Web không cần biến môi trường. Web gọi `/api` cùng origin, và Vercel chuyển tiếp request sang Render.
+
+### Kết quả
+
+Vercel cấp domain production `https://pickory.vercel.app`. Domain này khớp với `WEB_ORIGIN` và `API_BASE_URL` đã đặt trên Render, nên không cần sửa biến.
+
+Kiểm tra bằng `curl`:
+
+| Request qua `pickory.vercel.app` | Kết quả |
+|---|---|
+| `GET /api/health` | 200, 0,14 giây |
+| `GET /api/categories` | 200, danh sách rỗng |
+| `GET /gio-hang` | 200, Vercel trả `index.html` của SPA |
+| `GET /c/khong-co` | 404 từ Render, route SEO đi qua rewrite |
+
+Trang chủ và `/c/khong-co` cùng tải `/assets/index-C5rLhftp.js`. Vercel build trang chủ, còn Dockerfile trên Render build `index.html` cho route SEO. Hai bản build từ cùng commit cho cùng hash. Kết quả này xác nhận cách giữ `index.html` khớp với asset.
+
+Kiểm tra request ghi qua Vercel, với `POST /api/auth/sessions` và mật khẩu sai:
+
+| Header `Origin` | Kết quả |
+|---|---|
+| `https://pickory.vercel.app` | 401 `INVALID_CREDENTIALS` |
+| `https://evil.example` | 403 `FORBIDDEN_ORIGIN` |
+
+Với `Origin` đúng, API trả 401 vì sai mật khẩu. Kết quả này cho biết `RequestOriginGuard` cho request đi qua. Với `Origin` lạ, `RequestOriginGuard` chặn request trước khi API kiểm tra mật khẩu.
+
+Response có cookie `pk_anon` với các thuộc tính `secure`, `samesite=lax` và `httponly`. Cookie không có thuộc tính `Domain`, nên trình duyệt gắn cookie vào `pickory.vercel.app`. Cookie là cookie bên thứ nhất, đúng như thiết kế ở `docs/deployment.md`.
+
+Trang chủ hiện header và không có lỗi trong console. Phần nội dung trống, vì DB production chưa có danh mục và sản phẩm.
+
 ## Trạng thái hiện tại
 
 | Phần | Trạng thái |
 |---|---|
 | Supabase | Đã tạo project `pickory`, đã có schema, đã thu hồi quyền của `anon` |
 | Render | Service `pickory-api` đang chạy tại `https://pickory-api.onrender.com` |
-| Vercel | Chưa tạo |
+| Vercel | Web đang chạy tại `https://pickory.vercel.app` |
+| Dữ liệu | Chưa có tài khoản admin, danh mục và sản phẩm |
