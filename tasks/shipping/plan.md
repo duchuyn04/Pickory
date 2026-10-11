@@ -97,10 +97,10 @@ Chi tiết từng task ở `tasks/shipping/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Nghiệm thu
-- [ ] SHIP-09
+- [x] SHIP-09
 
 ### Checkpoint cuối
-- [ ] Mọi dòng Traceability đạt
+- [x] Mọi dòng Traceability đạt
 - [x] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, bỏ `Persistence/Migrations/`
 - [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
 - [ ] Review với người dùng, rồi mới bắt đầu `commerce`
@@ -110,8 +110,8 @@ Chi tiết từng task ở `tasks/shipping/todo.md`.
 | Success Criteria (spec) | Task | Cách kiểm |
 | --- | --- | --- |
 | Khách chọn tỉnh/thành và phường/xã từ danh mục đồng bộ từ GHN | SHIP-04, UI-S1, UI-S2 | Test tích hợp đồng bộ và API; Vitest ô chọn; E2E qua màn cấu hình (UI-S2). E2E ở checkout thuộc `commerce` |
-| Báo phí p95 dưới 2 giây trên sandbox, hoặc trả lỗi rõ ràng | SHIP-05, SHIP-09 | Test HTTP mock cho timeout và lỗi; đo p95 với sandbox khi có token (chưa có token, để mở) |
-| Tạo vận đơn trên sandbox, lưu đúng mã; bấm lại sau lỗi mạng không tạo đơn thứ hai | SHIP-07, SHIP-09 | Test tích hợp với client giả mô phỏng lỗi mạng; contract test sandbox khi có token (chưa có token, để mở) |
+| Báo phí p95 dưới 2 giây trên sandbox, hoặc trả lỗi rõ ràng | SHIP-05, SHIP-09 | Test HTTP mock cho timeout và lỗi; đo p95 với sandbox (119 ms) |
+| Tạo vận đơn trên sandbox, lưu đúng mã; bấm lại sau lỗi mạng không tạo đơn thứ hai | SHIP-07, SHIP-09 | Test tích hợp với client giả mô phỏng lỗi mạng; contract test sandbox tạo rồi hủy vận đơn |
 | Webhook cập nhật trạng thái, phát `ShipmentStatusChangedEvent` đúng 1 lần mỗi lần đổi | SHIP-08 | Test tích hợp gửi trùng webhook |
 | Tắt webhook, job đồng bộ cập nhật trạng thái trong 30 phút | SHIP-08 | Test tích hợp gọi processor; test cấu hình chu kỳ 30 phút |
 | `support` gọi API cấu hình nhận 403 | SHIP-06, SHIP-09 | Ma trận quyền |

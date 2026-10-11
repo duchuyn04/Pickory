@@ -193,12 +193,12 @@ Quy ước:
 **Tiêu chí nghiệm thu:**
 - [x] Ma trận quyền có mọi endpoint back-office của `shipping`
 - [x] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
-- [ ] Khi có token: contract test sandbox đạt (danh mục địa chỉ, báo phí, tạo rồi hủy 1 vận đơn)
-  Chưa kiểm được: `GHN_TOKEN` và `GHN_SHOP_ID` trong `.env` còn trống. Test đã viết và bị bỏ qua khi `GHN_LIVE_TESTS` khác `1`. Chạy lại theo mục "Lệnh chạy test live" sau khi điền token.
-- [ ] Khi có token: đo p95 báo phí trên sandbox, dưới 2 giây
-  Chưa đo được: thiếu token như tiêu chí trên. Test `Sandbox_CalculateFee_P95IsUnderBudget` gọi 20 lần tuần tự và in p95 qua `ITestOutputHelper`.
+- [x] Khi có token: contract test sandbox đạt (danh mục địa chỉ, báo phí, tạo rồi hủy 1 vận đơn)
+  Ngày 2026-10-11, 6 test của `GhnSandboxContractTests` đạt với token sandbox. Xem mục 4.
+- [x] Khi có token: đo p95 báo phí trên sandbox, dưới 2 giây
+  p95 là 119 ms trên 20 lần gọi tuần tự. Xem mục 4.
 - [x] Không có token: ghi rõ hai tiêu chí sandbox còn mở và lý do
-  Hai tiêu chí mở là contract test sandbox và p95 báo phí. Lý do là token trống.
+  Không còn áp dụng. Lần kiểm đầu đọc nhầm `.env` là trống. Token có sẵn, và hai tiêu chí sandbox đã đạt.
 **Kiểm tra:** `dotnet test`, script gộp coverage, output đo p95
 **Phụ thuộc:** SHIP-08 · **Quy mô:** S
 
@@ -209,8 +209,8 @@ Quy ước:
 | Success Criteria | Bằng chứng | Trạng thái |
 | --- | --- | --- |
 | Khách chọn tỉnh/thành và phường/xã từ danh mục đồng bộ từ GHN | Tích hợp `AddressSyncProcessorTests`: `Sync_WritesProvincesAndWardsWithSyncedAtFromTimeProvider`, `Sync_ProvinceWith450Wards_ReadsAllInThreePageCalls`. `AddressEndpointsTests`: `Provinces_AnonymousVisitor_ReturnsOnlyActiveRows_WithCodeAndNameOnly`, `Wards_ReturnsOnlyActiveWardsOfThatProvince_SortedByVietnameseName`. E2E `shipping-settings.spec.ts` | Đạt |
-| Báo phí p95 dưới 2 giây trên sandbox, hoặc trả lỗi rõ ràng | Lỗi rõ ràng: `QuoteRetryTests.Quote_Http5xxTwice_SendsExactlyTwoFeeRequestsThenThrowsUnavailable`, `Quote_NetworkErrorTwice_SendsExactlyTwoFeeRequestsThenThrowsUnavailable`; `QuoteServiceTests.Quote_WardUnknownToGhn_ThrowsRejectedFromCarrier`. P95: test live `GhnSandboxContractTests.Sandbox_CalculateFee_P95IsUnderBudget`, chưa chạy vì thiếu token | Mở (chờ token) |
-| Tạo vận đơn trên sandbox, lưu đúng mã; bấm lại sau lỗi mạng không tạo đơn thứ hai | Giả lập: `ShipmentCreateTests.Create_NetworkErrorAfterGhnCreated_StoresNothingThenRetryReturnsSameOrder`, `Create_RefAlreadyHasShipment_ReturnsExistingWithoutCallingGhnOrPublishing`; `ShipmentConcurrencyTests.Create_TwoCallersSameRef_StoresOneShipmentOneEventAndReturnsSameShipment`. Live: `GhnSandboxContractTests.Sandbox_CreateThenCancelOrder_EndsWithCancelStatus`, chưa chạy vì thiếu token | Mở (chờ token) |
+| Báo phí p95 dưới 2 giây trên sandbox, hoặc trả lỗi rõ ràng | Lỗi rõ ràng: `QuoteRetryTests.Quote_Http5xxTwice_SendsExactlyTwoFeeRequestsThenThrowsUnavailable`, `Quote_NetworkErrorTwice_SendsExactlyTwoFeeRequestsThenThrowsUnavailable`; `QuoteServiceTests.Quote_WardUnknownToGhn_ThrowsRejectedFromCarrier`. P95: test live `GhnSandboxContractTests.Sandbox_CalculateFee_P95IsUnderBudget`, đạt trên sandbox, p95 119 ms | Đạt |
+| Tạo vận đơn trên sandbox, lưu đúng mã; bấm lại sau lỗi mạng không tạo đơn thứ hai | Giả lập: `ShipmentCreateTests.Create_NetworkErrorAfterGhnCreated_StoresNothingThenRetryReturnsSameOrder`, `Create_RefAlreadyHasShipment_ReturnsExistingWithoutCallingGhnOrPublishing`; `ShipmentConcurrencyTests.Create_TwoCallersSameRef_StoresOneShipmentOneEventAndReturnsSameShipment`. Live: `GhnSandboxContractTests.Sandbox_CreateThenCancelOrder_EndsWithCancelStatus`, đạt trên sandbox | Đạt |
 | Webhook cập nhật trạng thái, phát `ShipmentStatusChangedEvent` đúng 1 lần mỗi lần đổi | `GhnWebhookTests.Webhook_StatusChanges_UpdatesShipmentAndPublishesOneEvent`, `Webhook_SameWebhookTwiceInSequence_PublishesOneEventAndWritesOneHistoryRow`, `Webhook_TwoConcurrentWebhooksForSameOrder_PublishOneEventAndWriteOneHistoryRow` | Đạt |
 | Tắt webhook, job đồng bộ cập nhật trạng thái trong 30 phút | `ShipmentStatusSyncProcessorTests.Sync_MissedWebhook_UpdatesShipmentAndPublishesExactlyOnce`; đơn vị `ShipmentStatusSyncWorkerTests.SyncInterval_Is30Minutes`, `Worker_SyncsOnStartup_ThenEvery30Minutes` | Đạt |
 | `support` gọi API cấu hình nhận 403 | `PermissionMatrixTests.Support_HasAccessOnlyWhenAuthorized` cho hai dòng `GET` và `PUT /api/admin/shipping/settings`; `BackofficeEndpoints_CoversAllShippingAdminEndpoints` kiểm ma trận đủ route; `ShippingSettingsApiTests.Get_WithoutPermission_Returns403`, `Put_WithoutPermission_Returns403AndSavesNothing` | Đạt |
@@ -245,9 +245,17 @@ Quy ước:
 - `ProviderReliabilityTests.RunAsync_RetriesOnlyTransientErrorsWithBackoff` hết thời gian chờ khi máy bận trong 2 lượt chạy toàn bộ. Chạy riêng lượt test đó thì đạt, và lượt chạy riêng cả `Pickory.UnitTests` đạt 924/924. Test này thuộc `ai-gateway`, không liên quan `shipping`.
 - Bộ lệnh frontend nằm ngoài lượt đo này.
 
-#### 4. Lệnh chạy test live sau khi điền token
+#### 4. Test live trên sandbox
 
-1. Điền `GHN_TOKEN` và `GHN_SHOP_ID` của sandbox vào `.env`.
+Kết quả ngày 2026-10-11 với `GHN_LIVE_TESTS=1`:
+
+- 6 test của `GhnSandboxContractTests` đạt: danh mục tỉnh, danh mục phường, báo phí, ngày giao, tạo rồi hủy vận đơn, đo p95.
+- Báo phí: 20 mẫu, min 18 ms, p95 119 ms, max 283 ms.
+- Vận đơn thử kết thúc ở trạng thái `cancel`, nên sandbox không còn đơn sống của lần chạy này.
+
+Lệnh chạy lại:
+
+1. Kiểm tra `.env` có `GHN_TOKEN` và `GHN_SHOP_ID` của sandbox.
 2. Đặt biến môi trường `GHN_LIVE_TESTS=1`.
 3. Chạy `dotnet test tests/Pickory.IntegrationTests --filter "FullyQualifiedName~GhnSandboxContractTests" --logger "console;verbosity=detailed"` trong `apps/backend`.
 4. Đọc dòng `Báo phí sandbox: ... p95 ... ms` trong output để lấy p95.
@@ -256,7 +264,8 @@ Quy ước:
 ---
 
 ## Checkpoint cuối
-- [ ] Mọi dòng Traceability đạt
+- [x] Mọi dòng Traceability đạt
+  Bảng ở mục 1 của SHIP-09: 7/7 dòng đạt.
 - [x] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, bỏ `Persistence/Migrations/`
 - [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
   Kết quả ngày 2026-10-11: Vitest 806 test đạt, E2E 40 test đạt. `dotnet test` đạt 6 test kiến trúc, 924 test đơn vị, 1086 test tích hợp, 10 test live bỏ qua.
