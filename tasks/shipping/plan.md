@@ -22,12 +22,12 @@ Nguồn: `https://developer.ghn.vn/en/docs/` (trang `api.ghn.vn` cũ đã chuy�
    - `GET /shiip/public-api/v3/master-data/ward/all-by-province-id?province_id=`: phường/xã của một tỉnh, tối đa 200 dòng mỗi trang.
    - API cũ 3 cấp (`province`, `district`, `ward` bản v2) vẫn còn.
 2. **Tạo vận đơn nhận địa chỉ mới bằng tên.** Đặt `is_new_to_address: true`, rồi gửi `to_province_name` và `to_ward_name` đúng chuỗi `name` của API mới. Không gửi `to_district_name`.
-3. **Báo phí chưa rõ với địa chỉ mới.** Trang `calculate-fee` chỉ mô tả `to_district_id` và `to_ward_code` của danh mục cũ. Tài liệu không nói API báo phí có nhận địa chỉ 2 cấp hay không. Đây là rủi ro lớn nhất của module, xem task `SHIP-00`.
-4. **`client_order_code` chống tạo trùng.** Mã này duy nhất trong một shop. Gửi lại cùng mã thì GHN trả `order_code` đã tạo, không tạo đơn mới.
+3. **Báo phí và ngày giao nhận địa chỉ 2 cấp (SHIP-00, 2026-10-11).** Gửi `is_new_to_address: true`, `to_province_id_v2` và `to_ward_id_v2` dạng số. Trang `calculate-fee` không nêu các trường này, nhưng sandbox xác nhận. Gửi `to_ward_code` thì GHN trả 400. API `leadtime` nhận cùng 3 trường. Xem ADR 0003.
+4. **`client_order_code` chống tạo trùng.** Mã này duy nhất trong một shop. Gửi lại cùng mã khi đơn chưa hủy thì GHN trả `order_code` đã tạo, không tạo đơn mới. Gửi lại mã của đơn đã hủy thì GHN tạo đơn mới (ADR 0003).
 5. **Giới hạn của GHN.** `insurance_value` tối đa 5.000.000 đ. `cod_amount` tối đa 50.000.000 đ. Cân nặng tối đa 50.000 g, mỗi cạnh tối đa 200 cm.
 6. **`required_note`** nhận `KHONGCHOXEMHANG`, `CHOXEMHANGKHONGTHU`, `CHOTHUHANG`.
 7. **Webhook không có chữ ký.** GHN cho đặt header tùy chọn khi đăng ký webhook. GHN thử lại khi nhận 5xx, 408, 429 hoặc timeout, tối đa 6 lần. Webhook có thể gửi trùng, nên phải chống trùng.
-8. **Tra vận đơn** bằng `GET /shiip/public-api/v2/shipping-order/detail?order_code=`. Tài liệu không có API tra theo `client_order_code`.
+8. **Tra vận đơn** bằng `GET /shiip/public-api/v2/shipping-order/detail?order_code=`. Tra theo `client_order_code` dùng `GET /shiip/public-api/v2/shipping-order/detail-by-client-code?client_order_code=`. API này chỉ tìm thấy đơn chưa hủy (ADR 0003).
 9. **Hủy vận đơn** bằng `POST /shiip/public-api/v2/switch-status/cancel`, cần `reason_code`. Vận đơn ở trạng thái không hủy được thì GHN trả `result: false` với HTTP 200.
 10. **Token có thể bị giới hạn theo IP.** GHN trả 401 khi IP không nằm trong danh sách cho phép.
 
@@ -53,7 +53,7 @@ SHIP-01 logic thuần: gộp kiện, ánh xạ trạng thái, mã tham chiếu G
 1. **Cấu trúc theo `tasks/dotnet-migration/plan.md`.** Hai project mới: `Pickory.Modules.Shipping` và `Pickory.Modules.Shipping.Contracts`. `ShippingModule.cs` có `AddShippingModule` và `MapShippingEndpoints`. `Pickory.ArchitectureTests` thêm luật cho module mới.
 2. **Interface công khai ở Contracts.** `IShippingService` có `QuoteAsync`, `CreateShipmentAsync`, `CancelShipmentAsync`, `GetShipmentAsync`, `BuildParcel`. Contracts có thêm kiểu `ShippingAddress`, `Parcel`, `Quote`, `Shipment`, `ShipmentStatus` và sự kiện `ShipmentStatusChangedEvent`.
 3. **Địa chỉ 2 cấp.** Module lưu tỉnh/thành và phường/xã theo API mới của GHN. Mã là `_id` của GHN ở dạng chuỗi, kèm `name`. Không có cấp quận/huyện. `ShippingAddress` có `ProvinceCode`, `ProvinceName`, `WardCode`, `WardName`, `Line`. Nếu `SHIP-00` cho thấy báo phí vẫn cần mã cũ, reviewer dừng plan và hỏi người dùng.
-4. **Mã gửi GHN theo lần tạo.** `client_order_code` là `{ref}` ở lần tạo đầu. Sau mỗi lần hủy, mã thêm hậu tố, ví dụ `{ref}-2`. GHN chống trùng theo mã này, nên bấm tạo lại sau lỗi mạng trả đúng vận đơn cũ. Mã mới sau khi hủy tránh việc GHN trả lại vận đơn đã hủy. Mã tối đa 50 ký tự.
+4. **Mã gửi GHN theo lần tạo.** `client_order_code` là `{ref}` ở lần tạo đầu. Sau mỗi lần hủy, mã thêm hậu tố, ví dụ `{ref}-2`. GHN chống trùng theo mã này khi đơn chưa hủy, nên bấm tạo lại sau lỗi mạng trả đúng vận đơn cũ. Gửi lại mã của đơn đã hủy thì GHN tạo đơn mới (ADR 0003), nên hậu tố không còn bắt buộc. Hậu tố vẫn giữ để mỗi đơn có mã riêng, và webhook hay tra theo mã không lẫn đơn đã hủy. Mã tối đa 50 ký tự.
 5. **`createShipment` không tự retry.** Đây là luật "Never" của spec. Lỗi mạng trả `SHIPPING_UNAVAILABLE`. Người dùng bấm lại thì module gửi lại cùng `client_order_code`, GHN không tạo đơn thứ hai.
 6. **Vận đơn đã hủy đổi `ref`.** Vận đơn cũ chuyển `cancelled`, cột `ref` đổi thành `{ref}#cancelled#{n}`, theo spec. Ràng buộc unique của `ref` vẫn giữ.
 7. **Bảo hiểm tối đa 5.000.000 đ.** Open Question 2 chọn mua bảo hiểm bằng giá trị hàng. GHN chỉ nhận tối đa 5.000.000 đ, nên module lấy giá trị nhỏ hơn. Báo cáo ghi rõ giới hạn này.
@@ -89,7 +89,7 @@ Chi tiết từng task ở `tasks/shipping/todo.md`.
 - [x] Test kiến trúc chặn `Shipping` tham chiếu module khác ngoài Contracts
 
 ### Phase 2: Tính năng
-- [x] SHIP-04 · [x] UI-S1 · [x] SHIP-06 · [x] UI-S2 · [x] SHIP-05 · [x] SHIP-07 · [x] SHIP-08
+- [x] SHIP-04 · [x] UI-S1 · [x] SHIP-06 · [x] UI-S2 · [x] SHIP-05 · [x] SHIP-07 · [x] SHIP-08 · [x] SHIP-10
 
 ### Checkpoint S2
 - [ ] Admin cấu hình địa chỉ lấy hàng trên giao diện, khách chọn được tỉnh/thành và phường/xã
@@ -101,7 +101,7 @@ Chi tiết từng task ở `tasks/shipping/todo.md`.
 
 ### Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt
-- [ ] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, bỏ `Persistence/Migrations/`
+- [x] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, bỏ `Persistence/Migrations/`
 - [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
 - [ ] Review với người dùng, rồi mới bắt đầu `commerce`
 

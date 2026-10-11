@@ -8,7 +8,7 @@ namespace Pickory.UnitTests.Modules.Shipping.Ghn;
 // SHIP-05 lát 4: adapter gọi API leadtime của GHN. Lời gọi này không thử lại và có timeout riêng.
 public sealed class GhnHttpClientLeadTimeTests
 {
-    private static readonly GhnLeadTimeRequest Request = new("1003646", 2, 1500, 30, 20, 12);
+    private static readonly GhnLeadTimeRequest Request = new(1000001, 1003646, 2, 1500, 30, 20, 12);
 
     [Fact]
     public async Task GetLeadTime_Success_ReturnsUnixSecondsAndSendsExpectedRequest()
@@ -24,7 +24,11 @@ public sealed class GhnHttpClientLeadTimeTests
         Assert.Equal("https://ghn.test/shiip/public-api/v2/shipping-order/leadtime", sent.Url);
         Assert.Equal(GhnClientHarness.Token, sent.Headers!["Token"]);
         Assert.Equal(GhnClientHarness.ShopId, sent.Headers["ShopId"]);
-        Assert.Contains("\"to_ward_code\":\"1003646\"", sent.Body);
+        // Mã gửi dạng số JSON (không có dấu nháy) cùng cờ địa chỉ 2 cấp, giống request báo phí.
+        Assert.Contains("\"is_new_to_address\":true", sent.Body);
+        Assert.Contains("\"to_province_id_v2\":1000001", sent.Body);
+        Assert.Contains("\"to_ward_id_v2\":1003646", sent.Body);
+        Assert.DoesNotContain("to_ward_code", sent.Body);
         Assert.Contains("\"service_type_id\":2", sent.Body);
         Assert.Contains("\"weight\":1500", sent.Body);
         Assert.DoesNotContain("to_district_id", sent.Body);

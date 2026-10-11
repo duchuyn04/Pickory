@@ -28,6 +28,10 @@ public sealed class ShipmentStatusMapperTests
     [InlineData("exception", ShipmentStatus.Exception)]
     [InlineData("damage", ShipmentStatus.Exception)]
     [InlineData("lost", ShipmentStatus.Exception)]
+    // Ba mã dưới đây có trong tài liệu GHN nhưng thiếu ở bảng gốc. SHIP-00 phát hiện, SHIP-10 bổ sung.
+    [InlineData("money_collect_picking", ShipmentStatus.PendingPickup)]
+    [InlineData("return_fail", ShipmentStatus.Returning)]
+    [InlineData("scrap", ShipmentStatus.Exception)]
     // Mỗi dòng của bảng trong spec có một ca riêng, nên đổi một dòng ánh xạ sẽ làm đúng ca đó đỏ.
     public void Map_KnownGhnStatus_ReturnsStandardStatus(string rawStatus, ShipmentStatus expected)
     {
@@ -75,6 +79,16 @@ public sealed class ShipmentStatusMapperTests
     public void IsTerminal_NonTerminalStatus_ReturnsFalse(ShipmentStatus status)
     {
         Assert.False(status.IsTerminal());
+    }
+
+    [Fact]
+    // Trả hàng thất bại một lần thì GHN còn thử lại. Trạng thái không được là trạng thái kết thúc để job đồng bộ còn theo dõi.
+    public void Map_ReturnFail_IsNotTerminal()
+    {
+        var status = ShipmentStatusMapper.Map("return_fail");
+
+        Assert.NotNull(status);
+        Assert.False(status.Value.IsTerminal());
     }
 
     [Fact]

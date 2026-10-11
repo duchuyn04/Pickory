@@ -91,6 +91,13 @@ internal sealed class ShippingService : IShippingService
         // Kiểm lại với danh mục hiện tại trước khi gọi GHN, vì phường có thể bị tắt sau khi khách chọn.
         await RequireDeliverableWardAsync(to, cancellationToken);
 
+        // GHN chỉ nhận mã số ở `to_province_id_v2` và `to_ward_id_v2`. Mã không đổi được sang số thì không gọi GHN.
+        if (!GhnAddressIds.TryParse(to.ProvinceCode, to.WardCode, out var provinceId, out var wardId))
+        {
+            _logger.LogError("Báo phí bị chặn vì mã địa chỉ của danh mục không phải số: tỉnh {ProvinceCode}, phường {WardCode}.", to.ProvinceCode, to.WardCode);
+            throw new ShippingRejectedException("Địa chỉ giao hàng có mã không hợp lệ.");
+        }
+
         // Admin chưa chọn gói thì dùng gói hàng nhẹ. Báo phí và ngày giao phải dùng cùng một gói.
         var serviceTypeId = QuoteRules.ResolveServiceTypeId(settings.DefaultServiceTypeId);
         var feeRequest = new GhnFeeRequest(
@@ -102,10 +109,11 @@ internal sealed class ShippingService : IShippingService
             // Giá trị hàng vượt trần thì khai đúng trần. GHN từ chối giá trị cao hơn.
             QuoteRules.ClampInsuredValue(insuredValue),
             codAmount,
-            to.WardCode);
+            provinceId,
+            wardId);
 
         var leadTimeRequest = new GhnLeadTimeRequest(
-            to.WardCode, serviceTypeId, parcel.WeightGrams, parcel.LengthCm, parcel.WidthCm, parcel.HeightCm);
+            provinceId, wardId, serviceTypeId, parcel.WeightGrams, parcel.LengthCm, parcel.WidthCm, parcel.HeightCm);
 
         // Hủy riêng được ngày giao khi báo phí lỗi. Token của bên gọi vẫn hủy được cả hai lời gọi.
         using var leadTimeCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -168,13 +176,13 @@ internal sealed class ShippingService : IShippingService
         // Kiểm lại với danh mục hiện tại và lấy tên chuẩn của danh mục để gửi GHN.
         var ward = await RequireDeliverableWardAsync(request.To.Address, cancellationToken);
 
-        // Đếm số vận đơn đã hủy của `Ref` để chọn đúng hậu tố của `client_order_code`.
+        // Đếm số vận đơn đã hủy của `Ref` để chọn hậu tố. Mỗi lần tạo sau khi hủy có mã riêng, nên đơn mới không lẫn với đơn đã hủy.
         var cancelledCount = await CountCancelledShipmentsAsync(request.Ref, cancellationToken);
         var clientOrderCode = GhnOrderCode.For(request.Ref, cancelledCount);
 
         var createOrderRequest = BuildCreateOrderRequest(request, normalizedPhone, ward, settings, clientOrderCode);
 
-        // Chỉ gọi GHN một lần, không thử lại. GHN có thể đã nhận lần đầu, và gọi lại cùng `client_order_code` trả đơn cũ.
+        // Chỉ gọi GHN một lần, không thử lại. GHN có thể đã nhận lần đầu, và gọi lại cùng `client_order_code` trả đơn cũ khi đơn chưa hủy.
         var created = await _ghnClient.CreateOrderAsync(createOrderRequest, cancellationToken);
 
         var now = _timeProvider.GetUtcNow();
@@ -363,7 +371,7 @@ internal sealed class ShippingService : IShippingService
             Items = serviceTypeId == QuoteRules.HeavyGoodsServiceTypeId
                 ? [new GhnOrderItem(content, 1, parcel.WeightGrams, parcel.LengthCm, parcel.WidthCm, parcel.HeightCm)]
                 : null,
-            // Gửi địa chỉ lấy hàng admin đã cấu hình để cấu hình đó có hiệu lực. Việc GHN nhận địa chỉ khác địa chỉ đã đăng ký còn chờ SHIP-00.
+            // Gửi địa chỉ lấy hàng admin đã cấu hình để cấu hình đó có hiệu lực. Sandbox xác nhận GHN vẫn nhận đơn khi không gửi địa chỉ này (ADR 0003).
             FromName = settings.SenderName,
             FromPhone = settings.SenderPhone,
             FromAddress = settings.Line,

@@ -262,9 +262,9 @@ public sealed class ShipmentCreateTests(PickoryWebApplicationFactory factory) : 
     }
 
     [Theory]
-    [InlineData("9999", "79")]
-    [InlineData("7902", "79")]
-    [InlineData("0101", "79")]
+    [InlineData("9999", "1000001")]
+    [InlineData("1003649", "1000001")]
+    [InlineData("1004001", "1000001")]
     public async Task Create_AddressNotInCatalog_ThrowsRejectedAndDoesNotCallGhn(string wardCode, string provinceCode)
     {
         var request = ShipmentTestSetup.SampleRequest with

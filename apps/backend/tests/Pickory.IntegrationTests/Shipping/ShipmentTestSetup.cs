@@ -31,7 +31,7 @@ internal static class ShipmentTestSetup
             new ShippingRecipient(
                 "Nguyễn Văn Khách",
                 phone,
-                new ShippingAddress("79", "Tên tỉnh sai trong tham số", "7901", "Tên phường sai trong tham số", "12 Phố Test")),
+                new ShippingAddress("1000001", "Tên tỉnh sai trong tham số", "1003646", "Tên phường sai trong tham số", "12 Phố Test")),
             new Parcel(1500, 30, 20, 12),
             [new ShipmentLine("Điện thoại Pickory", 2), new ShipmentLine("Ốp lưng", 1)],
             codAmount,

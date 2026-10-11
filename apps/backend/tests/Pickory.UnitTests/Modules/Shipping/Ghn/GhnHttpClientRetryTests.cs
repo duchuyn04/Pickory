@@ -9,7 +9,7 @@ namespace Pickory.UnitTests.Modules.Shipping.Ghn;
 // Mỗi test đếm số request mà handler nhận.
 public sealed class GhnHttpClientRetryTests
 {
-    private static readonly GhnFeeRequest FeeRequest = new(1500, 30, 20, 12, 2, 0, 0, "1003646");
+    private static readonly GhnFeeRequest FeeRequest = new(1500, 30, 20, 12, 2, 0, 0, 1000001, 1003646);
 
     private static readonly GhnCreateOrderRequest CreateRequest = new(
         "Nguyễn Văn A", "0900000000", "12 Phố Test", "Hồ Chí Minh", "Phường Bến Nghé", "ORD-1",

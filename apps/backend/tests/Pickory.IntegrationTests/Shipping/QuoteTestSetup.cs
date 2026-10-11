@@ -24,9 +24,10 @@ internal static class QuoteTestSetup
     public static readonly DateTime SyncedAt = new(2026, 10, 10, 6, 30, 15, DateTimeKind.Utc);
     public static readonly Parcel SampleParcel = new(1500, 30, 20, 12);
 
-    // Phường 7901 thuộc tỉnh 79 và đang dùng. Phường 7902 đã bị tắt, còn phường 0101 thuộc tỉnh 01.
+    // Mã lấy theo danh mục của `FakeGhnClient`, vì bản giả từ chối phường ngoài danh mục như GHN.
+    // Phường 1003646 đang dùng, phường 1003649 đã tắt, phường 1004001 thuộc tỉnh 1000002.
     public static readonly ShippingAddress ActiveAddress =
-        new("79", "Hồ Chí Minh", "7901", "Phường Bến Nghé", "12 Phố Test");
+        new("1000001", "Hồ Chí Minh", "1003646", "Phường Bến Nghé", "12 Phố Test");
 
     public static async Task ResetAsync(WebApplicationFactory<Program> factory)
     {
@@ -43,13 +44,22 @@ internal static class QuoteTestSetup
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
         shipping.AddressProvinces.AddRange(
-            AddressTestDatabase.Province("01", "Hà Nội", isActive: true, SyncedAt),
-            AddressTestDatabase.Province("79", "Hồ Chí Minh", isActive: true, SyncedAt));
+            AddressTestDatabase.Province("1000002", "Hà Nội", isActive: true, SyncedAt),
+            AddressTestDatabase.Province("1000001", "Hồ Chí Minh", isActive: true, SyncedAt));
         await shipping.SaveChangesAsync();
         shipping.AddressWards.AddRange(
-            AddressTestDatabase.Ward("0101", "01", "Phường Ba Đình", isActive: true, SyncedAt),
-            AddressTestDatabase.Ward("7901", "79", "Phường Bến Nghé", isActive: true, SyncedAt),
-            AddressTestDatabase.Ward("7902", "79", "Phường đã tắt", isActive: false, SyncedAt));
+            AddressTestDatabase.Ward("1004001", "1000002", "Phường Ba Đình", isActive: true, SyncedAt),
+            AddressTestDatabase.Ward("1003646", "1000001", "Phường Bến Nghé", isActive: true, SyncedAt),
+            AddressTestDatabase.Ward("1003649", "1000001", "Phường đã tắt", isActive: false, SyncedAt));
+        await shipping.SaveChangesAsync();
+    }
+
+    // Thêm một phường đang dùng vào danh mục đã seed. Test dùng để tạo mã không phải số hoặc phường GHN không biết.
+    public static async Task SeedActiveWardAsync(WebApplicationFactory<Program> factory, string wardCode, string provinceCode)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
+        shipping.AddressWards.Add(AddressTestDatabase.Ward(wardCode, provinceCode, "Phường thử", isActive: true, SyncedAt));
         await shipping.SaveChangesAsync();
     }
 
@@ -62,9 +72,9 @@ internal static class QuoteTestSetup
             Id = "singleton",
             SenderName = "Kho Pickory",
             SenderPhone = "0912345678",
-            ProvinceCode = "01",
+            ProvinceCode = "1000002",
             ProvinceName = "Hà Nội",
-            WardCode = "0101",
+            WardCode = "1004001",
             WardName = "Phường Ba Đình",
             Line = "12 Phố Kho",
             DefaultServiceTypeId = defaultServiceTypeId,

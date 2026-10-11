@@ -11,6 +11,7 @@ using Pickory.Modules.Catalog;
 using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Roles;
+using Pickory.Modules.Shipping;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Api;
@@ -207,9 +208,26 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     // Route mới của catalog phải có trong ma trận để không bỏ sót phép kiểm quyền.
     public void BackofficeEndpoints_CoversAllCatalogAdminEndpoints()
     {
+        AssertMatrixMatchesModuleAdminEndpoints(
+            "catalog", typeof(CatalogModule).Assembly, "Pickory.Modules.Catalog", CatalogPermissions.All);
+    }
+
+    [Fact]
+    // SHIP-09: route back-office của shipping phải có trong ma trận, kể cả route thêm sau này.
+    public void BackofficeEndpoints_CoversAllShippingAdminEndpoints()
+    {
+        // Shipping chỉ dùng một quyền back-office. Quyền này nằm trong danh sách chung của identity.
+        AssertMatrixMatchesModuleAdminEndpoints(
+            "shipping", typeof(ShippingModule).Assembly, "Pickory.Modules.Shipping", [Permissions.ShippingSettingsManage]);
+    }
+
+    // Đối chiếu hai chiều giữa route `/api/admin/` của một module và các dòng ma trận dùng quyền của module đó.
+    private void AssertMatrixMatchesModuleAdminEndpoints(
+        string moduleName, Assembly moduleAssembly, string moduleNamespace, IEnumerable<string> modulePermissions)
+    {
         // Dùng endpoint của ứng dụng thật để route mới không cần thêm vào danh sách kiểm thử riêng.
         var endpointDataSource = _factory.Services.GetRequiredService<EndpointDataSource>();
-        var catalogAdminEndpoints = new List<(string Method, string Pattern)>();
+        var moduleAdminEndpoints = new List<(string Method, string Pattern)>();
 
         foreach (var endpoint in endpointDataSource.Endpoints)
         {
@@ -229,18 +247,18 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             // Ma trận luôn ghi đường dẫn với dấu `/` đầu tiên; `RoutePattern` có thể không ghi dấu đó.
             var normalizedPattern = rawPattern.StartsWith('/') ? rawPattern : "/" + rawPattern;
 
-            // Kiểu khai báo của handler giúp giới hạn phép kiểm vào module catalog.
+            // Kiểu khai báo của handler giúp giới hạn phép kiểm vào module đang xét.
             var methodInfo = endpoint.Metadata.GetMetadata<MethodInfo>()
                 ?? endpoint.Metadata.OfType<Delegate>().FirstOrDefault()?.Method
                 ?? endpoint.RequestDelegate?.Method;
 
             var declaringType = methodInfo?.DeclaringType;
-            var isCatalogEndpoint = declaringType != null &&
-                (declaringType.Assembly == typeof(CatalogModule).Assembly ||
-                 declaringType.Namespace?.StartsWith("Pickory.Modules.Catalog", StringComparison.Ordinal) == true);
+            var isModuleEndpoint = declaringType != null &&
+                (declaringType.Assembly == moduleAssembly ||
+                 declaringType.Namespace?.StartsWith(moduleNamespace, StringComparison.Ordinal) == true);
 
-            // Route của module khác không thuộc tiêu chí bao phủ catalog trong checkpoint này.
-            if (!isCatalogEndpoint)
+            // Route của module khác do phép kiểm của module đó đối chiếu.
+            if (!isModuleEndpoint)
             {
                 continue;
             }
@@ -262,12 +280,12 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             // Một route có thể chấp nhận nhiều phương thức HTTP, mỗi phương thức cần một dòng ma trận.
             foreach (var method in httpMethods)
             {
-                catalogAdminEndpoints.Add((method.ToUpperInvariant(), normalizedPattern));
+                moduleAdminEndpoints.Add((method.ToUpperInvariant(), normalizedPattern));
             }
         }
 
         // Nếu bộ nhận diện route hỏng, danh sách rỗng sẽ làm phép so sánh bao phủ luôn xanh.
-        Assert.NotEmpty(catalogAdminEndpoints);
+        Assert.NotEmpty(moduleAdminEndpoints);
 
         // Ma trận dùng đường dẫn cụ thể để gửi request nên cần khóa tra cứu cùng dạng.
         var matrixRows = BackofficeEndpoints
@@ -285,7 +303,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
 
         // Route thiếu dòng ma trận sẽ không được kiểm tra quyền cho các tài khoản.
         var missingRoutes = new List<string>();
-        foreach (var (method, pattern) in catalogAdminEndpoints)
+        foreach (var (method, pattern) in moduleAdminEndpoints)
         {
             // Ma trận dùng `dummy-id` thay cho tham số của đường dẫn.
             var matrixPath = NormalizeRoutePatternForMatrix(pattern);
@@ -298,24 +316,24 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         // Liệt kê từng route thiếu để người sửa biết chính xác dòng cần bổ sung.
         Assert.True(
             missingRoutes.Count == 0,
-            $"Thiếu route quản trị catalog trong BackofficeEndpoints: {string.Join(", ", missingRoutes)}");
+            $"Thiếu route quản trị {moduleName} trong BackofficeEndpoints: {string.Join(", ", missingRoutes)}");
 
         // Dòng ma trận không có route ứng dụng có thể che sai lệch khi route bị xóa.
-        var catalogPermissionSet = CatalogPermissions.All.ToHashSet(StringComparer.Ordinal);
-        var registeredCatalogRoutes = catalogAdminEndpoints
+        var modulePermissionSet = modulePermissions.ToHashSet(StringComparer.Ordinal);
+        var registeredModuleRoutes = moduleAdminEndpoints
             .Select(endpoint => (endpoint.Method, Path: NormalizeRoutePatternForMatrix(endpoint.Pattern)))
             .ToHashSet();
 
         var unknownMatrixRoutes = matrixRows
-            .Where(row => row.RequiredPermissions.Any(permission => catalogPermissionSet.Contains(permission)))
-            .Where(row => !registeredCatalogRoutes.Contains((row.Method, row.Path)))
+            .Where(row => row.RequiredPermissions.Any(permission => modulePermissionSet.Contains(permission)))
+            .Where(row => !registeredModuleRoutes.Contains((row.Method, row.Path)))
             .Select(row => $"{row.Method} {row.Path}")
             .ToList();
 
-        // Liệt kê dòng thừa để phát hiện route catalog đã bị xóa khỏi ứng dụng.
+        // Liệt kê dòng thừa để phát hiện route của module đã bị xóa khỏi ứng dụng.
         Assert.True(
             unknownMatrixRoutes.Count == 0,
-            $"Ma trận BackofficeEndpoints chứa route catalog không tồn tại: {string.Join(", ", unknownMatrixRoutes)}");
+            $"Ma trận BackofficeEndpoints chứa route {moduleName} không tồn tại: {string.Join(", ", unknownMatrixRoutes)}");
     }
 
     // Route `PATCH` khóa tài khoản đọc body trước khi chạy nghiệp vụ, nên dòng ma trận cần body hợp lệ. Các route còn lại không cần body.

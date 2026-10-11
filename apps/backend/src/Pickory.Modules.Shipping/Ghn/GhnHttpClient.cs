@@ -100,7 +100,7 @@ internal sealed class GhnHttpClient : IGhnClient
 
     public async Task<GhnCreatedOrder> CreateOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken)
     {
-        // Không thử lại, kể cả khi lỗi mạng hoặc 5xx, vì GHN có thể đã nhận lần đầu. Người dùng bấm tạo lại thì GHN trả đơn cũ theo cùng `client_order_code`.
+        // Không thử lại, kể cả khi lỗi mạng hoặc 5xx, vì GHN có thể đã nhận lần đầu. Người dùng bấm tạo lại thì GHN trả đơn cũ theo cùng `client_order_code`, miễn là đơn chưa hủy.
         var created = await SendAsync<GhnCreatedOrder>(
             "CreateOrder",
             () => CreateRequest(HttpMethod.Post, "/shiip/public-api/v2/shipping-order/create", request),

@@ -79,13 +79,13 @@ Quyết định 3 của plan (lưu địa chỉ 2 cấp, không có quận/huy�
 
 Câu hỏi: danh sách mã trạng thái của GHN so với bảng ánh xạ trong spec và `ShipmentStatusMapper.cs`.
 
-Kết quả: 23 mã trạng thái trong tài liệu GHN. Spec và code ánh xạ 20 mã. 3 mã chưa ánh xạ: `money_collect_picking`, `return_fail`, `scrap`. Mọi mã code ánh xạ đều có trong tài liệu GHN.
+Kết quả: 23 mã trạng thái trong tài liệu GHN. Lúc xác minh, spec và code ánh xạ 20 mã. 3 mã chưa ánh xạ: `money_collect_picking`, `return_fail`, `scrap`. SHIP-10 đã thêm 3 mã này (xem bảng). Mọi mã code ánh xạ đều có trong tài liệu GHN.
 
 | Mã GHN | Trạng thái chuẩn trong code | Có trong spec | Ghi chú |
 | --- | --- | --- | --- |
 | `ready_to_pick` | `PendingPickup` | Có | |
 | `picking` | `PendingPickup` | Có | |
-| `money_collect_picking` | chưa ánh xạ | Không | Thu tiền tại điểm lấy hàng. Đề xuất `PendingPickup` |
+| `money_collect_picking` | `PendingPickup` (thêm ở SHIP-10) | Có (SHIP-10) | Thu tiền tại điểm lấy hàng. Hàng chưa rời shop |
 | `picked` | `InTransit` | Có | |
 | `storing` | `InTransit` | Có | |
 | `sorting` | `InTransit` | Có | |
@@ -99,13 +99,13 @@ Kết quả: 23 mã trạng thái trong tài liệu GHN. Spec và code ánh xạ
 | `return_transporting` | `Returning` | Có | |
 | `return_sorting` | `Returning` | Có | |
 | `returning` | `Returning` | Có | |
-| `return_fail` | chưa ánh xạ | Không | Trả hàng thất bại. Đề xuất `Exception` |
+| `return_fail` | `Returning` (thêm ở SHIP-10) | Có (SHIP-10) | Trả hàng thất bại một lần. GHN còn thử lại, nên không phải trạng thái cuối. Bản đầu của ADR đề xuất `Exception`, nhưng `Exception` làm job đồng bộ coi đơn là cần xử lý tay |
 | `returned` | `Returned` | Có | Trạng thái cuối |
 | `cancel` | `Cancelled` | Có | Trạng thái cuối |
 | `exception` | `Exception` | Có | Trạng thái cuối |
 | `lost` | `Exception` | Có | Trạng thái cuối |
 | `damage` | `Exception` | Có | Trạng thái cuối |
-| `scrap` | chưa ánh xạ | Không | Hàng bị hủy bỏ. Đề xuất `Exception` |
+| `scrap` | `Exception` (thêm ở SHIP-10) | Có (SHIP-10) | Hàng bị hủy bỏ. Cùng nhóm với `lost` và `damage` |
 
 Hành vi hiện tại với mã chưa ánh xạ là đúng spec: giữ trạng thái cũ và ghi log cảnh báo. Ba mã trên có thể xuất hiện thật, nên nên ánh xạ chúng.
 
@@ -201,7 +201,7 @@ Việc cần làm trước khi bật giới hạn IP ở production: gọi `fee`
 
 ## Ảnh hưởng tới code
 
-Không sửa code trong task này. Bảng dưới liệt kê chỗ lệch để các task sau sửa.
+SHIP-00 không sửa code. Bảng dưới liệt kê chỗ lệch tại thời điểm xác minh. Danh sách ngay dưới bảng ghi kết quả xử lý của SHIP-10 (2026-10-11).
 
 | # | Vị trí | Hiện tại | Kết quả sandbox | Đề xuất |
 | --- | --- | --- | --- | --- |
@@ -214,6 +214,15 @@ Không sửa code trong task này. Bảng dưới liệt kê chỗ lệch để 
 | 7 | `tasks/shipping/plan.md` mục "Kết quả tra tài liệu GHN" dòng 3, 4, 8 | Dòng 3: báo phí chưa rõ. Dòng 4: gửi lại trả đơn cũ. Dòng 8: không có API tra theo `client_order_code` | Dòng 3 đã rõ. Dòng 4 chỉ đúng khi đơn chưa hủy. Dòng 8 sai | Cập nhật plan theo ADR này. Job đồng bộ dự phòng và xử lý lỗi mạng có thể dùng `detail-by-client-code` cho đơn đang hoạt động |
 | 8 | `Ghn/GhnHttpClient.cs` `CancelOrderAsync` | Coi `result: false` là từ chối | Hủy lần hai trả `result: true` | Không cần sửa. Hủy lặp lại không lỗi |
 | 9 | Shop production | Shop sandbox dùng địa chỉ lấy hàng danh mục cũ | Tạo đơn không gửi `from_*` vẫn chạy | Khi cấu hình shop production, kiểm shop có `is_new_address` hay không. Báo phí và tạo đơn vẫn nhận địa chỉ nhận 2 cấp ở cả hai trường hợp |
+
+Kết quả xử lý của SHIP-10:
+- Dòng 1 và 2: `GhnFeeRequest` và `GhnLeadTimeRequest` gửi `is_new_to_address`, `to_province_id_v2` và `to_ward_id_v2` dạng số. `GhnAddressIds` đổi mã chuỗi sang số. Mã không đọc được thành số dương thì module không gọi GHN và trả `SHIPPING_REJECTED`.
+- Dòng 3: comment "GIẢ ĐỊNH" đã thay bằng lý do đúng.
+- Dòng 4: `FakeGhnClient` kiểm cờ và mã phường, từ chối giống GHN. Bản giả vẫn khác GHN ở hai điểm: hủy lần hai bị từ chối (GHN trả `result: true`), và tạo lại mã của đơn đã hủy trả đơn đã hủy (GHN tạo đơn mới). Hai điểm này chưa sửa.
+- Dòng 5: comment về hậu tố đã sửa. Hậu tố vẫn giữ.
+- Dòng 6: đã thêm 3 mã và cập nhật bảng trong spec.
+- Dòng 7: `plan.md` đã sửa theo ADR này.
+- Dòng 8 và 9: không đổi.
 
 Điểm không ảnh hưởng, đã khớp với code:
 - `GhnFee(Total, ServiceFee, InsuranceFee, CodFee)` khớp response báo phí.

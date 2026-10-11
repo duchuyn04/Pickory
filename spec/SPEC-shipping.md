@@ -70,15 +70,15 @@ Trạng thái chuẩn hóa, không phụ thuộc đơn vị vận chuyển:
 
 | Trạng thái chuẩn | Trạng thái GHN tương ứng (xác minh lại theo tài liệu GHN) |
 |---|---|
-| `pending_pickup` | `ready_to_pick`, `picking` |
+| `pending_pickup` | `ready_to_pick`, `picking`, `money_collect_picking` |
 | `in_transit` | `picked`, `storing`, `transporting`, `sorting` |
 | `delivering` | `delivering`, `money_collect_delivering` |
 | `delivered` | `delivered` |
 | `delivery_failed` | `delivery_fail` |
-| `returning` | `waiting_to_return`, `return`, `return_transporting`, `return_sorting`, `returning` |
+| `returning` | `waiting_to_return`, `return`, `return_transporting`, `return_sorting`, `returning`, `return_fail` |
 | `returned` | `returned` |
 | `cancelled` | `cancel` |
-| `exception` | `exception`, `damage`, `lost` |
+| `exception` | `exception`, `damage`, `lost`, `scrap` |
 
 - Trạng thái GHN chưa có trong bảng: ghi log cảnh báo, giữ trạng thái cũ, không làm hỏng luồng.
 - Lưu lịch sử mọi lần đổi trạng thái (`shipment_events`) kèm trạng thái gốc của GHN.
@@ -176,6 +176,7 @@ model ShippingSettings { /* pickup address, ghnShopId, defaultServiceTypeId */ }
 
 1. **Địa giới hành chính mới:** từ 01/07/2025 Việt Nam bỏ cấp quận/huyện. Cần kiểm tra trong tài liệu GHN hiện tại xem API địa chỉ và báo phí đang dùng 2 cấp hay vẫn cần mã quận/huyện. Spec để `districtCode` tùy chọn cho tới khi xác minh.
    - Cập nhật 2026-10-09: GHN đã có API danh mục 2 cấp, và API tạo vận đơn nhận địa chỉ 2 cấp. Tài liệu API báo phí chưa nói rõ. Task `SHIP-00` xác minh khi có token sandbox.
+   - Chốt 2026-10-11 (sandbox, ADR 0003): báo phí và ngày giao nhận địa chỉ 2 cấp qua `is_new_to_address`, `to_province_id_v2` và `to_ward_id_v2`. Không cần `districtCode`.
 2. Có mua bảo hiểm hàng hóa GHN theo giá trị đơn không? Đồ điện tử giá trị cao nên mình đề xuất có. Mặc định: có, `insuredValue` bằng giá trị hàng.
    - Chốt 2026-10-09: có mua. GHN nhận tối đa 5.000.000 đ, nên module gửi giá trị nhỏ hơn giữa giá trị hàng và 5.000.000 đ.
 3. Có cho khách xem hàng trước khi nhận (cho xem, không cho thử) không? Mặc định: cho xem, không cho thử.

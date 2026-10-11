@@ -43,9 +43,9 @@ public sealed class QuoteServiceTests(PickoryWebApplicationFactory factory) : IC
     }
 
     [Theory]
-    [InlineData("9999", "79")]
-    [InlineData("7902", "79")]
-    [InlineData("0101", "79")]
+    [InlineData("9999", "1000001")]
+    [InlineData("1003649", "1000001")]
+    [InlineData("1004001", "1000001")]
     // Phường không có, đã tắt, hoặc thuộc tỉnh khác với tỉnh khách gửi: GHN không được gọi.
     public async Task Quote_AddressNotInCatalog_ThrowsRejectedAndDoesNotCallGhn(string wardCode, string provinceCode)
     {
@@ -58,6 +58,40 @@ public sealed class QuoteServiceTests(PickoryWebApplicationFactory factory) : IC
         Assert.Equal("SHIPPING_REJECTED", exception.Code);
         Assert.Contains("Địa chỉ giao hàng không còn trong danh mục.", exception.Message);
         Assert.Equal(0, _ghn.TotalCallCount);
+    }
+
+    [Fact]
+    // Danh mục có phường mã không phải số là dữ liệu hỏng. Module không gọi GHN và ghi log mức lỗi để người vận hành sửa.
+    public async Task Quote_WardCodeIsNotNumeric_ThrowsRejectedAndDoesNotCallGhn()
+    {
+        await SeedCatalogAsync();
+        await SeedSettingsAsync(defaultServiceTypeId: null);
+        await QuoteTestSetup.SeedActiveWardAsync(factory, "ABC", "1000001");
+        var address = ActiveAddress with { WardCode = "ABC" };
+
+        var exception = await Assert.ThrowsAsync<ShippingRejectedException>(() => QuoteAsync(address));
+
+        Assert.Equal("SHIPPING_REJECTED", exception.Code);
+        Assert.Contains("Địa chỉ giao hàng có mã không hợp lệ.", exception.Message);
+        Assert.Equal(0, _ghn.TotalCallCount);
+        Assert.Contains(_logger.Entries, entry => entry.Level == LogLevel.Error);
+    }
+
+    [Fact]
+    // Phường có trong danh mục của shop nhưng GHN không biết: bản giả từ chối như GHN và module trả `SHIPPING_REJECTED`.
+    public async Task Quote_WardUnknownToGhn_ThrowsRejectedFromCarrier()
+    {
+        await SeedCatalogAsync();
+        await SeedSettingsAsync(defaultServiceTypeId: null);
+        await QuoteTestSetup.SeedActiveWardAsync(factory, "5555", "1000001");
+        var address = ActiveAddress with { WardCode = "5555" };
+
+        var exception = await Assert.ThrowsAsync<ShippingRejectedException>(() => QuoteAsync(address));
+
+        Assert.Equal("SHIPPING_REJECTED", exception.Code);
+        Assert.Contains("mã phường mới không tồn tại: 5555", exception.Message);
+        // Lời gọi đã tới GHN: một lần báo phí, và lời gọi ngày giao bị hủy cùng lúc.
+        Assert.Single(_ghn.FeeRequests);
     }
 
     [Fact]
@@ -110,7 +144,10 @@ public sealed class QuoteServiceTests(PickoryWebApplicationFactory factory) : IC
         Assert.Equal(5, quote.ServiceTypeId);
         var request = Assert.Single(_ghn.FeeRequests);
         Assert.Equal(5, request.ServiceTypeId);
-        Assert.Equal("7901", request.ToWardCode);
+        // Mã đã lưu dạng chuỗi được đổi sang số trước khi gửi, và cờ địa chỉ 2 cấp luôn bật.
+        Assert.Equal(1000001L, request.ToProvinceIdV2);
+        Assert.Equal(1003646L, request.ToWardIdV2);
+        Assert.True(request.IsNewToAddress);
         Assert.Equal(1500, request.Weight);
         Assert.Equal(30, request.Length);
         Assert.Equal(20, request.Width);

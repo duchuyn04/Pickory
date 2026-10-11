@@ -107,12 +107,18 @@ internal sealed class FakeGhnClient : IGhnClient
     public Task<GhnFee> CalculateFeeAsync(GhnFeeRequest request, CancellationToken cancellationToken)
     {
         ThrowIfFailing(FakeGhnOperation.CalculateFee);
+
+        // Giống GHN: địa chỉ nhận phải là phường có trong danh mục 2 cấp, nếu không GHN từ chối.
+        RequireKnownNewAddress(request.IsNewToAddress, request.ToWardIdV2);
         return Task.FromResult(ComputeFee(request.Weight, request.InsuranceValue));
     }
 
     public Task<GhnLeadTime> GetLeadTimeAsync(GhnLeadTimeRequest request, CancellationToken cancellationToken)
     {
         ThrowIfFailing(FakeGhnOperation.GetLeadTime);
+
+        // Cùng luật với báo phí: GHN từ chối phường không có trong danh mục mới.
+        RequireKnownNewAddress(request.IsNewToAddress, request.ToWardIdV2);
         return Task.FromResult(new GhnLeadTime(FixedLeadTimeUnixSeconds));
     }
 
@@ -127,7 +133,8 @@ internal sealed class FakeGhnClient : IGhnClient
         GhnCreatedOrder created;
         lock (_gate)
         {
-            // Gửi lại cùng `client_order_code` thì trả đơn đã tạo, kể cả đơn đã hủy, như GHN. Mã rỗng không dùng để chống trùng vì GHN coi trường này là tùy chọn.
+            // Gửi lại cùng `client_order_code` thì trả đơn đã tạo, kể cả đơn đã hủy, khác GHN thật (ADR 0003).
+            // Mã rỗng không dùng để chống trùng vì GHN coi trường này là tùy chọn.
             var hasClientCode = !string.IsNullOrWhiteSpace(request.ClientOrderCode);
             if (hasClientCode && _orderCodeByClientCode.TryGetValue(request.ClientOrderCode, out var existingCode))
             {
@@ -203,6 +210,22 @@ internal sealed class FakeGhnClient : IGhnClient
             }
 
             return Task.FromResult(new GhnOrderDetail(order.OrderCode, order.ClientOrderCode, order.Status, UpdatedDate: null));
+        }
+    }
+
+    // GHN không kiểm tỉnh với phường (ADR 0003), nên bản giả chỉ kiểm cờ và mã phường để lỗi giống GHN.
+    private static void RequireKnownNewAddress(bool isNewToAddress, long wardId)
+    {
+        // Thiếu cờ thì GHN đọc mã theo danh mục cũ và báo không thấy phường.
+        if (!isNewToAddress)
+        {
+            throw new ShippingRejectedException("to ward not found");
+        }
+
+        // Phường không có trong danh mục giả thì GHN báo `mã phường mới không tồn tại`.
+        if (!Wards.Any(ward => ward.Id == wardId))
+        {
+            throw new ShippingRejectedException($"mã phường mới không tồn tại: {wardId}");
         }
     }
 

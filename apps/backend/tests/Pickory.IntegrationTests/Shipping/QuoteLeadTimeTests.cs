@@ -70,7 +70,9 @@ public sealed class QuoteLeadTimeTests(PickoryWebApplicationFactory factory) : I
         await QuoteTestSetup.QuoteAsync(factory, recording, _logger);
 
         var request = Assert.Single(recording.LeadTimeRequests);
-        Assert.Equal("7901", request.ToWardCode);
+        Assert.Equal(1000001L, request.ToProvinceIdV2);
+        Assert.Equal(1003646L, request.ToWardIdV2);
+        Assert.True(request.IsNewToAddress);
         Assert.Equal(2, request.ServiceTypeId);
         Assert.Equal(1500, request.Weight);
         Assert.Equal(30, request.Length);

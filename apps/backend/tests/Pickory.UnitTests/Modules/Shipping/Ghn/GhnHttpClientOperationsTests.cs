@@ -12,7 +12,8 @@ namespace Pickory.UnitTests.Modules.Shipping.Ghn;
 public sealed class GhnHttpClientOperationsTests
 {
     private static readonly GhnFeeRequest FeeRequest = new(
-        Weight: 1500, Length: 30, Width: 20, Height: 12, ServiceTypeId: 2, InsuranceValue: 2000000, CodValue: 500000, ToWardCode: "1003646");
+        Weight: 1500, Length: 30, Width: 20, Height: 12, ServiceTypeId: 2, InsuranceValue: 2000000, CodValue: 500000,
+        ToProvinceIdV2: 1000001, ToWardIdV2: 1003646);
 
     private static readonly GhnCreateOrderRequest CreateRequest = new(
         ToName: "Nguyễn Văn A", ToPhone: "0900000000", ToAddress: "12 Phố Test", ToProvinceName: "Hồ Chí Minh",
@@ -140,7 +141,7 @@ public sealed class GhnHttpClientOperationsTests
     }
 
     [Fact]
-    public async Task CalculateFee_PostsParcelAndNewWardCode_AndReadsFee()
+    public async Task CalculateFee_PostsParcelAndTwoLevelAddressIds_AndReadsFee()
     {
         var harness = new GhnClientHarness();
         harness.RespondOk("""{"total":42000,"service_fee":38000,"insurance_fee":4000,"cod_fee":0}""");
@@ -156,8 +157,15 @@ public sealed class GhnHttpClientOperationsTests
         Assert.Equal(2, root.GetProperty("service_type_id").GetInt32());
         Assert.Equal(2000000, root.GetProperty("insurance_value").GetInt32());
         Assert.Equal(500000, root.GetProperty("cod_value").GetInt32());
-        Assert.Equal("1003646", root.GetProperty("to_ward_code").GetString());
-        // Không tự chọn mã quận hoặc huyện của danh mục cũ. Trường này không xuất hiện trong request.
+        // GHN chỉ nhận địa chỉ 2 cấp khi có cờ này. Thiếu cờ thì GHN đọc địa chỉ theo danh mục cũ và từ chối.
+        Assert.True(root.GetProperty("is_new_to_address").GetBoolean());
+        // Mã gửi dạng số JSON. Chuỗi làm GHN không nhận ra mã phường.
+        Assert.Equal(JsonValueKind.Number, root.GetProperty("to_province_id_v2").ValueKind);
+        Assert.Equal(1000001L, root.GetProperty("to_province_id_v2").GetInt64());
+        Assert.Equal(JsonValueKind.Number, root.GetProperty("to_ward_id_v2").ValueKind);
+        Assert.Equal(1003646L, root.GetProperty("to_ward_id_v2").GetInt64());
+        // Mã cũ làm GHN tìm phường trong danh mục cũ nên báo `to ward not found`. Các trường này không được xuất hiện.
+        Assert.False(root.TryGetProperty("to_ward_code", out _));
         Assert.False(root.TryGetProperty("to_district_id", out _));
         Assert.Equal(new GhnFee(42000, 38000, 4000, 0), fee);
     }

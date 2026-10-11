@@ -6,7 +6,8 @@ public static class GhnOrderCode
     // Giới hạn độ dài của GHN. Mã dài hơn bị GHN từ chối.
     public const int MaxLength = 50;
 
-    // Lần đầu dùng `ref`. Sau n lần hủy mã có hậu tố `-(n+1)` để GHN không trả lại vận đơn đã hủy.
+    // Lần đầu dùng `ref`, sau n lần hủy mã có hậu tố `-(n+1)`.
+    // Hậu tố giữ mỗi đơn một mã riêng, vì GHN tạo đơn mới khi nhận lại mã của đơn đã hủy (ADR 0003).
     public static string For(string reference, int cancelledCount)
     {
         // Mã rỗng không định danh được vận đơn nào. GHN sẽ coi mọi đơn là cùng một mã.

@@ -23,8 +23,7 @@ internal sealed record GhnWard([property: JsonPropertyName("_id")] long Id, stri
     public string Code => Id.ToString(CultureInfo.InvariantCulture);
 }
 
-// Yêu cầu báo phí, là GIẢ ĐỊNH cần SHIP-00 xác nhận vì tài liệu chỉ mô tả mã quận và phường của danh mục cũ.
-// Request gửi mã phường mới ở `to_ward_code` và bỏ `to_district_id`.
+// Yêu cầu báo phí với địa chỉ nhận 2 cấp. GHN chỉ nhận địa chỉ mới qua `is_new_to_address`, `to_province_id_v2` và `to_ward_id_v2` dạng số (ADR 0003).
 internal sealed record GhnFeeRequest(
     int Weight,
     int Length,
@@ -33,19 +32,29 @@ internal sealed record GhnFeeRequest(
     int ServiceTypeId,
     int InsuranceValue,
     int CodValue,
-    string ToWardCode);
+    long ToProvinceIdV2,
+    long ToWardIdV2)
+{
+    // Luôn bật cờ. Thiếu cờ thì GHN đọc mã theo danh mục cũ và trả `to district not found`.
+    public bool IsNewToAddress { get; init; } = true;
+}
 
 internal sealed record GhnFee(int Total, int ServiceFee, int InsuranceFee, int CodFee);
 
-// Yêu cầu thời gian giao dự kiến theo tài liệu GHN `/en/docs/order/leadtime`, bỏ các trường `from_*` vì GHN dùng địa chỉ lấy hàng của shop.
-// Giống `GhnFeeRequest`, mã phường mới ở `to_ward_code` và việc bỏ `to_district_id` là GIẢ ĐỊNH chờ SHIP-00.
+// Yêu cầu thời gian giao dự kiến, bỏ các trường `from_*` vì GHN dùng địa chỉ lấy hàng của shop.
+// Cùng 3 trường địa chỉ như `GhnFeeRequest` (ADR 0003, tiêu chí 4).
 internal sealed record GhnLeadTimeRequest(
-    string ToWardCode,
+    long ToProvinceIdV2,
+    long ToWardIdV2,
     int ServiceTypeId,
     int Weight,
     int Length,
     int Width,
-    int Height);
+    int Height)
+{
+    // Luôn bật cờ. Thiếu cờ thì GHN bắt buộc `to_district_id` của danh mục cũ.
+    public bool IsNewToAddress { get; init; } = true;
+}
 
 // `Leadtime` là số giây Unix của thời điểm giao dự kiến. Thiếu trường này thì giá trị là `null`.
 internal sealed record GhnLeadTime(long? Leadtime);
@@ -73,7 +82,7 @@ internal sealed record GhnCreateOrderRequest(
     public string? Note { get; init; }
 
     // Địa chỉ lấy hàng hai cấp theo tài liệu GHN `/en/docs/order/create`, để `null` thì GHN dùng địa chỉ của shop.
-    // Tên trường đã khớp tài liệu, còn việc GHN nhận địa chỉ khác địa chỉ đã đăng ký chờ SHIP-00 xác nhận.
+    // Sandbox xác nhận tạo đơn không gửi các trường này vẫn chạy và GHN dùng địa chỉ của shop (ADR 0003).
     public string? FromName { get; init; }
     public string? FromPhone { get; init; }
     public string? FromAddress { get; init; }

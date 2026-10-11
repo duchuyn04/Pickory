@@ -60,9 +60,38 @@ public sealed class FakeGhnClientTests
     {
         var client = new FakeGhnClient();
 
-        var fee = await client.CalculateFeeAsync(new GhnFeeRequest(1500, 30, 20, 12, 2, 2000000, 0, "1003646"), CancellationToken.None);
+        var fee = await client.CalculateFeeAsync(new GhnFeeRequest(1500, 30, 20, 12, 2, 2000000, 0, 1000001, 1003646), CancellationToken.None);
 
         Assert.Equal(new GhnFee(Total: 36000, ServiceFee: 26000, InsuranceFee: 10000, CodFee: 0), fee);
+    }
+
+    [Fact]
+    // GHN từ chối mã phường mới không có trong danh mục (`mã phường mới không tồn tại`). Bản giả phải từ chối giống vậy.
+    public async Task CalculateFee_WardNotInCatalog_ThrowsRejected()
+    {
+        var client = new FakeGhnClient();
+
+        await Assert.ThrowsAsync<ShippingRejectedException>(
+            () => client.CalculateFeeAsync(new GhnFeeRequest(1500, 30, 20, 12, 2, 0, 0, 1000001, 99999999), CancellationToken.None));
+    }
+
+    [Fact]
+    public async Task GetLeadTime_WardNotInCatalog_ThrowsRejected()
+    {
+        var client = new FakeGhnClient();
+
+        await Assert.ThrowsAsync<ShippingRejectedException>(
+            () => client.GetLeadTimeAsync(new GhnLeadTimeRequest(1000001, 99999999, 2, 1, 1, 1, 1), CancellationToken.None));
+    }
+
+    [Fact]
+    // Thiếu cờ `is_new_to_address` thì GHN đọc mã theo danh mục cũ và báo `to ward not found`.
+    public async Task CalculateFee_WithoutNewAddressFlag_ThrowsRejected()
+    {
+        var client = new FakeGhnClient();
+        var request = new GhnFeeRequest(1500, 30, 20, 12, 2, 0, 0, 1000001, 1003646) { IsNewToAddress = false };
+
+        await Assert.ThrowsAsync<ShippingRejectedException>(() => client.CalculateFeeAsync(request, CancellationToken.None));
     }
 
     [Fact]
@@ -70,7 +99,7 @@ public sealed class FakeGhnClientTests
     {
         var client = new FakeGhnClient();
 
-        var fee = await client.CalculateFeeAsync(new GhnFeeRequest(501, 1, 1, 1, 2, 0, 0, "1"), CancellationToken.None);
+        var fee = await client.CalculateFeeAsync(new GhnFeeRequest(501, 1, 1, 1, 2, 0, 0, 1000001, 1003646), CancellationToken.None);
 
         Assert.Equal(24000, fee.ServiceFee);
     }
@@ -148,7 +177,7 @@ public sealed class FakeGhnClientTests
     {
         var client = new FakeGhnClient();
 
-        var leadTime = await client.GetLeadTimeAsync(new GhnLeadTimeRequest("1", 2, 1, 1, 1, 1), CancellationToken.None);
+        var leadTime = await client.GetLeadTimeAsync(new GhnLeadTimeRequest(1000001, 1003646, 2, 1, 1, 1, 1), CancellationToken.None);
 
         Assert.Equal(FakeGhnClient.FixedLeadTimeUnixSeconds, leadTime.Leadtime);
         Assert.Equal(new DateOnly(2026, 10, 15), GhnLeadTimeDate.ToVietnamDate(leadTime.Leadtime!.Value));
@@ -192,10 +221,10 @@ public sealed class FakeGhnClientTests
         client.SetFailure(FakeGhnOperation.CalculateFee, FakeGhnFailure.Rejected);
 
         await Assert.ThrowsAsync<ShippingRejectedException>(
-            () => client.CalculateFeeAsync(new GhnFeeRequest(1, 1, 1, 1, 2, 0, 0, "1"), CancellationToken.None));
+            () => client.CalculateFeeAsync(new GhnFeeRequest(1, 1, 1, 1, 2, 0, 0, 1000001, 1003646), CancellationToken.None));
 
         client.ClearFailures();
-        var fee = await client.CalculateFeeAsync(new GhnFeeRequest(1, 1, 1, 1, 2, 0, 0, "1"), CancellationToken.None);
+        var fee = await client.CalculateFeeAsync(new GhnFeeRequest(1, 1, 1, 1, 2, 0, 0, 1000001, 1003646), CancellationToken.None);
         Assert.Equal(22000, fee.Total);
     }
 
@@ -225,8 +254,8 @@ public sealed class FakeGhnClientTests
     {
         FakeGhnOperation.GetProvinces => () => client.GetProvincesAsync(CancellationToken.None),
         FakeGhnOperation.GetWards => () => client.GetWardsAsync("khong-co", 0, 10, CancellationToken.None),
-        FakeGhnOperation.CalculateFee => () => client.CalculateFeeAsync(new GhnFeeRequest(1, 1, 1, 1, 2, 0, 0, "1"), CancellationToken.None),
-        FakeGhnOperation.GetLeadTime => () => client.GetLeadTimeAsync(new GhnLeadTimeRequest("1", 2, 1, 1, 1, 1), CancellationToken.None),
+        FakeGhnOperation.CalculateFee => () => client.CalculateFeeAsync(new GhnFeeRequest(1, 1, 1, 1, 2, 0, 0, 1000001, 1003646), CancellationToken.None),
+        FakeGhnOperation.GetLeadTime => () => client.GetLeadTimeAsync(new GhnLeadTimeRequest(1000001, 1003646, 2, 1, 1, 1, 1), CancellationToken.None),
         FakeGhnOperation.CreateOrder => () => client.CreateOrderAsync(OrderRequest("ORD-LOOP"), CancellationToken.None),
         FakeGhnOperation.CancelOrder => () => client.CancelOrderAsync(orderCode, GhnCancelReason.Other, null, CancellationToken.None),
         _ => () => client.GetOrderDetailAsync(orderCode, CancellationToken.None),

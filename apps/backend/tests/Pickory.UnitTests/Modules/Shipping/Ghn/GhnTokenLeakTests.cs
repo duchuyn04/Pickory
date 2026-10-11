@@ -48,7 +48,7 @@ public sealed class GhnTokenLeakTests
         await Capture(() => harness.Client.GetOrderDetailAsync("GHN1", CancellationToken.None));
         harness.RespondError(HttpStatusCode.InternalServerError, Token);
         harness.RespondError(HttpStatusCode.InternalServerError, Token);
-        await Capture(() => harness.Client.CalculateFeeAsync(new GhnFeeRequest(1, 1, 1, 1, 2, 0, 0, "1"), CancellationToken.None));
+        await Capture(() => harness.Client.CalculateFeeAsync(new GhnFeeRequest(1, 1, 1, 1, 2, 0, 0, 1000001, 1003646), CancellationToken.None));
         harness.Handler.EnqueueException(new HttpRequestException("Mất kết nối tới máy chủ"));
         await Capture(() => harness.Client.CreateOrderAsync(
             new GhnCreateOrderRequest("A", "0", "a", "P", "W", "ORD", 1, 1, 1, 1, 2, 1, 0, 0, "c"), CancellationToken.None));

@@ -13,6 +13,8 @@ public static class ShipmentStatusMapper
     {
         ["ready_to_pick"] = ShipmentStatus.PendingPickup,
         ["picking"] = ShipmentStatus.PendingPickup,
+        // GHN đang thu tiền ở điểm lấy hàng. Hàng chưa rời shop nên vẫn chờ lấy.
+        ["money_collect_picking"] = ShipmentStatus.PendingPickup,
         ["picked"] = ShipmentStatus.InTransit,
         ["storing"] = ShipmentStatus.InTransit,
         ["transporting"] = ShipmentStatus.InTransit,
@@ -26,11 +28,15 @@ public static class ShipmentStatusMapper
         ["return_transporting"] = ShipmentStatus.Returning,
         ["return_sorting"] = ShipmentStatus.Returning,
         ["returning"] = ShipmentStatus.Returning,
+        // Trả hàng thất bại một lần, GHN còn thử lại. Giữ trạng thái không kết thúc để job đồng bộ còn theo dõi.
+        ["return_fail"] = ShipmentStatus.Returning,
         ["returned"] = ShipmentStatus.Returned,
         [CancelledRawStatus] = ShipmentStatus.Cancelled,
         ["exception"] = ShipmentStatus.Exception,
         ["damage"] = ShipmentStatus.Exception,
         ["lost"] = ShipmentStatus.Exception,
+        // Hàng bị hủy bỏ, cùng nhóm với `lost` và `damage` vì shop phải kiểm tra thủ công.
+        ["scrap"] = ShipmentStatus.Exception,
     };
 
     // Trả `null` khi không biết trạng thái. Bên gọi giữ trạng thái cũ và ghi log cảnh báo, luồng không bị hỏng.
