@@ -72,3 +72,6 @@ services:
         value: "50"
       - key: AI_CHAT_DAILY_LIMIT_ANON
         value: "15"
+      # Mở tài liệu API chỉ xem tại `/api/docs`. Người xem đọc được route và schema, nhưng không gửi request từ trang docs.
+      - key: API_DOCS_ENABLED
+        value: "1"

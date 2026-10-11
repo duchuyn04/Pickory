@@ -70,6 +70,9 @@ public record AppConfig
     // Bật test gọi sandbox GHN thật. Test thường không gọi GHN.
     public bool GhnLiveTests { get; init; }
 
+    // Bật tài liệu API chỉ xem ở môi trường khác Development. Mặc định tắt, vì tài liệu liệt kê cả route admin.
+    public bool ApiDocsEnabled { get; init; }
+
     // Có đủ bộ ba khóa thì dùng Cloudinary thật. `Load` đã chặn trường hợp chỉ có một phần.
     public bool HasCloudinary => CloudinaryCloudName.Length > 0;
 
@@ -227,6 +230,7 @@ public record AppConfig
             GhnShopId = (configuration["GHN_SHOP_ID"] ?? string.Empty).Trim(),
             GhnWebhookSecret = (configuration["GHN_WEBHOOK_SECRET"] ?? string.Empty).Trim(),
             GhnLiveTests = ReadZeroOrOneFlag(configuration, "GHN_LIVE_TESTS"),
+            ApiDocsEnabled = ReadZeroOrOneFlag(configuration, "API_DOCS_ENABLED"),
         };
     }
 
@@ -280,7 +284,7 @@ public record AppConfig
             return false;
         }
 
-        // Chỉ nhận `1`, giống bản Node. Giá trị như `true` bị từ chối để không bật test tốn tiền do gõ nhầm.
+        // Chỉ nhận `1`, giống bản Node. Giá trị như `true` bị từ chối, để lỗi gõ không bật nhầm test tốn tiền hoặc tài liệu API.
         if (rawValue == "1")
         {
             return true;

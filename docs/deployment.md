@@ -137,6 +137,14 @@ API dừng khi khởi động nếu thiếu một trong các nhóm sau:
 
 `API_BASE_URL` là domain Vercel, không phải domain Render. API ghép callback Google từ biến này. Callback phải đi qua Vercel để cookie state và cookie phiên nằm trên domain web.
 
+`render.yaml` đặt `API_DOCS_ENABLED` bằng `1`. Production khi đó có tài liệu API tại `https://<domain Vercel>/api/docs`, ở chế độ chỉ xem:
+
+- Người xem đọc được mọi route và schema, kể cả route admin.
+- Trang không có nút "Try it out", nên người xem không gửi request từ trang docs.
+- RBAC (Role-Based Access Control) vẫn chặn route admin khi có người gọi API trực tiếp.
+
+Đặt `API_DOCS_ENABLED` bằng `0` để tắt tài liệu. Khi đó `/api/docs` trả 404.
+
 Dockerfile đã đặt `ASPNETCORE_ENVIRONMENT`, `WEB_INDEX_HTML_PATH`, `PICKORY_SKIP_DOTENV` và `DEV_OUTBOX_DIR`. Không đặt lại các biến này trên Render.
 
 ## Bước 5: cấu hình dịch vụ bên ngoài

@@ -84,8 +84,9 @@ builder.Services.AddCatalogModule(databaseConnectionString, config, builder.Envi
 // Shipping cần biết môi trường để dừng production khi thiếu biến GHN.
 builder.Services.AddShippingModule(databaseConnectionString, config, builder.Environment.IsProduction());
 
-// Tài liệu OpenAPI chỉ sinh ở Development. Các môi trường khác không đăng ký dịch vụ sinh tài liệu.
-if (builder.Environment.IsDevelopment())
+// Development luôn có tài liệu. Môi trường khác chỉ sinh tài liệu khi `API_DOCS_ENABLED` bật, vì tài liệu liệt kê cả route admin.
+var apiDocumentationMode = ApiDocumentation.SelectMode(builder.Environment.IsDevelopment(), config.ApiDocsEnabled);
+if (apiDocumentationMode is not null)
 {
     builder.Services.AddOpenApi(ApiDocumentation.DocumentName, options =>
     {
@@ -167,10 +168,10 @@ if (isBenchmarkCommand)
     return await CatalogBenchmark.RunAsync(app, config);
 }
 
-// Tài liệu lộ toàn bộ route admin, nên chỉ gắn ở Development. Đặt sau các nhánh lệnh để lệnh seed và benchmark không bị ảnh hưởng.
-if (app.Environment.IsDevelopment())
+// Gắn tài liệu theo chế độ đã chọn khi đăng ký dịch vụ. Đặt sau các nhánh lệnh để lệnh seed và benchmark không bị ảnh hưởng.
+if (apiDocumentationMode is { } selectedDocumentationMode)
 {
-    ApiDocumentation.Map(app);
+    ApiDocumentation.Map(app, selectedDocumentationMode);
 }
 
 app.Run();
