@@ -166,10 +166,122 @@ Kết quả sau khi thu hồi:
 
 Bài học: tùy chọn trên giao diện có thể không làm đúng điều người đọc nghĩ. Sau khi tạo DB, kiểm tra quyền thật bằng SQL.
 
+## Phần 2: chọn gói và khóa cho Render
+
+### Các quyết định trước khi tạo service
+
+| Câu hỏi | Lựa chọn | Hệ quả |
+|---|---|---|
+| Gói Render | Free | Service ngủ sau 15 phút. Không có pre-deploy, nên `db:migrate` chạy từ máy dev. |
+| Khóa GHN | Sandbox | `GHN_API_BASE` là `https://dev-online-gateway.ghn.vn`. Đơn tạo ra không phải đơn thật. |
+| Khóa Cloudinary | Tài khoản có sẵn | Người triển khai tự dán khóa vào form của Render. |
+| Khóa Google, LLM, embedding | Chưa có | Để trống. |
+
+Trước khi tạo service, code được kiểm tra để biết khóa nào bắt buộc ở `Production`:
+
+- Thiếu khóa Cloudinary: `ImageStorageRegistration.EnsureConfigured` dừng API khi khởi động.
+- Thiếu khóa GHN: `GhnConfigurationCheck.EnsureConfigured` dừng API khi khởi động.
+- Thiếu khóa LLM hoặc embedding: API vẫn chạy. `AiGatewayModule` không tạo provider, nên tính năng AI báo sự cố.
+- Thiếu khóa Google: API dùng giá trị giả. Đăng nhập bằng Google không chạy, đăng nhập bằng email vẫn chạy.
+
+Bài học: đọc code để biết cấu hình nào bắt buộc. Không đoán từ tên biến.
+
+### Sửa `render.yaml` theo quyết định
+
+Commit `b540c67` và `b25c041` sửa `render.yaml`:
+
+1. Đổi `plan: starter` thành `plan: free`.
+2. Xóa `preDeployCommand`, vì gói free không có pre-deploy.
+3. Đổi `GHN_API_BASE` sang gateway sandbox.
+
+Render đọc `render.yaml` từ nhánh `main` khi tạo Blueprint. Vì vậy, các commit này được đẩy lên `main` trước khi tạo Blueprint.
+
+## Phần 3: tạo Blueprint trên Render
+
+### Cấp quyền repo cho Render
+
+Render đọc code qua GitHub App "Render". App này chỉ được cấp quyền cho repo `MemoDeck`, nên danh sách repo không có `Pickory`.
+
+1. Mở trang New Blueprint trên Render.
+2. Chọn Configure account ở mục GitHub.
+3. Giữ Repository access là Only select repositories.
+4. Chọn Select repositories.
+5. Chọn `duchuyn04/Pickory`.
+6. Chọn Save.
+
+Không chọn All repositories. Render chỉ cần đọc repo cần triển khai. Cấp quyền cho mọi repo mở rộng phạm vi rủi ro khi tài khoản Render bị lộ.
+
+### Tạo Blueprint
+
+1. Chọn Connect ở dòng `duchuyn04/Pickory`.
+2. Đặt Blueprint Name là `pickory`.
+3. Giữ Branch là `main`.
+4. Để trống Blueprint Path. Render dùng `render.yaml` ở gốc repo.
+5. Chờ Render đọc `render.yaml`.
+6. Nhập giá trị cho các biến có `sync: false`.
+
+Render hiện một ô nhập cho mỗi biến có `sync: false` trong `render.yaml`. Các biến có `value` cố định không hiện trong form.
+
+Giá trị đã nhập:
+
+| Biến | Giá trị |
+|---|---|
+| `DATABASE_URL` | Chuỗi Session pooler của Supabase, có `?sslmode=require` |
+| `WEB_ORIGIN` | `https://pickory.vercel.app`, giá trị tạm |
+| `API_BASE_URL` | `https://pickory.vercel.app`, giá trị tạm |
+| Ba khóa Cloudinary | Người triển khai tự dán |
+| Ba khóa GHN | Người triển khai tự dán |
+
+`WEB_ORIGIN` và `API_BASE_URL` là domain Vercel. Lúc này project Vercel chưa có, nên dùng domain dự kiến. Sửa hai biến này sau khi Vercel cấp domain thật.
+
+### `GHN_WEBHOOK_SECRET` không lấy từ GHN
+
+GHN không cấp giá trị này. Người triển khai tự sinh một chuỗi ngẫu nhiên:
+
+```bash
+python -c "import secrets; print(secrets.token_hex(32))"
+```
+
+`GhnWebhookEndpoint` so sánh chuỗi này với header `X-Pickory-Webhook-Secret` của mỗi webhook. Thiếu header hoặc sai giá trị thì API trả 401.
+
+Rủi ro chưa kiểm chứng: trang cấu hình webhook của GHN có thể chỉ nhận URL, không nhận header. Khi đó mọi webhook thật bị trả 401. Trạng thái vận đơn chỉ cập nhật qua job đồng bộ 30 phút. Kiểm tra form webhook trên trang GHN khi cấu hình bước 5 của `docs/deployment.md`.
+
+### Kiểm tra form trước khi deploy
+
+Form che giá trị của biến bí mật bằng dấu chấm. Để biết ô nào đã có giá trị mà không đọc khóa, đếm độ dài giá trị của mỗi ô bằng JavaScript trong trình duyệt.
+
+Kết quả: ba ô Cloudinary còn trống. Người triển khai chọn deploy trước, rồi thêm khóa Cloudinary sau. Mục đích là kiểm tra build trên Render sớm.
+
+### Lần deploy đầu
+
+1. Chọn Deploy Blueprint.
+2. Mở trang service `pickory-api`.
+3. Mở deploy đầu tiên trong tab Events.
+4. Đọc log build và log khởi động.
+
+Render cấp domain `https://pickory-api.onrender.com`. Domain này khớp với domain trong `apps/frontend/vercel.json`, nên không cần sửa `vercel.json`.
+
+Kết quả build:
+
+- Bước `pnpm install` trong Docker xong trong 12 giây.
+- Bước `dotnet publish` xong trong 31 giây.
+- Render đẩy image và cache lên registry trong khoảng 30 giây.
+
+Kết quả khởi động: API dừng với mã thoát 139. Log ghi lỗi sau:
+
+```text
+Unhandled exception. System.InvalidOperationException: Production cần CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY và CLOUDINARY_API_SECRET.
+   at Pickory.Modules.Catalog.Images.ImageStorageRegistration.EnsureConfigured(...)
+```
+
+Lỗi này đúng như dự đoán ở phần 2. Kiểm tra cấu hình lúc khởi động làm API dừng ngay, thay vì chạy rồi lỗi khi người dùng tải ảnh lên.
+
+Bài học: một lần deploy thất bại vẫn cho thông tin. Lần này chứng minh Dockerfile build được trên Render, và chứng minh API đọc đúng biến môi trường.
+
 ## Trạng thái hiện tại
 
 | Phần | Trạng thái |
 |---|---|
 | Supabase | Đã tạo project `pickory`, đã có schema, đã thu hồi quyền của `anon` |
-| Render | Chưa tạo |
+| Render | Đã tạo service `pickory-api`. Build thành công. API chưa chạy vì thiếu khóa Cloudinary. |
 | Vercel | Chưa tạo |
