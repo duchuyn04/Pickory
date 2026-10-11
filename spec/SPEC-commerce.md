@@ -45,7 +45,7 @@ Biến ý định mua thành đơn hàng đã giao: giỏ hàng, checkout, đơn
 ### Checkout và đặt đơn
 
 1. Khách nhập liên hệ (tên, SĐT, email bắt buộc), địa chỉ (từ danh mục của `shipping`), ghi chú, phương thức thanh toán, thông tin hóa đơn (tùy chọn).
-2. Frontend gọi `POST /api/checkout/preview` để có tạm tính, phí ship, giảm phí ship, tổng tiền.
+2. Frontend gọi `POST /api/checkout/previews` để có tạm tính, phí ship, giảm phí ship, tổng tiền.
 3. Khách bấm đặt: `POST /api/orders` kèm header `Idempotency-Key`. Server làm trong 1 transaction:
    - Tính lại toàn bộ giá từ `catalog` và phí từ `shipping.quote`. **Không tin số tiền gửi từ frontend.** Tổng khác preview thì trả 409 để khách xem lại.
    - `stock.reserve(orderId, items)`. Thiếu hàng thì trả 409 kèm danh sách SKU thiếu.
@@ -129,7 +129,7 @@ Biến ý định mua thành đơn hàng đã giao: giỏ hàng, checkout, đơn
 
 **Đối soát tay** (`payments:reconcile`): gắn giao dịch chưa khớp vào một đơn, hoặc đánh dấu "không thuộc đơn nào". Ghi audit log.
 
-**Bảo mật:** API key webhook, số tài khoản nhận nằm trong cấu hình server. Endpoint webhook chỉ nhận JSON, giới hạn kích thước body 16 KB.
+**Bảo mật:** API key webhook nằm trong biến môi trường của server. Số tài khoản nhận nằm trong `CommerceSettings`, admin sửa trên giao diện, mỗi lần sửa ghi audit log. Endpoint webhook chỉ nhận JSON, giới hạn kích thước body 16 KB.
 
 ### Thanh toán COD
 
@@ -191,16 +191,16 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 |---|---|---|---|
 | GET | `/api/cart` | công khai | Giỏ hiện tại, giá mới nhất |
 | POST · PATCH · DELETE | `/api/cart/items[/:skuId]` | công khai | Thêm, đổi số lượng, xóa. Thêm nhận `source` tùy chọn (ví dụ `shopping-assistant`) để đo hiệu quả AI |
-| POST | `/api/checkout/preview` | công khai | Tạm tính, phí ship, tổng |
+| POST | `/api/checkout/previews` | công khai | Tạm tính, phí ship, tổng |
 | POST | `/api/orders` | công khai | Đặt đơn, bắt buộc `Idempotency-Key` |
 | GET | `/api/orders` | khách đã đăng nhập | Lịch sử đơn |
 | GET | `/api/orders/:code` | chủ đơn, hoặc có token | Chi tiết đơn |
-| GET | `/api/orders/:code/payment-status` | chủ đơn, hoặc có token | Cho trang chờ thanh toán hỏi định kỳ |
-| POST | `/api/orders/:code/cancel` | chủ đơn, hoặc có token | Khách tự hủy |
+| GET | `/api/orders/:code/payment` | chủ đơn, hoặc có token | Cho trang chờ thanh toán hỏi định kỳ |
+| POST | `/api/orders/:code/cancellation` | chủ đơn, hoặc có token | Khách tự hủy |
 | GET · POST · PATCH · DELETE | `/api/me/addresses[/:id]` | khách đã đăng nhập | Sổ địa chỉ |
 | GET | `/api/products/:id/reviews` | công khai | Đánh giá đang hiện |
 | POST · PATCH | `/api/products/:id/reviews[/mine]` | người đã mua | Viết, sửa đánh giá |
-| POST | `/api/reviews/:id/report` | khách đã đăng nhập | Báo cáo vi phạm |
+| POST | `/api/reviews/:id/reports` | khách đã đăng nhập | Báo cáo vi phạm |
 | POST | `/api/webhooks/sepay` | SePay (API key) | Nhận giao dịch |
 
 **Back-office**
@@ -208,17 +208,17 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
 | GET | `/api/admin/orders[/:code]` | `orders:read` | Danh sách, lọc theo trạng thái, thanh toán, ngày, cờ |
-| POST | `/api/admin/orders/:code/confirm` | `orders:update-status` | Xác nhận đơn |
+| POST | `/api/admin/orders/:code/confirmation` | `orders:update-status` | Xác nhận đơn |
 | POST | `/api/admin/orders/:code/shipment` | `orders:fulfill` | Tạo vận đơn (sửa được kích thước kiện) |
 | DELETE | `/api/admin/orders/:code/shipment` | `orders:fulfill` | Hủy vận đơn |
-| POST | `/api/admin/orders/:code/cancel` | `orders:cancel` | Hủy đơn, bắt buộc lý do |
-| POST | `/api/admin/orders/:code/invoice-issued` | `orders:update-status` | Đánh dấu đã xuất hóa đơn VAT |
+| POST | `/api/admin/orders/:code/cancellation` | `orders:cancel` | Hủy đơn, bắt buộc lý do |
+| PUT | `/api/admin/orders/:code/invoice-issuance` | `orders:update-status` | Đánh dấu đã xuất hóa đơn VAT |
 | GET | `/api/admin/payments/transactions` | `payments:read` | Giao dịch SePay, lọc chưa khớp |
-| POST | `/api/admin/payments/transactions/:id/match` | `payments:reconcile` | Khớp tay vào đơn |
-| POST | `/api/admin/orders/:code/cod-received` | `payments:reconcile` | Đánh dấu đã nhận COD |
-| POST | `/api/admin/orders/:code/refunded` | `refunds:manage` | Đánh dấu đã hoàn tiền, kèm mã giao dịch |
+| PATCH | `/api/admin/payments/transactions/:id` | `payments:reconcile` | Khớp tay vào đơn |
+| PUT | `/api/admin/orders/:code/cod-receipt` | `payments:reconcile` | Đánh dấu đã nhận COD |
+| PUT | `/api/admin/orders/:code/refund` | `refunds:manage` | Đánh dấu đã hoàn tiền, kèm mã giao dịch |
 | GET | `/api/admin/reviews` | `reviews:moderate` | Hàng chờ kiểm duyệt |
-| POST | `/api/admin/reviews/:id/hide` · `/show` | `reviews:moderate` | Ẩn, hiện lại |
+| PATCH | `/api/admin/reviews/:id` | `reviews:moderate` | Ẩn hoặc hiện lại bằng `hidden` và `reason` |
 | GET · PUT | `/api/admin/commerce/settings` | `commerce-settings:manage` | Ngưỡng miễn phí ship, hạn mức COD, tài khoản nhận |
 
 ## Data Model (Prisma, rút gọn)

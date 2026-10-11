@@ -45,8 +45,9 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             Assert.Contains("20261005125642_PrismaBaseline|", stamped["ef_ai_gateway"]);
             Assert.Contains("20261005125646_PrismaBaseline|", stamped["ef_catalog"]);
             Assert.All(stamped.Values, rows => Assert.Single(rows.Split('\n')));
-            // Shipping không thuộc schema Prisma cũ nên script nhận schema không đụng tới lịch sử của nó.
+            // Shipping và commerce không thuộc schema Prisma cũ nên script nhận schema không đụng tới lịch sử của hai module đó.
             Assert.Equal(originalHistory["ef_shipping"], stamped["ef_shipping"]);
+            Assert.Equal(originalHistory["ef_commerce"], stamped["ef_commerce"]);
             Assert.Empty(await context.Database.GetPendingMigrationsAsync());
 
             // Lần nhận schema thứ hai phải giữ nguyên lịch sử đã ghi, không thêm dòng hoặc đổi phiên bản.
@@ -105,11 +106,12 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             // Savepoint cho phép kiểm tra trạng thái sau lỗi SQL mà không hủy toàn bộ giao dịch thử.
             await transaction.RollbackToSavepointAsync("before_adoption");
             ApplicationDatabaseSchema.AssertEqual(invalidSchema, await ApplicationDatabaseSchema.ReadAsync(context));
-            // Ba module cũ phải chưa có lịch sử. Lịch sử shipping không bị xóa ở bước này nên phải còn nguyên.
+            // Ba module cũ phải chưa có lịch sử. Lịch sử shipping và commerce không bị xóa ở bước này nên phải còn nguyên.
             var historyAfterFailure = await BaselineMigrationIntegrationTests.ReadHistoryAsync(context);
-            Assert.All(historyAfterFailure.Where(entry => entry.Key != "ef_shipping"),
+            Assert.All(historyAfterFailure.Where(entry => entry.Key is not ("ef_shipping" or "ef_commerce")),
                 entry => Assert.Equal("<missing>", entry.Value));
             Assert.Equal(originalHistory["ef_shipping"], historyAfterFailure["ef_shipping"]);
+            Assert.Equal(originalHistory["ef_commerce"], historyAfterFailure["ef_commerce"]);
         }
         finally
         {

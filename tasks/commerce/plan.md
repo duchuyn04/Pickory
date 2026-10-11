@@ -32,7 +32,7 @@ Các mục dưới đây đã có ở plan cũ. Plan này không lặp lại tas
 2. SHIP-07 đã qua review của người dùng.
 3. SHIP-08 đã xong. COM-07 cần `RateLimiter` trong `Pickory.Shared`. COM-11 cần cách miễn kiểm `Origin` cho webhook. COM-16 cần webhook GHN để trạng thái tự cập nhật.
 4. SHIP-09 không chặn task nào của plan này. Tiêu chí sandbox GHN của `commerce` (COM-24) mở cùng lúc với SHIP-09.
-5. Người dùng trả lời Câu hỏi mở 1, 2, 3 và 4 trước khi bắt đầu task phụ thuộc vào chúng.
+5. Người dùng đã trả lời Câu hỏi mở 1 đến 9 ngày 2026-10-11.
 
 ## Đồ thị phụ thuộc
 
@@ -46,7 +46,7 @@ COM-02 máy trạng thái đơn và trạng thái thanh toán
       ├── COM-06 cấu hình commerce ────────────────── COM-UI7 màn cấu hình
       │    └── COM-07 checkout preview (cần SHIP-08)
       │         └── COM-08 đặt đơn ────────────────── COM-UI2 checkout
-      │              ├── COM-09 email xác nhận (chờ Câu hỏi mở 2)
+      │              ├── COM-09 email xác nhận
       │              ├── COM-10 theo dõi đơn, khách tự hủy ── COM-UI3 đơn của tôi
       │              ├── COM-11 webhook SePay ──────── COM-UI4 trang chờ thanh toán
       │              │    ├── COM-12 job hết hạn thanh toán
@@ -57,10 +57,10 @@ COM-02 máy trạng thái đơn và trạng thái thanh toán
       │              │    └── COM-17 nhận COD, đã hoàn tiền
       │              ├── COM-19 đánh giá ──────────── COM-UI9 khối đánh giá
       │              │    └── COM-20 kiểm duyệt ────── COM-UI10 hàng chờ kiểm duyệt
-      │              ├── COM-21 gắn đơn vãng lai, ẩn danh khi xóa tài khoản (chờ Câu hỏi mở 3)
+      │              ├── COM-21 gắn đơn vãng lai, ẩn danh khi xóa tài khoản
       │              ├── COM-22 ICommerceReader
       │              └── COM-23 ICommerceReports
-      └── COM-18 sổ địa chỉ (chờ Câu hỏi mở 4) ──── COM-UI8 sổ địa chỉ
+      └── COM-18 sổ địa chỉ ─────────────────── COM-UI8 sổ địa chỉ
 COM-E2E1 đến COM-E2E5 sau các task UI tương ứng
 COM-24 nghiệm thu
 ```
@@ -86,14 +86,14 @@ COM-07 cần COM-06, vì ngưỡng miễn phí ship và hạn mức COD nằm tr
 9. **Trạng thái giao hàng ánh xạ từ `ShipmentStatus`.** `Delivered` chuyển đơn sang `delivered`. `Returned` chuyển đơn sang `returned`. Trạng thái khác giữ đơn ở `shipping` và chỉ lưu vào lịch sử giao hàng. Sự kiện mang `Ref` gốc là mã đơn. Handler bỏ qua sự kiện có `ShipmentId` khác vận đơn hiện tại của đơn.
 10. **Webhook SePay xác thực trước, lưu thô trước khi khớp.** Module so API key bằng phép so thời gian cố định. Body tối đa 16 KB, chỉ nhận JSON. Giao dịch lưu vào `payment_transactions` với `provider_tx_id` unique, rồi mới khớp đơn. Định dạng chính xác chờ COM-00.
 11. **Khóa SePay chỉ nằm trong biến môi trường.** `SEPAY_WEBHOOK_API_KEY` không ra log, response hay frontend. Production thiếu khóa thì dừng khi khởi động. Dev và test thiếu khóa vẫn chạy, theo mẫu `GhnConfigurationCheck`.
-12. **Số tài khoản nhận nằm trong cấu hình admin.** Spec có hai chỗ khác nhau, xem Câu hỏi mở 6. Plan theo Data Model `CommerceSettings` của spec. Mỗi lần sửa ghi 1 dòng audit `commerce.settings.update`.
+12. **Số tài khoản nhận nằm trong cấu hình admin.** Người dùng chốt cách này ở Câu hỏi mở 6. Số tài khoản và mã ngân hàng nằm trong `commerce_settings`. Mỗi lần sửa ghi 1 dòng audit `commerce.settings.update`.
 13. **Giới hạn giỏ nằm trong cấu hình.** Mặc định 5 sản phẩm mỗi SKU và 20 dòng mỗi giỏ. Hai giá trị lưu trong `commerce_settings`, cùng ngưỡng miễn phí ship và hạn mức COD.
 14. **Link xem đơn của khách vãng lai dùng token băm.** Token ngẫu nhiên 32 byte. DB lưu SHA-256 của token. Module so hash bằng phép so thời gian cố định. Link chỉ cho xem đơn, xem trạng thái thanh toán và tự hủy đơn.
 15. **Job chạy nền theo mẫu `ImageDeletionWorker`.** Job hết hạn chạy mỗi phút. Test gọi thẳng processor, không chờ timer.
 16. **Giới hạn tần suất dùng `RateLimiter` của `Pickory.Shared`.** Route checkout preview giới hạn 20 lần mỗi phút cho mỗi khách, theo `spec/SPEC-shipping.md`. Webhook SePay giới hạn theo IP.
-17. **Route theo REST mức tài nguyên, không HATEOAS.** Bảng dưới đề xuất route thay cho route đặt theo hành động trong spec. Người dùng chưa chốt, xem Câu hỏi mở 1. Mỗi route con là một danh từ, nên `RequirePermission` vẫn gắn được theo từng route.
+17. **Route theo REST mức tài nguyên, không HATEOAS.** Bảng dưới thay cho route đặt theo hành động trong spec cũ. Người dùng chốt bảng này ở Câu hỏi mở 1, và spec đã cập nhật theo bảng. Mỗi route con là một danh từ, nên `RequirePermission` vẫn gắn được theo từng route.
 
-   | Route trong spec | Route đề xuất |
+   | Route trong spec cũ | Route đã chốt |
    | --- | --- |
    | `POST /api/checkout/preview` | `POST /api/checkout/previews` |
    | `POST /api/orders/:code/cancel` | `POST /api/orders/{code}/cancellation` |
@@ -125,7 +125,7 @@ COM-07 cần COM-06, vì ngưỡng miễn phí ship và hạn mức COD nằm tr
    | `REVIEW_EDIT_EXPIRED` | 409 | Sửa đánh giá sau 30 ngày |
    | `SHIPPING_UNAVAILABLE` | 503 | Lỗi từ `shipping`, giữ nguyên mã |
 
-19. **Điểm đánh giá không đi vào `catalog`.** `catalog` không được phụ thuộc `commerce`, vì `commerce` đã phụ thuộc `catalog`. Trang sản phẩm gọi `GET /api/products/{id}/reviews`. Response gồm điểm trung bình, phân bố số sao và trang đánh giá. Xem Câu hỏi mở 5.
+19. **Điểm đánh giá không đi vào `catalog`.** `catalog` không được phụ thuộc `commerce`, vì `commerce` đã phụ thuộc `catalog`. Trang sản phẩm gọi `GET /api/products/{id}/reviews`. Response gồm điểm trung bình, phân bố số sao và trang đánh giá. Người dùng chốt cách này ở Câu hỏi mở 5.
 20. **Audit log.** Mọi thao tác nhân viên trên đơn, thanh toán, đánh giá và cấu hình ghi đúng 1 dòng qua `IAuditLogWriter` trong cùng transaction.
 
 ## Task List
@@ -136,11 +136,11 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 - [ ] COM-00 (tài liệu làm ngay; phần cần khóa chờ người dùng, không chặn task khác)
 
 ### Phase 1: Nền tảng
-- [ ] COM-01 · [ ] COM-02 · [ ] COM-03
+- [x] COM-01 · [x] COM-02 · [x] COM-03
 
 ### Checkpoint M1
-- [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
-- [ ] Test kiến trúc chặn `Commerce` tham chiếu module khác ngoài Contracts
+- [x] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
+- [x] Test kiến trúc chặn `Commerce` tham chiếu module khác ngoài Contracts
 - [ ] Review với người dùng
 
 ### Phase 2: Giỏ hàng và đặt đơn
@@ -214,19 +214,28 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 | Chưa có khóa SePay và token GHN | Không kiểm được tiền về thật và vận đơn thật | Làm bằng webhook giả lập và `FakeGhnClient`. Tiêu chí cần khóa để mở ở COM-24 |
 | Hai `DbContext` không chung kết nối khi giữ hàng | Giữ hàng không rollback cùng đơn, gây lệch tồn kho | Quyết định 4. Test rollback trong COM-08 |
 | Tiền về sau khi đơn đã hủy và hàng đã bán cho người khác | Khách mất tiền nếu không có ai để ý | Đơn giữ `cancelled`, thanh toán `refund_pending`, đơn hiện trong màn đối soát |
-| Admin đổi số tài khoản nhận trên giao diện | Người chiếm quyền admin chuyển hướng tiền | Audit log mỗi lần sửa. Câu hỏi mở 6 |
+| Admin đổi số tài khoản nhận trên giao diện | Người chiếm quyền admin chuyển hướng tiền | Audit log mỗi lần sửa. Đã chốt ở Câu hỏi mở 6 |
 | Sự kiện của vận đơn cũ đến sau khi tạo vận đơn mới | Đơn bị chuyển sai trạng thái | Quyết định 9: so `ShipmentId` với vận đơn hiện tại |
 | Email lỗi khi đặt đơn | Khách không nhận link xem đơn | Email lỗi không làm hỏng đặt đơn. Trang đặt hàng thành công hiện link xem đơn |
 
 ## Câu hỏi mở
 
 1. **Route REST cho `commerce`.** Spec dùng route theo hành động, mâu thuẫn với quyết định 20 của `tasks/shipping/plan.md`. Plan đề xuất bảng ở quyết định 17. Người dùng chốt bảng này, hoặc sửa spec trước khi làm COM-10.
+   - **Đã chốt (2026-10-11):** dùng bảng của quyết định 17. Spec đã cập nhật theo bảng.
 2. **Cổng gửi email.** `IEmailSender` nằm trong `Pickory.Modules.Identity/Emails/`, nên `commerce` chưa dùng được. Đề xuất: chuyển `IEmailSender` và `DevOutboxEmailSender` sang `Pickory.Shared/Email/`. Việc này đổi cấu trúc identity, thuộc nhóm "Ask first". COM-09 chờ quyết định này.
+   - **Đã chốt (2026-10-11):** chuyển `IEmailSender` và `DevOutboxEmailSender` sang `Pickory.Shared/Email/`.
 3. **Sự kiện xác thực email.** Spec cần gắn đơn vãng lai khi khách xác thực email. Identity chưa phát sự kiện nào ở bước này. Đề xuất: thêm `EmailVerifiedEvent(UserId, Email)` vào `Pickory.Modules.Identity.Contracts/Events/`. Đây là đổi Contracts, thuộc nhóm "Ask first". COM-21 chờ quyết định này.
+   - **Đã chốt (2026-10-11):** thêm `EmailVerifiedEvent(UserId, Email)` vào `Pickory.Modules.Identity.Contracts/Events/`.
 4. **Kiểm mã địa chỉ.** Sổ địa chỉ và checkout cần biết mã tỉnh/thành và phường/xã có trong danh mục. `IShippingService` chưa có hàm tra danh mục. Đề xuất: thêm `IAddressDirectory.FindAsync(provinceCode, wardCode, cancellationToken)` vào `Pickory.Modules.Shipping.Contracts`, trả tên chuẩn hoặc `null`. Đây là đổi Contracts. COM-07 và COM-18 chờ quyết định này.
+   - **Đã chốt (2026-10-11):** thêm `IAddressDirectory.FindAsync` như đề xuất. Hàm trả tên chuẩn hoặc `null`.
 5. **Điểm đánh giá trên trang sản phẩm.** Spec ghi điểm trung bình được cung cấp cho `catalog` qua interface đọc. `catalog` không phụ thuộc `commerce` được, vì sẽ tạo vòng phụ thuộc. Đề xuất ở quyết định 19: frontend đọc thẳng từ route của `commerce`. Thẻ sản phẩm trong danh sách chưa hiện số sao. Người dùng xác nhận cách này.
+   - **Đã chốt (2026-10-11):** frontend gọi `GET /api/products/{id}/reviews` của `commerce`. Thẻ sản phẩm chưa hiện số sao.
 6. **Số tài khoản nhận nằm ở đâu.** Mục Bảo mật của spec ghi số tài khoản nằm trong cấu hình server. User story của admin và `CommerceSettings` cho admin sửa trên giao diện. Plan theo `CommerceSettings`. Người dùng chọn một trong hai.
+   - **Đã chốt (2026-10-11):** admin sửa trong `CommerceSettings`. Mỗi lần sửa ghi 1 dòng audit. Spec đã cập nhật mục Bảo mật.
 7. **Sự kiện đánh giá cho `personalized-content`.** `personalized-content` tạo lại tóm tắt khi có review mới hoặc review bị ẩn. Spec `commerce` chưa có sự kiện này. Đề xuất: thêm `ReviewChangedEvent(ProductId, ReviewId, Change)` vào `Pickory.Modules.Commerce.Contracts/Events/`, phát ở COM-19 và COM-20. Người dùng duyệt thêm sự kiện ngoài spec.
+   - **Đã chốt (2026-10-11):** thêm `ReviewChangedEvent(ProductId, ReviewId, Change)`, phát ở COM-19 và COM-20.
 8. **GHN tự hủy vận đơn khi đơn đang `shipping`.** Spec không nói đơn chuyển sang đâu. Đề xuất: đơn về `confirmed`, gắn cờ `shipment_cancelled`, để `sales` tạo lại vận đơn hoặc hủy đơn.
+   - **Đã chốt (2026-10-11):** đơn về `confirmed` và có cờ `shipment_cancelled`.
 9. **Báo cáo vi phạm đánh giá.** Spec chỉ có `reportCount`. Một khách có thể báo cáo 3 lần một đánh giá. Đề xuất: thêm bảng `review_reports` với khóa unique `(review_id, user_id)`.
+   - **Đã chốt (2026-10-11):** thêm bảng `review_reports`. Migration của COM-20 tạo bảng này, vì migration đầu tiên của COM-03 đã xong.
 10. Các Open Questions của spec: ngưỡng 500.000 đ và 20.000.000 đ giữ mặc định, cấu hình được. Chưa làm yêu cầu đổi trả trên web. Định dạng SePay chờ COM-00.

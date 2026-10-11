@@ -42,12 +42,12 @@ Quy ước:
 - `TaxCodeRule`: mã số thuế 10 hoặc 13 chữ số, cho phép dấu gạch.
 - `TransferContentParser`: tìm mã đơn trong nội dung chuyển khoản bằng `PK[A-Z2-9]{8}`.
 **Tiêu chí nghiệm thu:**
-- [ ] Mã đơn không chứa `0`, `O`, `1`, `I` và luôn dài 10 ký tự
-- [ ] Tạm tính bằng tổng giá nhân số lượng. Tạm tính bằng hoặc trên ngưỡng thì phí khách trả bằng 0 và phần shop chịu bằng phí GHN
-- [ ] Tổng tiền trên hạn mức COD thì COD bị từ chối, chuyển khoản vẫn hợp lệ
-- [ ] Mã số thuế đúng 10 hoặc 13 chữ số sau khi bỏ dấu gạch thì hợp lệ. Chuỗi khác bị từ chối
-- [ ] Parser tìm được mã có khoảng trắng xung quanh, chữ thường, hoặc chữ ngân hàng chèn trước và sau
-- [ ] Nội dung không có mã trả "không thấy", không ném lỗi
+- [x] Mã đơn không chứa `0`, `O`, `1`, `I` và luôn dài 10 ký tự
+- [x] Tạm tính bằng tổng giá nhân số lượng. Tạm tính bằng hoặc trên ngưỡng thì phí khách trả bằng 0 và phần shop chịu bằng phí GHN
+- [x] Tổng tiền trên hạn mức COD thì COD bị từ chối, chuyển khoản vẫn hợp lệ
+- [x] Mã số thuế đúng 10 hoặc 13 chữ số sau khi bỏ dấu gạch thì hợp lệ. Chuỗi khác bị từ chối
+- [x] Parser tìm được mã có khoảng trắng xung quanh, chữ thường, hoặc chữ ngân hàng chèn trước và sau
+- [x] Nội dung không có mã trả "không thấy", không ném lỗi
 **Kiểm tra:** unit test
 **Phụ thuộc:** không · **Quy mô:** S
 **File:** `apps/backend/src/Pickory.Modules.Commerce/{Orders/OrderCodeGenerator.cs, Pricing/OrderPricing.cs, Invoices/TaxCodeRule.cs, Payments/TransferContentParser.cs}`, test trong `apps/backend/tests/Pickory.UnitTests/Modules/Commerce/`
@@ -55,12 +55,12 @@ Quy ước:
 ### COM-02: Máy trạng thái đơn hàng
 **Mô tả:** `OrderTransitions` kiểm cặp trạng thái đơn và người chuyển theo bảng của spec. `PaymentTransitions` kiểm trạng thái thanh toán. Hai lớp là hàm thuần.
 **Tiêu chí nghiệm thu:**
-- [ ] Mọi chuyển đổi hợp lệ trong bảng của spec trả "được phép"
-- [ ] Mọi cặp còn lại trả "không hợp lệ" (test sinh đủ mọi cặp)
-- [ ] Khách chỉ hủy được ở `pending_payment` hoặc `pending_confirmation`
-- [ ] Nhân viên hủy được tới trước `delivered`. Đơn `shipping` cần vận đơn đã hủy
-- [ ] Hủy đơn đã `paid` thì thanh toán chuyển `refund_pending`
-- [ ] `refunded` chỉ đi từ `refund_pending`
+- [x] Mọi chuyển đổi hợp lệ trong bảng của spec trả "được phép"
+- [x] Mọi cặp còn lại trả "không hợp lệ" (test sinh đủ mọi cặp)
+- [x] Khách chỉ hủy được ở `pending_payment` hoặc `pending_confirmation`
+- [x] Nhân viên hủy được tới trước `delivered`. Đơn `shipping` cần vận đơn đã hủy
+- [x] Hủy đơn đã `paid` thì thanh toán chuyển `refund_pending`
+- [x] `refunded` chỉ đi từ `refund_pending`
 **Kiểm tra:** unit test
 **Phụ thuộc:** không · **Quy mô:** S
 **File:** `apps/backend/src/Pickory.Modules.Commerce/Orders/{OrderTransitions.cs, PaymentTransitions.cs}`
@@ -68,19 +68,19 @@ Quy ước:
 ### COM-03: Khung module, Contracts, schema và cấu hình
 **Mô tả:** Tạo `Pickory.Modules.Commerce` và `Pickory.Modules.Commerce.Contracts`. Thêm `CommerceDbContext`, migration đầu tiên, `CommerceModule.cs`. Contracts có năm sự kiện của quyết định 2 và khung `ICommerceReader`, `ICommerceReports`. Thêm `SEPAY_WEBHOOK_API_KEY` vào `AppConfig` và `.env.example`.
 **Tiêu chí nghiệm thu:**
-- [ ] Bảng `carts`, `cart_items`, `orders`, `order_items`, `order_status_history`, `payment_transactions`, `saved_addresses`, `reviews`, `commerce_settings` theo Data Model của spec
-- [ ] `orders.code`, `orders.idempotency_key`, `payment_transactions.provider_tx_id` có ràng buộc unique. `reviews` unique theo `(product_id, user_id)`
-- [ ] Tiền là cột `integer`. Thời gian lưu UTC theo quy ước của `tasks/dotnet-migration/plan.md`
-- [ ] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
-- [ ] `Pickory.ArchitectureTests` chặn `Commerce` tham chiếu module khác ngoài project Contracts
-- [ ] Production thiếu `SEPAY_WEBHOOK_API_KEY` thì dừng khi khởi động. Dev và test thiếu khóa vẫn chạy
-- [ ] `Program.cs` chỉ gọi `AddCommerceModule` và `MapCommerceEndpoints`
+- [x] Bảng `carts`, `cart_items`, `orders`, `order_items`, `order_status_history`, `payment_transactions`, `saved_addresses`, `reviews`, `commerce_settings` theo Data Model của spec
+- [x] `orders.code`, `orders.idempotency_key`, `payment_transactions.provider_tx_id` có ràng buộc unique. `reviews` unique theo `(product_id, user_id)`
+- [x] Tiền là cột `integer`. Thời gian lưu UTC theo quy ước của `tasks/dotnet-migration/plan.md`
+- [x] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
+- [x] `Pickory.ArchitectureTests` chặn `Commerce` tham chiếu module khác ngoài project Contracts
+- [x] Production thiếu `SEPAY_WEBHOOK_API_KEY` thì dừng khi khởi động. Dev và test thiếu khóa vẫn chạy
+- [x] `Program.cs` chỉ gọi `AddCommerceModule` và `MapCommerceEndpoints`
 **Kiểm tra:** build, test kiến trúc, test tích hợp schema
 **Phụ thuộc:** COM-01, COM-02 · **Quy mô:** M
 
 ### Checkpoint M1
-- [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
-- [ ] Test kiến trúc chặn `Commerce` tham chiếu module khác ngoài Contracts
+- [x] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
+- [x] Test kiến trúc chặn `Commerce` tham chiếu module khác ngoài Contracts
 - [ ] Review với người dùng
 
 ---
@@ -186,7 +186,7 @@ Quy ước:
 
 ### COM-09: Email xác nhận đơn
 **Mô tả:** Gửi email xác nhận sau khi đặt đơn. Email có mã đơn, danh sách sản phẩm, tổng tiền, link `/orders/{code}?t={token}`.
-**Trạng thái:** chờ Câu hỏi mở 2 của plan (cổng gửi email).
+**Trạng thái:** Câu hỏi mở 2 của plan đã chốt ngày 2026-10-11. `IEmailSender` chuyển sang `Pickory.Shared/Email/`.
 **Tiêu chí nghiệm thu:**
 - [ ] Email gửi sau commit. Email lỗi chỉ ghi log, đơn vẫn tạo thành công
 - [ ] Môi trường dev ghi email vào outbox dev, để Playwright đọc được link
@@ -434,7 +434,7 @@ Quy ước:
 
 ### COM-21: Gắn đơn vãng lai và ẩn danh khi xóa tài khoản
 **Mô tả:** Handler `EmailVerifiedEvent` gắn đơn vãng lai cùng email vào tài khoản. Handler `UserDeletedEvent` ẩn danh đánh giá và bỏ liên kết đơn với tài khoản.
-**Trạng thái:** phần gắn đơn chờ Câu hỏi mở 3 của plan.
+**Trạng thái:** Câu hỏi mở 3 của plan đã chốt ngày 2026-10-11. Identity phát `EmailVerifiedEvent(UserId, Email)`.
 **Tiêu chí nghiệm thu:**
 - [ ] Xác thực email gắn mọi đơn có `UserId` rỗng và cùng email liên hệ, so không phân biệt hoa thường
 - [ ] Đơn đã gắn tài khoản khác không đổi

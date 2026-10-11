@@ -1,6 +1,7 @@
 using System.Reflection;
 using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
+using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Shipping;
@@ -43,6 +44,7 @@ namespace Pickory.ArchitectureTests
             typeof(AiGatewayModule).Assembly,
             typeof(CatalogModule).Assembly,
             typeof(ShippingModule).Assembly,
+            typeof(CommerceModule).Assembly,
         ];
 
         [Fact]
@@ -115,6 +117,55 @@ namespace Pickory.ArchitectureTests
             Assert.All(shippingReferences, name => Assert.True(
                 name == "Pickory.Shared" || name.EndsWith(".Contracts", StringComparison.Ordinal),
                 $"Shipping không được tham chiếu {name}."));
+        }
+
+        [Fact]
+        // Commerce chỉ được thấy Contracts của module khác. Kiểu nội bộ của Identity, Catalog hoặc Shipping phải bị chặn.
+        public void HamKiemTraDungChung_BaoLoiViPham_KhiLopCommercePhuThuocNoiBoModuleKhac()
+        {
+            var result = ModuleArchitectureValidator.ValidateType(typeof(SampleViolatingClass), "Pickory.Modules.Commerce");
+
+            Assert.False(result.IsSuccessful);
+            Assert.Contains(result.Violations, v => v.Contains(nameof(SampleViolatingClass)));
+        }
+
+        [Fact]
+        // Commerce được thấy Contracts của module khác, giống mọi module.
+        public void HamKiemTraDungChung_ChoPhepCommerce_PhuThuocNamespaceContractsCuaModuleKhac()
+        {
+            var result = ModuleArchitectureValidator.ValidateType(typeof(SampleAllowedContractConsumer), "Pickory.Modules.Commerce");
+
+            Assert.True(result.IsSuccessful);
+            Assert.Empty(result.Violations);
+        }
+
+        [Fact]
+        // Assembly Commerce thật phải có trong danh sách module mà test duyệt, và chỉ tham chiếu Shared hoặc Contracts.
+        public void DanhSachModule_GomAssemblyCommerce_VaChiThamChieuSharedHoacContracts()
+        {
+            var moduleNames = ModuleArchitectureValidator.GetModuleAssemblies().Select(assembly => assembly.GetName().Name).ToList();
+
+            Assert.Contains("Pickory.Modules.Commerce", moduleNames);
+            Assert.DoesNotContain("Pickory.Modules.Commerce.Contracts", moduleNames);
+            var commerceReferences = typeof(CommerceModule).Assembly.GetReferencedAssemblies()
+                .Select(reference => reference.Name ?? string.Empty)
+                .Where(name => name.StartsWith("Pickory.", StringComparison.Ordinal))
+                .ToList();
+            Assert.All(commerceReferences, name => Assert.True(
+                name == "Pickory.Shared" || name.EndsWith(".Contracts", StringComparison.Ordinal),
+                $"Commerce không được tham chiếu {name}."));
+        }
+
+        [Fact]
+        // Hợp đồng của Commerce không được kéo module khác vào ngoài Shared. Module khác dùng Contracts này mà không thấy entity.
+        public void CommerceContracts_ChiThamChieuShared()
+        {
+            var contractReferences = typeof(Pickory.Modules.Commerce.Contracts.Orders.OrderStatus).Assembly.GetReferencedAssemblies()
+                .Select(reference => reference.Name ?? string.Empty)
+                .Where(name => name.StartsWith("Pickory.", StringComparison.Ordinal))
+                .ToList();
+
+            Assert.All(contractReferences, name => Assert.Equal("Pickory.Shared", name));
         }
 
         [Fact]

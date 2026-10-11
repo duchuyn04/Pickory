@@ -1,0 +1,22 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm build",
+  "outputDirectory": "dist",
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://pickory-api.onrender.com/api/:path*"
+    },
+    {
+      "source": "/p/:slug",
+      "destination": "https://pickory-api.onrender.com/p/:slug"
+    },
+    {
+      "source": "/c/:slug",
+      "destination": "https://pickory-api.onrender.com/c/:slug"
+    },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

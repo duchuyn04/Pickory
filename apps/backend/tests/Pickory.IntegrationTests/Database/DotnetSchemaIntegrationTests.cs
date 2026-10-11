@@ -6,6 +6,7 @@ using Npgsql;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.AiGateway.Persistence;
 using Pickory.Modules.Catalog.Persistence;
+using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Shipping.Persistence;
 using Pickory.Shared.Persistence;
@@ -18,7 +19,7 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
     : IClassFixture<PickoryWebApplicationFactory>
 {
     [Fact]
-    public async Task EfMigrations_CreateAllTwentyFiveTablesMatchingReferenceSchemaAndShippingModel()
+    public async Task EfMigrations_CreateAllTablesMatchingReferenceSchemaAndModuleModels()
     {
         // Đăng ký dịch vụ cung cấp context thật để phát hiện cấu hình khác cấu hình module.
         await using var scope = factory.Services.CreateAsyncScope();
@@ -26,28 +27,32 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
         var catalog = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
         var aiGateway = scope.ServiceProvider.GetRequiredService<AiGatewayDbContext>();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
+        var commerce = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
         AssertTestConnection(identity);
         AssertTestConnection(catalog);
         AssertTestConnection(aiGateway);
         AssertTestConnection(shipping);
+        AssertTestConnection(commerce);
 
         // Mỗi module chỉ được sở hữu bảng đã chỉ định, không kéo quan hệ module khác vào model.
         AssertModuleTables(identity, ApplicationDatabaseSchema.IdentityTables);
         AssertModuleTables(catalog, ApplicationDatabaseSchema.CatalogTables);
         AssertModuleTables(aiGateway, ApplicationDatabaseSchema.AiGatewayTables);
         AssertModuleTables(shipping, ApplicationDatabaseSchema.ShippingTables);
-        var model = ApplicationDatabaseSchema.ReadModel([identity, catalog, aiGateway, shipping]);
-        Assert.Equal(25, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
+        AssertModuleTables(commerce, ApplicationDatabaseSchema.CommerceTables);
+        var model = ApplicationDatabaseSchema.ReadModel([identity, catalog, aiGateway, shipping, commerce]);
+        Assert.Equal(34, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
 
         // Metadata thực phải khớp dump, kể cả thứ tự cột, cập nhật khóa ngoại và mô tả extension.
         var actual = await ApplicationDatabaseSchema.ReadAsync(identity);
         var reference = await DatabaseSqlFiles.ReadReferenceAsync(identity);
-        // `reference-schema.sql` là bản chụp schema Prisma nên không có bảng shipping. Phép so này chỉ xét đối tượng ngoài shipping.
-        var actualWithoutShipping = actual.Where(entry => !ApplicationDatabaseSchema.IsShippingObject(entry.Key))
+        // `reference-schema.sql` là bản chụp schema Prisma nên không có bảng shipping và commerce. Phép so này chỉ xét đối tượng ngoài hai module đó.
+        var actualWithoutShipping = actual.Where(entry => !ApplicationDatabaseSchema.IsShippingObject(entry.Key) &&
+                                                          !ApplicationDatabaseSchema.IsCommerceObject(entry.Key))
             .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
         ApplicationDatabaseSchema.AssertEqual(reference, actualWithoutShipping);
 
-        // Phép so model với DB thật xét cả shipping, nên đây là nơi kiểm schema shipping.
+        // Phép so model với DB thật xét cả shipping và commerce, nên đây là nơi kiểm schema của hai module đó.
         // Metadata Entity Framework Core không biểu diễn thứ tự cột vật lý hoặc mô tả extension.
         var modeledActual = actual.Where(entry => !entry.Key.StartsWith("ordinal:", StringComparison.Ordinal) &&
                                                    !entry.Key.StartsWith("extension:", StringComparison.Ordinal) &&

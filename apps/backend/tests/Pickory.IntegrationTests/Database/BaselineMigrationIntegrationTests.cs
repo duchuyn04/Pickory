@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.AiGateway.Persistence;
 using Pickory.Modules.Catalog.Persistence;
+using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Shipping.Persistence;
 using Xunit;
@@ -16,13 +17,14 @@ namespace Pickory.IntegrationTests.Database;
 public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFactory factory)
     : IClassFixture<PickoryWebApplicationFactory>
 {
-    private static readonly string[] HistorySchemas = ["ef_identity", "ef_ai_gateway", "ef_catalog", "ef_shipping"];
+    private static readonly string[] HistorySchemas = ["ef_identity", "ef_ai_gateway", "ef_catalog", "ef_shipping", "ef_commerce"];
 
     [Theory]
     [InlineData("identity", "ef_identity", "20261005125639_PrismaBaseline")]
     [InlineData("ai_gateway", "ef_ai_gateway", "20261005125642_PrismaBaseline")]
     [InlineData("catalog", "ef_catalog", "20261005125646_PrismaBaseline")]
     [InlineData("shipping", "ef_shipping", "20261010041544_InitialShipping")]
+    [InlineData("commerce", "ef_commerce", "20261011034624_InitialCommerce")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(
         string module, string historySchema, string migrationId)
     {
@@ -34,6 +36,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
             "ai_gateway" => scope.ServiceProvider.GetRequiredService<AiGatewayDbContext>(),
             "catalog" => scope.ServiceProvider.GetRequiredService<CatalogDbContext>(),
             "shipping" => scope.ServiceProvider.GetRequiredService<ShippingDbContext>(),
+            "commerce" => scope.ServiceProvider.GetRequiredService<CommerceDbContext>(),
             _ => throw new ArgumentOutOfRangeException(nameof(module))
         };
         DotnetSchemaIntegrationTests.AssertTestConnection(context);
@@ -87,6 +90,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
             "ai_gateway" => ApplicationDatabaseSchema.AiGatewayTables,
             "catalog" => ApplicationDatabaseSchema.CatalogTables,
             "shipping" => ApplicationDatabaseSchema.ShippingTables,
+            "commerce" => ApplicationDatabaseSchema.CommerceTables,
             _ => throw new ArgumentOutOfRangeException(nameof(module))
         };
         var enums = module switch
@@ -94,6 +98,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
             "identity" => new[] { "UserKind", "EmailTokenPurpose" },
             "catalog" => new[] { "ProductStatus", "InventoryMovementType" },
             "shipping" => ApplicationDatabaseSchema.ShippingEnums,
+            "commerce" => ApplicationDatabaseSchema.CommerceEnums,
             _ => Array.Empty<string>()
         };
         // Ranh giới tên ngăn `users` vô tình khớp bảng có tiền tố tương tự.

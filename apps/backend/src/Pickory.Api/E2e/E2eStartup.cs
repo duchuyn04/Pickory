@@ -1,6 +1,7 @@
 using Npgsql;
 using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
+using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
 using Pickory.Modules.Shipping;
 using Pickory.Shared.Persistence;
@@ -36,6 +37,7 @@ public static class E2eStartup
         await AiGatewayModule.MigrateAiGatewayDatabaseAsync(services, cancellationToken);
         await CatalogModule.MigrateCatalogDatabaseAsync(services, cancellationToken);
         await ShippingModule.MigrateShippingDatabaseAsync(services, cancellationToken);
+        await CommerceModule.MigrateCommerceDatabaseAsync(services, cancellationToken);
 
         // Nạp danh mục địa chỉ và chờ xong, vì worker nền chạy song song với test và có thể chưa kịp ghi.
         // Lỗi ở đây dừng lệnh thay vì mở API với danh mục rỗng.
@@ -88,6 +90,7 @@ public static class E2eStartup
             DROP SCHEMA IF EXISTS ef_ai_gateway CASCADE;
             DROP SCHEMA IF EXISTS ef_catalog CASCADE;
             DROP SCHEMA IF EXISTS ef_shipping CASCADE;
+            DROP SCHEMA IF EXISTS ef_commerce CASCADE;
             DROP SCHEMA IF EXISTS public CASCADE;
             CREATE SCHEMA public AUTHORIZATION pg_database_owner;
             COMMENT ON SCHEMA public IS 'standard public schema';

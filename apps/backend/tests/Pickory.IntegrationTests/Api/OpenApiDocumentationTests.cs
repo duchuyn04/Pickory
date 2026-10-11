@@ -141,6 +141,8 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
             builder.UseSetting("GHN_TOKEN", "test-ghn-token");
             builder.UseSetting("GHN_SHOP_ID", "test-ghn-shop");
             builder.UseSetting("GHN_WEBHOOK_SECRET", "test-ghn-webhook-secret");
+            // Production cũng dừng khi thiếu khóa SePay. Giá trị giả đủ để API khởi động, vì test không nhận webhook thật.
+            builder.UseSetting("SEPAY_WEBHOOK_API_KEY", "test-sepay-api-key");
         });
 
         var response = await productionFactory.CreateClient().GetAsync(path);

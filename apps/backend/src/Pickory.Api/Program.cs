@@ -1,11 +1,13 @@
 using Microsoft.OpenApi;
 using Pickory.Api;
 using Pickory.Api.Benchmark;
+using Pickory.Api.Deployment;
 using Pickory.Api.E2e;
 using Pickory.Api.Middleware;
 using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Catalog.Seeding;
+using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
 using Pickory.Modules.Shipping;
 using Pickory.Shared.Configuration;
@@ -51,8 +53,11 @@ if (isBenchmarkCommand)
     }
 }
 
-// Lệnh seed, benchmark và đồng bộ địa chỉ tự in kết quả và lỗi ra màn hình. Log JSON của EF Core sẽ làm loãng kết quả đó.
-if (isBenchmarkCommand || CatalogModule.IsCatalogSeedCommand(args) || ShippingModule.IsShippingCommand(args))
+// Lệnh seed, benchmark, đồng bộ địa chỉ và migration tự in kết quả và lỗi ra màn hình. Log JSON của EF Core sẽ làm loãng kết quả đó.
+if (isBenchmarkCommand
+    || CatalogModule.IsCatalogSeedCommand(args)
+    || ShippingModule.IsShippingCommand(args)
+    || DatabaseMigrationCommand.IsCommand(args))
 {
     builder.Logging.ClearProviders();
 }
@@ -79,6 +84,8 @@ builder.Services.AddAiGatewayModule(databaseConnectionString);
 builder.Services.AddCatalogModule(databaseConnectionString, config, builder.Environment.IsProduction());
 // Shipping cần biết môi trường để dừng production khi thiếu biến GHN.
 builder.Services.AddShippingModule(databaseConnectionString, config, builder.Environment.IsProduction());
+// Commerce cần biết môi trường để dừng production khi thiếu khóa webhook SePay.
+builder.Services.AddCommerceModule(databaseConnectionString, config, builder.Environment.IsProduction());
 
 // Tài liệu OpenAPI chỉ sinh ở Development. Các môi trường khác không đăng ký dịch vụ sinh tài liệu.
 if (builder.Environment.IsDevelopment())
@@ -123,6 +130,12 @@ if (ShippingModule.IsShippingCommand(args))
     return await ShippingModule.RunShippingCommandAsync(app.Services);
 }
 
+// Lệnh `db:migrate` áp migration rồi thoát. Lệnh không mở cổng mạng và không chạy worker nền.
+if (DatabaseMigrationCommand.IsCommand(args))
+{
+    return await DatabaseMigrationCommand.RunAsync(app.Services, Console.Out, Console.Error, CancellationToken.None);
+}
+
 // Lệnh `e2e:start` dựng lại DB E2E rồi chạy API như bình thường. Playwright chỉ thấy API sẵn sàng sau bước chuẩn bị.
 if (E2eStartup.IsCommand(args))
 {
@@ -150,6 +163,7 @@ app.MapIdentityEndpoints();
 app.MapAiGatewayEndpoints();
 app.MapCatalogEndpoints();
 app.MapShippingEndpoints();
+app.MapCommerceEndpoints();
 
 // Lệnh benchmark cần đủ route để đo `GET /api/products`, nên chạy sau khi route đã gắn.
 if (isBenchmarkCommand)

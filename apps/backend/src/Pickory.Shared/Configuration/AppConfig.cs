@@ -70,6 +70,9 @@ public record AppConfig
     // Bật test gọi sandbox GHN thật. Test thường không gọi GHN.
     public bool GhnLiveTests { get; init; }
 
+    // Khóa SePay gửi kèm webhook tiền về. Chuỗi rỗng nghĩa là chưa cấu hình, và production thiếu khóa thì API dừng.
+    public string SepayWebhookApiKey { get; init; } = string.Empty;
+
     // Có đủ bộ ba khóa thì dùng Cloudinary thật. `Load` đã chặn trường hợp chỉ có một phần.
     public bool HasCloudinary => CloudinaryCloudName.Length > 0;
 
@@ -227,6 +230,7 @@ public record AppConfig
             GhnShopId = (configuration["GHN_SHOP_ID"] ?? string.Empty).Trim(),
             GhnWebhookSecret = (configuration["GHN_WEBHOOK_SECRET"] ?? string.Empty).Trim(),
             GhnLiveTests = ReadZeroOrOneFlag(configuration, "GHN_LIVE_TESTS"),
+            SepayWebhookApiKey = (configuration["SEPAY_WEBHOOK_API_KEY"] ?? string.Empty).Trim(),
         };
     }
 

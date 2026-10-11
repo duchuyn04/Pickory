@@ -131,7 +131,13 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             // Test không gọi GHN thật, kể cả khi máy chạy test có đặt biến `GHN_*`. Biến môi trường thắng cấu hình trong bộ nhớ, nên phải thay `AppConfig` đã nạp.
             var loadedConfig = (AppConfig)services.Single(descriptor => descriptor.ServiceType == typeof(AppConfig)).ImplementationInstance!;
             services.RemoveAll<AppConfig>();
-            services.AddSingleton(loadedConfig with { GhnToken = string.Empty, GhnShopId = string.Empty, GhnWebhookSecret = string.Empty });
+            services.AddSingleton(loadedConfig with
+            {
+                GhnToken = string.Empty,
+                GhnShopId = string.Empty,
+                GhnWebhookSecret = string.Empty,
+                SepayWebhookApiKey = string.Empty,
+            });
 
             // `AddShippingModule` chọn client GHN theo `AppConfig` gốc, nên máy test có `GHN_TOKEN` vẫn dựng client thật. Factory thay `IGhnClient` bằng bản giả, giống `IImageStorage` bên dưới.
             services.RemoveAll<IGhnClient>();

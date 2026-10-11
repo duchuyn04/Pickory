@@ -34,6 +34,23 @@ internal static class ApplicationDatabaseSchema
 
     internal static readonly string[] ShippingEnums = ["ShipmentStatus", "ShipmentEventSource"];
 
+    // Bảng và enum của commerce cũng không có trong `reference-schema.sql`, nên phép so với file đó phải bỏ qua chúng.
+    internal static readonly string[] CommerceTables =
+    [
+        "cart_items", "carts", "commerce_settings", "order_items", "order_status_history", "orders",
+        "payment_transactions", "reviews", "saved_addresses"
+    ];
+
+    internal static readonly string[] CommerceEnums = ["OrderStatus", "PaymentStatus", "PaymentMethod"];
+
+    // Khóa metadata thuộc commerce có cùng dạng với khóa của shipping. Khớp theo ranh giới tên, không theo tiền tố.
+    internal static bool IsCommerceObject(string key)
+    {
+        return CommerceTables.Any(table => key.EndsWith($":public.{table}", StringComparison.Ordinal) ||
+                                           key.Contains($":public.{table}.", StringComparison.Ordinal)) ||
+               CommerceEnums.Any(name => key.EndsWith($":public.{name}", StringComparison.Ordinal));
+    }
+
     // Khóa metadata thuộc shipping có dạng `loại:public.tên` hoặc `loại:public.tên.phần`. Khớp theo ranh giới tên, không theo tiền tố.
     internal static bool IsShippingObject(string key)
     {
