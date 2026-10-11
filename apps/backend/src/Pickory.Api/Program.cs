@@ -1,6 +1,7 @@
 using Microsoft.OpenApi;
 using Pickory.Api;
 using Pickory.Api.Benchmark;
+using Pickory.Api.Deployment;
 using Pickory.Api.E2e;
 using Pickory.Api.Middleware;
 using Pickory.Modules.AiGateway;
@@ -51,8 +52,11 @@ if (isBenchmarkCommand)
     }
 }
 
-// Lệnh seed, benchmark và đồng bộ địa chỉ tự in kết quả và lỗi ra màn hình. Log JSON của EF Core sẽ làm loãng kết quả đó.
-if (isBenchmarkCommand || CatalogModule.IsCatalogSeedCommand(args) || ShippingModule.IsShippingCommand(args))
+// Lệnh seed, benchmark, đồng bộ địa chỉ và migration tự in kết quả và lỗi ra màn hình. Log JSON của EF Core sẽ làm loãng kết quả đó.
+if (isBenchmarkCommand
+    || CatalogModule.IsCatalogSeedCommand(args)
+    || ShippingModule.IsShippingCommand(args)
+    || DatabaseMigrationCommand.IsCommand(args))
 {
     builder.Logging.ClearProviders();
 }
@@ -121,6 +125,12 @@ if (CatalogModule.IsCatalogSeedCommand(args))
 if (ShippingModule.IsShippingCommand(args))
 {
     return await ShippingModule.RunShippingCommandAsync(app.Services);
+}
+
+// Lệnh `db:migrate` áp migration rồi thoát. Lệnh không mở cổng mạng và không chạy worker nền.
+if (DatabaseMigrationCommand.IsCommand(args))
+{
+    return await DatabaseMigrationCommand.RunAsync(app.Services, Console.Out, Console.Error, CancellationToken.None);
 }
 
 // Lệnh `e2e:start` dựng lại DB E2E rồi chạy API như bình thường. Playwright chỉ thấy API sẵn sàng sau bước chuẩn bị.

@@ -1,0 +1,30 @@
+# Context build là gốc repo. Loại file không cần để build nhanh hơn và không lộ secret vào image.
+
+# Secret ở máy dev không được vào image.
+.env
+.env.*
+!.env.example
+
+# Thư viện và kết quả build ở máy dev. Docker tự cài và tự build trong image.
+**/node_modules
+**/bin
+**/obj
+**/dist
+**/.dev-outbox
+**/playwright-report
+**/test-results
+**/coverage
+
+# Image không chạy test và không cần tài liệu.
+.git
+.claude
+.playwright-mcp
+apps/backend/tests
+apps/frontend/e2e
+docs
+spec
+tasks
+shop-retail
+docker
+*.docx
+*.pdf
