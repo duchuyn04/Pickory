@@ -27,11 +27,32 @@ Hai nền tảng cùng triển khai nhánh `main`. Render build lại API khi `a
 
 1. Tạo project mới trên Supabase.
 2. Chọn vùng Southeast Asia (Singapore).
-3. Ghi lại mật khẩu DB.
-4. Mở Connect trên trang project.
-5. Chọn Session pooler.
-6. Sao chép chuỗi kết nối dạng URI.
-7. Thêm `?sslmode=require` vào cuối chuỗi.
+3. Bỏ chọn Automatically expose new tables.
+4. Bỏ chọn Enable Data API.
+5. Ghi lại mật khẩu DB.
+6. Mở Connect trên trang project.
+7. Chọn tab Direct.
+8. Chọn Session pooler.
+9. Sao chép chuỗi kết nối dạng URI.
+10. Thêm `?sslmode=require` vào cuối chuỗi.
+
+Pickory không dùng Data API, vì API .NET kết nối thẳng tới Postgres. Data API tự tạo REST API công khai cho schema `public`, nơi có bảng `users`.
+
+### Thu hồi quyền của role `anon` và `authenticated`
+
+Chạy SQL sau trong SQL Editor của Supabase. Bỏ chọn Automatically expose new tables chưa đủ, vì Supabase vẫn cấp quyền qua default privileges của schema `public`.
+
+```sql
+BEGIN;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
+COMMIT;
+```
+
+SQL này chạy được trước hoặc sau migration. API .NET đăng nhập bằng `postgres`, là chủ sở hữu bảng, nên API không bị ảnh hưởng. `docs/deployment-walkthrough.md` có truy vấn kiểm tra quyền sau khi chạy.
 
 Chuỗi kết quả có dạng sau:
 
