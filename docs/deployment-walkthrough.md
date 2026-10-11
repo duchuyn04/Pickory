@@ -375,6 +375,59 @@ Response có cookie `pk_anon` với các thuộc tính `secure`, `samesite=lax` 
 
 Trang chủ hiện header và không có lỗi trong console. Phần nội dung trống, vì DB production chưa có danh mục và sản phẩm.
 
+## Phần 5: mở tài liệu API chỉ xem
+
+### Yêu cầu và quyết định cũ
+
+Yêu cầu: người khác xem được tài liệu Swagger trên production, nhưng chỉ xem.
+
+Trước thay đổi này, tài liệu chỉ có ở Development. `Program.cs` ghi lý do: tài liệu liệt kê cả route admin. Test `Documentation_InProduction_Returns404` giữ quyết định đó. Vì vậy, thay đổi cần một cờ bật rõ ràng, và mặc định vẫn tắt.
+
+### Cách làm
+
+Swagger UI có tùy chọn `SupportedSubmitMethods`. Danh sách rỗng làm trang ẩn nút "Try it out" và nút "Execute". Người xem vẫn đọc được route, tham số và schema.
+
+| Môi trường | `API_DOCS_ENABLED` | Kết quả |
+|---|---|---|
+| Development | Bất kỳ | Có tài liệu, có "Try it out" |
+| Production | Không đặt hoặc `0` | `/api/docs` trả 404 |
+| Production | `1` | Có tài liệu, chỉ xem |
+
+Các thay đổi trong code:
+
+- `AppConfig` đọc `API_DOCS_ENABLED` bằng `ReadZeroOrOneFlag`. Hàm này chỉ nhận `0` hoặc `1`, giống `GHN_LIVE_TESTS`.
+- `ApiDocumentation.SelectMode` chọn chế độ `Interactive`, `ReadOnly` hoặc không gắn tài liệu.
+- `ApiDocumentation.Map` đặt `SupportedSubmitMethods` rỗng ở chế độ `ReadOnly`.
+- `render.yaml` đặt `API_DOCS_ENABLED` bằng `"1"`.
+
+Chế độ chỉ xem là giới hạn của giao diện, không phải lớp bảo mật. Người biết route vẫn gọi API bằng `curl`. RBAC (Role-Based Access Control) vẫn chặn route admin khi người gọi không có quyền.
+
+### Kiểm tra trước khi deploy
+
+| Bộ test | Kết quả |
+|---|---|
+| Unit test | 943 test thành công |
+| Integration test | 1091 thành công, 10 bỏ qua (test gọi dịch vụ thật) |
+| Architecture test | 6 thành công |
+
+Integration test kiểm tra `index.js` của Swagger UI. Production có cờ chứa `"supportedSubmitMethods":[]`. Development không chứa chuỗi này.
+
+Integration test chạy trên DB riêng `pickory_test_docs`. DB test của nhánh Commerce có schema khác, nên dùng chung sẽ làm fixture từ chối reset DB. Lần chạy đầu đặt `DATABASE_URL` trùng với `TEST_DATABASE_URL`. Fixture từ chối chạy với lỗi "resolves to the DATABASE_URL development database". Lớp bảo vệ này chặn test xóa nhầm DB dev.
+
+### Kết quả trên production
+
+Render đồng bộ `render.yaml` sau khi `main` nhận commit `95c0296`. Render thêm biến `API_DOCS_ENABLED`, rồi build lại. Tài liệu xuất hiện sau khoảng 2 phút.
+
+| Kiểm tra | Kết quả |
+|---|---|
+| `GET /api/openapi/v1.json` | 200, tiêu đề `Pickory API`, 44 đường dẫn, `servers` là `/` |
+| `GET /api/docs` | 301, `Location: docs/index.html` |
+| `GET /api/docs/index.html` | 200 |
+| `index.js` | `"supportedSubmitMethods":[]` |
+| Trang Swagger trong trình duyệt | 58 thao tác, 0 nút "Try it out", 0 nút "Execute" |
+
+`Location` là đường dẫn tương đối. Trình duyệt ở lại domain `pickory.vercel.app`, không chuyển sang domain Render.
+
 ## Trạng thái hiện tại
 
 | Phần | Trạng thái |
@@ -382,4 +435,5 @@ Trang chủ hiện header và không có lỗi trong console. Phần nội dung 
 | Supabase | Đã tạo project `pickory`, đã có schema, đã thu hồi quyền của `anon` |
 | Render | Service `pickory-api` đang chạy tại `https://pickory-api.onrender.com` |
 | Vercel | Web đang chạy tại `https://pickory.vercel.app` |
+| Tài liệu API | Chỉ xem tại `https://pickory.vercel.app/api/docs` |
 | Dữ liệu | Chưa có tài khoản admin, danh mục và sản phẩm |
