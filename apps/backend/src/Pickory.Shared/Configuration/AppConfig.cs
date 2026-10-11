@@ -18,6 +18,9 @@ public record AppConfig
     // Chuỗi kết nối tới cơ sở dữ liệu PostgreSQL.
     public string DatabaseUrl { get; init; } = string.Empty;
 
+    // Số kết nối tối đa mà API mở tới DB. Null nghĩa là giữ mặc định của Npgsql (100 kết nối).
+    public int? DatabasePoolMax { get; init; }
+
     // Đường dẫn tới `index.html` đã build của SPA, nơi API chèn thẻ meta SEO cho `/p/{slug}` và `/c/{slug}`. Rỗng nghĩa là tắt.
     public string WebIndexHtmlPath { get; init; } = string.Empty;
 
@@ -209,6 +212,7 @@ public record AppConfig
             WebOrigin = webOrigin,
             ApiBaseUrl = apiBaseUrl,
             DatabaseUrl = databaseUrl,
+            DatabasePoolMax = ReadOptionalIntegerInRange(configuration, "DATABASE_POOL_MAX", 1, 100),
             WebIndexHtmlPath = (configuration["WEB_INDEX_HTML_PATH"] ?? string.Empty).Trim(),
             TrustProxy = trustProxy,
             GoogleClientId = string.IsNullOrWhiteSpace(googleClientId) ? "mock_google_client_id" : googleClientId,
@@ -249,6 +253,27 @@ public record AppConfig
         if (!isValid)
         {
             throw new InvalidOperationException($"Biến môi trường {key} phải là số hữu hạn không âm.");
+        }
+
+        return value;
+    }
+
+    // Biến tùy chọn. Rỗng nghĩa là không giới hạn thêm. Giá trị ngoài khoảng làm API dừng khi khởi động.
+    private static int? ReadOptionalIntegerInRange(IConfiguration configuration, string key, int minimum, int maximum)
+    {
+        var rawValue = configuration[key];
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return null;
+        }
+
+        var isValid = int.TryParse(rawValue.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var value)
+            && value >= minimum
+            && value <= maximum;
+        if (!isValid)
+        {
+            // Thông báo chỉ nêu tên biến và khoảng hợp lệ, không in lại giá trị đã nhập.
+            throw new InvalidOperationException($"Biến môi trường {key} phải là số nguyên từ {minimum} đến {maximum}.");
         }
 
         return value;

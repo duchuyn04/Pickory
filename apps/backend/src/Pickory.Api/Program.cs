@@ -76,7 +76,9 @@ builder.WebHost.ConfigureKestrel(options =>
 builder.Services.AddSharedInfrastructure();
 
 // Mỗi module tự đăng ký dữ liệu và dịch vụ. `Program.cs` không phụ thuộc vào phần bên trong module.
-var databaseConnectionString = PostgresConnectionString.Convert(config.DatabaseUrl);
+// Mọi module dùng chung một chuỗi kết nối, nên một giới hạn `DATABASE_POOL_MAX` áp cho cả API và worker nền.
+var databaseConnectionString = PostgresConnectionString.WithMaxPoolSize(
+    PostgresConnectionString.Convert(config.DatabaseUrl), config.DatabasePoolMax);
 builder.Services.AddIdentityModule(databaseConnectionString);
 builder.Services.AddAiGatewayModule(databaseConnectionString);
 // Catalog cần biết môi trường để dừng production khi thiếu khóa Cloudinary.
