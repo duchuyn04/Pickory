@@ -136,9 +136,9 @@ Quy ước:
 ### COM-UI7: Màn cấu hình commerce
 **Mô tả:** Màn `/admin/commerce/settings` trong back-office. Mục menu chỉ hiện với người có `commerce-settings:manage`.
 **Tiêu chí nghiệm thu:**
-- [ ] Lưu thành công hiện thông báo. Lỗi hiện dưới đúng ô bằng `FieldError`
-- [ ] Người thiếu quyền không thấy menu. Mở thẳng URL thấy trang không đủ quyền
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Lưu thành công hiện thông báo. Lỗi hiện dưới đúng ô bằng `FieldError`
+- [x] Người thiếu quyền không thấy menu. Mở thẳng URL thấy trang không đủ quyền
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** COM-06 · **Quy mô:** S
 

@@ -105,6 +105,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         requiredPermission: 'shipping-settings:manage',
       },
       {
+        label: 'Cấu hình bán hàng',
+        path: '/admin/commerce/settings',
+        icon: 'receipt',
+        requiredPermission: 'commerce-settings:manage',
+      },
+      {
         label: 'Nhật ký thao tác',
         path: '/admin/audit-logs',
         icon: 'history',

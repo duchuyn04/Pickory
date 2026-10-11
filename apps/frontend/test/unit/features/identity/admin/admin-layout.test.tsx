@@ -107,6 +107,7 @@ describe('AdminLayout', () => {
       'Quản lý Role',
       'Cấu hình AI',
       'Vận chuyển',
+      'Cấu hình bán hàng',
       'Nhật ký thao tác',
     ]);
   });
