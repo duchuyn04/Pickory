@@ -24,7 +24,7 @@ import { PrivacySettingsPage } from './features/identity/customer/privacy-settin
 import { RegisterPage } from './features/identity/customer/register-page';
 import { ResetPasswordPage } from './features/identity/customer/reset-password-page';
 import { VerifyEmailPage } from './features/identity/customer/verify-email-page';
-import { HealthPage } from './shared/health-page';
+import { HomePage } from './features/home/home-page';
 import { Header } from './shared/header';
 // Tách trình soạn mô tả khỏi bundle trang khách, chỉ tải khi nhân viên mở trang sản phẩm.
 const ProductsPage = lazy(() =>
@@ -63,7 +63,7 @@ export function App() {
     <>
       <Routes>
         <Route element={<CustomerLayout />}>
-          <Route path="/" element={<HealthPage />} />
+          <Route path="/" element={<HomePage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/me" element={<AccountPage />} />

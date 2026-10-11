@@ -47,7 +47,7 @@ afterEach(async () => {
   vi.unstubAllGlobals();
 });
 
-// Ghi lại mọi request theo dạng `METHOD đường-dẫn`. `GET /api/me` trả actor đã chọn, mọi request khác trả thành công.
+// Ghi lại mọi request theo dạng `METHOD đường-dẫn`. `GET /api/me` trả actor đã chọn, `GET /api/categories` trả mảng rỗng, request khác trả thành công.
 function stubFetch(actor: ActorData) {
   vi.stubGlobal(
     'fetch',
@@ -56,6 +56,10 @@ function stubFetch(actor: ActorData) {
       requests.push(`${method} ${String(input)}`);
       if (method === 'GET' && String(input) === '/api/me') {
         return new Response(JSON.stringify({ data: actor }));
+      }
+      // Đăng ký xong đưa khách về trang chủ. Trang chủ cần cây danh mục dạng mảng.
+      if (method === 'GET' && String(input) === '/api/categories') {
+        return new Response(JSON.stringify({ data: [] }));
       }
       return new Response(JSON.stringify({ data: { success: true, userKind: 'customer' } }), {
         status: method === 'POST' ? 201 : 200,
