@@ -1,3 +1,5 @@
+using Npgsql;
+using Pickory.Shared.Persistence;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Routing;
@@ -34,12 +36,14 @@ public static class AiGatewayModule
     {
         // Dùng cùng tùy chọn với migration để ứng dụng đọc đúng lịch sử migration.
         // Tùy chọn là singleton, nên gateway singleton tạo được context riêng cho mỗi thao tác qua factory.
+        // Module không có enum. Vẫn đăng ký data source chung, để cả bốn module dùng một pool kết nối.
+        services.AddSharedDataSource(databaseConnectionString, _ => { });
         services.AddDbContext<AiGatewayDbContext>(
-            options => AiGatewayDbContext.ConfigureOptions(options, databaseConnectionString),
+            (provider, options) => AiGatewayDbContext.ConfigureOptions(options, provider.GetRequiredService<NpgsqlDataSource>()),
             contextLifetime: ServiceLifetime.Scoped,
             optionsLifetime: ServiceLifetime.Singleton);
-        services.AddDbContextFactory<AiGatewayDbContext>(options =>
-            AiGatewayDbContext.ConfigureOptions(options, databaseConnectionString));
+        services.AddDbContextFactory<AiGatewayDbContext>((provider, options) =>
+            AiGatewayDbContext.ConfigureOptions(options, provider.GetRequiredService<NpgsqlDataSource>()));
 
         // Test thay đồng hồ hệ thống bằng đồng hồ giả. `TryAdd` giữ bản đã đăng ký trước.
         services.TryAddSingleton(TimeProvider.System);

@@ -133,7 +133,7 @@ Vercel đọc lệnh cài gói, lệnh build và thư mục kết quả từ `ve
 
 Supabase Session pooler gói free cho 15 kết nối cùng lúc. Npgsql mặc định mở tới 100 kết nối, nên trang chủ gửi nhiều request song song có thể vượt giới hạn.
 
-`DATABASE_POOL_MAX` giới hạn số kết nối của API. Request thừa xếp hàng thay vì mở kết nối mới. Giá trị `10` để lại 5 kết nối cho lệnh chạy từ máy dev.
+`DATABASE_POOL_MAX` giới hạn số kết nối của cả tiến trình API. Mọi module và worker nền dùng chung một pool. Request thừa xếp hàng thay vì mở kết nối mới. Giá trị `10` để lại 5 kết nối cho lệnh chạy từ máy dev.
 
 API dừng khi khởi động nếu `DATABASE_POOL_MAX` không phải số nguyên từ 1 đến 100. Để trống biến này thì API dùng mặc định của Npgsql.
 

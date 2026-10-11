@@ -28,7 +28,8 @@ services:
       # Các biến có `sync: false` không có giá trị trong repo. Render hỏi giá trị khi tạo Blueprint.
       - key: DATABASE_URL
         sync: false
-      # Supabase Session pooler gói free cho 15 kết nối cùng lúc. API giữ tối đa 10, để lại 5 cho lệnh chạy từ máy dev.
+      # Supabase Session pooler gói free cho 15 kết nối cùng lúc. Giới hạn này áp cho cả tiến trình API, gồm mọi module và worker nền.
+      # API giữ tối đa 10, để lại 5 cho lệnh chạy từ máy dev.
       - key: DATABASE_POOL_MAX
         value: "10"
       # Hai biến này là domain Vercel. Cookie phiên và callback Google phải ở cùng origin với web.

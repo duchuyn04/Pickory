@@ -1,3 +1,5 @@
+using Npgsql;
+using Pickory.Shared.Persistence;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -28,8 +30,10 @@ public static class ShippingModule
         GhnConfigurationCheck.EnsureConfigured(config, isProduction);
 
         // Dùng cùng tùy chọn với migration để ứng dụng đọc đúng enum và lịch sử. Ứng dụng không tự chạy migration khi khởi động.
-        services.AddDbContext<ShippingDbContext>(options =>
-            ShippingDbContext.ConfigureOptions(options, databaseConnectionString));
+        // Enum của module vào data source chung. Mọi module chia nhau một pool kết nối, nên `DATABASE_POOL_MAX` áp cho cả tiến trình.
+        services.AddSharedDataSource(databaseConnectionString, ShippingDbContext.MapEnums);
+        services.AddDbContext<ShippingDbContext>((provider, options) =>
+            ShippingDbContext.ConfigureOptions(options, provider.GetRequiredService<NpgsqlDataSource>()));
 
         // Client GHN thật khi có token, client giả khi thiếu. Module khác không thấy `IGhnClient` vì kiểu này là `internal`.
         services.AddGhnClient(config);

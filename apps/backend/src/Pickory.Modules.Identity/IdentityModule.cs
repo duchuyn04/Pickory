@@ -1,3 +1,5 @@
+using Npgsql;
+using Pickory.Shared.Persistence;
 using Microsoft.AspNetCore.Http;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
@@ -44,8 +46,10 @@ public static class IdentityModule
     public static IServiceCollection AddIdentityModule(this IServiceCollection services, string databaseConnectionString)
     {
         // Dùng cùng tùy chọn với migration để ứng dụng đọc đúng enum và lịch sử. Ứng dụng không tự chạy migration khi khởi động.
-        services.AddDbContext<IdentityDbContext>(options =>
-            IdentityDbContext.ConfigureOptions(options, databaseConnectionString));
+        // Enum của module vào data source chung. Mọi module chia nhau một pool kết nối, nên `DATABASE_POOL_MAX` áp cho cả tiến trình.
+        services.AddSharedDataSource(databaseConnectionString, IdentityDbContext.MapEnums);
+        services.AddDbContext<IdentityDbContext>((provider, options) =>
+            IdentityDbContext.ConfigureOptions(options, provider.GetRequiredService<NpgsqlDataSource>()));
 
         // Test thay đồng hồ hệ thống bằng đồng hồ giả. `TryAdd` giữ bản đã đăng ký trước.
         services.TryAddSingleton(TimeProvider.System);

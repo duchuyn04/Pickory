@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Pickory.Modules.Shipping.Contracts.Shipments;
 using Pickory.Modules.Shipping.Entities;
 using Pickory.Shared.Persistence;
@@ -25,6 +26,25 @@ public sealed class ShippingDbContext(DbContextOptions<ShippingDbContext> option
             postgres.MapEnum<ShipmentStatus>("ShipmentStatus");
             postgres.MapEnum<ShipmentEventSource>("ShipmentEventSource");
         });
+    }
+
+    // Dùng data source chung của API, nên mọi module chia nhau một pool kết nối. Ánh xạ enum của data source nằm ở `MapEnums`.
+    public static void ConfigureOptions(DbContextOptionsBuilder options, NpgsqlDataSource dataSource)
+    {
+        options.UseNpgsql(dataSource, postgres =>
+        {
+            postgres.MigrationsHistoryTable("__EFMigrationsHistory", "ef_shipping");
+            // EF Core cần ánh xạ enum riêng cho kiểu của nó. Thiếu bước này EF đọc enum như số nguyên.
+            postgres.MapEnum<ShipmentStatus>("ShipmentStatus");
+            postgres.MapEnum<ShipmentEventSource>("ShipmentEventSource");
+        });
+    }
+
+    // Ánh xạ enum của module vào data source chung. Tên và nhãn phải khớp enum đã có trong DB.
+    public static void MapEnums(NpgsqlDataSourceBuilder builder)
+    {
+        builder.MapEnum<ShipmentStatus>("ShipmentStatus");
+        builder.MapEnum<ShipmentEventSource>("ShipmentEventSource");
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)

@@ -1,3 +1,5 @@
+using Npgsql;
+using Pickory.Shared.Persistence;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Builder;
 using FluentValidation;
@@ -30,8 +32,10 @@ public static class CatalogModule
         this IServiceCollection services, string databaseConnectionString, AppConfig config, bool isProduction)
     {
         // Dùng cùng tùy chọn với migration để ứng dụng đọc đúng enum và lịch sử. Ứng dụng không tự chạy migration khi khởi động.
-        services.AddDbContext<CatalogDbContext>(options =>
-            CatalogDbContext.ConfigureOptions(options, databaseConnectionString));
+        // Enum của module vào data source chung. Mọi module chia nhau một pool kết nối, nên `DATABASE_POOL_MAX` áp cho cả tiến trình.
+        services.AddSharedDataSource(databaseConnectionString, CatalogDbContext.MapEnums);
+        services.AddDbContext<CatalogDbContext>((provider, options) =>
+            CatalogDbContext.ConfigureOptions(options, provider.GetRequiredService<NpgsqlDataSource>()));
         // Đăng ký đồng hồ thời gian hệ thống và các dịch vụ quản lý danh mục, thương hiệu, sản phẩm.
         services.TryAddSingleton(TimeProvider.System);
         services.AddValidatorsFromAssemblyContaining<CreateCategoryRequestValidator>();
