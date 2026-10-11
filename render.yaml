@@ -7,14 +7,13 @@ services:
     dockerfilePath: ./apps/backend/Dockerfile
     dockerContext: .
     branch: main
-    # Gói free ngủ sau 15 phút không có request. Worker nền dừng và webhook GHN chờ khởi động lại.
-    plan: starter
+    # Gói free dùng cho giai đoạn demo. Service ngủ sau 15 phút không có request, nên worker nền dừng và webhook GHN chờ khởi động lại.
+    plan: free
     # Đặt cùng vùng với project Supabase để giảm độ trễ tới DB.
     region: singapore
     healthCheckPath: /api/health
-    # Áp migration trên DB trước khi bản mới nhận request. Migration lỗi thì Render hủy lần triển khai và giữ bản cũ.
-    # Pre-deploy chỉ có ở gói trả phí. Gói free phải chạy migration từ máy dev.
-    preDeployCommand: dotnet Pickory.Api.dll db:migrate
+    # Gói free không có pre-deploy. Chạy `db:migrate` từ máy dev trước khi đẩy code có migration mới.
+    # Khi chuyển sang gói trả phí, thêm dòng `preDeployCommand: dotnet Pickory.Api.dll db:migrate`.
     autoDeployTrigger: commit
     # Thay đổi ở web cũng phải build lại API. `index.html` trong image phải khớp asset trên Vercel.
     buildFilter:

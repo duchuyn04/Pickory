@@ -79,7 +79,7 @@ Mã hóa ký tự đặc biệt trong mật khẩu theo dạng URL, ví dụ `@`
 
 Đặt tạm `WEB_ORIGIN` và `API_BASE_URL` bằng domain Vercel dự kiến. Sửa lại hai biến này sau bước 3 nếu domain khác.
 
-`render.yaml` chọn gói `starter`. Gói free ngủ sau 15 phút không có request. Khi service ngủ, các worker nền dừng:
+`render.yaml` chọn gói `free` cho giai đoạn demo. Gói free ngủ sau 15 phút không có request. Khi service ngủ, các worker nền dừng:
 
 - `ShipmentStatusSyncWorker`
 - `AddressSyncWorker`
@@ -89,15 +89,15 @@ Webhook GHN gọi vào service đang ngủ phải chờ service khởi động l
 
 ### Migration khi triển khai
 
-Render chạy `dotnet Pickory.Api.dll db:migrate` trước mỗi lần triển khai, theo `preDeployCommand` trong `render.yaml`. Lệnh áp migration của mọi module theo thứ tự trong `DatabaseMigrationCommand`.
+Gói free không có pre-deploy, nên Render không tự chạy migration. Chạy `db:migrate` từ máy dev trước khi đẩy code có migration mới lên `main`. Làm theo phần "Chạy lệnh trên DB production từ máy dev" ở bước 6.
 
-- Lệnh thành công: Render chuyển request sang bản mới.
-- Lệnh lỗi: Render hủy lần triển khai. Bản API cũ tiếp tục chạy.
-- Log của lần triển khai ghi tên module lỗi, ví dụ `Migration Catalog thất bại: ...`.
+Đẩy code trước khi chạy migration làm API mới đọc bảng chưa tồn tại. Migration của Pickory chỉ thêm đối tượng mới, nên bản API cũ vẫn chạy được trên schema mới.
+
+Lệnh `db:migrate` áp migration của mọi module theo thứ tự trong `DatabaseMigrationCommand`. Lệnh lỗi trả mã 1 và ghi tên module lỗi, ví dụ `Migration Catalog thất bại: ...`.
 
 Không bật extension `vector` trên Dashboard của Supabase. Supabase đặt extension đó vào schema `extensions`. Migration AiGateway tạo extension trong schema `public`.
 
-Pre-deploy chỉ có ở gói trả phí. Khi dùng gói free, xóa `preDeployCommand` khỏi `render.yaml`. Sau đó chạy `db:migrate` từ máy dev theo phần "Chạy lệnh trên DB production từ máy dev" ở bước 6.
+Khi chuyển sang gói trả phí, thêm `preDeployCommand: dotnet Pickory.Api.dll db:migrate` vào `render.yaml`. Render sẽ chạy migration trước mỗi lần triển khai. Migration lỗi thì Render hủy lần triển khai, và bản API cũ tiếp tục chạy.
 
 ## Bước 3: tạo web trên Vercel
 
@@ -151,7 +151,7 @@ Dockerfile đã đặt `ASPNETCORE_ENVIRONMENT`, `WEB_INDEX_HTML_PATH`, `PICKORY
 
 ## Bước 6: tạo tài khoản admin đầu tiên
 
-Tạo admin sau khi lần triển khai đầu thành công. Lúc đó migration đã tạo bảng.
+Tạo admin sau khi `db:migrate` chạy xong. Lệnh tạo admin ghi vào bảng mà migration tạo.
 
 ### Chạy lệnh trên DB production từ máy dev
 
@@ -162,9 +162,12 @@ Giữ chuỗi kết nối Supabase trong biến môi trường của terminal. K
 1. Mở terminal.
 2. Đặt biến `DATABASE_URL` của terminal bằng chuỗi Session pooler ở bước 1.
 3. Mở thư mục `apps/backend/src`.
-4. Chạy `dotnet run --project Pickory.Api -- identity:seed`.
-5. Chạy `dotnet run --project Pickory.Api -- identity:create-admin --email <email> --password <mật khẩu>`.
-6. Đóng terminal.
+4. Chạy `dotnet run --project Pickory.Api -- db:migrate`.
+5. Chạy `dotnet run --project Pickory.Api -- identity:seed`.
+6. Chạy `dotnet run --project Pickory.Api -- identity:create-admin --email <email> --password <mật khẩu>`.
+7. Đóng terminal.
+
+Bỏ qua bước 5 và bước 6 khi chỉ cần áp migration mới.
 
 Trong PowerShell, đặt biến bằng `$env:DATABASE_URL = '<chuỗi kết nối>'`. Trong Bash, đặt biến bằng `export DATABASE_URL='<chuỗi kết nối>'`.
 
@@ -201,4 +204,4 @@ Request gửi thẳng tới domain Render chỉ đi qua một proxy. Người g�
 
 - Dự án chưa có dịch vụ gửi thư thật. `DevOutboxEmailSender` ghi thư vào `/tmp/pickory-outbox` trong container. Người dùng không nhận được thư đăng ký và thư đặt lại mật khẩu.
 - Supabase gói free tạm dừng project sau 7 ngày không hoạt động.
-- Migration chỉ tự chạy ở gói trả phí của Render. Ở gói free, quên chạy `db:migrate` sau khi `main` có migration mới thì API lỗi khi đọc bảng mới.
+- Gói free của Render không tự chạy migration. Quên chạy `db:migrate` trước khi đẩy migration mới thì API lỗi khi đọc bảng mới.
