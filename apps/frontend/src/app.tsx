@@ -24,6 +24,7 @@ import { PrivacySettingsPage } from './features/identity/customer/privacy-settin
 import { RegisterPage } from './features/identity/customer/register-page';
 import { ResetPasswordPage } from './features/identity/customer/reset-password-page';
 import { VerifyEmailPage } from './features/identity/customer/verify-email-page';
+import { CartPage } from './features/commerce/customer/cart-page';
 import { HomePage } from './features/home/home-page';
 import { Header } from './shared/header';
 // Tách trình soạn mô tả khỏi bundle trang khách, chỉ tải khi nhân viên mở trang sản phẩm.
@@ -74,6 +75,7 @@ export function App() {
           <Route path="/c/:slug" element={<CategoryPage />} />
           <Route path="/p/:slug" element={<ProductPage />} />
           <Route path="/compare" element={<ComparePage />} />
+          <Route path="/cart" element={<CartPage />} />
         </Route>
         <Route path="/admin/login" element={<StaffLoginPage />} />
         <Route path="/admin" element={<AdminLayout />}>

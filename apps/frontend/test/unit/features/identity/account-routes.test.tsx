@@ -61,6 +61,20 @@ function stubFetch(actor: ActorData) {
       if (method === 'GET' && String(input) === '/api/categories') {
         return new Response(JSON.stringify({ data: [] }));
       }
+      // Header có mini cart nên mọi trang đều đọc giỏ. Giỏ trống đúng dạng của API.
+      if (method === 'GET' && String(input) === '/api/cart') {
+        return new Response(
+          JSON.stringify({
+            data: {
+              items: [],
+              subtotal: 0,
+              hasUnavailableItems: false,
+              maxQuantityPerSku: 5,
+              maxCartLines: 20,
+            },
+          }),
+        );
+      }
       // Banner và các lưới sản phẩm của trang chủ cần dữ liệu đúng dạng. Test này không kiểm sản phẩm,
       // nên API sản phẩm trả 404: banner bỏ máy không tìm thấy, các lưới hiện lỗi thay vì đọc dữ liệu rỗng.
       if (method === 'GET' && String(input).startsWith('/api/products')) {

@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -43,10 +44,15 @@ function LocationProbe() {
 async function renderProduct(product: ProductDetail, url = '/p/laptop-1') {
   await act(async () =>
     root.render(
-      <MemoryRouter initialEntries={[url]}>
-        <ProductView product={product} />
-        <LocationProbe />
-      </MemoryRouter>,
+      // Nút thêm giỏ dùng TanStack Query, nên trang sản phẩm cần có `QueryClientProvider`.
+      <QueryClientProvider
+        client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
+      >
+        <MemoryRouter initialEntries={[url]}>
+          <ProductView product={product} />
+          <LocationProbe />
+        </MemoryRouter>
+      </QueryClientProvider>,
     ),
   );
 }
@@ -194,13 +200,20 @@ describe('ProductView: trạng thái đặc biệt', () => {
     expect(cartButton()?.disabled).toBe(true);
   });
 
-  it('nút thêm giỏ luôn tắt kèm chú thích Sắp có', async () => {
+  it('nút thêm giỏ dùng được với SKU còn hàng và không còn chú thích Sắp có', async () => {
     await renderProduct(buildProductDetail());
+    expect(cartButton()?.disabled).toBe(false);
+    expect(container.textContent).not.toContain('Sắp có');
+  });
+
+  it('nút thêm giỏ tắt khi SKU đang chọn hết hàng', async () => {
+    await renderProduct(buildProductDetail(), '/p/laptop-1?sku=sku-black-512');
     expect(cartButton()?.disabled).toBe(true);
-    expect(container.textContent).toContain('Sắp có');
-    const describedBy = cartButton()?.getAttribute('aria-describedby');
-    expect(describedBy).toBeTruthy();
-    expect(document.getElementById(describedBy ?? '')?.textContent).toBe('Sắp có');
+  });
+
+  it('nút thêm giỏ tắt khi sản phẩm ngừng kinh doanh', async () => {
+    await renderProduct(buildProductDetail({ status: 'discontinued' }));
+    expect(cartButton()?.disabled).toBe(true);
   });
 
   it('không có ảnh nào thì hiện khung giữ chỗ', async () => {

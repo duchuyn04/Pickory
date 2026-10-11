@@ -1,6 +1,7 @@
 import { Link, useSearchParams } from 'react-router-dom';
 import { Icon } from '../../../shared/icons';
 import type { ProductDetail, ProductSkuInfo } from './catalog-api';
+import { AddToCartButton } from '../../commerce/customer/add-to-cart-button';
 import { CompareControl } from './compare-control';
 import { DescriptionView } from './description-view';
 import { selectGalleryImages } from './gallery-images';
@@ -136,18 +137,12 @@ export function ProductView({ product }: { product: ProductDetail }) {
           {isDiscontinued && <p className="muted small">Sản phẩm đã ngừng kinh doanh.</p>}
 
           <div className="product-actions">
-            {/* Nút luôn tắt tới khi module `commerce` có giỏ hàng (Open Question 4). */}
-            <button
-              type="button"
-              className="btn btn-primary btn-block"
-              aria-describedby="cart-note"
-              disabled
-            >
-              Thêm vào giỏ
-            </button>
-            <p id="cart-note" className="muted small">
-              Sắp có
-            </p>
+            {/* `key` theo SKU: đổi biến thể thì xác nhận và lỗi của lần thêm trước được xóa. */}
+            <AddToCartButton
+              key={selectedSku?.id ?? 'no-sku'}
+              sku={selectedSku}
+              isDiscontinued={isDiscontinued}
+            />
             <CompareControl categoryId={product.category.id} productId={product.id} />
           </div>
 

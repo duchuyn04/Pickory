@@ -691,9 +691,9 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await expect(compareCount).toHaveText('Danh sách so sánh: 0/4');
     await expect(compareButton).toHaveAttribute('aria-pressed', 'false');
 
-    // Nút giỏ luôn tắt tới khi có module commerce.
-    await expect(page.getByRole('button', { name: 'Thêm vào giỏ' })).toBeDisabled();
-    await expect(page.getByText('Sắp có')).toBeVisible();
+    // COM-UI1 đã bật nút giỏ cho SKU còn hàng và bỏ chú thích "Sắp có".
+    await expect(page.getByRole('button', { name: 'Thêm vào giỏ' })).toBeEnabled();
+    await expect(page.getByText('Sắp có')).toHaveCount(0);
     expect(issues).toEqual([]);
   });
 });

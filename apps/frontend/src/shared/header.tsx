@@ -1,6 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { MiniCart } from '../features/commerce/customer/mini-cart';
 import { useActor } from '../features/identity/hooks/use-actor';
 import { apiRequest } from './api';
 import { Icon } from './icons';
@@ -82,6 +83,9 @@ export function Header() {
               </Link>
             </>
           )}
+
+          {/* Giỏ nằm cuối thanh thao tác, nên panel mở ra bám mép phải của màn hình. */}
+          <MiniCart />
         </div>
       </div>
 

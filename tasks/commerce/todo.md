@@ -113,12 +113,12 @@ Quy ước:
 ### COM-UI1: Giỏ hàng và nút thêm giỏ
 **Mô tả:** Mini cart trên header và trang `/cart` trong `apps/frontend/src/features/commerce/customer/`. Bật nút "Thêm vào giỏ" ở trang sản phẩm, thay cho nút tắt "Sắp có" (Open Question 4 của `tasks/catalog/plan.md`).
 **Tiêu chí nghiệm thu:**
-- [ ] Thêm, đổi số lượng, xóa cập nhật mini cart và trang giỏ không cần tải lại trang
-- [ ] Dòng không mua được hiện nhãn lý do. Nút sang checkout tắt khi giỏ có dòng như vậy
-- [ ] Lỗi `CART_LIMIT_EXCEEDED` hiện thông báo tiếng Việt cạnh dòng hàng
-- [ ] Giá hiện theo định dạng VND
-- [ ] Dùng được bằng bàn phím. Ô số lượng có `label`
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Thêm, đổi số lượng, xóa cập nhật mini cart và trang giỏ không cần tải lại trang
+- [x] Dòng không mua được hiện nhãn lý do. Nút sang checkout tắt khi giỏ có dòng như vậy
+- [x] Lỗi `CART_LIMIT_EXCEEDED` hiện thông báo tiếng Việt cạnh dòng hàng
+- [x] Giá hiện theo định dạng VND
+- [x] Dùng được bằng bàn phím. Ô số lượng có `label`
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** COM-04 · **Quy mô:** M
 

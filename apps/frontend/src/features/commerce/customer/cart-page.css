@@ -1,0 +1,244 @@
+/*
+ * Trang giỏ hàng của khách. Khung trang, nút, ô nhập và thông báo lỗi dùng lại lớp chung
+ * của `category-page.css` và `components.css`.
+ */
+
+.cart-page h1 {
+  margin: var(--space-3) 0 var(--space-4);
+  font-size: var(--text-title);
+  font-weight: 700;
+}
+
+/* Hai cột: danh sách dòng bên trái, tổng tiền bên phải. Cột nhận `min-width: 0` để dòng dài không đẩy trang tràn ngang. */
+.cart-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.cart-lines {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Mỗi dòng là lưới: ảnh, thông tin, số lượng, thành tiền, nút xóa. Thông báo lỗi nằm hàng riêng dưới cùng. */
+.cart-line {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto 120px auto;
+  gap: var(--space-3) var(--space-4);
+  align-items: center;
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.cart-line:last-child {
+  border-bottom: 0;
+}
+
+.cart-line .cart-line-image {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-control);
+  object-fit: contain;
+}
+
+.cart-line-main {
+  min-width: 0;
+}
+
+.cart-line-main p {
+  margin: 0;
+}
+
+.cart-line-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.cart-line-name a {
+  color: var(--color-ink);
+  text-decoration: none;
+}
+
+.cart-line-name a:hover {
+  color: var(--color-brand);
+}
+
+.cart-line-options,
+.cart-line-price {
+  font-size: var(--text-sm);
+}
+
+.cart-line-price {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  margin-top: var(--space-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Nhãn lý do dùng màu lỗi kèm chữ đậm, nên không chỉ dựa vào màu để truyền đạt. */
+.cart-line-reason {
+  margin-top: var(--space-1);
+  color: var(--color-danger);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.quantity-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.quantity-stepper input {
+  width: 56px;
+  min-height: 38px;
+  padding: 0 var(--space-2);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.quantity-stepper input:focus-visible {
+  border-color: var(--color-focus);
+}
+
+.quantity-stepper .btn {
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  font-size: var(--text-md);
+}
+
+.cart-line-total {
+  margin: 0;
+  color: var(--color-price);
+  font-weight: 800;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dòng không mua được không nằm trong tạm tính, nên thành tiền mờ đi để không bị đọc nhầm là phải trả. */
+.cart-line-total-muted {
+  color: var(--color-ink-muted);
+  font-weight: 600;
+  text-decoration: line-through;
+}
+
+.cart-line-alert {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.cart-summary {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.cart-summary p {
+  margin: 0;
+}
+
+.cart-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.cart-summary-row strong {
+  color: var(--color-price);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+.cart-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-5);
+}
+
+.cart-empty h2,
+.cart-empty p {
+  margin: 0;
+}
+
+/*
+ * Màn hẹp: tóm tắt xuống dưới danh sách, mỗi dòng giỏ gọn hai hàng.
+ * Hàng trên có ảnh, tên và nút xóa ở góc phải, hàng dưới có ô số lượng bên trái và thành tiền căn phải.
+ */
+@media (max-width: 767px) {
+  .cart-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .cart-summary {
+    position: static;
+  }
+
+  .cart-line {
+    grid-template-columns: 72px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'image main remove'
+      'quantity quantity total'
+      'alert alert alert';
+    gap: var(--space-3);
+    align-items: start;
+  }
+
+  .cart-line .cart-line-image {
+    grid-area: image;
+    width: 72px;
+    height: 72px;
+  }
+
+  .cart-line-main {
+    grid-area: main;
+  }
+
+  .cart-line-remove {
+    grid-area: remove;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .cart-line-quantity {
+    grid-area: quantity;
+    align-self: center;
+  }
+
+  .cart-line-total {
+    grid-area: total;
+    align-self: center;
+  }
+
+  .cart-line-alert {
+    grid-area: alert;
+  }
+
+  /* Vùng bấm của nút tăng giảm không nhỏ hơn 40 px để dùng được bằng ngón tay. */
+  .quantity-stepper .btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .quantity-stepper input {
+    min-height: 40px;
+  }
+}

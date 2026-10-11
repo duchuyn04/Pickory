@@ -1,0 +1,7 @@
+/* Xác nhận sau khi thêm giỏ: chữ đậm màu thành công, để khách nhận ra mà không cần nhìn badge trên header. */
+.product-cart-added {
+  margin: 0;
+  color: var(--color-success);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
