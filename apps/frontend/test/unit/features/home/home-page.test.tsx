@@ -67,7 +67,8 @@ function listResponse(items: ProductListItem[], total = items.length): ProductLi
 }
 
 interface FakeApi {
-  categories?: CategoryNode[] | 'error';
+  // `'pending'` giữ request cây danh mục không bao giờ trả về, để kiểm trạng thái đang tải.
+  categories?: CategoryNode[] | 'error' | 'pending';
   // Danh mục có giá trị `'error'` thì dải sản phẩm của danh mục đó trả lỗi.
   railItems?: Record<string, ProductListItem[] | 'error'>;
 }
@@ -77,6 +78,9 @@ function stubApi({ categories = allCategories, railItems = {} }: FakeApi) {
   const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
     const url = new URL(String(input), 'http://localhost');
     if (url.pathname === '/api/categories') {
+      if (categories === 'pending') {
+        return new Promise<Response>(() => {});
+      }
       if (categories === 'error') {
         return Response.json(
           { error: { code: 'INTERNAL', message: 'Lỗi máy chủ.' } },
@@ -198,6 +202,18 @@ describe('HomePage: nội dung theo catalog', () => {
       'Không tải được sản phẩm laptop.',
     );
     expect(container.querySelectorAll('.rail .product-card')).toHaveLength(4);
+  });
+
+  it('không hỏi giá sản phẩm khi cây danh mục còn đang tải', async () => {
+    const fetchMock = stubApi({ categories: 'pending' });
+    await renderPage();
+
+    // Danh mục trong cấu hình banner có thể không tồn tại. Hỏi giá sớm sẽ nhận 404 từ API.
+    const productRequests = fetchMock.mock.calls.filter(([url]) =>
+      String(url).startsWith('/api/products'),
+    );
+    expect(productRequests).toHaveLength(0);
+    expect(container.querySelectorAll('.side-banner-skeleton')).toHaveLength(2);
   });
 
   it('báo lỗi khi không tải được danh mục và cho thử lại', async () => {

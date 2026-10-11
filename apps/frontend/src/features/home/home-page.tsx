@@ -51,13 +51,7 @@ export function HomePage() {
             <HeroCarousel slides={heroSlides} />
           )}
         </div>
-        {sideBanners.length > 0 && (
-          <div className="home-hero-side">
-            {sideBanners.map((banner) => (
-              <SideBanner key={banner.categorySlug} banner={banner} />
-            ))}
-          </div>
-        )}
+        <SideBanners banners={sideBanners} isPending={categoriesQuery.isPending} />
       </div>
 
       {categoriesQuery.isError && (
@@ -113,6 +107,33 @@ function CategoryMenu({ categories, isPending }: CategoryMenuProps) {
         ))}
       </ul>
     </nav>
+  );
+}
+
+interface SideBannersProps {
+  banners: SideBannerContent[];
+  isPending: boolean;
+}
+
+function SideBanners({ banners, isPending }: SideBannersProps) {
+  // Chờ cây danh mục trước khi hỏi giá. Banner của danh mục không tồn tại sẽ làm API trả 404.
+  if (isPending) {
+    return (
+      <div className="home-hero-side" aria-hidden="true">
+        {SIDE_BANNERS.map((banner) => (
+          <div key={banner.categorySlug} className="side-banner side-banner-skeleton" />
+        ))}
+      </div>
+    );
+  }
+  if (banners.length === 0) return null;
+
+  return (
+    <div className="home-hero-side">
+      {banners.map((banner) => (
+        <SideBanner key={banner.categorySlug} banner={banner} />
+      ))}
+    </div>
   );
 }
 

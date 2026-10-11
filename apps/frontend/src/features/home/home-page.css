@@ -287,6 +287,11 @@
   text-decoration: none;
 }
 
+/* Khung giữ chỗ dùng chung kích thước với banner thật, nên hero không đổi chiều cao khi tải xong. */
+.side-banner-skeleton {
+  background: var(--color-neutral-soft);
+}
+
 .side-banner-copy {
   display: flex;
   flex: 1;
