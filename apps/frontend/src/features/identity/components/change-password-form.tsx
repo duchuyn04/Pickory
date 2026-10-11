@@ -33,8 +33,7 @@ export function ChangePasswordForm() {
     setError(null);
     setSuccess(false);
 
-    // Kiểm tra ở trình duyệt để báo lỗi tiếng Việt ngay, không tốn một lượt gọi API; server vẫn kiểm tra lại.
-    // Việc khớp với ô nhập lại chỉ kiểm được ở phía giao diện vì server không nhận ô này.
+    // Kiểm tra ở trình duyệt để báo lỗi ngay. Server vẫn kiểm tra lại, nhưng không nhận ô nhập lại nên việc khớp chỉ kiểm được ở giao diện.
     const nextFieldErrors = {
       newPassword: getPasswordError(newPassword),
       confirm: getConfirmPasswordError(newPassword, confirmPassword),
@@ -46,7 +45,7 @@ export function ChangePasswordForm() {
 
     try {
       await apiRequest('/api/me/password', {
-        method: 'POST',
+        method: 'PUT',
         // Chuỗi rỗng đổi thành undefined để không gửi trường này, vì tài khoản chỉ dùng Google không có mật khẩu cũ.
         body: JSON.stringify({
           currentPassword: currentPassword || undefined,
@@ -62,7 +61,7 @@ export function ChangePasswordForm() {
 
       // Server đã xóa mọi phiên, nên nạp lại actor để giao diện biết mình không còn đăng nhập.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
-      // Đổi mật khẩu thành công sẽ thu hồi toàn bộ phiên trong DB, chuyển hướng về trang đăng nhập sau 1.5 giây để người dùng kịp đọc thông báo thành công.
+      // Server đã thu hồi mọi phiên trong DB. Chuyển hướng sau 1.5 giây để người dùng kịp đọc thông báo.
       setTimeout(() => {
         navigate('/login', { replace: true });
       }, 1500);

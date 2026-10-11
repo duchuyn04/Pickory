@@ -119,7 +119,7 @@ public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFac
         var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
         var customer = await CreateCustomerAsync("lock-forbidden");
 
-        var response = await SendAsync(HttpMethod.Post, $"/api/admin/customers/{customer.Id}/lock", salesSession);
+        var response = await SendAsync(HttpMethod.Patch, $"/api/admin/customers/{customer.Id}", new { locked = true }, salesSession);
 
         await RegisterTests.AssertErrorAsync(response, HttpStatusCode.Forbidden, "FORBIDDEN", "Bạn không có đủ quyền thực hiện thao tác này.");
     }
@@ -132,7 +132,14 @@ public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFac
         var customer = await CreateCustomerAsync("lock-customer");
         var customerSession = await IdentityTestData.CreateSessionAsync(_database, customer.Id);
 
-        var lockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/customers/{customer.Id}/lock", adminSession);
+        var lockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/customers/{customer.Id}", new { locked = true }, adminSession);
+
+        // Khóa ghi thời điểm khóa và xóa dòng phiên trong DB. Kiểm bằng DB vì `/api/me` cũng từ chối tài khoản bị khóa.
+        Assert.NotNull(await ReadLockedAtAsync(customer.Id));
+        await using (var afterLock = _database.CreateIdentityContext())
+        {
+            Assert.Equal(0, await afterLock.Sessions.CountAsync(session => session.UserId == customer.Id));
+        }
 
         await RegisterTests.AssertErrorAsync(
             await LoginAsync(customer.Email), HttpStatusCode.Unauthorized, "INVALID_CREDENTIALS", "Email hoặc mật khẩu không chính xác.");
@@ -142,13 +149,15 @@ public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFac
             Assert.Equal("guest", meDocument.RootElement.GetProperty("data").GetProperty("kind").GetString());
         }
 
-        var unlockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/customers/{customer.Id}/unlock", adminSession);
+        var unlockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/customers/{customer.Id}", new { locked = false }, adminSession);
 
         Assert.Equal(HttpStatusCode.OK, lockResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, unlockResponse.StatusCode);
+        // Mở khóa xóa thời điểm khóa.
+        Assert.Null(await ReadLockedAtAsync(customer.Id));
         using var unlockDocument = await ActorHttp.ReadJsonAsync(unlockResponse);
         Assert.Equal("Đã mở khóa tài khoản khách hàng.", unlockDocument.RootElement.GetProperty("data").GetProperty("message").GetString());
-        Assert.Equal(HttpStatusCode.OK, (await LoginAsync(customer.Email)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await LoginAsync(customer.Email)).StatusCode);
 
         // Hai thao tác cùng có nhật ký với người thực hiện là admin.
         await using var identity = _database.CreateIdentityContext();
@@ -164,9 +173,52 @@ public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFac
         var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
         var (staff, _) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales", "not-a-customer");
 
-        var response = await SendAsync(HttpMethod.Post, $"/api/admin/customers/{staff.Id}/lock", adminSession);
+        var response = await SendAsync(HttpMethod.Patch, $"/api/admin/customers/{staff.Id}", new { locked = true }, adminSession);
 
         await RegisterTests.AssertErrorAsync(response, HttpStatusCode.NotFound, "CUSTOMER_NOT_FOUND", "Không tìm thấy khách hàng.");
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"locked\":null}")]
+    [InlineData("{\"locked\":\"true\"}")]
+    [InlineData("{\"locked\":1}")]
+    [InlineData("{\"locked\":true,\"name\":\"Tên mới\"}")]
+    [InlineData("[]")]
+    // Body thiếu `locked`, sai kiểu hoặc có trường lạ nhận 400. Khách không bị khóa và phiên còn nguyên.
+    public async Task PatchCustomer_InvalidBodyReturns400AndChangesNothing(string rawBody)
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var customer = await CreateCustomerAsync("patch-invalid");
+        // Phiên này cho phép kiểm body sai không xóa phiên của khách.
+        _ = await IdentityTestData.CreateSessionAsync(_database, customer.Id);
+        using var request = ActorHttp.CreateRequest(HttpMethod.Patch, $"/api/admin/customers/{customer.Id}", $"pk_session={adminSession}");
+        request.Headers.Add("Origin", "http://localhost:5173");
+        request.Content = new StringContent(rawBody, System.Text.Encoding.UTF8, "application/json");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        Assert.Equal("VALIDATION_ERROR", document.RootElement.GetProperty("error").GetProperty("code").GetString());
+        Assert.Null(await ReadLockedAtAsync(customer.Id));
+        await using var identity = _database.CreateIdentityContext();
+        Assert.Equal(1, await identity.Sessions.CountAsync(session => session.UserId == customer.Id));
+    }
+
+    [Theory]
+    [InlineData("lock")]
+    [InlineData("unlock")]
+    // Hai route cũ đặt theo hành động không còn đăng ký. Test tách đường dẫn và hành động để lệnh grep route cũ không báo nhầm.
+    public async Task OldLockRoutes_AreNoLongerRegistered(string action)
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var customer = await CreateCustomerAsync("old-route");
+
+        var response = await SendAsync(HttpMethod.Post, $"/api/admin/customers/{customer.Id}/" + action, adminSession);
+
+        Assert.Contains(response.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
+        Assert.Null(await ReadLockedAtAsync(customer.Id));
     }
 
     private Task<User> CreateCustomerAsync(string prefix, string? name = null, string? phone = null)
@@ -189,11 +241,23 @@ public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFac
 
     private Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, string sessionToken)
     {
-        return _client.SendAsync(ActorHttp.CreateJsonRequest(method, path, body: null, $"pk_session={sessionToken}"));
+        return SendAsync(method, path, body: null, sessionToken);
+    }
+
+    private Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object? body, string sessionToken)
+    {
+        return _client.SendAsync(ActorHttp.CreateJsonRequest(method, path, body, $"pk_session={sessionToken}"));
+    }
+
+    // Đọc thời điểm khóa trực tiếp từ DB. Test không dựa vào body response để biết khóa đã được ghi.
+    private async Task<DateTime?> ReadLockedAtAsync(string userId)
+    {
+        await using var identity = _database.CreateIdentityContext();
+        return await identity.Users.Where(user => user.Id == userId).Select(user => user.LockedAt).SingleAsync();
     }
 
     private Task<HttpResponseMessage> LoginAsync(string email)
     {
-        return _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/login", new { email, password = IdentityTestData.DefaultPassword }));
+        return _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/sessions", new { email, password = IdentityTestData.DefaultPassword }));
     }
 }

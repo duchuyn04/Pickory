@@ -11,13 +11,13 @@ using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.ChangePassword;
 
-// `POST /api/me/password` đổi mật khẩu của người dùng đang đăng nhập.
+// `PUT /api/me/password` thay mật khẩu của người dùng đang đăng nhập.
 public static class ChangePasswordEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         // Chỉ người đã đăng nhập mới có mật khẩu để đổi.
-        endpoints.MapPost("/api/me/password", HandleAsync).RequireAuth();
+        endpoints.MapPut("/api/me/password", HandleAsync).RequireAuth();
     }
 
     private static async Task<IResult> HandleAsync(

@@ -72,8 +72,8 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
         _data.TrackProduct(productId);
 
         var adjusted = await _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, $"/api/admin/skus/{skuId}/adjust-stock", new { delta = stock, reason = "Nhập kho cho test" }, _adminCookie));
-        Assert.Equal(HttpStatusCode.OK, adjusted.StatusCode);
+            HttpMethod.Post, $"/api/admin/skus/{skuId}/movements", new { delta = stock, reason = "Nhập kho cho test" }, _adminCookie));
+        Assert.Equal(HttpStatusCode.Created, adjusted.StatusCode);
         return new CreatedProduct(productId, skuId);
     }
 
@@ -177,8 +177,8 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
             var stock = color == "Đỏ" ? 1 : 5;
             redSkuId = color == "Đỏ" ? skuId : redSkuId;
             var adjusted = await _client.SendAsync(ActorHttp.CreateJsonRequest(
-                HttpMethod.Post, $"/api/admin/skus/{skuId}/adjust-stock", new { delta = stock, reason = "Nhập kho cho test" }, _adminCookie));
-            Assert.Equal(HttpStatusCode.OK, adjusted.StatusCode);
+                HttpMethod.Post, $"/api/admin/skus/{skuId}/movements", new { delta = stock, reason = "Nhập kho cho test" }, _adminCookie));
+            Assert.Equal(HttpStatusCode.Created, adjusted.StatusCode);
         }
 
         return new TwoVariantProduct(productId, redSkuId!);

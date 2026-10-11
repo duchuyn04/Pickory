@@ -253,7 +253,7 @@ export function ProductFormView({
         // Thứ tự trong danh sách là thứ tự hiển thị. Backend không nhận URL ảnh thu nhỏ.
         images: images.map(({ publicId, alt, skuId }) => ({ publicId, alt: alt.trim(), skuId })),
       });
-      // Lưu xong thì dữ liệu trên máy chủ bằng dữ liệu trong form, nên các nút trạng thái được mở lại.
+      // Lưu xong, dữ liệu trên máy chủ khớp với dữ liệu trong form. Vì vậy các nút trạng thái được mở lại.
       savedSnapshotRef.current = formSnapshot;
     } catch (error) {
       // Lỗi thông số trả về key từ API phải nằm ngay dưới ô, không xóa bản nháp.
@@ -527,7 +527,7 @@ export function ProductFormPage() {
 
   async function changeStatus(target: ProductStatus) {
     const updated = await apiRequest<ProductDetail>(`/api/admin/products/${id}/status`, {
-      method: 'POST',
+      method: 'PUT',
       body: JSON.stringify({ status: target }),
     });
     // Ghi phản hồi vào cache để nhãn trạng thái đổi ngay, không chờ lần tải lại.

@@ -21,7 +21,7 @@ export function StaffPage() {
   const [selectedStaff, setSelectedStaff] = useState<StaffRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại; nếu bỏ qua thì lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
+  // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại. Nếu bỏ qua, lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
   const {
     data: staffList = [],
     isLoading: staffLoading,
@@ -63,10 +63,11 @@ export function StaffPage() {
     // Xóa lỗi của lần thao tác trước để không hiện lẫn.
     setActionError(null);
     try {
-      const endpoint = isLocking
-        ? `/api/admin/staff/${staff.id}/lock`
-        : `/api/admin/staff/${staff.id}/unlock`;
-      await apiRequest(endpoint, { method: 'POST' });
+      // Một route cho cả hai thao tác. Trường `locked` cho API biết cần khóa hay mở khóa.
+      await apiRequest(`/api/admin/staff/${staff.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ locked: isLocking }),
+      });
       // Nạp lại danh sách để dòng của người đó hiện trạng thái khóa mới.
       await queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
     } catch (err: unknown) {

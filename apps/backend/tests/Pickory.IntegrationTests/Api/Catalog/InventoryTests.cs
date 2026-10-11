@@ -6,6 +6,7 @@ using Pickory.IntegrationTests.Api.Identity;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Entities;
+using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Modules.Identity.Roles;
 using Xunit;
 
@@ -53,7 +54,7 @@ public sealed class InventoryTests : IClassFixture<PickoryWebApplicationFactory>
 
     private async Task<HttpResponseMessage> AdjustAsync(string skuId, object body, string? cookie = null) =>
         await _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, $"/api/admin/skus/{skuId}/adjust-stock", body, cookie ?? _adminCookie));
+            HttpMethod.Post, $"/api/admin/skus/{skuId}/movements", body, cookie ?? _adminCookie));
 
     private async Task<HttpResponseMessage> GetAsync(string path, string? cookie = null) =>
         await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, path, cookie ?? _adminCookie));
@@ -149,7 +150,7 @@ public sealed class InventoryTests : IClassFixture<PickoryWebApplicationFactory>
 
         var response = await AdjustAsync(product.SkuIds[0], new { delta = -3, reason = "Hàng hỏng" });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal(0, await _data.StockOfAsync(product.SkuIds[0]));
         Assert.False((await _data.DisplayOfAsync(product.ProductId)).InStock);
     }
@@ -164,7 +165,8 @@ public sealed class InventoryTests : IClassFixture<PickoryWebApplicationFactory>
 
         var response = await AdjustAsync(skuId, new { delta = 2, reason = "  Nhập lô mới  " });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // Điều chỉnh tạo một dòng biến động mới nên route trả 201.
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         using var json = await ActorHttp.ReadJsonAsync(response);
         var data = json.RootElement.GetProperty("data");
         Assert.Equal(skuId, data.GetProperty("skuId").GetString());
@@ -197,13 +199,65 @@ public sealed class InventoryTests : IClassFixture<PickoryWebApplicationFactory>
     }
 
     [Fact]
+    // Dòng biến động vừa tạo bằng `POST` hiện ngay trong `GET` cùng đường dẫn.
+    public async Task Adjust_NewMovementAppearsInMovementList()
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(1));
+        var skuId = product.SkuIds[0];
+
+        var created = await AdjustAsync(skuId, new { delta = 5, reason = "Nhập lô thử danh sách" });
+        var list = await GetAsync($"/api/admin/skus/{skuId}/movements");
+
+        Assert.Equal(HttpStatusCode.Created, created.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
+        using var createdJson = await ActorHttp.ReadJsonAsync(created);
+        var createdId = createdJson.RootElement.GetProperty("data").GetProperty("movement").GetProperty("id").GetString();
+        using var listJson = await ActorHttp.ReadJsonAsync(list);
+        var listedIds = listJson.RootElement.GetProperty("data").GetProperty("items").EnumerateArray()
+            .Select(item => item.GetProperty("id").GetString());
+        Assert.Contains(createdId, listedIds);
+    }
+
+    [Fact]
+    // Hai method trên cùng đường dẫn có quyền khác nhau. Role chỉ có `products:read` xem được lịch sử nhưng không điều chỉnh được.
+    public async Task MovementsRoute_ReadOnlyRoleCanGetButCannotPost()
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(2));
+        var skuId = product.SkuIds[0];
+        var readOnlyRole = await IdentityTestData.CreateRoleAsync(_database, [Permissions.ProductsRead]);
+        var (_, readOnlyToken) = await IdentityTestData.CreateStaffSessionAsync(_database, readOnlyRole.Code, $"inv-readonly-{_suffix}");
+        var readOnlyCookie = $"pk_session={readOnlyToken}";
+
+        var getResponse = await GetAsync($"/api/admin/skus/{skuId}/movements", readOnlyCookie);
+        var postResponse = await AdjustAsync(skuId, new { delta = 1, reason = "Không được phép" }, readOnlyCookie);
+
+        Assert.Equal(HttpStatusCode.OK, getResponse.StatusCode);
+        await AssertErrorAsync(postResponse, HttpStatusCode.Forbidden, "FORBIDDEN");
+        await AssertNothingChangedAsync(skuId, 2, 1);
+    }
+
+    [Fact]
+    // Route cũ đặt theo hành động không còn đăng ký. Test tách đường dẫn để lệnh grep route cũ không báo nhầm.
+    public async Task OldAdjustRoute_IsNoLongerRegistered()
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(2));
+        var skuId = product.SkuIds[0];
+
+        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(
+            HttpMethod.Post, $"/api/admin/skus/{skuId}/" + "adjust" + "-stock", new { delta = 1, reason = "Route cũ" }, _adminCookie));
+
+        Assert.Contains(response.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
+        await AssertNothingChangedAsync(skuId, 2, 1);
+    }
+
+    [Fact]
     public async Task Adjust_Return_StoresReturnType()
     {
         var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(1));
 
         var response = await AdjustAsync(product.SkuIds[0], new { delta = 1, reason = "Khách trả hàng", type = "return" });
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var movements = await _data.MovementsOfAsync(product.SkuIds[0]);
         Assert.Equal(InventoryMovementType.Return, movements[^1].Type);
         Assert.Equal(2, await _data.StockOfAsync(product.SkuIds[0]));

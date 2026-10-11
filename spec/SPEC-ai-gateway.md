@@ -191,7 +191,7 @@ actorKeyHash, createdAt
 - [ ] Contract test với DeepSeek và OpenAI thật pass khi bật `AI_LIVE_TESTS=1`.
 - [x] Coverage `service.ts` và từng file gateway có logic ≥ 80%.
 
-Các tiêu chí trên được nghiệm thu trên bản Node. Bản .NET có bảng đối chiếu ở mục DN-06 của `tasks/todo-dotnet.md`.
+Các tiêu chí trên được nghiệm thu trên bản Node. Bản .NET có bảng đối chiếu ở mục DN-06 của `tasks/dotnet-migration/todo.md`.
 
 ## Open Questions
 

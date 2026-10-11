@@ -10,12 +10,12 @@ using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.Login;
 
-// `POST /api/admin/auth/login` đăng nhập nhân viên. Phiên có hạn 12 giờ.
+// `POST /api/admin/auth/sessions` tạo phiên đăng nhập cho nhân viên. Phiên có hạn 12 giờ.
 public static class StaffLoginEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/admin/auth/login", HandleAsync);
+        endpoints.MapPost("/api/admin/auth/sessions", HandleAsync);
     }
 
     private static async Task<IResult> HandleAsync(
@@ -33,6 +33,7 @@ public static class StaffLoginEndpoint
 
         // Cookie có cùng hạn 12 giờ với phiên nhân viên trong DB.
         SessionCookies.AppendSessionCookie(context.Response, session.RawToken, SessionCookies.StaffSessionLifetime, environment.IsProduction());
-        return Results.Ok(new ApiResponse<UserResponse<UserSummaryResponse>>(new(user)));
+        // Đăng nhập tạo một phiên mới trong DB, nên route trả 201 thay cho 200.
+        return Results.Json(new ApiResponse<UserResponse<UserSummaryResponse>>(new(user)), statusCode: StatusCodes.Status201Created);
     }
 }

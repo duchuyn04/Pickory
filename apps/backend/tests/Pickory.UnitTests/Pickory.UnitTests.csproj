@@ -17,6 +17,8 @@
     <ProjectReference Include="..\..\src\Pickory.Modules.AiGateway.Contracts\Pickory.Modules.AiGateway.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Modules.Catalog\Pickory.Modules.Catalog.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Modules.Catalog.Contracts\Pickory.Modules.Catalog.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.Shipping\Pickory.Modules.Shipping.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.Shipping.Contracts\Pickory.Modules.Shipping.Contracts.csproj" />
   </ItemGroup>
 
 </Project>

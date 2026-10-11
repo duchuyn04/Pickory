@@ -10,12 +10,12 @@ using Pickory.Shared.Http;
 
 namespace Pickory.Modules.Identity.Features.Logout;
 
-// `POST /api/auth/logout` đăng xuất khách và nhân viên.
+// `DELETE /api/auth/sessions/current` xóa phiên hiện tại của khách hoặc nhân viên.
 public static class LogoutEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/logout", HandleAsync);
+        endpoints.MapDelete("/api/auth/sessions/current", HandleAsync);
     }
 
     private static async Task<IResult> HandleAsync(HttpContext context, IdentityDbContext database)

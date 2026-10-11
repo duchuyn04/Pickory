@@ -8,12 +8,12 @@ using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.ResetPassword;
 
-// `POST /api/auth/reset-password` đặt mật khẩu mới cho link quên mật khẩu và link mời nhân viên.
+// `PUT /api/auth/password` đặt mật khẩu mới bằng token của link quên mật khẩu hoặc link mời nhân viên.
 public static class ResetPasswordEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/reset-password", HandleAsync);
+        endpoints.MapPut("/api/auth/password", HandleAsync);
     }
 
     private static async Task<IResult> HandleAsync(

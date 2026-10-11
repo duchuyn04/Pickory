@@ -16,7 +16,7 @@ function recordProfileWrites(page: Page): string[] {
   page.on('request', (request) => {
     const isProfileWrite =
       (request.method() === 'PATCH' && request.url().endsWith('/api/me')) ||
-      (request.method() === 'POST' && request.url().endsWith('/api/auth/register'));
+      (request.method() === 'POST' && request.url().endsWith('/api/auth/registrations'));
     if (isProfileWrite) writes.push(`${request.method()} ${request.url()}`);
   });
   return writes;

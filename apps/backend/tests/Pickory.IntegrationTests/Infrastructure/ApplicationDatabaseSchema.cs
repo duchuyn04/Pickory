@@ -26,6 +26,22 @@ internal static class ApplicationDatabaseSchema
 
     internal static readonly string[] AiGatewayTables = ["ai_embedding_cache", "ai_settings", "ai_usage_logs"];
 
+    // Bảng và enum của shipping không có trong `reference-schema.sql` (bản chụp schema Prisma). Phép so với file đó phải bỏ qua chúng.
+    internal static readonly string[] ShippingTables =
+    [
+        "address_provinces", "address_wards", "shipment_events", "shipments", "shipping_settings"
+    ];
+
+    internal static readonly string[] ShippingEnums = ["ShipmentStatus", "ShipmentEventSource"];
+
+    // Khóa metadata thuộc shipping có dạng `loại:public.tên` hoặc `loại:public.tên.phần`. Khớp theo ranh giới tên, không theo tiền tố.
+    internal static bool IsShippingObject(string key)
+    {
+        return ShippingTables.Any(table => key.EndsWith($":public.{table}", StringComparison.Ordinal) ||
+                                           key.Contains($":public.{table}.", StringComparison.Ordinal)) ||
+               ShippingEnums.Any(name => key.EndsWith($":public.{name}", StringComparison.Ordinal));
+    }
+
 
     internal static Dictionary<string, string> ReadModel(IEnumerable<DbContext> contexts)
     {

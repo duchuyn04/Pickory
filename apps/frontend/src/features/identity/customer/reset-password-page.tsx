@@ -19,7 +19,7 @@ export function ResetPasswordPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  // Giữ token trong state vì effect bên dưới sẽ xóa nó khỏi URL; lấy một lần lúc khởi tạo nên không đổi theo URL nữa.
+  // Giữ token trong state vì effect bên dưới xóa token khỏi URL. State lấy token một lần lúc khởi tạo.
   const [token] = useState(() => searchParams.get('token') || '');
 
   const [newPassword, setNewPassword] = useState('');
@@ -34,7 +34,7 @@ export function ResetPasswordPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Xóa token khỏi thanh địa chỉ để nó không nằm lại trong lịch sử trình duyệt hay bị gửi đi qua header Referer.
+  // Xóa token khỏi thanh địa chỉ. Token không nằm lại trong lịch sử trình duyệt và không đi qua header Referer.
   useEffect(() => {
     if (searchParams.has('token')) {
       navigate(location.pathname, { replace: true });
@@ -46,7 +46,7 @@ export function ResetPasswordPage() {
     e.preventDefault();
     setError(null);
 
-    // Kiểm tra ở trình duyệt trước khi gửi: token chỉ dùng được một lần, nên không nên để lỗi nhập liệu làm hỏng token oan.
+    // Kiểm tra ở trình duyệt trước khi gửi. Token chỉ dùng được một lần, nên lỗi nhập liệu không được làm mất token.
     const nextFieldErrors = {
       password: getPasswordError(newPassword, 8),
       confirm: getConfirmPasswordError(newPassword, confirmPassword),
@@ -58,14 +58,14 @@ export function ResetPasswordPage() {
 
     try {
       const res = await apiRequest<{ success: boolean; userKind: 'customer' | 'staff' }>(
-        '/api/auth/reset-password',
+        '/api/auth/password',
         {
-          method: 'POST',
+          method: 'PUT',
           body: JSON.stringify({ token, newPassword }),
         },
       );
 
-      // Server đã xóa mọi phiên, nên xóa hẳn actor khỏi cache; nếu giữ bản cũ (đang là khách đăng nhập) thì trang đăng nhập sẽ tự chuyển đi.
+      // Server đã xóa mọi phiên, nên xóa hẳn actor khỏi cache. Bản cũ còn đăng nhập sẽ làm trang đăng nhập tự chuyển đi.
       await queryClient.resetQueries({ queryKey: ['actor'], exact: true });
 
       setUserKind(res.userKind);

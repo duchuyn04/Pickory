@@ -1,16 +1,18 @@
+using System.Text.Json;
 using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Pickory.Modules.Identity.Contracts.Actors;
 using Pickory.Modules.Identity.Contracts.Authorization;
+using Pickory.Modules.Identity.Features.AccountLock;
 using Pickory.Modules.Identity.Users;
 using Pickory.Shared.Http;
 using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.AdminStaff;
 
-// Route quản lý nhân viên: danh sách, mời, gán role, khóa và mở khóa.
+// Route quản lý nhân viên: danh sách, mời, gán role và đổi trạng thái khóa bằng `PATCH` với trường `locked`.
 public static class AdminStaffEndpoints
 {
     public static void Map(IEndpointRouteBuilder endpoints)
@@ -18,8 +20,7 @@ public static class AdminStaffEndpoints
         endpoints.MapGet("/api/admin/staff", ListAsync).RequirePermission(Permissions.StaffRead);
         endpoints.MapPost("/api/admin/staff/invitations", InviteAsync).RequirePermission(Permissions.StaffManage);
         endpoints.MapPut("/api/admin/staff/{id}/roles", AssignRolesAsync).RequirePermission(Permissions.StaffManage);
-        endpoints.MapPost("/api/admin/staff/{id}/lock", LockAsync).RequirePermission(Permissions.StaffManage);
-        endpoints.MapPost("/api/admin/staff/{id}/unlock", UnlockAsync).RequirePermission(Permissions.StaffManage);
+        endpoints.MapPatch("/api/admin/staff/{id}", UpdateLockAsync).RequirePermission(Permissions.StaffManage);
     }
 
     private static async Task<IResult> ListAsync(HttpContext context, StaffManagementHandler handler)
@@ -54,14 +55,18 @@ public static class AdminStaffEndpoints
         return Results.Ok(new ApiResponse<AssignedRolesResponse>(result));
     }
 
-    private static async Task<IResult> LockAsync(HttpContext context, string id, StaffManagementHandler handler)
+    private static async Task<IResult> UpdateLockAsync(HttpContext context, string id, JsonElement? body, StaffManagementHandler handler)
     {
-        await handler.LockAsync(context.GetActor(), id, context.RequestAborted);
-        return Results.Ok(new ApiResponse<AccountActionResponse>(new AccountActionResponse(Success: true, "Đã khóa tài khoản nhân viên.")));
-    }
+        // Đọc body trước khi chạm DB. Body thiếu `locked` hoặc sai kiểu nhận lỗi `VALIDATION_ERROR` và không đổi tài khoản.
+        var locked = AccountLockRequest.ReadLocked(body);
 
-    private static async Task<IResult> UnlockAsync(HttpContext context, string id, StaffManagementHandler handler)
-    {
+        // Mỗi giá trị `locked` đi qua đúng một hàm của handler. Luật tự khóa mình và admin cuối cùng nằm trong handler.
+        if (locked)
+        {
+            await handler.LockAsync(context.GetActor(), id, context.RequestAborted);
+            return Results.Ok(new ApiResponse<AccountActionResponse>(new AccountActionResponse(Success: true, "Đã khóa tài khoản nhân viên.")));
+        }
+
         await handler.UnlockAsync(context.GetActor(), id, context.RequestAborted);
         return Results.Ok(new ApiResponse<AccountActionResponse>(new AccountActionResponse(Success: true, "Đã mở khóa tài khoản nhân viên.")));
     }

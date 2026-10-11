@@ -46,6 +46,9 @@ Người dùng chốt hướng này ngày 2026-10-06. Hướng mới thay hướ
 | `--color-table-head` | `#fafbfc` | Nền tiêu đề cột của bảng ngoài thẻ |
 | `--color-dark` | `#14171c` | Nút chọn đang bật, thanh thông báo nền tối |
 | `--color-on-dark` | `#ffffff` | Chữ trên nền tối, ví dụ ảnh đại diện ở khung admin |
+| `--color-brand-deep` | `#61000b` | Nền đỏ đậm của banner trang chủ |
+| `--color-highlight-on-dark` | `#ffd84d` | Giá nổi bật trên banner nền tối |
+| `--color-on-dark-soft` | `rgba(255, 255, 255, 0.16)` | Nền nút tròn trên banner nền tối |
 | `--color-ink` | `#1b1f24` | Chữ chính |
 | `--color-ink-muted` | `#5b6470` | Chữ phụ, tiêu đề cột |
 | `--color-ink-secondary` | `#3f4650` | Chữ của badge trung tính |
@@ -91,6 +94,7 @@ Người dùng chốt hướng này ngày 2026-10-06. Hướng mới thay hướ
 - Khoảng cách theo thang 4 px: 4, 8, 12, 16, 24, 32, 48, 64.
 - Bóng: `--shadow-card` rất nhẹ cho thẻ nổi, `--shadow-popover` cho hộp thoại và menu thả.
 - Khung admin dùng `--shadow-nav-active` cho mục menu đang chọn và `--shadow-drawer` cho ngăn kéo menu trên điện thoại.
+- Trang chủ dùng `--shadow-art` cho hình minh họa trên banner. Nút cuộn dải sản phẩm dùng `--shadow-raised`.
 
 ## Component chung
 
@@ -136,7 +140,7 @@ Màn đã chuyển sang design system không viết `style={{`. Test `test/unit/
 
 ## Kế hoạch áp dụng
 
-Kế hoạch chi tiết ở `tasks/plan-design.md` và `tasks/todo-design.md`.
+Kế hoạch chi tiết ở `tasks/design/plan.md` và `tasks/design/todo.md`.
 
 1. DS-01: token, lớp component chung và tài liệu này.
 2. DS-02: khung admin theo `shop-retail/admin/index.html`. Khung nằm ở `features/identity/admin/admin-layout.tsx`.

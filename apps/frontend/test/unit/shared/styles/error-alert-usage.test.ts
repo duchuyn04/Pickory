@@ -12,6 +12,8 @@ const sharedAlertFiles: Record<string, true> = {
 const allowedAlerts: Record<string, RegExp> = {
   'shared/forbidden-notice.tsx': /className="card"/,
   'features/ai-gateway/admin/ai-settings-page.tsx': /className="alert alert-ok(?:\s[^"]*)?"/,
+  // Thông báo lưu thành công của màn cấu hình vận chuyển, cùng mẫu `alert-ok` với màn cấu hình AI.
+  'features/shipping/admin/shipping-settings-page.tsx': /className="alert alert-ok(?:\s[^"]*)?"/,
   // Lỗi cạnh ô nhập giữ `form-error` để `aria-describedby` trỏ đúng thông báo của ô.
   'features/catalog/admin/attribute-editor.tsx': /className="form-error"/,
   'features/catalog/admin/description-editor.tsx':

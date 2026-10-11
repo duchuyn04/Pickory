@@ -99,6 +99,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         requiredPermission: 'ai-usage:read',
       },
       {
+        label: 'Vận chuyển',
+        path: '/admin/shipping/settings',
+        icon: 'truck',
+        requiredPermission: 'shipping-settings:manage',
+      },
+      {
         label: 'Nhật ký thao tác',
         path: '/admin/audit-logs',
         icon: 'history',

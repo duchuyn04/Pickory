@@ -33,7 +33,7 @@ public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
 
     [Theory]
     [InlineData("PATCH", "/api/me")]
-    [InlineData("POST", "/api/me/password")]
+    [InlineData("PUT", "/api/me/password")]
     [InlineData("DELETE", "/api/me")]
     // Ba route tài khoản dùng `RequireAuth`. Khách chưa đăng nhập nhận 401 trước khi route đọc body.
     public async Task AccountRoutes_RequireSignedInUser(string method, string path)
@@ -110,7 +110,7 @@ public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
         var otherSessionToken = await AddSessionAsync(user.Id, DateTime.UtcNow);
 
         var response = await SendAsync(
-            HttpMethod.Post, "/api/me/password", new { currentPassword = IdentityTestData.DefaultPassword, newPassword = "BrandNewPassword123!" }, sessionToken);
+            HttpMethod.Put, "/api/me/password", new { currentPassword = IdentityTestData.DefaultPassword, newPassword = "BrandNewPassword123!" }, sessionToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         using var document = await ActorHttp.ReadJsonAsync(response);
@@ -126,8 +126,8 @@ public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
         using var otherDocument = await ActorHttp.ReadJsonAsync(otherDevice);
         Assert.Equal("guest", otherDocument.RootElement.GetProperty("data").GetProperty("kind").GetString());
 
-        var loginResponse = await SendAsync(HttpMethod.Post, "/api/auth/login", new { email = user.Email, password = "BrandNewPassword123!" }, sessionToken: null);
-        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        var loginResponse = await SendAsync(HttpMethod.Post, "/api/auth/sessions", new { email = user.Email, password = "BrandNewPassword123!" }, sessionToken: null);
+        Assert.Equal(HttpStatusCode.Created, loginResponse.StatusCode);
     }
 
     [Theory]
@@ -138,7 +138,7 @@ public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
     {
         var (user, sessionToken) = await CreateCustomerSessionAsync("change-password-wrong");
 
-        var response = await SendAsync(HttpMethod.Post, "/api/me/password", new { currentPassword, newPassword = "BrandNewPassword123!" }, sessionToken);
+        var response = await SendAsync(HttpMethod.Put, "/api/me/password", new { currentPassword, newPassword = "BrandNewPassword123!" }, sessionToken);
 
         await RegisterTests.AssertErrorAsync(response, HttpStatusCode.BadRequest, "INVALID_CREDENTIALS", expectedMessage);
         // Mật khẩu cũ vẫn dùng được vì yêu cầu bị từ chối.
@@ -151,7 +151,7 @@ public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
     {
         var (user, sessionToken) = await CreateCustomerSessionAsync("change-password-google", password: null);
 
-        var response = await SendAsync(HttpMethod.Post, "/api/me/password", new { newPassword = "FirstPassword123!" }, sessionToken);
+        var response = await SendAsync(HttpMethod.Put, "/api/me/password", new { newPassword = "FirstPassword123!" }, sessionToken);
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.True(PasswordHasher.Verify((await ReadUserAsync(user.Id)).PasswordHash!, "FirstPassword123!"));
@@ -163,7 +163,7 @@ public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
     {
         var (_, sessionToken) = await CreateCustomerSessionAsync("change-password-weak");
 
-        var response = await SendAsync(HttpMethod.Post, "/api/me/password", new { currentPassword = IdentityTestData.DefaultPassword, newPassword = "short" }, sessionToken);
+        var response = await SendAsync(HttpMethod.Put, "/api/me/password", new { currentPassword = IdentityTestData.DefaultPassword, newPassword = "short" }, sessionToken);
 
         await RegisterTests.AssertErrorAsync(
             response, HttpStatusCode.BadRequest, "VALIDATION_ERROR", "Dữ liệu không hợp lệ (newPassword: Mật khẩu mới phải chứa tối thiểu 8 ký tự.).");
@@ -218,7 +218,7 @@ public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
         // Module khác nhận đúng một sự kiện để xóa dữ liệu riêng của người dùng.
         Assert.Single(_factory.DomainEvents.OfType<UserDeletedEvent>(), value => value.UserId == user.Id);
 
-        var loginResponse = await SendAsync(HttpMethod.Post, "/api/auth/login", new { email = user.Email, password = IdentityTestData.DefaultPassword }, sessionToken: null);
+        var loginResponse = await SendAsync(HttpMethod.Post, "/api/auth/sessions", new { email = user.Email, password = IdentityTestData.DefaultPassword }, sessionToken: null);
         Assert.Equal(HttpStatusCode.Unauthorized, loginResponse.StatusCode);
     }
 

@@ -8,6 +8,7 @@ using Pickory.Modules.Catalog;
 using Pickory.Modules.Catalog.Products;
 using Pickory.Modules.Catalog.Seeding;
 using Pickory.Modules.Identity;
+using Pickory.Modules.Shipping;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.Persistence;
 
@@ -29,6 +30,7 @@ public static class CatalogBenchmark
         await IdentityModule.MigrateIdentityDatabaseAsync(app.Services, CancellationToken.None);
         await AiGatewayModule.MigrateAiGatewayDatabaseAsync(app.Services, CancellationToken.None);
         await CatalogModule.MigrateCatalogDatabaseAsync(app.Services, CancellationToken.None);
+        await ShippingModule.MigrateShippingDatabaseAsync(app.Services, CancellationToken.None);
 
         var catalog = BenchmarkProducts.Generate(CatalogSeedData.Create(), ProductCount);
         var seedTimer = Stopwatch.StartNew();

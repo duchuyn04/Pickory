@@ -91,23 +91,24 @@ public class ExceptionHandlingMiddleware
                 throw;
             }
 
-            // Gom chi tiết lỗi validate theo định dạng path: message như bản Node.
-            var details = string.Join("; ", validationException.Errors.Select(failure =>
-            {
-                var path = string.IsNullOrWhiteSpace(failure.PropertyName)
-                    ? "body"
-                    : ToCamelCasePath(failure.PropertyName);
-                return $"{path}: {failure.ErrorMessage}";
-            }));
+            // Mỗi lỗi một phần tử có khóa riêng. Client gán lỗi vào đúng ô bằng khóa này, không đọc ngược câu `message`.
+            var fieldDetails = validationException.Errors
+                .Select(failure => new ErrorFieldDetail(
+                    string.IsNullOrWhiteSpace(failure.PropertyName) ? "body" : ToCamelCasePath(failure.PropertyName),
+                    failure.ErrorMessage))
+                .ToList();
 
-            var message = $"Dữ liệu không hợp lệ ({details}).";
+            // Câu `message` giữ định dạng path: message như bản Node, vì các client và test cũ đang đọc câu này.
+            var summary = string.Join("; ", fieldDetails.Select(detail => $"{detail.Key}: {detail.Message}"));
+            var message = $"Dữ liệu không hợp lệ ({summary}).";
 
-            // Trả lỗi 400 cùng mã VALIDATION_ERROR chuẩn hóa.
+            // Trả lỗi 400 cùng mã VALIDATION_ERROR chuẩn hóa, kèm `details` có cấu trúc.
             await WriteErrorResponseAsync(
                 context,
                 StatusCodes.Status400BadRequest,
                 "VALIDATION_ERROR",
-                message);
+                message,
+                fieldDetails);
         }
         catch (OperationCanceledException) when (context.RequestAborted.IsCancellationRequested)
         {
@@ -144,12 +145,13 @@ public class ExceptionHandlingMiddleware
         HttpContext context,
         int statusCode,
         string code,
-        string message)
+        string message,
+        IReadOnlyList<ErrorFieldDetail>? details = null)
     {
         context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json; charset=utf-8";
 
-        var errorResponse = new ErrorResponse(new ErrorDetail(code, message));
+        var errorResponse = new ErrorResponse(new ErrorDetail(code, message, details));
         var json = JsonSerializer.Serialize(errorResponse, PickoryJsonDefaults.Options);
         await context.Response.WriteAsync(json);
     }

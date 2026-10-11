@@ -1,3 +1,5 @@
+using Pickory.Shared.Throttling;
+
 namespace Pickory.Modules.Identity.Throttling;
 
 // Mọi bộ giới hạn của identity trong một singleton. Ngưỡng và thông báo giữ nguyên bản Node.

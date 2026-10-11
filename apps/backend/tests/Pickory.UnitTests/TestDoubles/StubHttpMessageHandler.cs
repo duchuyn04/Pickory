@@ -33,15 +33,36 @@ public sealed class StubHttpMessageHandler : HttpMessageHandler
         _responses.Enqueue(() => throw exception);
     }
 
+    // Phản hồi không bao giờ về. Chỉ hủy token mới dừng được lời gọi, nên test timeout không phụ thuộc đồng hồ.
+    public void EnqueueHang()
+    {
+        _responses.Enqueue(() => throw new HangMarkerException());
+    }
+
+    private sealed class HangMarkerException : Exception;
+
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         var body = request.Content is null ? string.Empty : await request.Content.ReadAsStringAsync(cancellationToken);
-        Requests.Add(new RecordedHttpRequest(request.RequestUri!.ToString(), request.Headers.Authorization?.ToString(), body));
+        // Ghi mọi header để test kiểm tra `Token` và `ShopId`. Giá trị lấy nguyên văn từ request.
+        var headers = request.Headers.ToDictionary(
+            header => header.Key, header => string.Join(",", header.Value), StringComparer.OrdinalIgnoreCase);
+        Requests.Add(new RecordedHttpRequest(
+            request.RequestUri!.ToString(), request.Headers.Authorization?.ToString(), body, request.Method.Method, headers));
         if (_responses.Count == 0)
         {
             throw new InvalidOperationException("Test chưa xếp phản hồi HTTP.");
         }
 
-        return _responses.Dequeue()();
+        try
+        {
+            return _responses.Dequeue()();
+        }
+        catch (HangMarkerException)
+        {
+            // Chờ vô hạn tới khi bên gọi hủy. Adapter phải tự hết giờ, nên token luôn bị hủy.
+            await Task.Delay(Timeout.Infinite, cancellationToken);
+            throw;
+        }
     }
 }

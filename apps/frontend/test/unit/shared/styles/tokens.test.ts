@@ -25,6 +25,9 @@ const textOnBackgroundPairs: [string, string][] = [
   ['--color-ink-secondary', '--color-neutral-soft'],
   ['--color-ink-secondary', '--color-surface-muted'],
   ['--color-on-dark', '--color-dark'],
+  ['--color-on-dark', '--color-brand-deep'],
+  ['--color-highlight-on-dark', '--color-brand-deep'],
+  ['--color-highlight-on-dark', '--color-dark'],
   ['--color-on-brand', '--color-header-soft'],
 ];
 

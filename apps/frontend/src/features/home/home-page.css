@@ -1,0 +1,615 @@
+/*
+ * Trang chủ của khách theo `shop-retail/index.html`: hero ba cột, ô danh mục và dải sản phẩm.
+ * Kích thước lấy từ `shop-retail/assets/css/store.css`, màu chỉ dùng token.
+ */
+
+/* Cùng bề rộng với header và trang danh mục, để mép nội dung thẳng hàng khi chuyển trang. */
+.home-page {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-7);
+}
+
+/* Hero: menu danh mục, banner chính và cột banner phụ. */
+.home-hero {
+  display: grid;
+  grid-template-columns: 230px minmax(0, 1fr) 280px;
+  gap: 14px;
+  align-items: stretch;
+}
+
+.home-category-menu {
+  padding: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.home-category-menu ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-category-menu a {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  /* Năm danh mục cao 56px gần bằng chiều cao banner, nên menu không để khoảng trống lớn bên dưới. */
+  min-height: 56px;
+  padding: var(--space-2) 10px;
+  border-radius: var(--radius-control);
+  color: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.home-category-menu a span {
+  flex: 1;
+}
+
+.home-category-menu a:hover {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+}
+
+/* Mũi tên chỉ gợi ý mục là link, nên làm mờ để tên danh mục nổi hơn. */
+.home-category-menu-chevron {
+  opacity: 0.5;
+}
+
+.home-category-menu-skeleton {
+  height: 24px;
+  margin: var(--space-2) 10px var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-neutral-soft);
+}
+
+.home-hero-main {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+/* Khung giữ chỗ cao bằng banner thật, nên phần dưới trang không nhảy khi banner tải xong. */
+.hero-skeleton {
+  aspect-ratio: 16 / 7.2;
+  background: var(--color-neutral-soft);
+}
+
+.hero-carousel-viewport {
+  position: relative;
+  aspect-ratio: 16 / 7.2;
+  overflow: hidden;
+}
+
+.hero-slides {
+  position: relative;
+  height: 100%;
+}
+
+/* Mọi banner xếp chồng. Banner đang chọn hiện dần, banner khác ẩn nhưng vẫn giữ chỗ trong DOM. */
+.hero-slide {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0.45s ease,
+    visibility 0.45s;
+}
+
+.hero-slide.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.hero-tone-deep {
+  background: var(--color-brand-deep);
+  color: var(--color-on-dark);
+}
+
+.hero-tone-dark {
+  background: var(--color-dark);
+  color: var(--color-on-dark);
+}
+
+.hero-slide-link {
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  gap: var(--space-4);
+  align-items: center;
+  height: 100%;
+  padding: 28px 56px 28px 40px;
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Viền focus vẽ bên trong, vì khung banner cắt phần tràn ra ngoài. */
+.hero-slide-link:focus-visible {
+  outline-offset: -4px;
+}
+
+.hero-slide-title {
+  margin: 0 0 10px;
+  font-size: clamp(var(--text-title), 2.6vw, var(--text-xl));
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.hero-slide-text {
+  max-width: 40ch;
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-sm);
+  opacity: 0.9;
+}
+
+/* Giữ một dòng kể cả khi chưa có giá, để nút không nhảy lên xuống. */
+.hero-slide-price {
+  min-height: 1.5em;
+  margin: 0 0 var(--space-4);
+  font-size: var(--text-sm);
+}
+
+.hero-slide-price strong {
+  color: var(--color-highlight-on-dark);
+  font-size: var(--text-lg);
+}
+
+/* Nút trắng chữ đậm trên nền tối, giống `btn-light` của bản mẫu. Cả banner là link nên đây chỉ là nhãn. */
+.hero-slide-cta {
+  border-color: var(--color-surface);
+}
+
+.hero-slide-link:hover .hero-slide-cta {
+  background: var(--color-page);
+}
+
+.hero-slide-art {
+  justify-self: center;
+  width: 100%;
+  max-width: 300px;
+  height: auto;
+  filter: drop-shadow(var(--shadow-art));
+}
+
+/* Nút chuyển banner chỉ hiện khi rê chuột hoặc khi focus bàn phím, để không che hình. */
+.hero-carousel-arrow {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 56px;
+  padding: 0;
+  border: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-50%);
+  transition: opacity 0.2s;
+}
+
+.hero-carousel:hover .hero-carousel-arrow,
+.hero-carousel-arrow:focus-visible {
+  opacity: 0.92;
+}
+
+.hero-carousel-prev {
+  left: 0;
+  border-radius: 0 10px 10px 0;
+}
+
+.hero-carousel-next {
+  right: 0;
+  border-radius: 10px 0 0 10px;
+}
+
+/* Nút dừng luôn hiện. Khách phải dừng được nội dung tự chuyển mà không cần rê chuột (WCAG 2.2.2). */
+.hero-carousel-toggle {
+  position: absolute;
+  right: var(--space-3);
+  bottom: var(--space-3);
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-on-dark-soft);
+  color: var(--color-on-dark);
+  cursor: pointer;
+}
+
+.hero-carousel-toggle .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.hero-carousel-toggle:hover {
+  background: var(--color-surface);
+  color: var(--color-ink);
+}
+
+.hero-carousel-tabs {
+  display: grid;
+  grid-auto-columns: 1fr;
+  grid-auto-flow: column;
+  border-top: 1px solid var(--color-border);
+}
+
+.hero-carousel-tabs button {
+  min-height: 44px;
+  padding: 10px var(--space-2);
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--color-ink-muted);
+  font: inherit;
+  font-size: var(--text-label);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.hero-carousel-tabs button[aria-selected='true'] {
+  border-bottom-color: var(--color-brand);
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.hero-carousel-tabs button:focus-visible {
+  outline-offset: -2px;
+}
+
+.home-hero-side {
+  display: grid;
+  grid-auto-rows: 1fr;
+  gap: 14px;
+}
+
+.side-banner {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 150px;
+  padding: var(--space-4);
+  overflow: hidden;
+  border-radius: var(--radius-card);
+  background: var(--color-dark);
+  color: var(--color-on-dark);
+  text-decoration: none;
+}
+
+/* Khung giữ chỗ dùng chung kích thước với banner thật, nên hero không đổi chiều cao khi tải xong. */
+.side-banner-skeleton {
+  background: var(--color-neutral-soft);
+}
+
+.side-banner-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.side-banner-copy b {
+  font-size: var(--text-md);
+  line-height: 1.3;
+}
+
+.side-banner-copy span {
+  font-size: var(--text-label);
+  opacity: 0.88;
+}
+
+.side-banner-art {
+  width: 46%;
+  max-width: 140px;
+  height: auto;
+  filter: drop-shadow(var(--shadow-art));
+  transition: transform 0.2s;
+}
+
+.side-banner:hover .side-banner-art {
+  transform: scale(1.04);
+}
+
+.home-error {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+  margin-top: var(--space-5);
+}
+
+/* Khối nội dung dưới hero: tiêu đề bên trái, link "Xem tất cả" bên phải. */
+.home-section {
+  margin-top: 28px;
+}
+
+.home-section-head {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.home-section-head h2 {
+  margin: 0;
+  font-size: var(--text-lg);
+}
+
+.home-section-more {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  min-height: 32px;
+  margin-left: auto;
+  color: var(--color-link);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.home-section-more:hover {
+  text-decoration: underline;
+}
+
+.home-section-more .icon {
+  width: 16px;
+  height: 16px;
+}
+
+.category-tiles {
+  display: grid;
+  /* Ít danh mục thì các ô giãn phủ hết hàng, không để khoảng trống lớn bên phải. */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-tile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  height: 100%;
+  padding: 14px 10px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  color: inherit;
+  text-align: center;
+  text-decoration: none;
+  transition: border-color 0.15s;
+}
+
+.category-tile:hover {
+  border-color: var(--color-brand);
+}
+
+.category-tile img {
+  width: 84px;
+  height: 84px;
+}
+
+.category-tile-icon {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  color: var(--color-ink-muted);
+}
+
+.category-tile-icon .icon {
+  width: 40px;
+  height: 40px;
+}
+
+.category-tile-name {
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.category-tile-count {
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+/* Dải sản phẩm cuộn ngang: năm thẻ một khung ở màn rộng, mỗi lần cuộn dừng ở mép thẻ. */
+.rail {
+  position: relative;
+}
+
+.rail-track {
+  display: grid;
+  grid-auto-columns: calc((100% - 4 * var(--space-3)) / 5);
+  grid-auto-flow: column;
+  gap: var(--space-3);
+  padding: 2px;
+  overflow-x: auto;
+  /* Điểm dừng tính cả lề 2px. Thiếu dòng này, dải tự lệch 2px và nút cuộn lùi hiện ngay khi mở trang. */
+  scroll-padding-inline: 2px;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.rail-track::-webkit-scrollbar {
+  display: none;
+}
+
+.rail-track > * {
+  scroll-snap-align: start;
+}
+
+.rail-track:focus-visible {
+  outline-offset: 2px;
+}
+
+.rail-skeleton-card {
+  aspect-ratio: 3 / 4.4;
+  border-radius: var(--radius-card);
+  background: var(--color-neutral-soft);
+}
+
+.rail-arrow {
+  position: absolute;
+  top: 38%;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+/* Ở mép dải thì ẩn nút, vì cuộn tiếp không còn gì để xem. */
+.rail-arrow:disabled {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rail-arrow-back {
+  left: -14px;
+}
+
+.rail-arrow-forward {
+  right: -14px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-slide,
+  .side-banner-art {
+    transition: none;
+  }
+}
+
+/* Màn vừa: bỏ menu danh mục, vì header và ô danh mục bên dưới đã dẫn tới cùng trang. */
+@media (max-width: 1179px) {
+  .home-hero {
+    grid-template-columns: minmax(0, 1fr) 260px;
+  }
+
+  .home-category-menu {
+    display: none;
+  }
+
+  .rail-track {
+    grid-auto-columns: calc((100% - 3 * var(--space-3)) / 4);
+  }
+}
+
+/* Máy tính bảng: banner phụ xuống dưới banner chính, xếp hai cột. */
+@media (max-width: 1023px) {
+  .home-hero {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .home-hero-side {
+    grid-template-columns: 1fr 1fr;
+    grid-auto-rows: auto;
+  }
+
+  .side-banner {
+    min-height: 120px;
+  }
+
+  .rail-track {
+    grid-auto-columns: calc((100% - 2 * var(--space-3)) / 3);
+  }
+}
+
+/* Điện thoại: banner thấp hơn, bỏ câu mô tả và nút mũi tên. Khách vuốt dải sản phẩm bằng tay. */
+@media (max-width: 767px) {
+  .home-page {
+    padding-top: var(--space-3);
+  }
+
+  .hero-skeleton,
+  .hero-carousel-viewport {
+    aspect-ratio: auto;
+    height: 220px;
+  }
+
+  .hero-slide-link {
+    grid-template-columns: 1fr 38%;
+    gap: var(--space-2);
+    padding: 18px 18px 18px 20px;
+  }
+
+  .hero-slide-title {
+    font-size: var(--text-lg);
+  }
+
+  .hero-slide-text {
+    display: none;
+  }
+
+  .hero-slide-price {
+    margin-bottom: var(--space-3);
+  }
+
+  .hero-slide-price strong {
+    font-size: var(--text-md);
+  }
+
+  .hero-carousel-arrow {
+    display: none;
+  }
+
+  .hero-carousel-tabs {
+    display: flex;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .hero-carousel-tabs button {
+    flex: 1 0 auto;
+    padding: 10px var(--space-3);
+  }
+
+  .home-hero-side {
+    gap: var(--space-2);
+  }
+
+  .side-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    min-height: 96px;
+    padding: var(--space-3);
+  }
+
+  .side-banner-art {
+    display: none;
+  }
+
+  .category-tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-2);
+  }
+
+  .rail-track {
+    grid-auto-columns: calc((100% - var(--space-2)) / 2.2);
+    gap: var(--space-2);
+  }
+
+  .rail-arrow {
+    display: none;
+  }
+}

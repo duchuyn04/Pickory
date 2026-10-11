@@ -2,7 +2,7 @@
 
 - Ngày: 2026-10-05
 - Trạng thái: Quyết định triển khai đã chọn, xác minh API thật bị chặn do thiếu khóa
-- Liên quan: `spec/SPEC-ai-gateway.md`, `tasks/todo.md` AI-00 đến AI-09
+- Liên quan: `spec/SPEC-ai-gateway.md`, `tasks/identity-ai-gateway/todo.md` AI-00 đến AI-09
 
 ## Nguồn chính thức
 

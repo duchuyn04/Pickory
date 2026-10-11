@@ -55,7 +55,7 @@ export function AdjustStockDialog({
 
     setIsSubmitting(true);
     try {
-      const result = await apiRequest<AdjustStockResult>(`/api/admin/skus/${skuId}/adjust-stock`, {
+      const result = await apiRequest<AdjustStockResult>(`/api/admin/skus/${skuId}/movements`, {
         method: 'POST',
         body: JSON.stringify(toAdjustmentBody(form)),
       });

@@ -3,6 +3,8 @@ import { buildCloudinarySrcSet, withCloudinaryTransform } from '../shared/image-
 import { ProductImage } from '../shared/product-image';
 import type { ProductListItem } from './catalog-api';
 import { formatProductPrice, getProductBadges } from './product-display';
+// Thẻ mang CSS riêng, vì trang danh mục và trang chủ cùng dùng thẻ này.
+import './product-card.css';
 
 // Ô lưới có 2 cột ở điện thoại, 2 đến 4 cột ở màn rộng. `sizes` cho trình duyệt chọn ảnh vừa ô.
 const IMAGE_SIZES = '(max-width: 767px) 45vw, (max-width: 1023px) 236px, 240px';

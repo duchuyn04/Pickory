@@ -262,19 +262,19 @@ async function seedCatalog(page: Page): Promise<SeededCatalog> {
 
     if (seed.stock > 0) {
       const adjusted = await page.request.post(
-        `/api/admin/skus/${product.variants[0].id}/adjust-stock`,
+        `/api/admin/skus/${product.variants[0].id}/movements`,
         {
           headers,
           data: { delta: seed.stock, reason: 'Nhập kho E2E trang danh mục' },
         },
       );
-      expect(adjusted.status(), await adjusted.text()).toBe(200);
+      expect(adjusted.status(), await adjusted.text()).toBe(201);
     }
     if (seed.finalStatus === 'draft') continue;
 
     // Sản phẩm phải `active` trước. Ngừng kinh doanh là bước chuyển tiếp từ `active`.
     for (const status of seed.finalStatus === 'active' ? ['active'] : ['active', 'discontinued']) {
-      const changed = await page.request.post(`/api/admin/products/${product.id}/status`, {
+      const changed = await page.request.put(`/api/admin/products/${product.id}/status`, {
         headers,
         data: { status },
       });

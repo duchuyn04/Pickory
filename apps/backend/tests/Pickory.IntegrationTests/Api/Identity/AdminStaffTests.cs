@@ -90,10 +90,10 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         Assert.Equal("invite", message.Metadata["purpose"]);
         Assert.Contains($"http://localhost:5173/reset-password?token={message.Metadata["token"]}", message.Text);
 
-        var resetResponse = await SendAsync(HttpMethod.Post, "/api/auth/reset-password", new { token = message.Metadata["token"], newPassword = "StaffPassword123!" }, sessionToken: null);
-        var loginResponse = await SendAsync(HttpMethod.Post, "/api/admin/auth/login", new { email, password = "StaffPassword123!" }, sessionToken: null);
+        var resetResponse = await SendAsync(HttpMethod.Put, "/api/auth/password", new { token = message.Metadata["token"], newPassword = "StaffPassword123!" }, sessionToken: null);
+        var loginResponse = await SendAsync(HttpMethod.Post, "/api/admin/auth/sessions", new { email, password = "StaffPassword123!" }, sessionToken: null);
         Assert.Equal(HttpStatusCode.OK, resetResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.OK, loginResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, loginResponse.StatusCode);
     }
 
     [Theory]
@@ -208,7 +208,7 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         var (admin, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
 
         var roleResponse = await SendAsync(HttpMethod.Put, $"/api/admin/staff/{admin.Id}/roles", new { roleCodes = new[] { "sales" } }, adminSession);
-        var lockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{admin.Id}/lock", body: null, adminSession);
+        var lockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{admin.Id}", new { locked = true }, adminSession);
 
         await RegisterTests.AssertErrorAsync(roleResponse, HttpStatusCode.BadRequest, "CANNOT_MODIFY_SELF", "Không thể tự sửa đổi role của chính mình.");
         await RegisterTests.AssertErrorAsync(lockResponse, HttpStatusCode.BadRequest, "CANNOT_MODIFY_SELF", "Không thể tự khóa tài khoản của chính mình.");
@@ -222,8 +222,8 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         var (targetAdmin, _) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin", "target-admin");
 
         var demoteResponse = await SendAsync(HttpMethod.Put, $"/api/admin/staff/{targetAdmin.Id}/roles", new { roleCodes = Array.Empty<string>() }, session);
-        var lockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{targetAdmin.Id}/lock", body: null, session);
-        var unlockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{targetAdmin.Id}/unlock", body: null, session);
+        var lockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{targetAdmin.Id}", new { locked = true }, session);
+        var unlockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{targetAdmin.Id}", new { locked = false }, session);
 
         await RegisterTests.AssertErrorAsync(demoteResponse, HttpStatusCode.Forbidden, "FORBIDDEN", "Chỉ quản trị viên (admin) mới có quyền sửa đổi quyền của một admin khác.");
         await RegisterTests.AssertErrorAsync(lockResponse, HttpStatusCode.Forbidden, "FORBIDDEN", "Chỉ quản trị viên (admin) mới có quyền khóa tài khoản của một admin.");
@@ -237,11 +237,11 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         var (_, session) = await CreateStaffManagerSessionAsync([Permissions.StaffManage]);
         var (target, _) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales", "stronger-target");
 
-        var lockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{target.Id}/lock", body: null, session);
+        var lockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = true }, session);
         var replaceResponse = await SendAsync(HttpMethod.Put, $"/api/admin/staff/{target.Id}/roles", new { roleCodes = Array.Empty<string>() }, session);
         await LockDirectlyAsync(target.Id);
-        var relockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{target.Id}/lock", body: null, session);
-        var unlockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{target.Id}/unlock", body: null, session);
+        var relockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = true }, session);
+        var unlockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = false }, session);
 
         // Kiểm tra quyền chạy trước nhánh "đã khóa". Thông báo nêu quyền thiếu đầu tiên theo thứ tự chữ cái.
         const string expectedMessage = "Bạn không có quyền quản lý nhân viên sở hữu quyền \"ai-usage:read\".";
@@ -259,9 +259,9 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         var weakRole = await IdentityTestData.CreateRoleAsync(_database, [Permissions.OrdersRead]);
         var (target, targetSession) = await IdentityTestData.CreateStaffSessionAsync(_database, weakRole.Code, "weak-target");
 
-        var lockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{target.Id}/lock", body: null, session);
+        var lockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = true }, session);
         await AssertSessionIsGuestAsync(targetSession);
-        var unlockResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{target.Id}/unlock", body: null, session);
+        var unlockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = false }, session);
 
         Assert.Equal(HttpStatusCode.OK, lockResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, unlockResponse.StatusCode);
@@ -276,8 +276,8 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         var (admin, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
         var (target, targetSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales", "lock-target");
 
-        var firstResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{target.Id}/lock", body: null, adminSession);
-        var secondResponse = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{target.Id}/lock", body: null, adminSession);
+        var firstResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = true }, adminSession);
+        var secondResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = true }, adminSession);
 
         Assert.Equal(HttpStatusCode.OK, firstResponse.StatusCode);
         Assert.Equal(HttpStatusCode.OK, secondResponse.StatusCode);
@@ -285,6 +285,8 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         Assert.Equal("Đã khóa tài khoản nhân viên.", document.RootElement.GetProperty("data").GetProperty("message").GetString());
         await AssertSessionIsGuestAsync(targetSession);
         await using var identity = _database.CreateIdentityContext();
+        // Dòng phiên bị xóa khỏi DB. Kiểm trực tiếp vì tài khoản bị khóa cũng bị từ chối khi đọc phiên.
+        Assert.Equal(0, await identity.Sessions.CountAsync(session => session.UserId == target.Id));
         var audit = await identity.AuditLogs.SingleAsync(log => log.TargetId == target.Id && log.Action == "staff.lock");
         Assert.Equal(admin.Id, audit.ActorId);
     }
@@ -296,9 +298,71 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
         var customer = await IdentityTestData.CreateUserAsync(_database, IdentityTestData.NewEmail("not-staff"), UserKind.Customer, "customer");
 
-        var response = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{customer.Id}/lock", body: null, adminSession);
+        var response = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{customer.Id}", new { locked = true }, adminSession);
 
         await RegisterTests.AssertErrorAsync(response, HttpStatusCode.NotFound, "USER_NOT_FOUND", "Không tìm thấy tài khoản nhân viên.");
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"locked\":null}")]
+    [InlineData("{\"locked\":\"false\"}")]
+    [InlineData("{\"locked\":true,\"roleCodes\":[\"admin\"]}")]
+    [InlineData("[]")]
+    // Body thiếu `locked`, sai kiểu hoặc có trường lạ nhận 400. Nhân viên không bị khóa và phiên còn nguyên.
+    public async Task PatchStaff_InvalidBodyReturns400AndChangesNothing(string rawBody)
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var (target, _) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales", "patch-invalid");
+        using var request = ActorHttp.CreateRequest(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", $"pk_session={adminSession}");
+        request.Headers.Add("Origin", "http://localhost:5173");
+        request.Content = new StringContent(rawBody, System.Text.Encoding.UTF8, "application/json");
+
+        var response = await _client.SendAsync(request);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        Assert.Equal("VALIDATION_ERROR", document.RootElement.GetProperty("error").GetProperty("code").GetString());
+        await using var identity = _database.CreateIdentityContext();
+        Assert.Null(await identity.Users.Where(user => user.Id == target.Id).Select(user => user.LockedAt).SingleAsync());
+        Assert.Equal(1, await identity.Sessions.CountAsync(session => session.UserId == target.Id));
+    }
+
+    [Fact]
+    // Mở khóa bằng `locked: false` xóa thời điểm khóa và ghi đúng một dòng nhật ký `staff.unlock`.
+    public async Task PatchStaff_UnlockClearsLockedAtAndWritesOneAuditRow()
+    {
+        var (admin, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var (target, _) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales", "patch-unlock");
+
+        var lockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = true }, adminSession);
+        await using (var afterLock = _database.CreateIdentityContext())
+        {
+            Assert.NotNull(await afterLock.Users.Where(user => user.Id == target.Id).Select(user => user.LockedAt).SingleAsync());
+        }
+
+        var unlockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = false }, adminSession);
+
+        Assert.Equal(HttpStatusCode.OK, lockResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, unlockResponse.StatusCode);
+        await using var identity = _database.CreateIdentityContext();
+        Assert.Null(await identity.Users.Where(user => user.Id == target.Id).Select(user => user.LockedAt).SingleAsync());
+        var unlockAudit = await identity.AuditLogs.SingleAsync(log => log.TargetId == target.Id && log.Action == "staff.unlock");
+        Assert.Equal(admin.Id, unlockAudit.ActorId);
+    }
+
+    [Theory]
+    [InlineData("lock")]
+    [InlineData("unlock")]
+    // Hai route cũ đặt theo hành động không còn đăng ký. Test tách đường dẫn và hành động để lệnh grep route cũ không báo nhầm.
+    public async Task OldLockRoutes_AreNoLongerRegistered(string action)
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var (target, _) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales", "old-route");
+
+        var response = await SendAsync(HttpMethod.Post, $"/api/admin/staff/{target.Id}/" + action, body: null, adminSession);
+
+        Assert.Contains(response.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
     }
 
     [Fact]

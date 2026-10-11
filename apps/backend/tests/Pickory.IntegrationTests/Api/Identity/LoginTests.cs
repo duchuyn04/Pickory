@@ -42,9 +42,10 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
         var anonymousId = Guid.NewGuid().ToString();
 
         // Gửi email viết hoa. API chuẩn hóa email nên vẫn tìm đúng tài khoản.
-        var response = await SendAsync("/api/auth/login", email.ToUpperInvariant(), IdentityTestData.DefaultPassword, $"pk_anon={anonymousId}");
+        var response = await SendAsync("/api/auth/sessions", email.ToUpperInvariant(), IdentityTestData.DefaultPassword, $"pk_anon={anonymousId}");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // Đăng nhập tạo một phiên mới nên API trả 201.
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         using var document = await ActorHttp.ReadJsonAsync(response);
         var body = document.RootElement.GetProperty("data").GetProperty("user");
         // Hồ sơ khách hàng có số điện thoại, giống body của bản Node.
@@ -73,9 +74,10 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
         var user = await IdentityTestData.CreateUserAsync(_database, email, UserKind.Staff, "sales");
 
         // Nhân viên dùng route đăng nhập riêng của khu vực quản trị.
-        var response = await SendAsync("/api/admin/auth/login", email, IdentityTestData.DefaultPassword);
+        var response = await SendAsync("/api/admin/auth/sessions", email, IdentityTestData.DefaultPassword);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // Đăng nhập nhân viên cũng tạo một phiên mới nên API trả 201.
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         using var document = await ActorHttp.ReadJsonAsync(response);
         var body = document.RootElement.GetProperty("data").GetProperty("user");
         Assert.Equal(user.Id, body.GetProperty("id").GetString());
@@ -102,8 +104,8 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
     }
 
     [Theory]
-    [InlineData("/api/auth/login", UserKind.Staff, "sales")]
-    [InlineData("/api/admin/auth/login", UserKind.Customer, "customer")]
+    [InlineData("/api/auth/sessions", UserKind.Staff, "sales")]
+    [InlineData("/api/admin/auth/sessions", UserKind.Customer, "customer")]
     // Tài khoản sai loại trên route đăng nhập nhận lỗi sai thông tin. Route không cho biết email thuộc loại tài khoản nào.
     public async Task Login_WrongAccountKindReturnsInvalidCredentials(string path, UserKind kind, string roleCode)
     {
@@ -117,8 +119,8 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
     }
 
     [Theory]
-    [InlineData("/api/auth/login", UserKind.Customer, "customer")]
-    [InlineData("/api/admin/auth/login", UserKind.Staff, "sales")]
+    [InlineData("/api/auth/sessions", UserKind.Customer, "customer")]
+    [InlineData("/api/admin/auth/sessions", UserKind.Staff, "sales")]
     // Sai email và sai mật khẩu trả cùng lỗi. Kẻ dò không biết email nào đã đăng ký.
     public async Task Login_UnknownEmailAndWrongPasswordShareOneError(string path, UserKind kind, string roleCode)
     {
@@ -141,7 +143,7 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
         await IdentityTestData.CreateUserAsync(
             _database, email, UserKind.Customer, "customer", password: hasPassword ? IdentityTestData.DefaultPassword : null, locked: locked, deleted: deleted);
 
-        var response = await SendAsync("/api/auth/login", email, IdentityTestData.DefaultPassword);
+        var response = await SendAsync("/api/auth/sessions", email, IdentityTestData.DefaultPassword);
 
         // Mọi trường hợp nhận cùng lỗi sai thông tin. Người ngoài không biết trạng thái của tài khoản.
         await AssertInvalidCredentialsAsync(response);
@@ -157,11 +159,11 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
         // Năm lần sai đầu tiên vẫn nhận 401, chưa bị khóa.
         for (var attempt = 1; attempt <= 5; attempt++)
         {
-            await AssertInvalidCredentialsAsync(await SendAsync("/api/auth/login", email, "WrongPassword999!"));
+            await AssertInvalidCredentialsAsync(await SendAsync("/api/auth/sessions", email, "WrongPassword999!"));
         }
 
         // Gửi mật khẩu đúng ở lần thứ 6.
-        var response = await SendAsync("/api/auth/login", email, IdentityTestData.DefaultPassword);
+        var response = await SendAsync("/api/auth/sessions", email, IdentityTestData.DefaultPassword);
 
         // API trả 429 với thông điệp khóa 15 phút giống bản Node.
         await RegisterTests.AssertErrorAsync(
@@ -177,7 +179,7 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
     // Email sai định dạng hoặc mật khẩu rỗng bị từ chối trước khi API tra cứu tài khoản.
     public async Task Login_InvalidInputReturnsValidationError(string email, string password, string expectedMessage)
     {
-        var response = await SendAsync("/api/auth/login", email, password);
+        var response = await SendAsync("/api/auth/sessions", email, password);
 
         // Thông điệp lỗi kiểm tra dữ liệu có tên trường, giống định dạng của bản Node.
         await RegisterTests.AssertErrorAsync(response, HttpStatusCode.BadRequest, "VALIDATION_ERROR", expectedMessage);
@@ -195,10 +197,10 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
         using var client = failingFactory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
 
         var response = await client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, "/api/auth/login", new { email, password = IdentityTestData.DefaultPassword }));
+            HttpMethod.Post, "/api/auth/sessions", new { email, password = IdentityTestData.DefaultPassword }));
 
-        // API vẫn trả 200 dù handler ném lỗi.
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // API vẫn trả 201 dù handler ném lỗi.
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
     }
 
     [Fact]
@@ -208,9 +210,9 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
         var email = IdentityTestData.NewEmail("logout");
         await IdentityTestData.CreateUserAsync(_database, email, UserKind.Staff, "sales");
         // Đăng nhập thật để có token phiên do API cấp.
-        var sessionToken = ActorHttp.ReadSessionToken(await SendAsync("/api/admin/auth/login", email, IdentityTestData.DefaultPassword));
+        var sessionToken = ActorHttp.ReadSessionToken(await SendAsync("/api/admin/auth/sessions", email, IdentityTestData.DefaultPassword));
 
-        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/logout", body: null, $"pk_session={sessionToken}"));
+        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Delete, "/api/auth/sessions/current", body: null, $"pk_session={sessionToken}"));
 
         // Body giống bản Node với `success` là true.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -232,10 +234,42 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
     public async Task Logout_WithoutSessionStillSucceeds()
     {
         // Gửi request không có cookie phiên.
-        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/auth/logout", body: null));
+        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Delete, "/api/auth/sessions/current", body: null));
 
         // API trả 200 thay vì 401.
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("POST", "/api/auth/", "login")]
+    [InlineData("POST", "/api/admin/auth/", "login")]
+    [InlineData("POST", "/api/auth/", "logout")]
+    // Ba route cũ đặt theo hành động không còn đăng ký. Test tách tiền tố và hành động để lệnh grep route cũ không báo nhầm.
+    public async Task OldActionRoutes_AreNoLongerRegistered(string method, string prefix, string action)
+    {
+        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(
+            new HttpMethod(method), prefix + action, new { email = "any@pickory.local", password = IdentityTestData.DefaultPassword }));
+
+        // Route không tồn tại trả 404. Route trùng đường dẫn nhưng sai method trả 405.
+        Assert.Contains(response.StatusCode, new[] { HttpStatusCode.NotFound, HttpStatusCode.MethodNotAllowed });
+    }
+
+    [Fact]
+    // Đăng xuất thiếu `Origin` và `Referer` bị chặn. Trang tấn công không đăng xuất hộ nạn nhân được.
+    public async Task Logout_WithoutOriginAndReferer_Returns403AndKeepsSession()
+    {
+        var email = IdentityTestData.NewEmail("logout-origin");
+        await IdentityTestData.CreateUserAsync(_database, email, UserKind.Staff, "sales");
+        var sessionToken = ActorHttp.ReadSessionToken(await SendAsync("/api/admin/auth/sessions", email, IdentityTestData.DefaultPassword));
+
+        // `CreateRequest` không gắn `Origin`, giống request từ nguồn không phải trang web.
+        var response = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Delete, "/api/auth/sessions/current", $"pk_session={sessionToken}"));
+
+        // API trả 403 và không đụng tới phiên trong DB.
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        Assert.Equal("FORBIDDEN_ORIGIN", document.RootElement.GetProperty("error").GetProperty("code").GetString());
+        Assert.NotNull(await ReadSessionExpiryAsync(sessionToken));
     }
 
     // Gửi email và mật khẩu tới route đăng nhập. Request có `Origin` của web để qua bước chống CSRF (Cross-Site Request Forgery).

@@ -106,8 +106,23 @@ describe('AdminLayout', () => {
       'Nhân viên',
       'Quản lý Role',
       'Cấu hình AI',
+      'Vận chuyển',
       'Nhật ký thao tác',
     ]);
+  });
+
+  it('mục Vận chuyển chỉ hiện khi có quyền shipping-settings:manage', async () => {
+    await renderLayout({
+      ...salesActor,
+      permissions: [...salesActor.permissions, 'shipping-settings:manage'],
+    });
+    expect(navLabels()).toContain('Vận chuyển');
+    expect(navLink('Vận chuyển').getAttribute('href')).toBe('/admin/shipping/settings');
+  });
+
+  it('nhân viên thiếu quyền shipping-settings:manage không thấy mục Vận chuyển', async () => {
+    await renderLayout(salesActor);
+    expect(navLabels()).not.toContain('Vận chuyển');
   });
 
   it('ẩn mục thiếu quyền và ẩn nhãn nhóm không còn mục nào', async () => {

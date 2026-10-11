@@ -7,12 +7,12 @@ using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Identity.Features.ForgotPassword;
 
-// `POST /api/auth/forgot-password` gửi link đặt lại mật khẩu.
+// `POST /api/auth/password-resets` tạo một yêu cầu đặt lại mật khẩu và gửi link qua email.
 public static class ForgotPasswordEndpoint
 {
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapPost("/api/auth/forgot-password", HandleAsync);
+        endpoints.MapPost("/api/auth/password-resets", HandleAsync);
     }
 
     private static async Task<IResult> HandleAsync(

@@ -116,7 +116,7 @@ function createServer(options: ServerOptions = {}) {
       state.product = { ...state.product, name: body.name };
       return jsonResponse({ data: state.product });
     }
-    if (url.pathname === '/api/admin/products/p1/status' && method === 'POST') {
+    if (url.pathname === '/api/admin/products/p1/status' && method === 'PUT') {
       if (options.statusFailure) return options.statusFailure;
       const body = JSON.parse(init!.body as string) as { status: string };
       state.product = { ...state.product, status: body.status };
@@ -170,9 +170,9 @@ async function typeInto(selector: string, value: string) {
 }
 
 const statusLabel = () => document.querySelector('.status-current .badge')?.textContent;
-const postsToStatus = (fetchMock: ReturnType<typeof createServer>) =>
+const statusPutRequests = (fetchMock: ReturnType<typeof createServer>) =>
   fetchMock.mock.calls.filter(
-    ([input, init]) => String(input).endsWith('/status') && init?.method === 'POST',
+    ([input, init]) => String(input).endsWith('/status') && init?.method === 'PUT',
   );
 
 describe('ProductFormPage: lỗi tải sản phẩm', () => {
@@ -219,7 +219,7 @@ describe('ProductFormPage: khối trạng thái', () => {
       'Đã đổi trạng thái thành "Đang bán".',
     );
     expect(reload).not.toHaveBeenCalled();
-    const calls = postsToStatus(fetchMock);
+    const calls = statusPutRequests(fetchMock);
     expect(calls).toHaveLength(1);
     expect(JSON.parse(calls[0]![1]!.body as string)).toEqual({ status: 'active' });
     expect(queryClient.getQueryData<{ status: string }>(['admin-product', 'p1'])?.status).toBe(
@@ -273,7 +273,7 @@ describe('ProductFormPage: khối trạng thái', () => {
     expect(buttonByName('Đăng bán')!.disabled).toBe(true);
     expect(document.body.textContent).toContain('Lưu thay đổi trước khi đổi trạng thái.');
     await click(buttonByName('Đăng bán'));
-    expect(postsToStatus(fetchMock)).toHaveLength(0);
+    expect(statusPutRequests(fetchMock)).toHaveLength(0);
 
     await click(buttonByName('Lưu sản phẩm'));
     expect(buttonByName('Đăng bán')!.disabled).toBe(false);
