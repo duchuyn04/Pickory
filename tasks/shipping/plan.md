@@ -79,7 +79,7 @@ SHIP-01 logic thuần: gộp kiện, ánh xạ trạng thái, mã tham chiếu G
 Chi tiết từng task ở `tasks/shipping/todo.md`.
 
 ### Phase 0: Xác minh GHN
-- [ ] SHIP-00 (còn 1 tiêu chí mở về trạng thái hủy được, xem `todo.md`)
+- [x] SHIP-00
 
 ### Phase 1: Nền tảng
 - [x] SHIP-01 · [x] SHIP-02 · [x] SHIP-03

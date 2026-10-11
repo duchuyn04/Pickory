@@ -175,6 +175,7 @@ Kết quả:
 Trạng thái còn hủy được:
 - Tài liệu GHN không liệt kê. Trang `cancel` chỉ nói `result: false` xảy ra khi đơn "đã ở trạng thái không hủy được".
 - Sandbox xác nhận `ready_to_pick` hủy được. Sandbox không cho đẩy đơn sang trạng thái khác, nên chưa quan sát được trường hợp `result: false`.
+- Quyết định ngày 2026-10-11: module không cần danh sách trạng thái hủy được. GHN trả `result: false` thì module báo `SHIPPING_REJECTED` và giữ nguyên DB.
 - Chưa kiểm được: trạng thái từ `picking` trở đi. `GhnHttpClient.CancelOrderAsync` đã xử lý `result: false` như từ chối nghiệp vụ. Contract test ở SHIP-09 chỉ kiểm được đến `ready_to_pick`.
 
 Mã vận đơn thử đã tạo (tất cả đã hủy):

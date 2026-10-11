@@ -15,14 +15,17 @@ Quy ước:
 
 ### SHIP-00: Xác minh GHN sandbox
 **Mô tả:** Gọi GHN sandbox bằng token thật để chốt các điểm tài liệu chưa nói rõ. Ghi kết quả vào `docs/adr/0003-ghn-shipping-integration.md`. Task này cần `GHN_TOKEN` và `GHN_SHOP_ID` do người dùng cung cấp.
-**Trạng thái:** đã xác minh ngày 2026-10-11 với token sandbox. Kết quả ở ADR 0003. Còn 1 tiêu chí mở: trạng thái hủy được ngoài `ready_to_pick`.
+**Trạng thái:** đã xác minh ngày 2026-10-11 với token sandbox. Kết quả ở ADR 0003.
 **Tiêu chí nghiệm thu:**
 - [x] API báo phí: xác định cách gửi địa chỉ 2 cấp (tỉnh/thành và phường/xã mới), kèm request và response thật đã che token
 - [x] Danh sách mã trạng thái vận đơn của GHN, đối chiếu với bảng ánh xạ trong spec
 - [x] Gửi lại cùng `client_order_code` trả cùng `order_code`, không tạo đơn thứ hai
 - [x] API thời gian giao dự kiến (`leadtime`) nhận địa chỉ 2 cấp hay không
-- [ ] Trạng thái nào còn hủy được
-  Chưa kiểm hết: sandbox chỉ cho thấy `ready_to_pick` hủy được và không cho đẩy đơn sang trạng thái khác. Tài liệu GHN không liệt kê trạng thái hủy được. Task SHIP-09 (contract test sandbox) và vận hành thật sẽ kiểm tiếp. Xem ADR 0003, tiêu chí 5.
+- [x] Trạng thái nào còn hủy được: `ready_to_pick` hủy được trên sandbox. Trạng thái khác dựa vào `result: false` của GHN, và có test cho nhánh này
+  Người dùng duyệt đổi tiêu chí ngày 2026-10-11. Tài liệu GHN không liệt kê trạng thái hủy được, và sandbox không cho đẩy đơn khỏi `ready_to_pick`.
+  - Sandbox: `GhnSandboxContractTests.Sandbox_CreateThenCancelOrder_EndsWithCancelStatus` hủy được đơn `ready_to_pick`.
+  - Nhánh `result: false`: `GhnHttpClientOperationsTests.CancelOrder_ResultFalse_ThrowsRejectedWithItemMessage`, `ShipmentCancelTests.Cancel_GhnRejects_KeepsStatusAndRefAndPublishesNothing`.
+  - Khi vận hành thật, ghi trạng thái nào GHN từ chối hủy vào ADR 0003.
 - [x] Token có giới hạn IP hay không, và IP nào cần đăng ký
 **Kiểm tra:** script tạm ngoài repo, output thật trong ADR
 **Phụ thuộc:** không · **Quy mô:** S
@@ -189,7 +192,7 @@ Quy ước:
   - Ở 375 px, trang không tràn ngang. Console không có lỗi.
   - Ô chọn ở checkout của khách thuộc `commerce`. Màn này dùng cùng component `AddressPicker`.
 - [x] Webhook và job đồng bộ phát sự kiện đúng 1 lần cho mỗi lần đổi trạng thái
-- [ ] Review với người dùng
+- [x] Review với người dùng
 
 ---
 
@@ -276,4 +279,4 @@ Lệnh chạy lại:
 - [x] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, bỏ `Persistence/Migrations/`
 - [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
   Kết quả ngày 2026-10-11: Vitest 806 test đạt, E2E 40 test đạt. `dotnet test` đạt 6 test kiến trúc, 924 test đơn vị, 1086 test tích hợp, 10 test live bỏ qua.
-- [ ] Review với người dùng, rồi mới bắt đầu `commerce`
+- [x] Review với người dùng, rồi mới bắt đầu `commerce`
