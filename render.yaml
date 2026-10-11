@@ -32,6 +32,10 @@ services:
       # API giữ tối đa 10, để lại 5 cho lệnh chạy từ máy dev.
       - key: DATABASE_POOL_MAX
         value: "10"
+      # Trang chủ gửi 11 request tới danh sách sản phẩm và cây danh mục. Gói free xử lý chậm khi nhiều request song song.
+      # Cache 30 giây trong bộ nhớ API, và API xóa cache ngay khi admin đổi catalog hoặc tồn kho.
+      - key: CATALOG_CACHE_SECONDS
+        value: "30"
       # Hai biến này là domain Vercel. Cookie phiên và callback Google phải ở cùng origin với web.
       - key: WEB_ORIGIN
         sync: false

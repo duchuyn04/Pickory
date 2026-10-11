@@ -2,6 +2,7 @@ using FluentValidation;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Pickory.Modules.Catalog.Caching;
 using Pickory.Modules.Identity.Contracts.Actors;
 using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Shared.Http;
@@ -27,10 +28,11 @@ public static class CategoriesEndpoints
 
     private static async Task<IResult> GetCategoriesAsync(
         CategoryManagementHandler handler,
+        CatalogResponseCache cache,
         CancellationToken cancellationToken)
     {
-        // Trả cây danh mục hai cấp công khai cho người dùng và khách vãng lai.
-        var tree = await handler.GetTreeAsync(cancellationToken);
+        // Trả cây danh mục hai cấp công khai cho người dùng và khách vãng lai. Cây không phụ thuộc người gọi nên dùng một khóa.
+        var tree = await cache.GetOrCreateAsync("categories", () => handler.GetTreeAsync(cancellationToken));
         return Results.Ok(new ApiResponse<IReadOnlyList<CategoryTreeResponse>>(tree));
     }
 

@@ -21,6 +21,9 @@ public record AppConfig
     // Số kết nối tối đa mà API mở tới DB. Null nghĩa là giữ mặc định của Npgsql (100 kết nối).
     public int? DatabasePoolMax { get; init; }
 
+    // Số giây cache danh sách sản phẩm và cây danh mục công khai. 0 nghĩa là tắt cache.
+    public int CatalogCacheSeconds { get; init; }
+
     // Đường dẫn tới `index.html` đã build của SPA, nơi API chèn thẻ meta SEO cho `/p/{slug}` và `/c/{slug}`. Rỗng nghĩa là tắt.
     public string WebIndexHtmlPath { get; init; } = string.Empty;
 
@@ -213,6 +216,8 @@ public record AppConfig
             ApiBaseUrl = apiBaseUrl,
             DatabaseUrl = databaseUrl,
             DatabasePoolMax = ReadOptionalIntegerInRange(configuration, "DATABASE_POOL_MAX", 1, 100),
+            // Không đặt biến thì tắt cache. Giá trị ngoài khoảng 0 đến 300 làm API dừng khi khởi động.
+            CatalogCacheSeconds = ReadOptionalIntegerInRange(configuration, "CATALOG_CACHE_SECONDS", 0, 300) ?? 0,
             WebIndexHtmlPath = (configuration["WEB_INDEX_HTML_PATH"] ?? string.Empty).Trim(),
             TrustProxy = trustProxy,
             GoogleClientId = string.IsNullOrWhiteSpace(googleClientId) ? "mock_google_client_id" : googleClientId,

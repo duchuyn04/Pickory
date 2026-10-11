@@ -123,6 +123,7 @@ Vercel đọc lệnh cài gói, lệnh build và thư mục kết quả từ `ve
 | `WEB_ORIGIN` | Domain Vercel, ví dụ `https://pickory.vercel.app` |
 | `API_BASE_URL` | Cùng giá trị với `WEB_ORIGIN` |
 | `DATABASE_POOL_MAX` | `10`, giới hạn số kết nối DB của API. Xem phần ngay dưới bảng |
+| `CATALOG_CACHE_SECONDS` | `30`, số giây cache danh sách sản phẩm và cây danh mục công khai. Xem phần ngay dưới bảng |
 | `TRUST_PROXY` | `2`, xem phần kiểm tra số hop |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Ứng dụng OAuth của Google |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Tài khoản Cloudinary |
@@ -134,6 +135,12 @@ Vercel đọc lệnh cài gói, lệnh build và thư mục kết quả từ `ve
 Supabase Session pooler gói free cho 15 kết nối cùng lúc. Npgsql mặc định mở tới 100 kết nối, nên trang chủ gửi nhiều request song song có thể vượt giới hạn.
 
 `DATABASE_POOL_MAX` giới hạn số kết nối của cả tiến trình API. Mọi module và worker nền dùng chung một pool. Request thừa xếp hàng thay vì mở kết nối mới. Giá trị `10` để lại 5 kết nối cho lệnh chạy từ máy dev.
+
+`CATALOG_CACHE_SECONDS` cache `GET /api/products` và `GET /api/categories` trong bộ nhớ của API. API xóa cache ngay sau khi admin đổi sản phẩm, danh mục, thương hiệu hoặc tồn kho.
+
+Cache nằm riêng trong từng instance API. Khi chạy nhiều instance, một instance có thể trả dữ liệu cũ tối đa `CATALOG_CACHE_SECONDS` giây sau thay đổi ở instance khác.
+
+API dừng khi khởi động nếu `CATALOG_CACHE_SECONDS` không phải số nguyên từ 0 đến 300. Để trống biến này thì cache tắt.
 
 API dừng khi khởi động nếu `DATABASE_POOL_MAX` không phải số nguyên từ 1 đến 100. Để trống biến này thì API dùng mặc định của Npgsql.
 

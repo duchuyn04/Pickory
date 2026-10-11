@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Pickory.Modules.Catalog.Caching;
 using Pickory.Shared.Http;
 
 namespace Pickory.Modules.Catalog.Features.Storefront;
@@ -15,7 +16,8 @@ public static class PublicProductsEndpoints
 
     private static async Task<IResult> GetProductsAsync(
         HttpContext context,
-        ProductSearchService searchService)
+        ProductSearchService searchService,
+        CatalogResponseCache cache)
     {
         // Gom tham số lặp thành một chuỗi cách nhau bằng dấu phẩy. Giá trị lặp của tham số số bị bộ đọc từ chối.
         var parameters = context.Request.Query.ToDictionary(
@@ -24,7 +26,10 @@ public static class PublicProductsEndpoints
         var query = ProductSearchQuery.Read(parameters);
         try
         {
-            var result = await searchService.SearchAsync(query, context.RequestAborted);
+            // Khóa theo tham số đã chuẩn hóa. Lỗi không bao giờ được cache, nên `UnknownFilterException` đi thẳng ra ngoài.
+            var result = await cache.GetOrCreateAsync(
+                CatalogResponseCache.NormalizeQuery(parameters),
+                () => searchService.SearchAsync(query, context.RequestAborted));
             return Results.Ok(new ApiResponse<ProductListResponse>(result));
         }
         catch (UnknownFilterException unknownFilter)

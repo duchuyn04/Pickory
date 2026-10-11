@@ -8,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Pickory.Modules.Catalog.Caching;
+using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Features.Brands;
 using Pickory.Modules.Catalog.Features.Categories;
 using Pickory.Modules.Catalog.Features.Inventory;
@@ -22,6 +24,7 @@ using Pickory.Modules.Catalog.Stock;
 using Pickory.Modules.Catalog.Contracts.Reading;
 using Pickory.Modules.Catalog.Contracts.Stock;
 using Pickory.Shared.Configuration;
+using Pickory.Shared.Events;
 
 namespace Pickory.Modules.Catalog;
 
@@ -39,6 +42,11 @@ public static class CatalogModule
         // Đăng ký đồng hồ thời gian hệ thống và các dịch vụ quản lý danh mục, thương hiệu, sản phẩm.
         services.TryAddSingleton(TimeProvider.System);
         services.AddValidatorsFromAssemblyContaining<CreateCategoryRequestValidator>();
+        // Cache phản hồi công khai của hai route danh sách. Singleton qua factory để container giải phóng khi tắt.
+        services.AddSingleton(_ => new CatalogResponseCache(TimeSpan.FromSeconds(config.CatalogCacheSeconds)));
+        // Sản phẩm và tồn kho phát sự kiện sau commit. Handler xóa cache ở đúng thời điểm đó.
+        services.AddScoped<IDomainEventHandler<ProductChangedEvent>, CatalogCacheInvalidationHandler>();
+        services.AddScoped<IDomainEventHandler<StockChangedEvent>, CatalogCacheInvalidationHandler>();
         services.AddScoped<CategoryManagementHandler>();
         services.AddScoped<BrandManagementHandler>();
         services.AddScoped<ProductManagementHandler>();

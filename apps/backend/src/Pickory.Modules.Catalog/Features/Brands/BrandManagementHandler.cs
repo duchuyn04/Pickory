@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Pickory.Modules.Catalog.Caching;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Catalog.Products;
@@ -13,7 +14,8 @@ namespace Pickory.Modules.Catalog.Features.Brands;
 public sealed class BrandManagementHandler(
     CatalogDbContext database,
     IAuditLogWriter auditLogWriter,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    CatalogResponseCache responseCache)
 {
     // Đọc danh sách thương hiệu sắp xếp theo tên để phục vụ bộ lọc công khai.
     public async Task<IReadOnlyList<BrandResponse>> ListAsync(CancellationToken cancellationToken)
@@ -59,6 +61,8 @@ public sealed class BrandManagementHandler(
             ToAuditSnapshot(brand));
         await auditLogWriter.WriteAsync(auditEntry, transaction.GetDbTransaction(), cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        // Xóa cache sau commit. Request song song nạp lại từ DB sẽ thấy dữ liệu mới.
+        responseCache.Invalidate();
 
         return ToResponse(brand);
     }
@@ -107,6 +111,8 @@ public sealed class BrandManagementHandler(
             ToAuditSnapshot(brand));
         await auditLogWriter.WriteAsync(auditEntry, transaction.GetDbTransaction(), cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        // Xóa cache sau commit. Request song song nạp lại từ DB sẽ thấy dữ liệu mới.
+        responseCache.Invalidate();
 
         return ToResponse(brand);
     }
@@ -148,6 +154,8 @@ public sealed class BrandManagementHandler(
             null);
         await auditLogWriter.WriteAsync(auditEntry, transaction.GetDbTransaction(), cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        // Xóa cache sau commit. Request song song nạp lại từ DB sẽ thấy dữ liệu mới.
+        responseCache.Invalidate();
     }
 
     private async Task<string> GenerateUniqueSlugAsync(string name, string? excludeId, CancellationToken cancellationToken)
