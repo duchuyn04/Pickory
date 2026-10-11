@@ -22,5 +22,10 @@ internal sealed class CartConfiguration : IEntityTypeConfiguration<Cart>
         entity.HasIndex(value => value.UserId)
             .IsUnique()
             .HasDatabaseName("carts_userId_key");
+
+        // Mỗi mã ẩn danh có tối đa một giỏ. Hai request đầu tiên chạy đồng thời không tạo được hai giỏ.
+        entity.HasIndex(value => value.AnonymousId)
+            .IsUnique()
+            .HasDatabaseName("carts_anonymousId_key");
     }
 }

@@ -24,7 +24,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
     [InlineData("ai_gateway", "ef_ai_gateway", "20261005125642_PrismaBaseline")]
     [InlineData("catalog", "ef_catalog", "20261005125646_PrismaBaseline")]
     [InlineData("shipping", "ef_shipping", "20261010041544_InitialShipping")]
-    [InlineData("commerce", "ef_commerce", "20261011034624_InitialCommerce")]
+    [InlineData("commerce", "ef_commerce", "20261011172706_AddCartAnonymousIdUniqueIndex")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(
         string module, string historySchema, string migrationId)
     {
@@ -41,8 +41,9 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
         };
         DotnetSchemaIntegrationTests.AssertTestConnection(context);
         var migrationsAssembly = context.GetService<IMigrationsAssembly>();
-        var baseline = Assert.Single(migrationsAssembly.Migrations);
-        Assert.Equal(migrationId, baseline.Key);
+        // `migrationId` là migration mới nhất của module. Module có nhiều migration thì script Down và Up chạy qua tất cả migration.
+        var migrationIds = migrationsAssembly.Migrations.Keys.Order(StringComparer.Ordinal).ToList();
+        Assert.Equal(migrationId, migrationIds[^1]);
         Assert.NotNull(migrationsAssembly.ModelSnapshot);
         Assert.False(context.Database.HasPendingModelChanges(), $"{context.GetType().Name} snapshot must match its design-time model.");
         var migrator = context.GetService<IMigrator>();
@@ -54,7 +55,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
         var originalHistory = await ReadHistoryAsync(context);
         Assert.All(originalHistory, entry => Assert.NotEqual("<missing>", entry.Value));
         var historyRepository = context.GetService<IHistoryRepository>();
-        Assert.Equal(migrationId, Assert.Single(await historyRepository.GetAppliedMigrationsAsync()).MigrationId);
+        Assert.Equal(migrationIds, AppliedIds(await historyRepository.GetAppliedMigrationsAsync()));
         await using var transaction = await context.Database.BeginTransactionAsync();
         try
         {
@@ -70,7 +71,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
             // SQL Up thật phải tạo lại đầy đủ đối tượng trên phần schema module đang rỗng.
             await context.Database.ExecuteSqlRawAsync(upSql);
             ApplicationDatabaseSchema.AssertEqual(original, await ApplicationDatabaseSchema.ReadAsync(context));
-            Assert.Equal(migrationId, Assert.Single(await historyRepository.GetAppliedMigrationsAsync()).MigrationId);
+            Assert.Equal(migrationIds, AppliedIds(await historyRepository.GetAppliedMigrationsAsync()));
             AssertOtherHistoriesUnchanged(originalHistory, await ReadHistoryAsync(context), historySchema);
         }
         finally
@@ -81,6 +82,9 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
         AssertHistoriesEqual(originalHistory, await ReadHistoryAsync(context));
         ApplicationDatabaseSchema.AssertEqual(original, await ApplicationDatabaseSchema.ReadAsync(context));
     }
+
+    private static List<string> AppliedIds(IReadOnlyList<HistoryRow> rows) =>
+        rows.Select(row => row.MigrationId).Order(StringComparer.Ordinal).ToList();
 
     private static bool IsOwnedObject(string key, string module)
     {

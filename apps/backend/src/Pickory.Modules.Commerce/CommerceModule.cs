@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Pickory.Modules.Commerce.Carts;
 using Pickory.Modules.Commerce.Configuration;
 using Pickory.Modules.Commerce.Persistence;
+using Pickory.Modules.Commerce.Settings;
 using Pickory.Shared.Configuration;
 
 namespace Pickory.Modules.Commerce;
@@ -25,6 +27,10 @@ public static class CommerceModule
 
         // Job hết hạn thanh toán và luật thời hạn cần đồng hồ. Module không giả định module khác đã đăng ký đồng hồ.
         services.TryAddSingleton(TimeProvider.System);
+
+        // Giới hạn commerce đọc từ một lớp duy nhất. Giỏ hàng và đặt đơn cùng dùng nguồn giá trị này.
+        services.AddScoped<CommerceSettingsProvider>();
+        services.AddScoped<CartService>();
         return services;
     }
 
@@ -39,8 +45,8 @@ public static class CommerceModule
     public static IEndpointRouteBuilder MapCommerceEndpoints(this IEndpointRouteBuilder endpoints)
     {
         // Nhóm không thêm tiền tố, và gắn tag `Commerce` cho mọi route của module trong tài liệu OpenAPI.
-        // Phase 1 chưa có route nào, nên các task sau gắn route vào nhóm này.
-        _ = endpoints.MapGroup(string.Empty).WithTags("Commerce");
+        var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("Commerce");
+        CartEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }

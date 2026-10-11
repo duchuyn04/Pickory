@@ -90,13 +90,13 @@ Quy ước:
 ### COM-04: Giỏ hàng
 **Mô tả:** `GET /api/cart`, `POST /api/cart/items`, `PATCH /api/cart/items/{skuId}`, `DELETE /api/cart/items/{skuId}`. Giỏ gắn với `AnonymousId` hoặc `UserId` của `Actor`. Giỏ không lưu giá. Thêm và xóa phát `CartItemAddedEvent`, `CartItemRemovedEvent`.
 **Tiêu chí nghiệm thu:**
-- [ ] Mỗi lần xem giỏ, giá lấy mới từ `ICatalogReader.GetSkusAsync`
-- [ ] SKU tắt, hết hàng hoặc sản phẩm ngừng bán vẫn hiện trong giỏ, kèm nhãn lý do
-- [ ] Vượt số lượng mỗi SKU hoặc số dòng mỗi giỏ trả 422 `CART_LIMIT_EXCEEDED`
-- [ ] SKU không tồn tại trả 404. Số lượng nhỏ hơn 1 trả 400 `VALIDATION_ERROR`
-- [ ] `source` tùy chọn đi vào `CartItemAddedEvent`. Chuỗi `source` dài hơn 64 ký tự trả 400
-- [ ] Mỗi lần thêm hoặc xóa thành công phát đúng 1 sự kiện sau commit
-- [ ] Thêm vào giỏ không giữ hàng: tồn kho không đổi
+- [x] Mỗi lần xem giỏ, giá lấy mới từ `ICatalogReader.GetSkusAsync`
+- [x] SKU tắt, hết hàng hoặc sản phẩm ngừng bán vẫn hiện trong giỏ, kèm nhãn lý do
+- [x] Vượt số lượng mỗi SKU hoặc số dòng mỗi giỏ trả 422 `CART_LIMIT_EXCEEDED`
+- [x] SKU không tồn tại trả 404. Số lượng nhỏ hơn 1 trả 400 `VALIDATION_ERROR`
+- [x] `source` tùy chọn đi vào `CartItemAddedEvent`. Chuỗi `source` dài hơn 64 ký tự trả 400
+- [x] Mỗi lần thêm hoặc xóa thành công phát đúng 1 sự kiện sau commit
+- [x] Thêm vào giỏ không giữ hàng: tồn kho không đổi
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-03 · **Quy mô:** M
 

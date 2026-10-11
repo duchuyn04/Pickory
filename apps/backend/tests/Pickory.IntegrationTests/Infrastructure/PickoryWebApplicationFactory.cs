@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Images;
+using Pickory.Modules.Commerce.Contracts.Events;
 using Pickory.Modules.Identity.Emails;
 using Pickory.Modules.Shipping.Addresses;
 using Pickory.Modules.Shipping.Contracts.Events;
@@ -120,13 +121,15 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             // Trỏ `IGoogleOAuthClient` về cùng một instance. Thông tin test đặt là thông tin API nhận.
             services.AddSingleton<IGoogleOAuthClient>(provider => provider.GetRequiredService<FakeGoogleOAuthClient>());
 
-            // Ghi lại sự kiện của identity và catalog để test kiểm tra số lần phát.
+            // Ghi lại sự kiện của identity, catalog, shipping và commerce để test kiểm tra số lần phát.
             services.AddSingleton<RecordedDomainEvents>();
             services.AddSingleton<IDomainEventHandler<UserLinkedEvent>, RecordingDomainEventHandler<UserLinkedEvent>>();
             services.AddSingleton<IDomainEventHandler<UserDeletedEvent>, RecordingDomainEventHandler<UserDeletedEvent>>();
             services.AddSingleton<IDomainEventHandler<ProductChangedEvent>, RecordingDomainEventHandler<ProductChangedEvent>>();
             services.AddSingleton<IDomainEventHandler<StockChangedEvent>, RecordingDomainEventHandler<StockChangedEvent>>();
             services.AddSingleton<IDomainEventHandler<ShipmentStatusChangedEvent>, RecordingDomainEventHandler<ShipmentStatusChangedEvent>>();
+            services.AddSingleton<IDomainEventHandler<CartItemAddedEvent>, RecordingDomainEventHandler<CartItemAddedEvent>>();
+            services.AddSingleton<IDomainEventHandler<CartItemRemovedEvent>, RecordingDomainEventHandler<CartItemRemovedEvent>>();
 
             // Test không gọi GHN thật, kể cả khi máy chạy test có đặt biến `GHN_*`. Biến môi trường thắng cấu hình trong bộ nhớ, nên phải thay `AppConfig` đã nạp.
             var loadedConfig = (AppConfig)services.Single(descriptor => descriptor.ServiceType == typeof(AppConfig)).ImplementationInstance!;

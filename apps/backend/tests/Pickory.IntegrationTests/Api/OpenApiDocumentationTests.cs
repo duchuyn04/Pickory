@@ -19,7 +19,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
     // Cấu hình Swagger UI ghi danh sách phương thức được gửi. Danh sách rỗng nghĩa là không có nút gửi request.
     private const string EmptySubmitMethods = "\"supportedSubmitMethods\":[]";
 
-    private static readonly string[] AllowedTags = ["System", "Identity", "AI Gateway", "Catalog", "Shipping"];
+    private static readonly string[] AllowedTags = ["System", "Identity", "AI Gateway", "Catalog", "Shipping", "Commerce"];
 
     private async Task<JsonDocument> ReadDocumentAsync()
     {
@@ -111,6 +111,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
         Assert.Equal("Catalog", FirstTag(paths, "/api/products", "get"));
         Assert.Equal("AI Gateway", FirstTag(paths, "/api/admin/ai/usage", "get"));
         Assert.Equal("Shipping", FirstTag(paths, "/api/addresses/provinces", "get"));
+        Assert.Equal("Commerce", FirstTag(paths, "/api/cart", "get"));
     }
 
     [Fact]

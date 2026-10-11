@@ -51,6 +51,10 @@ namespace Pickory.Modules.Commerce.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("carts_pkey");
 
+                    b.HasIndex("AnonymousId")
+                        .IsUnique()
+                        .HasDatabaseName("carts_anonymousId_key");
+
                     b.HasIndex("UserId")
                         .IsUnique()
                         .HasDatabaseName("carts_userId_key");

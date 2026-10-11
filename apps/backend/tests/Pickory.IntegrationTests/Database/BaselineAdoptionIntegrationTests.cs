@@ -44,7 +44,11 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             Assert.Contains("20261005125639_PrismaBaseline|", stamped["ef_identity"]);
             Assert.Contains("20261005125642_PrismaBaseline|", stamped["ef_ai_gateway"]);
             Assert.Contains("20261005125646_PrismaBaseline|", stamped["ef_catalog"]);
-            Assert.All(stamped.Values, rows => Assert.Single(rows.Split('\n')));
+            // Ba module có schema Prisma cũ chỉ có một dòng lịch sử sau khi nhận schema. Module sinh sau có thể có nhiều migration.
+            foreach (var adoptedSchema in new[] { "ef_identity", "ef_ai_gateway", "ef_catalog" })
+            {
+                Assert.Single(stamped[adoptedSchema].Split('\n'));
+            }
             // Shipping và commerce không thuộc schema Prisma cũ nên script nhận schema không đụng tới lịch sử của hai module đó.
             Assert.Equal(originalHistory["ef_shipping"], stamped["ef_shipping"]);
             Assert.Equal(originalHistory["ef_commerce"], stamped["ef_commerce"]);
