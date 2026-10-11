@@ -125,8 +125,8 @@ Vercel đọc lệnh cài gói, lệnh build và thư mục kết quả từ `ve
 | `TRUST_PROXY` | `2`, xem phần kiểm tra số hop |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Ứng dụng OAuth của Google |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Tài khoản Cloudinary |
-| `GHN_API_BASE` | `https://online-gateway.ghn.vn` |
-| `GHN_TOKEN`, `GHN_SHOP_ID`, `GHN_WEBHOOK_SECRET` | Tài khoản GHN production |
+| `GHN_API_BASE` | `https://dev-online-gateway.ghn.vn` khi dùng sandbox, `https://online-gateway.ghn.vn` khi dùng production |
+| `GHN_TOKEN`, `GHN_SHOP_ID`, `GHN_WEBHOOK_SECRET` | Tài khoản GHN cùng môi trường với `GHN_API_BASE` |
 | `LLM_API_KEY`, `LLM_MODEL` | Khóa và ID model của provider LLM (Large Language Model) |
 | `EMBEDDING_API_KEY` | Khóa provider embedding |
 

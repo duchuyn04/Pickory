@@ -46,9 +46,10 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
-      # Gateway production của GHN. Mặc định trong code là sandbox.
+      # Giai đoạn demo dùng tài khoản sandbox của GHN, nên đơn không phải đơn thật.
+      # Khi có tài khoản GHN production, đổi giá trị sang `https://online-gateway.ghn.vn`.
       - key: GHN_API_BASE
-        value: https://online-gateway.ghn.vn
+        value: https://dev-online-gateway.ghn.vn
       - key: GHN_TOKEN
         sync: false
       - key: GHN_SHOP_ID
