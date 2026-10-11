@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Api.Identity;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Catalog;
+using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Roles;
@@ -72,6 +73,8 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "PUT", "/api/admin/ai/settings", [Permissions.AiSettingsManage] },
         { "GET", "/api/admin/shipping/settings", [Permissions.ShippingSettingsManage] },
         { "PUT", "/api/admin/shipping/settings", [Permissions.ShippingSettingsManage] },
+        { "GET", "/api/admin/commerce/settings", [Permissions.CommerceSettingsManage] },
+        { "PUT", "/api/admin/commerce/settings", [Permissions.CommerceSettingsManage] },
         { "GET", "/api/admin/categories", [Permissions.ProductsRead] },
         { "POST", "/api/admin/categories", [Permissions.ProductsWrite] },
         { "PATCH", "/api/admin/categories/dummy-id", [Permissions.ProductsWrite] },
@@ -219,6 +222,15 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         // Shipping chỉ dùng một quyền back-office. Quyền này nằm trong danh sách chung của identity.
         AssertMatrixMatchesModuleAdminEndpoints(
             "shipping", typeof(ShippingModule).Assembly, "Pickory.Modules.Shipping", [Permissions.ShippingSettingsManage]);
+    }
+
+    [Fact]
+    // COM-06: route back-office của commerce phải có trong ma trận, kể cả route thêm sau này.
+    public void BackofficeEndpoints_CoversAllCommerceAdminEndpoints()
+    {
+        // Commerce hiện chỉ có một quyền back-office. Quyền này nằm trong danh sách chung của identity.
+        AssertMatrixMatchesModuleAdminEndpoints(
+            "commerce", typeof(CommerceModule).Assembly, "Pickory.Modules.Commerce", [Permissions.CommerceSettingsManage]);
     }
 
     // Đối chiếu hai chiều giữa route `/api/admin/` của một module và các dòng ma trận dùng quyền của module đó.

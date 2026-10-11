@@ -144,7 +144,7 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 2: Giỏ hàng và đặt đơn
-- [x] COM-04 · [x] COM-05 · [x] COM-UI1 · [ ] COM-06 · [ ] COM-UI7 · [ ] COM-07 · [ ] COM-08 · [ ] COM-UI2 · [ ] COM-09 · [ ] COM-10 · [ ] COM-UI3
+- [x] COM-04 · [x] COM-05 · [x] COM-UI1 · [x] COM-06 · [ ] COM-UI7 · [ ] COM-07 · [ ] COM-08 · [ ] COM-UI2 · [ ] COM-09 · [ ] COM-10 · [ ] COM-UI3
 
 ### Checkpoint M2
 - [ ] Khách vãng lai thêm giỏ, chọn địa chỉ, thấy phí ship và đặt được đơn COD trên `pnpm dev`

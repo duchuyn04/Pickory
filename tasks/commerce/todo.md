@@ -125,11 +125,11 @@ Quy ước:
 ### COM-06: Cấu hình commerce
 **Mô tả:** `GET` và `PUT /api/admin/commerce/settings` với quyền `commerce-settings:manage`. Cấu hình gồm ngưỡng miễn phí ship, hạn mức COD, giới hạn giỏ, số tài khoản nhận và mã ngân hàng.
 **Tiêu chí nghiệm thu:**
-- [ ] `sales` và `support` nhận 403. Endpoint mới có trong ma trận quyền
-- [ ] Giá trị mặc định: ngưỡng 500.000 đ, hạn mức COD 20.000.000 đ, 5 sản phẩm mỗi SKU, 20 dòng mỗi giỏ
-- [ ] Số âm hoặc số tài khoản sai định dạng trả 400 `VALIDATION_ERROR`
-- [ ] Mỗi lần sửa ghi đúng 1 dòng audit `commerce.settings.update` trong cùng transaction
-- [ ] Response không chứa `SEPAY_WEBHOOK_API_KEY`
+- [x] `sales` và `support` nhận 403. Endpoint mới có trong ma trận quyền
+- [x] Giá trị mặc định: ngưỡng 500.000 đ, hạn mức COD 20.000.000 đ, 5 sản phẩm mỗi SKU, 20 dòng mỗi giỏ
+- [x] Số âm hoặc số tài khoản sai định dạng trả 400 `VALIDATION_ERROR`
+- [x] Mỗi lần sửa ghi đúng 1 dòng audit `commerce.settings.update` trong cùng transaction
+- [x] Response không chứa `SEPAY_WEBHOOK_API_KEY`
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-03 · **Quy mô:** S
 

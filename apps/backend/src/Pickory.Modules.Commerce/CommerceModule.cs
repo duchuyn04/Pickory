@@ -32,6 +32,8 @@ public static class CommerceModule
 
         // Giới hạn commerce đọc từ một lớp duy nhất. Giỏ hàng và đặt đơn cùng dùng nguồn giá trị này.
         services.AddScoped<CommerceSettingsProvider>();
+        // Trang cấu hình của admin đọc và ghi dòng cấu hình qua lớp riêng, vì phải ghi audit cùng transaction.
+        services.AddScoped<CommerceSettingsStore>();
         services.AddScoped<CartService>();
         services.AddScoped<CartMergeService>();
 
@@ -54,6 +56,7 @@ public static class CommerceModule
         // Nhóm không thêm tiền tố, và gắn tag `Commerce` cho mọi route của module trong tài liệu OpenAPI.
         var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("Commerce");
         CartEndpoints.Map(moduleRoutes);
+        CommerceSettingsEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }
