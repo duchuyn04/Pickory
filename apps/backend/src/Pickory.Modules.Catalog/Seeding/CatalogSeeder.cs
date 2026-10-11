@@ -1,19 +1,23 @@
 using System.Data.Common;
+using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using Pickory.Modules.Catalog.Descriptions;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Features.Brands;
 using Pickory.Modules.Catalog.Features.Categories;
 using Pickory.Modules.Catalog.Features.Products;
+using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Catalog.Products;
 using Pickory.Modules.Catalog.Stock;
 using Pickory.Modules.Identity.Contracts.Actors;
 using Pickory.Modules.Identity.Contracts.Audit;
+using Pickory.Shared.Exceptions;
 
 namespace Pickory.Modules.Catalog.Seeding;
 
@@ -40,8 +44,21 @@ public sealed class SeedReport
     }
 }
 
-// Lỗi của dữ liệu mẫu, ví dụ sản phẩm không qua điều kiện đăng bán. Lệnh in lý do và thoát với mã lỗi.
-public sealed class SeedException(string message) : Exception(message);
+// Lỗi của dữ liệu mẫu hoặc của kho ảnh khi seed một sản phẩm. Lệnh in lý do và thoát với mã lỗi.
+public class SeedException(string message, Exception? innerException = null) : Exception(message, innerException);
+
+// Kho ảnh báo hết lượt gọi API. Lệnh dừng và người chạy lệnh phải chờ giới hạn đặt lại rồi chạy lại.
+public sealed class SeedRateLimitedException(string message, Exception? innerException = null)
+    : SeedException(message, innerException);
+
+// Số lần thử lại và khoảng chờ cho lỗi tạm thời của kho ảnh. Hàm chờ tách riêng để test không phải chờ thật.
+public sealed record SeedRetryPolicy(IReadOnlyList<TimeSpan> Delays, Func<TimeSpan, CancellationToken, Task> Wait)
+{
+    // Thử lại tối đa 3 lần, chờ tăng dần. Admin API treo thường qua đi sau vài giây.
+    public static readonly SeedRetryPolicy Default = new(
+        [TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30)],
+        (delay, cancellationToken) => Task.Delay(delay, cancellationToken));
+}
 
 // Ghi dữ liệu mẫu qua cùng handler của trang quản trị. Nhờ vậy luật slug, SKU, giá và đăng bán không bị viết lại.
 public static class CatalogSeeder
@@ -61,20 +78,26 @@ public static class CatalogSeeder
     };
 
     public static async Task<SeedReport> SeedAsync(
-        IServiceProvider services, SeedCatalog catalog, CancellationToken cancellationToken)
+        IServiceProvider services, SeedCatalog catalog, CancellationToken cancellationToken,
+        TextWriter? progress = null, SeedRetryPolicy? retryPolicy = null)
     {
+        var output = progress ?? TextWriter.Null;
+        var policy = retryPolicy ?? SeedRetryPolicy.Default;
         var report = new SeedReport();
         var categoryIds = await SeedCategoriesAsync(services, catalog, report, cancellationToken);
         var brandIds = await SeedBrandsAsync(services, catalog, report, cancellationToken);
         var packagingByCategory = catalog.Categories.ToDictionary(category => category.Name, category => category.Packaging);
 
-        foreach (var product in catalog.Products)
+        for (var index = 0; index < catalog.Products.Count; index++)
         {
+            var product = catalog.Products[index];
             // Mỗi sản phẩm một scope và một DbContext, để bộ nhớ không phình khi seed hàng trăm sản phẩm.
             await using var scope = services.CreateAsyncScope();
-            await SeedProductAsync(
+            var createdNow = await SeedProductAsync(
                 scope.ServiceProvider, product, categoryIds[product.CategoryName], brandIds[product.BrandName],
-                packagingByCategory[product.CategoryName], report, cancellationToken);
+                packagingByCategory[product.CategoryName], report, output, policy, cancellationToken);
+            // Lệnh chạy nhiều phút. Mỗi sản phẩm một dòng để người chạy lệnh thấy lệnh còn chạy.
+            await output.WriteLineAsync($"[{index + 1}/{catalog.Products.Count}] {product.Name}: {(createdNow ? "tạo mới" : "bỏ qua")}");
         }
 
         return report;
@@ -136,24 +159,22 @@ public static class CatalogSeeder
         return ids;
     }
 
-    private static async Task SeedProductAsync(
+    // Trả true khi sản phẩm vừa được tạo, false khi sản phẩm đã có từ trước.
+    private static async Task<bool> SeedProductAsync(
         IServiceProvider provider, SeedProduct seed, string categoryId, string brandId, SeedPackaging packaging,
-        SeedReport report, CancellationToken cancellationToken)
+        SeedReport report, TextWriter progress, SeedRetryPolicy retryPolicy, CancellationToken cancellationToken)
     {
         var database = provider.GetRequiredService<CatalogDbContext>();
         var handler = CreateHandler<ProductManagementHandler>(provider);
 
         // Khóa tự nhiên là slug. Sản phẩm đã có thì chỉ bỏ bước tạo, còn tồn kho và trạng thái vẫn được kiểm để lệnh chạy dở chạy lại được.
-        var productId = await database.Products.AsNoTracking()
-            .Where(item => item.Slug == seed.Slug).Select(item => item.Id).FirstOrDefaultAsync(cancellationToken);
+        var productId = await FindProductIdAsync(database, seed, cancellationToken);
+        var createdNow = false;
         if (productId is null)
         {
-            var created = await handler.CreateAsync(
-                SystemActor, BuildRequest(seed, categoryId, brandId, packaging), cancellationToken);
-            productId = created.Id;
-            report.Created("Sản phẩm");
-            report.Created("SKU", created.Variants.Count);
-            report.Created("Ảnh", created.Images.Count);
+            (productId, createdNow) = await CreateProductWithRetryAsync(
+                provider, database, handler, seed, categoryId, brandId, packaging, report, progress, retryPolicy,
+                cancellationToken);
         }
         else
         {
@@ -162,6 +183,119 @@ public static class CatalogSeeder
 
         await SeedStockAsync(provider, database, seed, productId, report, cancellationToken);
         await SeedStatusAsync(database, handler, seed, productId, report, cancellationToken);
+        return createdNow;
+    }
+
+    private static Task<string?> FindProductIdAsync(CatalogDbContext database, SeedProduct seed, CancellationToken cancellationToken) =>
+        database.Products.AsNoTracking()
+            .Where(item => item.Slug == seed.Slug).Select(item => item.Id).FirstOrDefaultAsync(cancellationToken);
+
+    // Tải ảnh rồi tạo sản phẩm. Lỗi tạm thời của kho ảnh được thử lại, mọi lỗi khác dừng lệnh và nêu tên sản phẩm.
+    private static async Task<(string ProductId, bool CreatedNow)> CreateProductWithRetryAsync(
+        IServiceProvider provider, CatalogDbContext database, ProductManagementHandler handler, SeedProduct seed,
+        string categoryId, string brandId, SeedPackaging packaging, SeedReport report, TextWriter progress,
+        SeedRetryPolicy retryPolicy, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                // Sau lần thử lỗi, lần thử trước có thể đã kịp tạo sản phẩm. Kiểm lại trong `try` để lỗi DB tạm thời ở đây cũng được thử lại.
+                if (attempt > 0)
+                {
+                    var existingId = await FindProductIdAsync(database, seed, cancellationToken);
+                    if (existingId is not null)
+                    {
+                        report.Skipped("Sản phẩm");
+                        return (existingId, false);
+                    }
+                }
+
+                // Tải ảnh trước khi tạo sản phẩm. Handler từ chối ảnh chưa có trên kho nên thiếu ảnh thì không tạo được sản phẩm.
+                await EnsureImagesAsync(provider, seed, report, cancellationToken);
+                var created = await handler.CreateAsync(
+                    SystemActor, BuildRequest(seed, categoryId, brandId, packaging), cancellationToken);
+                report.Created("Sản phẩm");
+                report.Created("SKU", created.Variants.Count);
+                report.Created("Ảnh", created.Images.Count);
+                return (created.Id, true);
+            }
+            catch (Exception exception) when (ShouldWrapFailure(exception, cancellationToken))
+            {
+                var failure = ClassifyFailure(exception, cancellationToken);
+                // Hết lượt gọi thì thử lại ngay chỉ tốn thêm lượt. Dừng lệnh và nói rõ cách xử lý.
+                if (failure == StorageFailure.RateLimited)
+                {
+                    throw new SeedRateLimitedException(
+                        $"Đã chạm giới hạn Admin API của Cloudinary khi seed \"{seed.Name}\" ({exception.Message}). " +
+                        "Hãy chờ giới hạn đặt lại (mỗi giờ) rồi chạy lại lệnh. Sản phẩm đã tạo được giữ nguyên.",
+                        exception);
+                }
+
+                var canRetry = failure == StorageFailure.Transient && attempt < retryPolicy.Delays.Count;
+                if (!canRetry)
+                {
+                    throw new SeedException($"Không seed được \"{seed.Name}\": {exception.Message}", exception);
+                }
+
+                var delay = retryPolicy.Delays[attempt];
+                await progress.WriteLineAsync(
+                    $"  Thử lại lần {attempt + 1}/{retryPolicy.Delays.Count}: {seed.Name} (chờ {delay.TotalSeconds:0} giây): {exception.Message}");
+                await retryPolicy.Wait(delay, cancellationToken);
+            }
+        }
+    }
+
+    private enum StorageFailure
+    {
+        Transient,
+        RateLimited,
+        Permanent,
+    }
+
+    // Người gọi hủy lệnh và lỗi dữ liệu mẫu đã nêu tên sản phẩm thì để nguyên, không bọc lại.
+    private static bool ShouldWrapFailure(Exception exception, CancellationToken cancellationToken) =>
+        exception is not SeedException && !(exception is OperationCanceledException && cancellationToken.IsCancellationRequested);
+
+    // EF Core bọc lỗi Npgsql tạm thời trong `InvalidOperationException`. Duyệt chuỗi lỗi bên trong để tìm lỗi gốc.
+    private static bool HasTransientDatabaseCause(Exception exception)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is NpgsqlException { IsTransient: true })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static StorageFailure ClassifyFailure(Exception exception, CancellationToken cancellationToken)
+    {
+        switch (exception)
+        {
+            case ImageRateLimitedException:
+                return StorageFailure.RateLimited;
+            case ImageUploadException upload:
+                return upload.IsTransient ? StorageFailure.Transient : StorageFailure.Permanent;
+            case HttpRequestException { StatusCode: HttpStatusCode.TooManyRequests or (HttpStatusCode)420 }:
+                return StorageFailure.RateLimited;
+            case HttpRequestException { StatusCode: null }:
+                // Không có mã trạng thái nghĩa là lỗi mạng trước khi nhận phản hồi.
+                return StorageFailure.Transient;
+            case HttpRequestException { StatusCode: var status } when (int)status >= 500 || status == HttpStatusCode.RequestTimeout:
+                return StorageFailure.Transient;
+            case Exception when HasTransientDatabaseCause(exception):
+                // Pooler hoặc mạng ngắt kết nối DB giữa chừng. EF Core bọc lỗi này trong `InvalidOperationException`.
+                return StorageFailure.Transient;
+            case TaskCanceledException when !cancellationToken.IsCancellationRequested:
+                // Hủy không do người gọi nghĩa là hết thời gian chờ của `HttpClient`.
+                return StorageFailure.Transient;
+            default:
+                // Lỗi 4xx khác (khóa sai), ảnh sai định dạng hoặc lỗi ghi DB: thử lại vẫn lỗi như cũ.
+                return StorageFailure.Permanent;
+        }
     }
 
     private static CreateProductRequest BuildRequest(
@@ -178,8 +312,8 @@ public static class CatalogSeeder
             throw new SeedException($"Mô tả của \"{seed.Name}\" không hợp lệ: {exception.Message}");
         }
 
-        var images = Enumerable.Range(1, seed.ImageCount)
-            .Select(number => new ProductImageRequest($"{ImageFolder}/{seed.Slug}-{number}", $"{seed.Name} - ảnh {number}"))
+        var images = seed.Images
+            .Select((_, index) => new ProductImageRequest(ImagePublicId(seed, index + 1), $"{seed.Name} - ảnh {index + 1}"))
             .ToList();
         var variants = seed.Variants.Select(variant => new ProductVariantRequest(
             variant.OptionValues, Code: null, variant.Price, variant.CompareAtPrice, Enabled: true,
@@ -190,6 +324,42 @@ public static class CatalogSeeder
             JsonSerializer.SerializeToElement(description),
             JsonSerializer.SerializeToElement(seed.Specs),
             seed.Options, seed.WarrantyMonths, variants, images);
+    }
+
+    // `publicId` suy ra từ slug và số thứ tự bắt đầu từ 1, nên lần chạy sau tìm lại đúng ảnh đã tải.
+    public static string ImagePublicId(SeedProduct seed, int number) => $"{ImageFolder}/{seed.Slug}-{number}";
+
+    // Gọi upload với `overwrite=false` cho từng ảnh. Cloudinary giữ ảnh đã có và upload API không tính vào giới hạn Admin API.
+    private static async Task EnsureImagesAsync(
+        IServiceProvider provider, SeedProduct seed, SeedReport report, CancellationToken cancellationToken)
+    {
+        var uploader = provider.GetRequiredService<IImageUploader>();
+        for (var index = 0; index < seed.Images.Count; index++)
+        {
+            var publicId = ImagePublicId(seed, index + 1);
+            var sourceUrl = seed.Images[index].SourceUrl;
+            ImageUploadOutcome outcome;
+            try
+            {
+                outcome = await uploader.UploadFromUrlAsync(publicId, sourceUrl, cancellationToken);
+            }
+            catch (ImageUploadException exception)
+            {
+                // Nêu `publicId` và URL nguồn để người chạy lệnh biết ảnh nào cần sửa. Giữ cờ tạm thời cho bước thử lại.
+                throw new ImageUploadException(
+                    $"Không tải được ảnh của \"{seed.Name}\" (publicId {publicId}, nguồn {sourceUrl}): {exception.Message}",
+                    exception.IsTransient);
+            }
+
+            if (outcome == ImageUploadOutcome.AlreadyExisted)
+            {
+                report.Skipped("Ảnh đã tải lên");
+            }
+            else
+            {
+                report.Created("Ảnh đã tải lên");
+            }
+        }
     }
 
     // Ghi tồn kho ban đầu bằng movement `manual`. Cột `stock` không bao giờ được gán trực tiếp.

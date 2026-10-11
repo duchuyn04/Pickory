@@ -2,6 +2,7 @@ using System.Net;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Infrastructure;
@@ -9,12 +10,14 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Api;
 
-// Tài liệu OpenAPI và Swagger UI chỉ có ở Development. Test này kiểm tài liệu đủ route, đủ tag và tắt ở Production.
+// Development có tài liệu đủ chức năng. Production chỉ có tài liệu chỉ xem khi bật `API_DOCS_ENABLED`. Test kiểm route, tag và hai chế độ.
 [Collection(IntegrationDatabaseCollection.Name)]
 public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>
 {
     private const string DocumentPath = "/api/openapi/v1.json";
     private const string DocsPath = "/api/docs";
+    // Cấu hình Swagger UI ghi danh sách phương thức được gửi. Danh sách rỗng nghĩa là không có nút gửi request.
+    private const string EmptySubmitMethods = "\"supportedSubmitMethods\":[]";
 
     private static readonly string[] AllowedTags = ["System", "Identity", "AI Gateway", "Catalog", "Shipping"];
 
@@ -130,7 +133,67 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
     [InlineData("/api/docs/index.html")]
     public async Task Documentation_InProduction_Returns404(string path)
     {
-        await using var productionFactory = factory.WithWebHostBuilder(builder =>
+        await using var productionFactory = CreateProductionFactory(apiDocsFlag: null);
+
+        var response = await productionFactory.CreateClient().GetAsync(path);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(DocumentPath)]
+    [InlineData(DocsPath)]
+    // Cờ bằng `0` giữ tài liệu tắt, giống khi không đặt biến.
+    public async Task Documentation_InProductionWithFlagZero_Returns404(string path)
+    {
+        await using var productionFactory = CreateProductionFactory(apiDocsFlag: "0");
+
+        var response = await productionFactory.CreateClient().GetAsync(path);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    // Bật cờ thì production trả tài liệu JSON và trang Swagger. Người ngoài đọc được route và schema.
+    public async Task Documentation_InProductionWithFlag_ServesDocumentAndUi()
+    {
+        await using var productionFactory = CreateProductionFactory(apiDocsFlag: "1");
+        var client = productionFactory.CreateClient();
+
+        var documentResponse = await client.GetAsync(DocumentPath);
+        var docsResponse = await client.GetAsync(DocsPath);
+
+        Assert.Equal(HttpStatusCode.OK, documentResponse.StatusCode);
+        using var document = JsonDocument.Parse(await documentResponse.Content.ReadAsStringAsync());
+        Assert.Equal("Pickory API", document.RootElement.GetProperty("info").GetProperty("title").GetString());
+        Assert.Equal(HttpStatusCode.OK, docsResponse.StatusCode);
+        Assert.Contains("swagger-ui", await docsResponse.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    // Production chỉ cho xem. Danh sách phương thức rỗng làm Swagger UI ẩn nút "Try it out".
+    public async Task Docs_InProductionWithFlag_HidesTryItOut()
+    {
+        await using var productionFactory = CreateProductionFactory(apiDocsFlag: "1");
+
+        var configuration = await productionFactory.CreateClient().GetStringAsync($"{DocsPath}/index.js");
+
+        Assert.Contains(EmptySubmitMethods, configuration);
+    }
+
+    [Fact]
+    // Development giữ nút "Try it out", để dev gọi thử API qua proxy của Vite.
+    public async Task Docs_InDevelopment_KeepsTryItOut()
+    {
+        var configuration = await factory.CreateClient().GetStringAsync($"{DocsPath}/index.js");
+
+        Assert.DoesNotContain(EmptySubmitMethods, configuration);
+    }
+
+    // Tạo API ở môi trường Production. `apiDocsFlag` bằng null nghĩa là không đặt `API_DOCS_ENABLED`.
+    private WebApplicationFactory<Program> CreateProductionFactory(string? apiDocsFlag)
+    {
+        return factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Production");
             // Production dừng khi thiếu khóa Cloudinary. Giá trị giả đủ để API khởi động, vì test thay kho ảnh bằng bản giả.
@@ -143,11 +206,11 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
             builder.UseSetting("GHN_WEBHOOK_SECRET", "test-ghn-webhook-secret");
             // Production cũng dừng khi thiếu khóa SePay. Giá trị giả đủ để API khởi động, vì test không nhận webhook thật.
             builder.UseSetting("SEPAY_WEBHOOK_API_KEY", "test-sepay-api-key");
+            if (apiDocsFlag is not null)
+            {
+                builder.UseSetting("API_DOCS_ENABLED", apiDocsFlag);
+            }
         });
-
-        var response = await productionFactory.CreateClient().GetAsync(path);
-
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     // Route tài liệu và hai route trang SEO trả HTML, nên không thuộc tài liệu API.

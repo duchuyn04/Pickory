@@ -152,6 +152,11 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             services.AddSingleton(FakeImageStorage.Credentials);
             services.AddSingleton<FakeImageStorage>();
             services.AddSingleton<IImageStorage>(provider => provider.GetRequiredService<FakeImageStorage>());
+            // Bộ tải ảnh cũng phải là bản giả, nếu không máy có khóa Cloudinary sẽ tải ảnh thật khi chạy test seed.
+            services.RemoveAll<IImageUploader>();
+            services.RemoveAll<FakeImageUploader>();
+            services.AddSingleton<FakeImageUploader>();
+            services.AddSingleton<IImageUploader>(provider => provider.GetRequiredService<FakeImageUploader>());
 
             // Bỏ worker chạy nền. Test gọi `ImageDeletionProcessor` trực tiếp, để job không đổi trạng thái giữa lúc test đang kiểm.
             var workerRegistration = services.SingleOrDefault(descriptor =>
@@ -193,4 +198,7 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
 
     // Cung cấp kho ảnh giả cho test. Test đặt ảnh "đã tải lên" và đọc danh sách ảnh đã xóa.
     public FakeImageStorage ImageStorage => Services.GetRequiredService<FakeImageStorage>();
+
+    // Cung cấp bộ tải ảnh giả cho test. Test đọc danh sách lần tải hoặc đặt URL nguồn bị từ chối.
+    public FakeImageUploader ImageUploader => Services.GetRequiredService<FakeImageUploader>();
 }

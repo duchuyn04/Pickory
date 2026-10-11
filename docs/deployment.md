@@ -27,11 +27,32 @@ Hai nền tảng cùng triển khai nhánh `main`. Render build lại API khi `a
 
 1. Tạo project mới trên Supabase.
 2. Chọn vùng Southeast Asia (Singapore).
-3. Ghi lại mật khẩu DB.
-4. Mở Connect trên trang project.
-5. Chọn Session pooler.
-6. Sao chép chuỗi kết nối dạng URI.
-7. Thêm `?sslmode=require` vào cuối chuỗi.
+3. Bỏ chọn Automatically expose new tables.
+4. Bỏ chọn Enable Data API.
+5. Ghi lại mật khẩu DB.
+6. Mở Connect trên trang project.
+7. Chọn tab Direct.
+8. Chọn Session pooler.
+9. Sao chép chuỗi kết nối dạng URI.
+10. Thêm `?sslmode=require` vào cuối chuỗi.
+
+Pickory không dùng Data API, vì API .NET kết nối thẳng tới Postgres. Data API tự tạo REST API công khai cho schema `public`, nơi có bảng `users`.
+
+### Thu hồi quyền của role `anon` và `authenticated`
+
+Chạy SQL sau trong SQL Editor của Supabase. Bỏ chọn Automatically expose new tables chưa đủ, vì Supabase vẫn cấp quyền qua default privileges của schema `public`.
+
+```sql
+BEGIN;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM anon, authenticated;
+REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON TABLES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON SEQUENCES FROM anon, authenticated;
+ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public REVOKE ALL ON FUNCTIONS FROM anon, authenticated;
+COMMIT;
+```
+
+SQL này chạy được trước hoặc sau migration. API .NET đăng nhập bằng `postgres`, là chủ sở hữu bảng, nên API không bị ảnh hưởng. `docs/deployment-walkthrough.md` có truy vấn kiểm tra quyền sau khi chạy.
 
 Chuỗi kết quả có dạng sau:
 
@@ -58,7 +79,7 @@ Mã hóa ký tự đặc biệt trong mật khẩu theo dạng URL, ví dụ `@`
 
 Đặt tạm `WEB_ORIGIN` và `API_BASE_URL` bằng domain Vercel dự kiến. Sửa lại hai biến này sau bước 3 nếu domain khác.
 
-`render.yaml` chọn gói `starter`. Gói free ngủ sau 15 phút không có request. Khi service ngủ, các worker nền dừng:
+`render.yaml` chọn gói `free` cho giai đoạn demo. Gói free ngủ sau 15 phút không có request. Khi service ngủ, các worker nền dừng:
 
 - `ShipmentStatusSyncWorker`
 - `AddressSyncWorker`
@@ -68,15 +89,15 @@ Webhook GHN và SePay gọi vào service đang ngủ phải chờ service khởi
 
 ### Migration khi triển khai
 
-Render chạy `dotnet Pickory.Api.dll db:migrate` trước mỗi lần triển khai, theo `preDeployCommand` trong `render.yaml`. Lệnh áp migration của mọi module theo thứ tự trong `DatabaseMigrationCommand`.
+Gói free không có pre-deploy, nên Render không tự chạy migration. Chạy `db:migrate` từ máy dev trước khi đẩy code có migration mới lên `main`. Làm theo phần "Chạy lệnh trên DB production từ máy dev" ở bước 6.
 
-- Lệnh thành công: Render chuyển request sang bản mới.
-- Lệnh lỗi: Render hủy lần triển khai. Bản API cũ tiếp tục chạy.
-- Log của lần triển khai ghi tên module lỗi, ví dụ `Migration Catalog thất bại: ...`.
+Đẩy code trước khi chạy migration làm API mới đọc bảng chưa tồn tại. Migration của Pickory chỉ thêm đối tượng mới, nên bản API cũ vẫn chạy được trên schema mới.
+
+Lệnh `db:migrate` áp migration của mọi module theo thứ tự trong `DatabaseMigrationCommand`. Lệnh lỗi trả mã 1 và ghi tên module lỗi, ví dụ `Migration Catalog thất bại: ...`.
 
 Không bật extension `vector` trên Dashboard của Supabase. Supabase đặt extension đó vào schema `extensions`. Migration AiGateway tạo extension trong schema `public`.
 
-Pre-deploy chỉ có ở gói trả phí. Khi dùng gói free, xóa `preDeployCommand` khỏi `render.yaml`. Sau đó chạy `db:migrate` từ máy dev theo phần "Chạy lệnh trên DB production từ máy dev" ở bước 6.
+Khi chuyển sang gói trả phí, thêm `preDeployCommand: dotnet Pickory.Api.dll db:migrate` vào `render.yaml`. Render sẽ chạy migration trước mỗi lần triển khai. Migration lỗi thì Render hủy lần triển khai, và bản API cũ tiếp tục chạy.
 
 ## Bước 3: tạo web trên Vercel
 
@@ -101,14 +122,28 @@ Vercel đọc lệnh cài gói, lệnh build và thư mục kết quả từ `ve
 | `DATABASE_URL` | Chuỗi Session pooler ở bước 1 |
 | `WEB_ORIGIN` | Domain Vercel, ví dụ `https://pickory.vercel.app` |
 | `API_BASE_URL` | Cùng giá trị với `WEB_ORIGIN` |
+| `DATABASE_POOL_MAX` | `10`, giới hạn số kết nối DB của API. Xem phần ngay dưới bảng |
+| `CATALOG_CACHE_SECONDS` | `30`, số giây cache danh sách sản phẩm và cây danh mục công khai. Xem phần ngay dưới bảng |
 | `TRUST_PROXY` | `2`, xem phần kiểm tra số hop |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Ứng dụng OAuth của Google |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Tài khoản Cloudinary |
-| `GHN_API_BASE` | `https://online-gateway.ghn.vn` |
-| `GHN_TOKEN`, `GHN_SHOP_ID`, `GHN_WEBHOOK_SECRET` | Tài khoản GHN production |
+| `GHN_API_BASE` | `https://dev-online-gateway.ghn.vn` khi dùng sandbox, `https://online-gateway.ghn.vn` khi dùng production |
+| `GHN_TOKEN`, `GHN_SHOP_ID`, `GHN_WEBHOOK_SECRET` | Tài khoản GHN cùng môi trường với `GHN_API_BASE` |
 | `SEPAY_WEBHOOK_API_KEY` | Khóa webhook trên SePay |
 | `LLM_API_KEY`, `LLM_MODEL` | Khóa và ID model của provider LLM (Large Language Model) |
 | `EMBEDDING_API_KEY` | Khóa provider embedding |
+
+Supabase Session pooler gói free cho 15 kết nối cùng lúc. Npgsql mặc định mở tới 100 kết nối, nên trang chủ gửi nhiều request song song có thể vượt giới hạn.
+
+`DATABASE_POOL_MAX` giới hạn số kết nối của cả tiến trình API. Mọi module và worker nền dùng chung một pool. Request thừa xếp hàng thay vì mở kết nối mới. Giá trị `10` để lại 5 kết nối cho lệnh chạy từ máy dev.
+
+`CATALOG_CACHE_SECONDS` cache `GET /api/products` và `GET /api/categories` trong bộ nhớ của API. API xóa cache ngay sau khi admin đổi sản phẩm, danh mục, thương hiệu hoặc tồn kho.
+
+Cache nằm riêng trong từng instance API. Khi chạy nhiều instance, một instance có thể trả dữ liệu cũ tối đa `CATALOG_CACHE_SECONDS` giây sau thay đổi ở instance khác.
+
+API dừng khi khởi động nếu `CATALOG_CACHE_SECONDS` không phải số nguyên từ 0 đến 300. Để trống biến này thì cache tắt.
+
+API dừng khi khởi động nếu `DATABASE_POOL_MAX` không phải số nguyên từ 1 đến 100. Để trống biến này thì API dùng mặc định của Npgsql.
 
 API dừng khi khởi động nếu thiếu một trong các nhóm sau:
 
@@ -117,6 +152,14 @@ API dừng khi khởi động nếu thiếu một trong các nhóm sau:
 - `SEPAY_WEBHOOK_API_KEY`, khi bản triển khai có module Commerce.
 
 `API_BASE_URL` là domain Vercel, không phải domain Render. API ghép callback Google từ biến này. Callback phải đi qua Vercel để cookie state và cookie phiên nằm trên domain web.
+
+`render.yaml` đặt `API_DOCS_ENABLED` bằng `1`. Production khi đó có tài liệu API tại `https://<domain Vercel>/api/docs`, ở chế độ chỉ xem:
+
+- Người xem đọc được mọi route và schema, kể cả route admin.
+- Trang không có nút "Try it out", nên người xem không gửi request từ trang docs.
+- RBAC (Role-Based Access Control) vẫn chặn route admin khi có người gọi API trực tiếp.
+
+Đặt `API_DOCS_ENABLED` bằng `0` để tắt tài liệu. Khi đó `/api/docs` trả 404.
 
 Dockerfile đã đặt `ASPNETCORE_ENVIRONMENT`, `WEB_INDEX_HTML_PATH`, `PICKORY_SKIP_DOTENV` và `DEV_OUTBOX_DIR`. Không đặt lại các biến này trên Render.
 
@@ -134,7 +177,7 @@ API chưa có route webhook SePay. Đặt URL webhook SePay khi module Commerce 
 
 ## Bước 6: tạo tài khoản admin đầu tiên
 
-Tạo admin sau khi lần triển khai đầu thành công. Lúc đó migration đã tạo bảng.
+Tạo admin sau khi `db:migrate` chạy xong. Lệnh tạo admin ghi vào bảng mà migration tạo.
 
 ### Chạy lệnh trên DB production từ máy dev
 
@@ -145,13 +188,46 @@ Giữ chuỗi kết nối Supabase trong biến môi trường của terminal. K
 1. Mở terminal.
 2. Đặt biến `DATABASE_URL` của terminal bằng chuỗi Session pooler ở bước 1.
 3. Mở thư mục `apps/backend/src`.
-4. Chạy `dotnet run --project Pickory.Api -- identity:seed`.
-5. Chạy `dotnet run --project Pickory.Api -- identity:create-admin --email <email> --password <mật khẩu>`.
-6. Đóng terminal.
+4. Chạy `dotnet run --project Pickory.Api -- db:migrate`.
+5. Chạy `dotnet run --project Pickory.Api -- identity:seed`.
+6. Chạy `dotnet run --project Pickory.Api -- identity:create-admin --email <email> --password <mật khẩu>`.
+7. Đóng terminal.
+
+Bỏ qua bước 5 và bước 6 khi chỉ cần áp migration mới.
 
 Trong PowerShell, đặt biến bằng `$env:DATABASE_URL = '<chuỗi kết nối>'`. Trong Bash, đặt biến bằng `export DATABASE_URL='<chuỗi kết nối>'`.
 
 API đọc `.env` với độ ưu tiên thấp nhất. Biến `DATABASE_URL` của terminal thắng giá trị trong `.env`, nên lệnh ghi vào DB Supabase.
+
+### Seed dữ liệu mẫu vào production
+
+Cảnh báo: lệnh `catalog:seed` ghi 50 sản phẩm vào DB production. Kiểm tra `DATABASE_URL` trước khi chạy.
+
+Lệnh tự từ chối khi `ASPNETCORE_ENVIRONMENT` là `Production`. `dotnet run` dùng profile `http` của `launchSettings.json`. Profile này đặt `ASPNETCORE_ENVIRONMENT` là `Development`, nên lệnh chạy được.
+
+Lệnh nhờ Cloudinary tự tải ảnh chính hãng từ URL nguồn. Cloudinary giữ ảnh đã có và không ghi đè.
+
+Lệnh in một dòng cho mỗi sản phẩm, ví dụ `[3/50] Dell XPS 13 9340: tạo mới`. Lệnh chạy vài phút.
+
+1. Mở terminal.
+2. Đặt biến `DATABASE_URL` của terminal bằng chuỗi Session pooler ở bước 1.
+3. Đặt ba biến `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` và `CLOUDINARY_API_SECRET` của terminal.
+4. Mở thư mục `apps/backend/src`.
+5. Chạy `dotnet run --project Pickory.Api -- db:migrate`.
+6. Chạy `dotnet run --project Pickory.Api -- identity:seed`.
+7. Chạy `dotnet run --project Pickory.Api -- identity:create-admin --email <email> --password <mật khẩu>`.
+8. Chạy `dotnet run --project Pickory.Api -- catalog:seed`.
+9. Kiểm tra dòng `Sản phẩm` có `tạo mới 50`.
+10. Chạy lại bước 8 và kiểm tra dòng `Sản phẩm` có `tạo mới 0`.
+11. Đóng terminal.
+
+Khi Cloudinary hết thời gian chờ hoặc lỗi mạng, lệnh thử lại sản phẩm đó tối đa 3 lần. Lệnh chờ 5, 15 rồi 30 giây và in một dòng `Thử lại lần`.
+
+Nếu Cloudinary từ chối một ảnh hoặc hết 3 lần thử, lệnh dừng với mã 1. Lệnh in tên sản phẩm và lỗi. Lỗi ảnh có thêm `publicId` và URL nguồn.
+
+Nếu lệnh in "đã chạm giới hạn Admin API", gói free đã dùng hết 500 lệnh Admin API trong giờ. Chờ giới hạn đặt lại, rồi chạy lại bước 8.
+
+Sửa URL trong `CatalogSeedImages.cs`, rồi chạy lại bước 8. Sản phẩm đã tạo được bỏ qua.
 
 ## Bước 7: kiểm tra sau lần triển khai đầu
 
@@ -184,4 +260,4 @@ Request gửi thẳng tới domain Render chỉ đi qua một proxy. Người g�
 
 - Dự án chưa có dịch vụ gửi thư thật. `DevOutboxEmailSender` ghi thư vào `/tmp/pickory-outbox` trong container. Người dùng không nhận được thư đăng ký và thư đặt lại mật khẩu.
 - Supabase gói free tạm dừng project sau 7 ngày không hoạt động.
-- Migration chỉ tự chạy ở gói trả phí của Render. Ở gói free, quên chạy `db:migrate` sau khi `main` có migration mới thì API lỗi khi đọc bảng mới.
+- Gói free của Render không tự chạy migration. Quên chạy `db:migrate` trước khi đẩy migration mới thì API lỗi khi đọc bảng mới.

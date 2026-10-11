@@ -1,14 +1,19 @@
-/* Thẻ sản phẩm: cả thẻ là một link tới trang chi tiết. */
+/*
+ * Thẻ sản phẩm theo thegioididong.com: viền mảnh, bo 6px, đệm 10px, chip xám, tên chữ thường, giá đỏ đậm.
+ * Cả thẻ là một link tới trang chi tiết. Rê chuột đổi viền, thẻ không nâng lên và không có bóng.
+ */
 .product-card {
+  --pointer-x: 0;
+  --pointer-y: 0;
   height: 100%;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
+  border-radius: var(--radius-product);
   background: var(--color-surface);
-  transition: border-color 0.15s;
+  transition: border-color var(--duration-fast);
 }
 
 .product-card:hover {
-  border-color: var(--color-border-strong);
+  border-color: var(--color-ink);
 }
 
 /* Link ngoài cùng đã có viền focus riêng ở thẻ, nên bỏ viền mặc định để không vẽ hai vòng. */
@@ -20,10 +25,10 @@
 .product-card-link {
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: 6px;
   height: 100%;
-  padding: var(--space-3);
-  border-radius: var(--radius-card);
+  padding: 10px;
+  border-radius: var(--radius-product);
   color: inherit;
   text-decoration: none;
 }
@@ -33,44 +38,117 @@
 }
 
 .product-card-media {
+  position: relative;
   aspect-ratio: 1;
-  margin-bottom: var(--space-2);
+  margin-bottom: var(--space-1);
   overflow: hidden;
   border-radius: var(--radius-control);
 }
 
+/* Ảnh phóng nhẹ và dời theo chuột khi rê. Biến con trỏ do `ProductCard` ghi, nằm trong khoảng [-1, 1]. */
 .product-card-media img {
   display: block;
   width: 100%;
   height: 100%;
+  padding: var(--space-2);
   object-fit: contain;
+  transition:
+    scale var(--duration-base) var(--ease-out-expo),
+    translate var(--duration-base) var(--ease-out-soft);
 }
 
+.product-card:hover .product-card-media img {
+  scale: 1.08;
+  translate: calc(var(--pointer-x) * 8px) calc(var(--pointer-y) * 8px);
+}
+
+/* Nhãn "Xem chi tiết" trượt lên từ đáy ảnh khi rê chuột, để khách biết cả thẻ bấm được. */
+.product-card-cta {
+  position: absolute;
+  right: var(--space-2);
+  bottom: var(--space-2);
+  left: var(--space-2);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-on-dark);
+  font-size: var(--text-label);
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(calc(100% + var(--space-2)));
+  transition:
+    opacity var(--duration-fast),
+    transform var(--duration-base) var(--ease-out-expo);
+}
+
+.product-card-cta .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.product-card:hover .product-card-cta {
+  opacity: 1;
+  transform: none;
+}
+
+/* Màn cảm ứng không có trạng thái rê, nên nhãn không hiện nửa vời sau khi chạm. */
+@media (hover: none) {
+  .product-card-cta {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product-card-media img,
+  .product-card-cta {
+    transition: none;
+  }
+
+  .product-card:hover .product-card-media img {
+    translate: none;
+  }
+}
+
+/* Chip xám nhỏ trên tên máy, cùng kiểu chip "Trả chậm 0%" của thegioididong.com. Pickory ghi tên hãng. */
 .product-card-brand {
+  align-self: flex-start;
   margin: 0;
+  padding: 2px 6px;
+  border-radius: var(--radius-chip);
+  background: var(--color-surface-muted);
   color: var(--color-ink-muted);
   font-size: var(--text-xs);
+  line-height: 18px;
 }
 
 /* Tên giữ chiều cao hai dòng để các thẻ cùng hàng thẳng nhau dù tên dài ngắn khác nhau. */
 .product-card-name {
   display: -webkit-box;
-  min-height: 2.7em;
+  min-height: 40px;
   margin: 0;
   overflow: hidden;
   font-size: var(--text-sm);
-  font-weight: 600;
-  line-height: 1.35;
+  font-weight: 400;
+  line-height: 20px;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
   line-clamp: 2;
+  transition: color var(--duration-fast);
+}
+
+.product-card:hover .product-card-name {
+  color: var(--color-brand);
 }
 
 /* Giá đứng ngay dưới tên, nên giá của các thẻ cùng hàng thẳng nhau dù thẻ có nhãn trạng thái hay không. */
 .product-card-price {
   margin: 0;
-  padding-top: var(--space-1);
+  line-height: 24px;
   color: var(--color-price);
   font-size: var(--text-md);
   font-weight: 700;

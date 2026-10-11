@@ -1,3 +1,5 @@
+using Npgsql;
+using Pickory.Shared.Persistence;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Builder;
 using FluentValidation;
@@ -6,6 +8,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging;
+using Pickory.Modules.Catalog.Caching;
+using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Features.Brands;
 using Pickory.Modules.Catalog.Features.Categories;
 using Pickory.Modules.Catalog.Features.Inventory;
@@ -20,6 +24,7 @@ using Pickory.Modules.Catalog.Stock;
 using Pickory.Modules.Catalog.Contracts.Reading;
 using Pickory.Modules.Catalog.Contracts.Stock;
 using Pickory.Shared.Configuration;
+using Pickory.Shared.Events;
 
 namespace Pickory.Modules.Catalog;
 
@@ -30,11 +35,18 @@ public static class CatalogModule
         this IServiceCollection services, string databaseConnectionString, AppConfig config, bool isProduction)
     {
         // Dùng cùng tùy chọn với migration để ứng dụng đọc đúng enum và lịch sử. Ứng dụng không tự chạy migration khi khởi động.
-        services.AddDbContext<CatalogDbContext>(options =>
-            CatalogDbContext.ConfigureOptions(options, databaseConnectionString));
+        // Enum của module vào data source chung. Mọi module chia nhau một pool kết nối, nên `DATABASE_POOL_MAX` áp cho cả tiến trình.
+        services.AddSharedDataSource(databaseConnectionString, CatalogDbContext.MapEnums);
+        services.AddDbContext<CatalogDbContext>((provider, options) =>
+            CatalogDbContext.ConfigureOptions(options, provider.GetRequiredService<NpgsqlDataSource>()));
         // Đăng ký đồng hồ thời gian hệ thống và các dịch vụ quản lý danh mục, thương hiệu, sản phẩm.
         services.TryAddSingleton(TimeProvider.System);
         services.AddValidatorsFromAssemblyContaining<CreateCategoryRequestValidator>();
+        // Cache phản hồi công khai của hai route danh sách. Singleton qua factory để container giải phóng khi tắt.
+        services.AddSingleton(_ => new CatalogResponseCache(TimeSpan.FromSeconds(config.CatalogCacheSeconds)));
+        // Sản phẩm và tồn kho phát sự kiện sau commit. Handler xóa cache ở đúng thời điểm đó.
+        services.AddScoped<IDomainEventHandler<ProductChangedEvent>, CatalogCacheInvalidationHandler>();
+        services.AddScoped<IDomainEventHandler<StockChangedEvent>, CatalogCacheInvalidationHandler>();
         services.AddScoped<CategoryManagementHandler>();
         services.AddScoped<BrandManagementHandler>();
         services.AddScoped<ProductManagementHandler>();

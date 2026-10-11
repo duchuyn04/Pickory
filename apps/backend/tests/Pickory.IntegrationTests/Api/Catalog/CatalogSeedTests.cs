@@ -2,11 +2,18 @@ using System.Net;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc.Testing;
+using System.Data.Common;
+using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
+using Npgsql;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Catalog.Attributes;
 using Pickory.Modules.Catalog.Descriptions;
 using Pickory.Modules.Catalog.Entities;
+using Pickory.Modules.Catalog.Persistence;
+using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Products;
 using Pickory.Modules.Catalog.Seeding;
 using Xunit;
@@ -27,7 +34,13 @@ public sealed class CatalogSeedTests : IClassFixture<PickoryWebApplicationFactor
         _database = database;
     }
 
-    public Task InitializeAsync() => CleanSeedDataAsync();
+    public async Task InitializeAsync()
+    {
+        await CleanSeedDataAsync();
+        await ResetSeedImagesAsync();
+        _factory.ImageUploader.ClearFailures();
+        _factory.ImageStorage.ClearFindFailures();
+    }
 
     public async Task DisposeAsync()
     {
@@ -51,24 +64,77 @@ public sealed class CatalogSeedTests : IClassFixture<PickoryWebApplicationFactor
         await context.Brands.Where(brand => brandSlugs.Contains(brand.Slug)).ExecuteDeleteAsync();
     }
 
-    // Mô phỏng ảnh đã có trên Cloudinary, vì kho ảnh giả của test từ chối publicId lạ.
-    private void UploadSeedImages(SeedCatalog catalog)
+    // Kho ảnh giả giữ ảnh giữa các test của lớp này. Xóa ảnh mẫu để mỗi test bắt đầu với kho chưa có ảnh nào.
+    private async Task ResetSeedImagesAsync()
     {
-        foreach (var product in catalog.Products)
+        foreach (var product in _catalog.Products)
         {
-            for (var number = 1; number <= product.ImageCount; number++)
+            for (var number = 1; number <= product.Images.Count; number++)
             {
-                _factory.ImageStorage.Add($"{CatalogSeeder.ImageFolder}/{product.Slug}-{number}", 200_000, "jpg");
+                await _factory.ImageStorage.DeleteAsync(CatalogSeeder.ImagePublicId(product, number), CancellationToken.None);
             }
         }
     }
 
     private async Task<SeedReport> SeedAsync(SeedCatalog? catalog = null)
     {
-        catalog ??= _catalog;
-        UploadSeedImages(catalog);
-        return await CatalogSeeder.SeedAsync(_factory.Services, catalog, CancellationToken.None);
+        return await CatalogSeeder.SeedAsync(_factory.Services, catalog ?? _catalog, CancellationToken.None);
     }
+
+    // Chính sách thử lại không chờ thật. Test ghi lại các khoảng chờ mà seeder yêu cầu.
+    private sealed class RecordedWaits
+    {
+        public List<TimeSpan> Delays { get; } = [];
+
+        public SeedRetryPolicy Policy => new(
+            [TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15), TimeSpan.FromSeconds(30)],
+            (delay, _) =>
+            {
+                Delays.Add(delay);
+                return Task.CompletedTask;
+            });
+    }
+
+    private async Task<SeedReport> SeedOneProductAsync(RecordedWaits waits, StringWriter progress)
+    {
+        var catalog = new SeedCatalog(_catalog.Categories, [_catalog.Products[0]]);
+        return await CatalogSeeder.SeedAsync(_factory.Services, catalog, CancellationToken.None, progress, waits.Policy);
+    }
+
+    // Giả lỗi mạng DB tạm thời ở các truy vấn tra sản phẩm theo slug, bắt đầu từ truy vấn thứ `firstFailingQuery`.
+    private sealed class ProductSlugQueryFault(int firstFailingQuery, int failureCount) : DbCommandInterceptor
+    {
+        private int _queries;
+        private int _failures;
+
+        public int Failures => Volatile.Read(ref _failures);
+
+        public override ValueTask<InterceptionResult<DbDataReader>> ReaderExecutingAsync(
+            DbCommand command, CommandEventData eventData, InterceptionResult<DbDataReader> result,
+            CancellationToken cancellationToken = default)
+        {
+            var isProductSlugQuery = command.CommandText.Contains("slug", StringComparison.OrdinalIgnoreCase)
+                && command.CommandText.Contains("products", StringComparison.OrdinalIgnoreCase)
+                && !command.CommandText.Contains("INSERT", StringComparison.OrdinalIgnoreCase);
+            if (isProductSlugQuery && Interlocked.Increment(ref _queries) >= firstFailingQuery
+                && Volatile.Read(ref _failures) < failureCount)
+            {
+                Interlocked.Increment(ref _failures);
+                // `IsTransient` của Npgsql đúng khi lỗi bọc một lỗi `IOException`, như khi pooler ngắt kết nối.
+                throw new NpgsqlException("connection reset", new IOException("pooler closed the connection"));
+            }
+
+            return base.ReaderExecutingAsync(command, eventData, result, cancellationToken);
+        }
+    }
+
+    private WebApplicationFactory<Program> FactoryWith(ProductSlugQueryFault fault) =>
+        _factory.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services => services.ConfigureDbContext<CatalogDbContext>(options => options.AddInterceptors(fault))));
+
+    private static TaskCanceledException HttpClientTimeout() => new("timeout", new TimeoutException());
+
+    private static HttpRequestException RateLimited() => new("limit", null, (HttpStatusCode)420);
 
     private async Task<Dictionary<string, int>> CountRowsAsync()
     {
@@ -100,7 +166,7 @@ public sealed class CatalogSeedTests : IClassFixture<PickoryWebApplicationFactor
         Assert.Equal(5, afterFirst["categories"]);
         Assert.Equal(_catalog.Products.Count, afterFirst["products"]);
         Assert.Equal(_catalog.Products.Sum(product => product.Variants.Count), afterFirst["skus"]);
-        Assert.Equal(_catalog.Products.Sum(product => product.ImageCount), afterFirst["images"]);
+        Assert.Equal(_catalog.Products.Sum(product => product.Images.Count), afterFirst["images"]);
         Assert.Equal(_catalog.Products.Sum(product => product.Variants.Count(variant => variant.Stock > 0)), afterFirst["movements"]);
         // Lần chạy thứ hai không tạo gì mới ở bất kỳ loại bản ghi nào.
         Assert.Equal(_catalog.Products.Count, first.CreatedCount("Sản phẩm"));
@@ -213,8 +279,8 @@ public sealed class CatalogSeedTests : IClassFixture<PickoryWebApplicationFactor
         var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("data");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        // Laptop mẫu có 6 sản phẩm khách thấy được (5 đang bán và 1 ngừng kinh doanh).
-        Assert.Equal(6, body.GetProperty("total").GetInt32());
+        // Laptop mẫu có 10 sản phẩm khách thấy được, tất cả đang bán.
+        Assert.Equal(10, body.GetProperty("total").GetInt32());
         var ramFacet = body.GetProperty("facets").GetProperty("attributes").EnumerateArray()
             .Single(attribute => attribute.GetProperty("key").GetString() == "ram_gb");
         Assert.True(ramFacet.GetProperty("values").EnumerateArray().Sum(value => value.GetProperty("count").GetInt32()) > 0);
@@ -240,12 +306,270 @@ public sealed class CatalogSeedTests : IClassFixture<PickoryWebApplicationFactor
     public async Task Seed_ProductThatCannotBePublished_FailsWithTheReasons()
     {
         // Sản phẩm không có ảnh nào thì không đủ điều kiện đăng bán, nên lệnh dừng và nêu lý do.
-        var broken = _catalog.Products[0] with { ImageCount = 0 };
+        var broken = _catalog.Products[0] with { Images = [] };
         var catalog = new SeedCatalog(_catalog.Categories, [broken]);
 
         var error = await Assert.ThrowsAsync<SeedException>(() => SeedAsync(catalog));
 
         Assert.Contains("ít nhất 1 ảnh", error.Message);
         Assert.Contains(broken.Name, error.Message);
+    }
+
+    [Fact]
+    public async Task Seed_FirstRun_UploadsEveryImageThatIsNotOnTheStorage()
+    {
+        // Bộ tải giả giữ lịch sử của mọi test trong lớp, nên chỉ đếm các lần tải sau mốc này.
+        var uploadsBefore = _factory.ImageUploader.Uploads.Count;
+
+        var report = await SeedAsync();
+
+        var expectedUploads = _catalog.Products
+            .SelectMany(product => product.Images.Select((image, index) =>
+                (PublicId: CatalogSeeder.ImagePublicId(product, index + 1), image.SourceUrl)))
+            .ToList();
+        var uploads = _factory.ImageUploader.Uploads.Skip(uploadsBefore).ToList();
+        Assert.Equal(expectedUploads.Count, uploads.Count);
+        Assert.Equal(expectedUploads.OrderBy(upload => upload.PublicId), uploads.OrderBy(upload => upload.PublicId));
+        Assert.Equal(expectedUploads.Count, report.CreatedCount("Ảnh đã tải lên"));
+    }
+
+    [Fact]
+    public async Task Seed_ImageAlreadyOnTheStorage_IsNotUploadedAgain()
+    {
+        var product = _catalog.Products[0];
+        var knownPublicId = CatalogSeeder.ImagePublicId(product, 1);
+        _factory.ImageStorage.Add(knownPublicId, 200_000, "webp");
+        var uploadsBefore = _factory.ImageUploader.Uploads.Count;
+
+        await SeedAsync(new SeedCatalog(_catalog.Categories, [product]));
+
+        var newUploads = _factory.ImageUploader.Uploads.Skip(uploadsBefore).ToList();
+        Assert.DoesNotContain(newUploads, upload => upload.PublicId == knownPublicId);
+        Assert.Equal(product.Images.Count - 1, newUploads.Count);
+    }
+
+    [Fact]
+    public async Task Seed_SecondRun_UploadsNothing()
+    {
+        await SeedAsync();
+        var uploadsAfterFirst = _factory.ImageUploader.Uploads.Count;
+
+        var second = await SeedAsync();
+
+        Assert.Equal(uploadsAfterFirst, _factory.ImageUploader.Uploads.Count);
+        Assert.Equal(0, second.CreatedCount("Ảnh đã tải lên"));
+    }
+
+    [Fact]
+    public async Task Seed_ImageThatCannotBeUploaded_FailsWithTheProductNameAndTheSourceUrl()
+    {
+        var product = _catalog.Products[0];
+        var brokenUrl = product.Images[1].SourceUrl;
+        _factory.ImageUploader.FailFor(brokenUrl, "Invalid image file");
+
+        var error = await Assert.ThrowsAsync<SeedException>(
+            () => SeedAsync(new SeedCatalog(_catalog.Categories, [product])));
+
+        Assert.Contains(product.Name, error.Message);
+        Assert.Contains(CatalogSeeder.ImagePublicId(product, 2), error.Message);
+        Assert.Contains(brokenUrl, error.Message);
+        Assert.Contains("Invalid image file", error.Message);
+    }
+
+    [Fact]
+    public async Task Seed_DoesNotAskTheStorageAboutEachImageBeforeUploading()
+    {
+        var product = _catalog.Products[0];
+        var findsBefore = _factory.ImageStorage.FindCount;
+
+        await SeedAsync(new SeedCatalog(_catalog.Categories, [product]));
+
+        // Chỉ bước kiểm ảnh của handler hỏi kho ảnh, mỗi ảnh một lần. Seeder không hỏi thêm lần nào.
+        Assert.Equal(product.Images.Count, _factory.ImageStorage.FindCount - findsBefore);
+    }
+
+    [Fact]
+    public async Task Seed_ImageAlreadyOnTheStorage_IsCountedAsSkippedAndNotOverwritten()
+    {
+        var product = _catalog.Products[0];
+        _factory.ImageStorage.Add(CatalogSeeder.ImagePublicId(product, 1), 200_000, "webp");
+
+        var report = await SeedAsync(new SeedCatalog(_catalog.Categories, [product]));
+
+        Assert.Equal(1, report.SkippedCount("Ảnh đã tải lên"));
+        Assert.Equal(product.Images.Count - 1, report.CreatedCount("Ảnh đã tải lên"));
+    }
+
+    [Fact]
+    public async Task Seed_StorageTimesOutOnce_RetriesAndCreatesTheProduct()
+    {
+        var product = _catalog.Products[0];
+        _factory.ImageStorage.QueueFindFailures(CatalogSeeder.ImagePublicId(product, 2), HttpClientTimeout());
+        var waits = new RecordedWaits();
+        var progress = new StringWriter();
+
+        var report = await SeedOneProductAsync(waits, progress);
+
+        Assert.Equal(1, report.CreatedCount("Sản phẩm"));
+        Assert.Equal([TimeSpan.FromSeconds(5)], waits.Delays);
+        Assert.Contains($"Thử lại lần 1/3: {product.Name}", progress.ToString());
+    }
+
+    [Fact]
+    public async Task Seed_UploadTimesOutTwice_WaitsLongerEachTimeAndCreatesTheProduct()
+    {
+        var product = _catalog.Products[0];
+        _factory.ImageUploader.QueueFailures(
+            product.Images[0].SourceUrl,
+            new ImageUploadException("Cloudinary không phản hồi kịp", isTransient: true),
+            new ImageUploadException("Cloudinary không phản hồi kịp", isTransient: true));
+        var waits = new RecordedWaits();
+
+        var report = await SeedOneProductAsync(waits, new StringWriter());
+
+        Assert.Equal(1, report.CreatedCount("Sản phẩm"));
+        Assert.Equal([TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15)], waits.Delays);
+    }
+
+    [Fact]
+    public async Task Seed_StorageKeepsTimingOut_StopsAfterThreeRetriesAndNamesTheProduct()
+    {
+        var product = _catalog.Products[0];
+        var publicId = CatalogSeeder.ImagePublicId(product, 1);
+        _factory.ImageStorage.QueueFindFailures(
+            publicId, HttpClientTimeout(), HttpClientTimeout(), HttpClientTimeout(), HttpClientTimeout());
+        var waits = new RecordedWaits();
+
+        var error = await Assert.ThrowsAsync<SeedException>(() => SeedOneProductAsync(waits, new StringWriter()));
+
+        Assert.Equal(3, waits.Delays.Count);
+        Assert.Contains(product.Name, error.Message);
+    }
+
+    [Fact]
+    public async Task Seed_UploadKeepsFailingOnTheNetwork_FailsWithProductPublicIdAndSourceUrl()
+    {
+        var product = _catalog.Products[0];
+        var transient = new ImageUploadException("Không gọi được Cloudinary: connection reset", isTransient: true);
+        _factory.ImageUploader.QueueFailures(
+            product.Images[0].SourceUrl, transient, transient, transient, transient);
+
+        var error = await Assert.ThrowsAsync<SeedException>(
+            () => SeedOneProductAsync(new RecordedWaits(), new StringWriter()));
+
+        Assert.Contains(product.Name, error.Message);
+        Assert.Contains(CatalogSeeder.ImagePublicId(product, 1), error.Message);
+        Assert.Contains(product.Images[0].SourceUrl, error.Message);
+    }
+
+    [Fact]
+    public async Task Seed_DataErrorFromTheStorage_IsNotRetried()
+    {
+        var product = _catalog.Products[0];
+        _factory.ImageUploader.FailFor(product.Images[0].SourceUrl, "Invalid image file");
+        var waits = new RecordedWaits();
+
+        await Assert.ThrowsAsync<SeedException>(() => SeedOneProductAsync(waits, new StringWriter()));
+
+        Assert.Empty(waits.Delays);
+    }
+
+    [Fact]
+    public async Task Seed_StorageRejectsTheKey_FailsWithTheProductNameAndIsNotRetried()
+    {
+        var product = _catalog.Products[0];
+        _factory.ImageStorage.QueueFindFailures(
+            CatalogSeeder.ImagePublicId(product, 1),
+            new HttpRequestException("Unauthorized", null, HttpStatusCode.Unauthorized));
+        var waits = new RecordedWaits();
+
+        var error = await Assert.ThrowsAsync<SeedException>(() => SeedOneProductAsync(waits, new StringWriter()));
+
+        Assert.Empty(waits.Delays);
+        Assert.Contains(product.Name, error.Message);
+        Assert.Contains("Unauthorized", error.Message);
+    }
+
+    [Fact]
+    public async Task Seed_AdminApiRateLimitOnFind_StopsWithoutRetryAndExplainsTheLimit()
+    {
+        var product = _catalog.Products[0];
+        _factory.ImageStorage.QueueFindFailures(CatalogSeeder.ImagePublicId(product, 1), RateLimited());
+        var waits = new RecordedWaits();
+
+        var error = await Assert.ThrowsAsync<SeedRateLimitedException>(
+            () => SeedOneProductAsync(waits, new StringWriter()));
+
+        Assert.Empty(waits.Delays);
+        Assert.Contains("giới hạn Admin API của Cloudinary", error.Message);
+        Assert.Contains("chạy lại", error.Message);
+        Assert.Contains(product.Name, error.Message);
+    }
+
+    [Fact]
+    public async Task Seed_UploadRateLimited_StopsWithoutRetry()
+    {
+        var product = _catalog.Products[0];
+        _factory.ImageUploader.QueueFailures(product.Images[0].SourceUrl, new ImageRateLimitedException("HTTP 420"));
+        var waits = new RecordedWaits();
+
+        await Assert.ThrowsAsync<SeedRateLimitedException>(() => SeedOneProductAsync(waits, new StringWriter()));
+
+        Assert.Empty(waits.Delays);
+    }
+
+    [Fact]
+    public async Task Seed_PrintsOneProgressLinePerProduct()
+    {
+        var products = _catalog.Products.Take(2).ToList();
+        var catalog = new SeedCatalog(_catalog.Categories, products);
+        var waits = new RecordedWaits();
+        var first = new StringWriter();
+        var second = new StringWriter();
+
+        await CatalogSeeder.SeedAsync(_factory.Services, catalog, CancellationToken.None, first, waits.Policy);
+        await CatalogSeeder.SeedAsync(_factory.Services, catalog, CancellationToken.None, second, waits.Policy);
+
+        Assert.Contains($"[1/2] {products[0].Name}: tạo mới", first.ToString());
+        Assert.Contains($"[2/2] {products[1].Name}: tạo mới", first.ToString());
+        Assert.Contains($"[1/2] {products[0].Name}: bỏ qua", second.ToString());
+    }
+
+    [Fact]
+    public async Task Seed_TransientDatabaseErrorWhileRecheckingTheSlug_IsRetried()
+    {
+        var product = _catalog.Products[0];
+        var fault = new ProductSlugQueryFault(firstFailingQuery: 2, failureCount: 1);
+        using var factory = FactoryWith(fault);
+        // Lần thử đầu hỏng ở kho ảnh. Truy vấn slug thứ hai (bước tra lại sau khi chờ) hỏng vì lỗi DB tạm thời.
+        factory.Services.GetRequiredService<FakeImageStorage>()
+            .QueueFindFailures(CatalogSeeder.ImagePublicId(product, 1), HttpClientTimeout());
+        var waits = new RecordedWaits();
+        var progress = new StringWriter();
+
+        var report = await CatalogSeeder.SeedAsync(
+            factory.Services, new SeedCatalog(_catalog.Categories, [product]), CancellationToken.None, progress, waits.Policy);
+
+        Assert.Equal(1, fault.Failures);
+        Assert.Equal(1, report.CreatedCount("Sản phẩm"));
+        Assert.Equal([TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(15)], waits.Delays);
+    }
+
+    [Fact]
+    public async Task Seed_DatabaseKeepsFailingWhileRecheckingTheSlug_FailsWithTheProductName()
+    {
+        var product = _catalog.Products[0];
+        var fault = new ProductSlugQueryFault(firstFailingQuery: 2, failureCount: int.MaxValue);
+        using var factory = FactoryWith(fault);
+        factory.Services.GetRequiredService<FakeImageStorage>()
+            .QueueFindFailures(CatalogSeeder.ImagePublicId(product, 1), HttpClientTimeout());
+        var waits = new RecordedWaits();
+
+        var error = await Assert.ThrowsAsync<SeedException>(() => CatalogSeeder.SeedAsync(
+            factory.Services, new SeedCatalog(_catalog.Categories, [product]), CancellationToken.None,
+            new StringWriter(), waits.Policy));
+
+        Assert.Equal(3, waits.Delays.Count);
+        Assert.Contains(product.Name, error.Message);
     }
 }

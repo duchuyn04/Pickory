@@ -54,7 +54,7 @@ dotnet test apps/backend/Pickory.sln                                          # 
 dotnet run --project apps/backend/src/Pickory.Api                             # chạy API ở cổng 3000
 dotnet run --project apps/backend/src/Pickory.Api -- identity:seed            # tạo role mặc định cho DB trong DATABASE_URL
 dotnet run --project apps/backend/src/Pickory.Api -- identity:create-admin    # tạo admin đầu tiên; truyền --email, --password hoặc ADMIN_EMAIL, ADMIN_PASSWORD
-dotnet run --project apps/backend/src/Pickory.Api -- catalog:seed             # ghi 30 sản phẩm mẫu vào DB trong DATABASE_URL; chạy lại không tạo trùng; từ chối khi ASPNETCORE_ENVIRONMENT là Production
+dotnet run --project apps/backend/src/Pickory.Api -- catalog:seed             # ghi 50 sản phẩm mẫu (10 mỗi danh mục gốc) vào DB trong DATABASE_URL; có khóa CLOUDINARY_* thì tải ảnh chính hãng lên Cloudinary; chạy lại không tạo trùng; từ chối khi ASPNETCORE_ENVIRONMENT là Production
 DATABASE_URL=postgresql://pickory:pickory@localhost:5432/pickory_bench dotnet run --project apps/backend/src/Pickory.Api -- catalog:benchmark   # sinh 500 sản phẩm rồi đo p95 của GET /api/products; chỉ chạy khi tên DB chứa "bench"
 ```
 

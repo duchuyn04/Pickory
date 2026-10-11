@@ -70,6 +70,19 @@ public static class PostgresConnectionString
         return connection.ConnectionString;
     }
 
+    // Áp giới hạn kết nối lên chuỗi đã chuyển đổi. Npgsql dùng một pool cho mỗi chuỗi kết nối, nên mọi module dùng chung chuỗi này chia nhau giới hạn.
+    public static string WithMaxPoolSize(string connectionString, int? maxPoolSize)
+    {
+        // Không có giới hạn thì giữ nguyên chuỗi, để dev và test không đổi hành vi.
+        if (maxPoolSize is null)
+        {
+            return connectionString;
+        }
+
+        var connection = new NpgsqlConnectionStringBuilder(connectionString) { MaxPoolSize = maxPoolSize.Value };
+        return connection.ConnectionString;
+    }
+
     private static ArgumentException InvalidDatabaseUrl()
     {
         return new ArgumentException("DATABASE_URL phải là URI PostgreSQL hợp lệ với tùy chọn được hỗ trợ.", "databaseUrl");

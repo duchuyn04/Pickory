@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Pickory.Modules.Catalog.Attributes;
+using Pickory.Modules.Catalog.Caching;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Catalog.Products;
@@ -15,7 +16,8 @@ namespace Pickory.Modules.Catalog.Features.Categories;
 public sealed class CategoryManagementHandler(
     CatalogDbContext database,
     IAuditLogWriter auditLogWriter,
-    TimeProvider timeProvider)
+    TimeProvider timeProvider,
+    CatalogResponseCache responseCache)
 {
     // Đọc toàn bộ danh mục và dựng cây phân cấp hai cấp kèm thuộc tính lọc.
     public async Task<IReadOnlyList<CategoryTreeResponse>> GetTreeAsync(CancellationToken cancellationToken)
@@ -164,6 +166,8 @@ public sealed class CategoryManagementHandler(
             ToAuditSnapshot(newCategory));
         await auditLogWriter.WriteAsync(auditEntry, transaction.GetDbTransaction(), cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        // Xóa cache sau commit. Request song song nạp lại từ DB sẽ thấy dữ liệu mới.
+        responseCache.Invalidate();
 
         return ToResponse(newCategory, attributes);
     }
@@ -314,6 +318,8 @@ public sealed class CategoryManagementHandler(
             ToAuditSnapshot(category));
         await auditLogWriter.WriteAsync(auditEntry, transaction.GetDbTransaction(), cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        // Xóa cache sau commit. Request song song nạp lại từ DB sẽ thấy dữ liệu mới.
+        responseCache.Invalidate();
 
         return ToResponse(category, targetAttributes);
     }
@@ -364,6 +370,8 @@ public sealed class CategoryManagementHandler(
             null);
         await auditLogWriter.WriteAsync(auditEntry, transaction.GetDbTransaction(), cancellationToken);
         await transaction.CommitAsync(cancellationToken);
+        // Xóa cache sau commit. Request song song nạp lại từ DB sẽ thấy dữ liệu mới.
+        responseCache.Invalidate();
     }
 
     private async Task ValidateAttributeModificationsAsync(

@@ -18,6 +18,12 @@ public record AppConfig
     // Chuỗi kết nối tới cơ sở dữ liệu PostgreSQL.
     public string DatabaseUrl { get; init; } = string.Empty;
 
+    // Số kết nối tối đa mà API mở tới DB. Null nghĩa là giữ mặc định của Npgsql (100 kết nối).
+    public int? DatabasePoolMax { get; init; }
+
+    // Số giây cache danh sách sản phẩm và cây danh mục công khai. 0 nghĩa là tắt cache.
+    public int CatalogCacheSeconds { get; init; }
+
     // Đường dẫn tới `index.html` đã build của SPA, nơi API chèn thẻ meta SEO cho `/p/{slug}` và `/c/{slug}`. Rỗng nghĩa là tắt.
     public string WebIndexHtmlPath { get; init; } = string.Empty;
 
@@ -69,6 +75,9 @@ public record AppConfig
 
     // Bật test gọi sandbox GHN thật. Test thường không gọi GHN.
     public bool GhnLiveTests { get; init; }
+
+    // Bật tài liệu API chỉ xem ở môi trường khác Development. Mặc định tắt, vì tài liệu liệt kê cả route admin.
+    public bool ApiDocsEnabled { get; init; }
 
     // Khóa SePay gửi kèm webhook tiền về. Chuỗi rỗng nghĩa là chưa cấu hình, và production thiếu khóa thì API dừng.
     public string SepayWebhookApiKey { get; init; } = string.Empty;
@@ -209,6 +218,9 @@ public record AppConfig
             WebOrigin = webOrigin,
             ApiBaseUrl = apiBaseUrl,
             DatabaseUrl = databaseUrl,
+            DatabasePoolMax = ReadOptionalIntegerInRange(configuration, "DATABASE_POOL_MAX", 1, 100),
+            // Không đặt biến thì tắt cache. Giá trị ngoài khoảng 0 đến 300 làm API dừng khi khởi động.
+            CatalogCacheSeconds = ReadOptionalIntegerInRange(configuration, "CATALOG_CACHE_SECONDS", 0, 300) ?? 0,
             WebIndexHtmlPath = (configuration["WEB_INDEX_HTML_PATH"] ?? string.Empty).Trim(),
             TrustProxy = trustProxy,
             GoogleClientId = string.IsNullOrWhiteSpace(googleClientId) ? "mock_google_client_id" : googleClientId,
@@ -230,6 +242,7 @@ public record AppConfig
             GhnShopId = (configuration["GHN_SHOP_ID"] ?? string.Empty).Trim(),
             GhnWebhookSecret = (configuration["GHN_WEBHOOK_SECRET"] ?? string.Empty).Trim(),
             GhnLiveTests = ReadZeroOrOneFlag(configuration, "GHN_LIVE_TESTS"),
+            ApiDocsEnabled = ReadZeroOrOneFlag(configuration, "API_DOCS_ENABLED"),
             SepayWebhookApiKey = (configuration["SEPAY_WEBHOOK_API_KEY"] ?? string.Empty).Trim(),
         };
     }
@@ -249,6 +262,27 @@ public record AppConfig
         if (!isValid)
         {
             throw new InvalidOperationException($"Biến môi trường {key} phải là số hữu hạn không âm.");
+        }
+
+        return value;
+    }
+
+    // Biến tùy chọn. Rỗng nghĩa là không giới hạn thêm. Giá trị ngoài khoảng làm API dừng khi khởi động.
+    private static int? ReadOptionalIntegerInRange(IConfiguration configuration, string key, int minimum, int maximum)
+    {
+        var rawValue = configuration[key];
+        if (string.IsNullOrWhiteSpace(rawValue))
+        {
+            return null;
+        }
+
+        var isValid = int.TryParse(rawValue.Trim(), NumberStyles.None, CultureInfo.InvariantCulture, out var value)
+            && value >= minimum
+            && value <= maximum;
+        if (!isValid)
+        {
+            // Thông báo chỉ nêu tên biến và khoảng hợp lệ, không in lại giá trị đã nhập.
+            throw new InvalidOperationException($"Biến môi trường {key} phải là số nguyên từ {minimum} đến {maximum}.");
         }
 
         return value;
@@ -284,7 +318,7 @@ public record AppConfig
             return false;
         }
 
-        // Chỉ nhận `1`, giống bản Node. Giá trị như `true` bị từ chối để không bật test tốn tiền do gõ nhầm.
+        // Chỉ nhận `1`, giống bản Node. Giá trị như `true` bị từ chối, để lỗi gõ không bật nhầm test tốn tiền hoặc tài liệu API.
         if (rawValue == "1")
         {
             return true;

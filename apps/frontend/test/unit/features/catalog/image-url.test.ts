@@ -26,6 +26,24 @@ describe('withCloudinaryTransform', () => {
   it('URL rỗng vẫn rỗng, để ô ảnh hiện trạng thái chưa có ảnh', () => {
     expect(withCloudinaryTransform('', 200)).toBe('');
   });
+
+  it('tùy chọn cắt viền thêm hai lần `e_trim` trước khi đổi cỡ', () => {
+    expect(
+      withCloudinaryTransform(
+        'https://res.cloudinary.com/demo/image/upload/pickory/products/mat-truoc',
+        400,
+        { trim: true },
+      ),
+    ).toBe(
+      'https://res.cloudinary.com/demo/image/upload/e_trim/e_trim/f_auto,q_auto,w_400/pickory/products/mat-truoc',
+    );
+  });
+
+  it('URL không phải ảnh Cloudinary thì không cắt viền', () => {
+    expect(withCloudinaryTransform('https://example.com/anh.jpg', 400, { trim: true })).toBe(
+      'https://example.com/anh.jpg',
+    );
+  });
 });
 
 describe('buildCloudinarySrcSet', () => {
@@ -41,5 +59,16 @@ describe('buildCloudinarySrcSet', () => {
       'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_800/pickory/products/mat-truoc 800w',
       'https://res.cloudinary.com/demo/image/upload/f_auto,q_auto,w_1200/pickory/products/mat-truoc 1200w',
     ]);
+  });
+
+  it('truyền tùy chọn cắt viền cho mọi chiều rộng', () => {
+    const srcSet = buildCloudinarySrcSet(
+      'https://res.cloudinary.com/demo/image/upload/pickory/products/mat-truoc',
+      { trim: true },
+    );
+
+    expect(
+      srcSet.split(', ').every((entry) => entry.includes('/upload/e_trim/e_trim/f_auto')),
+    ).toBe(true);
   });
 });

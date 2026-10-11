@@ -23,7 +23,8 @@ public static class CatalogCommandLine
 
         try
         {
-            var report = await CatalogSeeder.SeedAsync(services, CatalogSeedData.Create(), cancellationToken);
+            // Tiến độ và dòng thử lại đi thẳng ra stdout, vì lệnh chạy nhiều phút.
+            var report = await CatalogSeeder.SeedAsync(services, CatalogSeedData.Create(), cancellationToken, output);
             await output.WriteLineAsync("Seed catalog thành công:");
             foreach (var line in report.Lines())
             {

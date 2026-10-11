@@ -7,6 +7,7 @@ namespace Pickory.Modules.Catalog.Images;
 public static class ImageStorageRegistration
 {
     private const string CloudinaryHttpClient = "catalog-cloudinary";
+    private const string CloudinaryUploadHttpClient = "catalog-cloudinary-upload";
 
     public static IServiceCollection AddCatalogImageStorage(
         this IServiceCollection services, AppConfig config, bool isProduction)
@@ -24,6 +25,12 @@ public static class ImageStorageRegistration
                 provider.GetRequiredService<IHttpClientFactory>().CreateClient(CloudinaryHttpClient),
                 credentials,
                 provider.GetRequiredService<TimeProvider>()));
+            // Cloudinary phải tự tải ảnh từ trang hãng nên thời gian chờ dài hơn lệnh đọc và xóa ảnh.
+            services.AddHttpClient(CloudinaryUploadHttpClient, client => client.Timeout = TimeSpan.FromSeconds(120));
+            services.AddSingleton<IImageUploader>(provider => new CloudinaryImageUploader(
+                provider.GetRequiredService<IHttpClientFactory>().CreateClient(CloudinaryUploadHttpClient),
+                credentials,
+                provider.GetRequiredService<TimeProvider>()));
             return services;
         }
 
@@ -31,6 +38,9 @@ public static class ImageStorageRegistration
         services.AddSingleton(FakeImageStorage.Credentials);
         services.AddSingleton(new FakeImageStorage(acceptUnknownProductImages: true));
         services.AddSingleton<IImageStorage>(provider => provider.GetRequiredService<FakeImageStorage>());
+        // Bộ tải giả không gọi mạng. Kho giả nhận mọi ảnh sản phẩm nên lệnh seed ở dev không cần tải gì.
+        services.AddSingleton(provider => new FakeImageUploader(provider.GetRequiredService<FakeImageStorage>()));
+        services.AddSingleton<IImageUploader>(provider => provider.GetRequiredService<FakeImageUploader>());
         return services;
     }
 

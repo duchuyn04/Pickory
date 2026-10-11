@@ -1,5 +1,6 @@
 using System.Data.Common;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Infrastructure;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Shared.Persistence;
@@ -22,6 +23,20 @@ public sealed class IdentityDbContext(DbContextOptions<IdentityDbContext> option
     {
         // Tách lịch sử khỏi Prisma. Npgsql phải dùng kiểu enum hiện có, không dùng số nguyên.
         options.UseNpgsql(connectionString, ConfigureNpgsql);
+    }
+
+    // Dùng data source chung của API, nên mọi module chia nhau một pool kết nối. Ánh xạ enum của data source nằm ở `MapEnums`.
+    public static void ConfigureOptions(DbContextOptionsBuilder options, NpgsqlDataSource dataSource)
+    {
+        // Cấu hình EF giống bản dùng chuỗi kết nối. Chỉ nguồn kết nối đổi sang data source chung.
+        options.UseNpgsql(dataSource, ConfigureNpgsql);
+    }
+
+    // Ánh xạ enum của module vào data source chung. Tên và nhãn phải khớp enum đã có trong DB.
+    public static void MapEnums(NpgsqlDataSourceBuilder builder)
+    {
+        builder.MapEnum<UserKind>("UserKind");
+        builder.MapEnum<EmailTokenPurpose>("EmailTokenPurpose");
     }
 
     // Module khác ghi nhật ký trên kết nối đang mở của module đó. Context dùng chung kết nối và transaction.

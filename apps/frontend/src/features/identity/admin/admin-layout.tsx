@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef, useState } from 'react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import { BrandMark } from '../../../shared/brand-mark';
 import { Icon } from '../../../shared/icons';
 import { useActor, type ActorData } from '../hooks/use-actor';
 import { ADMIN_NAV_GROUPS, filterNavGroupsByPermission, isNavItemActive } from './admin-navigation';
@@ -100,9 +101,7 @@ export function AdminLayout() {
         aria-label="Menu quản trị"
       >
         <div className="admin-brand">
-          <span className="logo-mark" aria-hidden="true">
-            P
-          </span>
+          <BrandMark />
           <span className="admin-brand-text admin-nav-label">
             <b>Pickory</b>
             <small>Trang quản trị</small>
@@ -194,9 +193,7 @@ export function AdminLayout() {
             <Icon name={isMenuOpen ? 'close' : 'menu'} />
           </button>
           <span className="admin-top-brand">
-            <span className="logo-mark" aria-hidden="true">
-              P
-            </span>
+            <BrandMark />
             <b>Pickory</b>
           </span>
         </header>

@@ -685,18 +685,13 @@
   text-decoration: underline;
 }
 
-/* Ô logo chữ P trên nền đỏ, dùng ở khung admin và màn đăng nhập nhân viên. */
+/* Biểu tượng chữ P của Pickory (`shared/brand-mark.tsx`), dùng ở header, khung admin và màn đăng nhập nhân viên. */
 .logo-mark {
-  display: grid;
+  display: block;
   flex: none;
-  place-items: center;
-  width: 32px;
+  width: auto;
   height: 32px;
-  border-radius: 9px;
-  background: var(--color-brand);
-  color: var(--color-on-brand);
-  font-size: var(--text-md);
-  font-weight: 800;
+  object-fit: contain;
 }
 
 /* Icon nét mảnh của `shared/icons.tsx`. Kích thước cố định để icon không co khi chữ bên cạnh dài. */

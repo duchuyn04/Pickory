@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Shared.Persistence;
 
@@ -24,6 +25,25 @@ public sealed class CatalogDbContext(DbContextOptions<CatalogDbContext> options)
             postgres.MapEnum<ProductStatus>("ProductStatus");
             postgres.MapEnum<InventoryMovementType>("InventoryMovementType");
         });
+    }
+
+    // Dùng data source chung của API, nên mọi module chia nhau một pool kết nối. Ánh xạ enum của data source nằm ở `MapEnums`.
+    public static void ConfigureOptions(DbContextOptionsBuilder options, NpgsqlDataSource dataSource)
+    {
+        options.UseNpgsql(dataSource, postgres =>
+        {
+            postgres.MigrationsHistoryTable("__EFMigrationsHistory", "ef_catalog");
+            // EF Core cần ánh xạ enum riêng cho kiểu của nó. Thiếu bước này EF đọc enum như số nguyên.
+            postgres.MapEnum<ProductStatus>("ProductStatus");
+            postgres.MapEnum<InventoryMovementType>("InventoryMovementType");
+        });
+    }
+
+    // Ánh xạ enum của module vào data source chung. Tên và nhãn phải khớp enum đã có trong DB.
+    public static void MapEnums(NpgsqlDataSourceBuilder builder)
+    {
+        builder.MapEnum<ProductStatus>("ProductStatus");
+        builder.MapEnum<InventoryMovementType>("InventoryMovementType");
     }
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
