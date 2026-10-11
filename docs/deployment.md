@@ -122,6 +122,7 @@ Vercel đọc lệnh cài gói, lệnh build và thư mục kết quả từ `ve
 | `DATABASE_URL` | Chuỗi Session pooler ở bước 1 |
 | `WEB_ORIGIN` | Domain Vercel, ví dụ `https://pickory.vercel.app` |
 | `API_BASE_URL` | Cùng giá trị với `WEB_ORIGIN` |
+| `DATABASE_POOL_MAX` | `10`, giới hạn số kết nối DB của API. Xem phần ngay dưới bảng |
 | `TRUST_PROXY` | `2`, xem phần kiểm tra số hop |
 | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | Ứng dụng OAuth của Google |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Tài khoản Cloudinary |
@@ -129,6 +130,12 @@ Vercel đọc lệnh cài gói, lệnh build và thư mục kết quả từ `ve
 | `GHN_TOKEN`, `GHN_SHOP_ID`, `GHN_WEBHOOK_SECRET` | Tài khoản GHN cùng môi trường với `GHN_API_BASE` |
 | `LLM_API_KEY`, `LLM_MODEL` | Khóa và ID model của provider LLM (Large Language Model) |
 | `EMBEDDING_API_KEY` | Khóa provider embedding |
+
+Supabase Session pooler gói free cho 15 kết nối cùng lúc. Npgsql mặc định mở tới 100 kết nối, nên trang chủ gửi nhiều request song song có thể vượt giới hạn.
+
+`DATABASE_POOL_MAX` giới hạn số kết nối của API. Request thừa xếp hàng thay vì mở kết nối mới. Giá trị `10` để lại 5 kết nối cho lệnh chạy từ máy dev.
+
+API dừng khi khởi động nếu `DATABASE_POOL_MAX` không phải số nguyên từ 1 đến 100. Để trống biến này thì API dùng mặc định của Npgsql.
 
 API dừng khi khởi động nếu thiếu một trong các nhóm sau:
 
@@ -180,6 +187,36 @@ Bỏ qua bước 5 và bước 6 khi chỉ cần áp migration mới.
 Trong PowerShell, đặt biến bằng `$env:DATABASE_URL = '<chuỗi kết nối>'`. Trong Bash, đặt biến bằng `export DATABASE_URL='<chuỗi kết nối>'`.
 
 API đọc `.env` với độ ưu tiên thấp nhất. Biến `DATABASE_URL` của terminal thắng giá trị trong `.env`, nên lệnh ghi vào DB Supabase.
+
+### Seed dữ liệu mẫu vào production
+
+Cảnh báo: lệnh `catalog:seed` ghi 50 sản phẩm vào DB production. Kiểm tra `DATABASE_URL` trước khi chạy.
+
+Lệnh tự từ chối khi `ASPNETCORE_ENVIRONMENT` là `Production`. `dotnet run` dùng profile `http` của `launchSettings.json`. Profile này đặt `ASPNETCORE_ENVIRONMENT` là `Development`, nên lệnh chạy được.
+
+Lệnh nhờ Cloudinary tự tải ảnh chính hãng từ URL nguồn. Cloudinary giữ ảnh đã có và không ghi đè.
+
+Lệnh in một dòng cho mỗi sản phẩm, ví dụ `[3/50] Dell XPS 13 9340: tạo mới`. Lệnh chạy vài phút.
+
+1. Mở terminal.
+2. Đặt biến `DATABASE_URL` của terminal bằng chuỗi Session pooler ở bước 1.
+3. Đặt ba biến `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` và `CLOUDINARY_API_SECRET` của terminal.
+4. Mở thư mục `apps/backend/src`.
+5. Chạy `dotnet run --project Pickory.Api -- db:migrate`.
+6. Chạy `dotnet run --project Pickory.Api -- identity:seed`.
+7. Chạy `dotnet run --project Pickory.Api -- identity:create-admin --email <email> --password <mật khẩu>`.
+8. Chạy `dotnet run --project Pickory.Api -- catalog:seed`.
+9. Kiểm tra dòng `Sản phẩm` có `tạo mới 50`.
+10. Chạy lại bước 8 và kiểm tra dòng `Sản phẩm` có `tạo mới 0`.
+11. Đóng terminal.
+
+Khi Cloudinary hết thời gian chờ hoặc lỗi mạng, lệnh thử lại sản phẩm đó tối đa 3 lần. Lệnh chờ 5, 15 rồi 30 giây và in một dòng `Thử lại lần`.
+
+Nếu Cloudinary từ chối một ảnh hoặc hết 3 lần thử, lệnh dừng với mã 1. Lệnh in tên sản phẩm và lỗi. Lỗi ảnh có thêm `publicId` và URL nguồn.
+
+Nếu lệnh in "đã chạm giới hạn Admin API", gói free đã dùng hết 500 lệnh Admin API trong giờ. Chờ giới hạn đặt lại, rồi chạy lại bước 8.
+
+Sửa URL trong `CatalogSeedImages.cs`, rồi chạy lại bước 8. Sản phẩm đã tạo được bỏ qua.
 
 ## Bước 7: kiểm tra sau lần triển khai đầu
 

@@ -82,6 +82,31 @@ public sealed class ImageStorageRegistrationTests
     }
 
     [Fact]
+    public void AddCatalogImageStorage_WithKeys_UsesCloudinaryUploader()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(TimeProvider.System);
+
+        services.AddCatalogImageStorage(WithCloudinary, isProduction: false);
+        using var provider = services.BuildServiceProvider();
+
+        Assert.IsType<CloudinaryImageUploader>(provider.GetRequiredService<IImageUploader>());
+    }
+
+    [Fact]
+    // Không có khóa thì bộ tải là bản giả, nên lệnh seed ở dev không gọi mạng.
+    public void AddCatalogImageStorage_WithoutKeys_UsesFakeUploader()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(TimeProvider.System);
+
+        services.AddCatalogImageStorage(WithoutCloudinary, isProduction: false);
+        using var provider = services.BuildServiceProvider();
+
+        Assert.IsType<FakeImageUploader>(provider.GetRequiredService<IImageUploader>());
+    }
+
+    [Fact]
     // In bản ghi khóa ra log không được lộ secret.
     public void CloudinaryCredentials_ToString_HidesSecret()
     {

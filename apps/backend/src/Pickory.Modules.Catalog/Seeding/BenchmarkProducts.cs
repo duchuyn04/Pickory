@@ -8,6 +8,7 @@ public static class BenchmarkProducts
     private const int MinPrice = 500_000;
     private const int MaxPrice = 60_000_000;
     private const int FixedRandomSeed = 2026;
+    private const string BenchmarkImageUrl = "https://example.com/benchmark.jpg";
 
     public static SeedCatalog Generate(SeedCatalog template, int count)
     {
@@ -30,7 +31,11 @@ public static class BenchmarkProducts
                 $"Sản phẩm sinh tự động để đo hiệu năng danh sách, thuộc danh mục {category.Name}.",
                 $"Sản phẩm benchmark số {index + 1} thuộc danh mục {category.Name}.",
                 source.Specs, [], [new SeedVariant(new Dictionary<string, string>(), price, Stock: 10)],
-                ProductStatus.Active, ImageCount: 1));
+                ProductStatus.Active)
+            {
+                // Benchmark chạy với kho ảnh giả nên URL này không bao giờ được tải.
+                Images = [new SeedImage(BenchmarkImageUrl)],
+            });
         }
 
         return new SeedCatalog(template.Categories, products);

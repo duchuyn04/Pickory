@@ -15,6 +15,11 @@ public sealed class FakeImageStorage(bool acceptUnknownProductImages = false) : 
     private readonly ConcurrentDictionary<string, StoredImage> _images = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, string> _failingDeletes = new(StringComparer.Ordinal);
     private readonly ConcurrentQueue<string> _deletedPublicIds = new();
+    private readonly ConcurrentDictionary<string, ConcurrentQueue<Exception>> _queuedFindFailures = new(StringComparer.Ordinal);
+    private int _findCount;
+
+    // Số lần `FindAsync` đã được gọi, để test kiểm tra seeder không hỏi kho ảnh từng ảnh.
+    public int FindCount => Volatile.Read(ref _findCount);
 
     // Danh sách ảnh đã xóa theo thứ tự gọi, để test kiểm tra worker gọi đúng ảnh.
     public IReadOnlyList<string> DeletedPublicIds => _deletedPublicIds.ToArray();
@@ -25,6 +30,22 @@ public sealed class FakeImageStorage(bool acceptUnknownProductImages = false) : 
         _images[publicId] = new StoredImage(bytes, format);
     }
 
+    // Ảnh đã được tải lên hoặc thêm tường minh. Khác `FindAsync`, hàm này không tính chế độ dễ dãi.
+    public bool Contains(string publicId) => _images.ContainsKey(publicId);
+
+    // Mô phỏng Admin API treo hoặc lỗi: mỗi lần tra `publicId` này ném một lỗi trong hàng đợi, rồi trả kết quả thường.
+    public void QueueFindFailures(string publicId, params Exception[] failures)
+    {
+        var queue = _queuedFindFailures.GetOrAdd(publicId, _ => new ConcurrentQueue<Exception>());
+        foreach (var failure in failures)
+        {
+            queue.Enqueue(failure);
+        }
+    }
+
+    // Xóa lỗi tra cứu đã đặt, để lỗi của một test không lan sang test sau.
+    public void ClearFindFailures() => _queuedFindFailures.Clear();
+
     // Mô phỏng Cloudinary từ chối xóa ảnh này, để test nhánh thử lại của worker.
     public void FailDeletesFor(string publicId, string errorMessage)
     {
@@ -33,6 +54,12 @@ public sealed class FakeImageStorage(bool acceptUnknownProductImages = false) : 
 
     public Task<StoredImage?> FindAsync(string publicId, CancellationToken cancellationToken)
     {
+        Interlocked.Increment(ref _findCount);
+        if (_queuedFindFailures.TryGetValue(publicId, out var queue) && queue.TryDequeue(out var queued))
+        {
+            throw queued;
+        }
+
         if (_images.TryGetValue(publicId, out var image))
         {
             return Task.FromResult<StoredImage?>(image);
