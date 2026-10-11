@@ -180,7 +180,14 @@ Quy ước:
 **Phụ thuộc:** SHIP-00 · **Quy mô:** M
 
 ### Checkpoint S2
-- [ ] Admin cấu hình địa chỉ lấy hàng trên giao diện, khách chọn được tỉnh/thành và phường/xã
+- [x] Admin cấu hình địa chỉ lấy hàng trên giao diện, khách chọn được tỉnh/thành và phường/xã
+  Kiểm ngày 2026-10-11 trên `pnpm dev` với dữ liệu GHN sandbox thật.
+  - Lệnh `shipping:sync-addresses` đồng bộ 34 tỉnh/thành và 3321 phường/xã.
+  - Admin gõ "ha noi" thấy "Hà Nội", gõ "hoan kiem" thấy "Phường Hoàn Kiếm".
+  - Admin lưu cấu hình thì trang báo "Đã lưu cấu hình vận chuyển.". Tải lại trang vẫn giữ đủ giá trị.
+  - Đổi sang "Hồ Chí Minh" thì ô phường/xã bị xóa. Lưu khi thiếu phường/xã thì lỗi "Cần chọn phường/xã." hiện dưới ô.
+  - Ở 375 px, trang không tràn ngang. Console không có lỗi.
+  - Ô chọn ở checkout của khách thuộc `commerce`. Màn này dùng cùng component `AddressPicker`.
 - [x] Webhook và job đồng bộ phát sự kiện đúng 1 lần cho mỗi lần đổi trạng thái
 - [ ] Review với người dùng
 
