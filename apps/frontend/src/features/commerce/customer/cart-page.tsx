@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { formatProductPrice } from '../../catalog/customer/product-display';
 import type { Cart } from './cart-api';
@@ -52,6 +52,9 @@ function CartSummary({ cart }: { cart: Cart }) {
 }
 
 export function CartPage() {
+  const location = useLocation();
+  const reorderFailedCount =
+    (location.state as { reorderFailedCount?: number } | null)?.reorderFailedCount ?? 0;
   const cartQuery = useCart();
   const setQuantity = useSetCartQuantity();
   const removeItem = useRemoveCartItem();
@@ -97,6 +100,13 @@ export function CartPage() {
   return (
     <main className="catalog-page cart-page">
       <h1>Giỏ hàng</h1>
+
+      {reorderFailedCount > 0 && (
+        <p role="status" className="alert alert-warn">
+          {reorderFailedCount} dòng hàng không thêm được vào giỏ. Sản phẩm có thể đã hết hàng hoặc
+          ngừng bán.
+        </p>
+      )}
 
       {cartQuery.isPending && (
         <p role="status" aria-busy="true">

@@ -103,13 +103,32 @@ public sealed class OrderTrackingService(
             throw new AppException("ORDER_NOT_FOUND", 404, OrderNotFoundMessage);
         }
 
+        // Chỉ đơn SePay còn chờ tiền được nhận thông tin ngân hàng; đơn khác không được mời chuyển khoản.
+        string? bankAccountNumber = null;
+        string? bankCode = null;
+        if (order.PaymentMethod == PaymentMethod.Sepay &&
+            order.Status == OrderStatus.PendingPayment &&
+            order.PaymentStatus == PaymentStatus.Unpaid)
+        {
+            // Thiếu một giá trị cấu hình thì ẩn cả cặp để khách không chuyển tiền vào thông tin không đầy đủ.
+            var settings = await database.Settings.AsNoTracking().SingleOrDefaultAsync(cancellationToken);
+            if (!string.IsNullOrWhiteSpace(settings?.SepayAccountNumber) &&
+                !string.IsNullOrWhiteSpace(settings.SepayBankCode))
+            {
+                bankAccountNumber = settings.SepayAccountNumber;
+                bankCode = settings.SepayBankCode;
+            }
+        }
+
         return new OrderPaymentResponse(
             order.Code,
             OrderLabels.ToLabel(order.Status),
             OrderLabels.ToLabel(order.PaymentStatus),
             OrderLabels.ToLabel(order.PaymentMethod),
             order.Total,
-            order.PaymentDeadline);
+            order.PaymentDeadline,
+            bankAccountNumber,
+            bankCode);
     }
 
     public async Task<OrderDetailResponse> CancelAsync(
@@ -208,6 +227,7 @@ public sealed class OrderTrackingService(
             .OrderBy(item => item.NameSnapshot)
             .ThenBy(item => item.SkuId)
             .Select(item => new OrderDetailItemResponse(
+                item.SkuId,
                 item.NameSnapshot,
                 FormatVariantName(item.OptionValues),
                 item.ImagePublicId,

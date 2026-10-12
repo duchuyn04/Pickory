@@ -179,7 +179,7 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
     {
         var customer = await _kit.CreateCustomerAsync();
         var anonymousId = _kit.NewAnonymousId();
-        var (code, _, _) = await CreateOrderAsync(anonymousId, sessionToken: customer.SessionToken);
+        var (code, _, skuId) = await CreateOrderAsync(anonymousId, sessionToken: customer.SessionToken);
 
         // Chủ tài khoản gọi xem đơn không kèm query token.
         var response = await SendGetAsync($"{OrdersPath}/{code}", anonymousId, sessionToken: customer.SessionToken);
@@ -188,6 +188,9 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
         var json = await CartTestKit.ReadJsonAsync(response);
         var data = json.GetProperty("data");
         Assert.Equal(code, data.GetProperty("code").GetString());
+        // Mã SKU của dòng hàng đã lưu cho phép khách thêm lại đúng biến thể vào giỏ.
+        var item = Assert.Single(data.GetProperty("items").EnumerateArray());
+        Assert.Equal(skuId, item.GetProperty("skuId").GetString());
         Assert.Equal("pending_confirmation", data.GetProperty("status").GetString());
         Assert.True(data.GetProperty("canCancel").GetBoolean());
         Assert.Null(data.GetProperty("trackingCode").GetString());
@@ -364,10 +367,12 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
         var json = await CartTestKit.ReadJsonAsync(response);
         var data = json.GetProperty("data");
 
-        // Tập trường của data phải khớp chính xác 6 trường nghiệp vụ theo quyết định 4.
+        // Tập trường phải chứa cấu hình nhận tiền, nhưng không lộ thông tin người mua.
         var properties = data.EnumerateObject().Select(property => property.Name).OrderBy(name => name).ToList();
         var expectedProperties = new[]
         {
+            "bankAccountNumber",
+            "bankCode",
             "code",
             "paymentDeadline",
             "paymentMethod",
@@ -377,6 +382,63 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
         }.OrderBy(name => name).ToList();
 
         Assert.Equal(expectedProperties, properties);
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("bankAccountNumber").ValueKind);
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("bankCode").ValueKind);
+    }
+
+    [Fact]
+    public async Task GetPayment_OnlyPendingSepayWithCompleteSettings_ReturnsBankDetails()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        // Tạo cấu hình riêng vì `CheckoutWebApplicationFactory` không tự sinh dòng cấu hình.
+        await _kit.SetLimitsAsync(5, 20);
+        var (code, token, _) = await CreateOrderAsync(anonymousId, paymentMethod: "sepay");
+
+        // Ghi cấu hình nhận tiền để kiểm tra thông tin trả về cho đơn chờ thanh toán.
+        await using (var commerce = _kit.Database.CreateCommerceContext())
+        {
+            var settings = await commerce.Settings.SingleAsync();
+            settings.SepayAccountNumber = "0000123456";
+            settings.SepayBankCode = "VCB";
+            await commerce.SaveChangesAsync();
+        }
+
+        var response = await SendGetAsync($"{OrdersPath}/{code}/payment", anonymousId, tokenQuery: token);
+        var data = (await CartTestKit.ReadJsonAsync(response)).GetProperty("data");
+        Assert.Equal("0000123456", data.GetProperty("bankAccountNumber").GetString());
+        Assert.Equal("VCB", data.GetProperty("bankCode").GetString());
+    }
+
+    [Theory]
+    [InlineData("cod", OrderStatus.PendingConfirmation, PaymentStatus.Unpaid, true, true)]
+    [InlineData("sepay", OrderStatus.PendingConfirmation, PaymentStatus.Paid, true, true)]
+    [InlineData("sepay", OrderStatus.Cancelled, PaymentStatus.Unpaid, true, true)]
+    [InlineData("sepay", OrderStatus.PendingPayment, PaymentStatus.Unpaid, false, true)]
+    [InlineData("sepay", OrderStatus.PendingPayment, PaymentStatus.Unpaid, true, false)]
+    public async Task GetPayment_WithoutEligibleOrderAndCompleteSettings_HidesBankDetails(
+        string paymentMethod, OrderStatus status, PaymentStatus paymentStatus, bool hasAccount, bool hasBank)
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        // Tạo cấu hình riêng để từng trường hợp thử không phụ thuộc cấu hình từ test khác.
+        await _kit.SetLimitsAsync(5, 20);
+        var (code, token, _) = await CreateOrderAsync(anonymousId, paymentMethod: paymentMethod);
+
+        // Cấu hình và trạng thái riêng của từng trường hợp bảo vệ tài khoản nhận khỏi đơn không hợp lệ.
+        await using (var commerce = _kit.Database.CreateCommerceContext())
+        {
+            var settings = await commerce.Settings.SingleAsync();
+            settings.SepayAccountNumber = hasAccount ? "0000123456" : null;
+            settings.SepayBankCode = hasBank ? "VCB" : null;
+            var order = await commerce.Orders.SingleAsync(order => order.Code == code);
+            order.Status = status;
+            order.PaymentStatus = paymentStatus;
+            await commerce.SaveChangesAsync();
+        }
+
+        var response = await SendGetAsync($"{OrdersPath}/{code}/payment", anonymousId, tokenQuery: token);
+        var data = (await CartTestKit.ReadJsonAsync(response)).GetProperty("data");
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("bankAccountNumber").ValueKind);
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("bankCode").ValueKind);
     }
     // Route payment trả 404 cho mọi trường hợp thiếu token hoặc token không hợp lệ.
     [Fact]

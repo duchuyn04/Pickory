@@ -2,6 +2,7 @@ import { apiRequest } from '../../../../shared/api';
 
 // Một dòng sản phẩm trong chi tiết đơn hàng.
 export interface OrderDetailItem {
+  skuId: string;
   name: string;
   variantName: string | null;
   imagePublicId: string | null;

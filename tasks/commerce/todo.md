@@ -263,12 +263,12 @@ Quy ước:
 ### COM-UI4: Trang chờ thanh toán VietQR
 **Mô tả:** Trang hiện ảnh VietQR, số tài khoản, ngân hàng, số tiền và nội dung chuyển khoản. Nội dung chuyển khoản là mã đơn. Trang có đồng hồ đếm ngược 30 phút. Trang hỏi `GET /api/orders/{code}/payment` mỗi 3 giây.
 **Tiêu chí nghiệm thu:**
-- [ ] URL ảnh QR theo định dạng chốt ở COM-00
-- [ ] Đã thanh toán thì trang chuyển sang trang thành công trong 5 giây
-- [ ] Hết giờ thì hiện thông báo đơn đã hủy và nút đặt lại
-- [ ] Nút sao chép số tài khoản và nội dung chuyển khoản. Có thông báo cho trình đọc màn hình
-- [ ] Rời trang thì dừng hỏi định kỳ
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] URL ảnh QR theo định dạng chốt ở COM-00
+- [x] Đã thanh toán thì trang chuyển sang trang thành công trong 5 giây
+- [x] Hết giờ thì hiện thông báo đơn đã hủy và nút đặt lại
+- [x] Nút sao chép số tài khoản và nội dung chuyển khoản. Có thông báo cho trình đọc màn hình
+- [x] Rời trang thì dừng hỏi định kỳ
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest với đồng hồ giả; Playwright `--headed`
 **Phụ thuộc:** COM-11 · **Quy mô:** M
 

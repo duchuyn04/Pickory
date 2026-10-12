@@ -24,7 +24,11 @@ afterEach(async () => {
 
 function renderOrderSuccess(
   code: string,
-  state: { accessToken?: string | null; paymentMethod?: string | null } | null,
+  state: {
+    accessToken?: string | null;
+    paymentMethod?: string | null;
+    paymentConfirmed?: boolean;
+  } | null,
   actor: { kind: string; userId?: string } | null,
 ) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -88,15 +92,15 @@ describe('OrderSuccessPage', () => {
     expect(container.textContent).toContain('Liên kết xem đơn đã gửi tới email của bạn.');
   });
 
-  it('hiển thị thông báo chờ thanh toán khi phương thức là sepay', async () => {
-    // Đơn chuyển khoản ngân hàng SePay có dòng lưu ý chờ thanh toán.
+  it('hiển thị xác nhận đã nhận tiền thay cho trạng thái chờ chuyển khoản', async () => {
     await renderOrderSuccess(
       'PK12345678',
-      { accessToken: 'token-abc', paymentMethod: 'sepay' },
+      { accessToken: 'token-abc', paymentMethod: 'sepay', paymentConfirmed: true },
       null,
     );
 
-    expect(container.textContent).toContain('Đơn hàng đang chờ thanh toán chuyển khoản ngân hàng.');
+    expect(container.textContent).toContain('Shop đã nhận tiền chuyển khoản');
+    expect(container.textContent).not.toContain('Đơn hàng đang chờ thanh toán');
   });
 
   it('không hiện thông báo email hoặc liên kết khi tài khoản còn tải và không có token', async () => {

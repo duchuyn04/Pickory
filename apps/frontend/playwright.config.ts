@@ -43,6 +43,7 @@ export default defineConfig({
         LLM_API_KEY: '',
         LLM_MODEL: '',
         EMBEDDING_API_KEY: '',
+        SEPAY_WEBHOOK_API_KEY: e2eEnvironment.sepayWebhookApiKey,
       },
     },
     {

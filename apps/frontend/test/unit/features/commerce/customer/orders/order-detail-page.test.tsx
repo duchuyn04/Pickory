@@ -34,6 +34,7 @@ function buildDetail(overrides: Partial<OrderDetail> = {}): OrderDetail {
     paymentDeadline: null,
     items: [
       {
+        skuId: 'sku-keyboard-1',
         name: 'Bàn phím cơ Pickory Key 1',
         variantName: 'Xám, Red Switch',
         imagePublicId: 'img-pub-1',
@@ -43,6 +44,7 @@ function buildDetail(overrides: Partial<OrderDetail> = {}): OrderDetail {
         lineTotal: 2_000_000,
       },
       {
+        skuId: 'sku-mouse-1',
         name: 'Chuột gaming Pickory Mouse',
         variantName: null,
         imagePublicId: null,

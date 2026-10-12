@@ -17,6 +17,7 @@ public sealed record OrderListItemResponse(
 
 // Chi tiết một dòng sản phẩm trong đơn hàng.
 public sealed record OrderDetailItemResponse(
+    string SkuId,
     string Name,
     string? VariantName,
     string? ImagePublicId,
@@ -58,4 +59,6 @@ public sealed record OrderPaymentResponse(
     string PaymentStatus,
     string PaymentMethod,
     int Total,
-    DateTime? PaymentDeadline);
+    DateTime? PaymentDeadline,
+    string? BankAccountNumber,
+    string? BankCode);

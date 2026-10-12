@@ -109,6 +109,7 @@ function checkoutRoutes() {
     <Routes>
       <Route path="/checkout" element={<CheckoutPage />} />
       <Route path="/orders/:code/success" element={<OrderSuccessPage />} />
+      <Route path="/orders/:code/payment" element={<p>Trang thanh toán</p>} />
       <Route path="/cart" element={<p>Trang giỏ hàng</p>} />
     </Routes>
   );
@@ -508,6 +509,33 @@ describe('CheckoutPage: đặt đơn', () => {
     expect(container.textContent).toContain('DH-0001');
     const viewLink = container.querySelector<HTMLAnchorElement>('a[href^="/orders/DH-0001?t="]');
     expect(viewLink?.getAttribute('href')).toBe('/orders/DH-0001?t=token-abc');
+  });
+
+  it('chuyển đơn SePay tới trang thanh toán cùng token để tải lại vẫn xem được', async () => {
+    const api = stubCheckoutApi({
+      orderReply: () =>
+        okReply(
+          {
+            code: 'PKABCDEFGH',
+            status: 'pending_payment',
+            paymentStatus: 'unpaid',
+            paymentMethod: 'sepay',
+            total: 20_030_000,
+            accessToken: 'guest&token',
+          },
+          201,
+        ),
+    });
+    await openCheckout();
+    await fillAddress();
+    await fillContact();
+    await act(async () => field('checkout-payment-sepay').click());
+    await waitForPreview();
+
+    await clickSubmit();
+
+    expect(api.orderCalls()).toHaveLength(1);
+    expect(locationText()).toBe('/orders/PKABCDEFGH/payment?t=guest%26token');
   });
 
   it('nạp lại giỏ sau khi đặt đơn thành công', async () => {

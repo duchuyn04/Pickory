@@ -262,11 +262,17 @@ export function CheckoutPage() {
       // Đơn đã tạo thì giỏ đã trống ở server. Xóa cache để mini cart và trang giỏ nạp lại.
       await queryClient.resetQueries({ queryKey: CART_QUERY_KEY });
 
-      // Token đi qua state của router, không đi vào URL, để không lọt vào lịch sử trình duyệt và log.
-      navigate(`/orders/${encodeURIComponent(order.code)}/success`, {
-        replace: true,
-        state: { accessToken: order.accessToken, paymentMethod: order.paymentMethod },
-      });
+      // Khách vãng lai cần token trong liên kết để tải lại trang và tiếp tục theo dõi thanh toán.
+      if (order.paymentMethod === 'sepay') {
+        const query = order.accessToken ? `?t=${encodeURIComponent(order.accessToken)}` : '';
+        navigate(`/orders/${encodeURIComponent(order.code)}/payment${query}`, { replace: true });
+      } else {
+        // COD hoàn tất bước đặt hàng ngay, không đi qua màn chuyển khoản.
+        navigate(`/orders/${encodeURIComponent(order.code)}/success`, {
+          replace: true,
+          state: { accessToken: order.accessToken, paymentMethod: order.paymentMethod },
+        });
+      }
     } catch (error) {
       await handleOrderFailure(error as ApiError);
     } finally {

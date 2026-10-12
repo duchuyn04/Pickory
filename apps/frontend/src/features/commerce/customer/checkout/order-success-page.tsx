@@ -6,6 +6,7 @@ import './checkout-page.css';
 interface OrderSuccessState {
   accessToken?: string | null;
   paymentMethod?: string | null;
+  paymentConfirmed?: boolean;
 }
 
 // Trang thông báo đặt hàng thành công và cung cấp liên kết xem đơn.
@@ -14,7 +15,7 @@ export function OrderSuccessPage() {
   const location = useLocation();
   const state = (location.state ?? null) as OrderSuccessState | null;
   const accessToken = state?.accessToken ?? null;
-  const paymentMethod = state?.paymentMethod ?? null;
+  const paymentConfirmed = state?.paymentConfirmed === true;
 
   const { data: actor, isLoading: isActorLoading } = useActor();
   const isAuthenticated = Boolean(actor && actor.kind === 'customer');
@@ -29,9 +30,7 @@ export function OrderSuccessPage() {
           Mã đơn hàng của bạn: <strong className="order-success-code">{code}</strong>
         </p>
 
-        {paymentMethod === 'sepay' && (
-          <p className="alert alert-warn">Đơn hàng đang chờ thanh toán chuyển khoản ngân hàng.</p>
-        )}
+        {paymentConfirmed && <p className="alert alert-ok">Shop đã nhận tiền chuyển khoản.</p>}
 
         {/* Chờ xác định tài khoản để không hiện nhầm thông báo dành cho khách vãng lai. */}
         {(accessToken || !isActorLoading) &&

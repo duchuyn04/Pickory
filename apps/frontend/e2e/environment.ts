@@ -33,6 +33,8 @@ process.env.E2E_ADMIN_PASSWORD ??= randomBytes(24).toString('base64url');
 process.env.E2E_ACCOUNT_PASSWORD ??= randomBytes(24).toString('base64url');
 
 export const e2eEnvironment = {
+  // Khóa giả chỉ dùng cho API E2E, không dùng cho môi trường thật.
+  sepayWebhookApiKey: 'com-ui4-e2e-key',
   databaseUrl: databaseUrl.toString(),
   webOrigin: 'http://127.0.0.1:4173',
   apiOrigin: 'http://127.0.0.1:3101',

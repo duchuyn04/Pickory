@@ -1,0 +1,243 @@
+.payment-page {
+  padding-bottom: var(--space-8);
+}
+
+.payment-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
+}
+
+.payment-heading h1,
+.payment-empty h1 {
+  margin: var(--space-1) 0 var(--space-2);
+  font-size: var(--text-title);
+}
+
+.payment-heading p {
+  margin-bottom: 0;
+}
+
+.payment-eyebrow {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.payment-detail-link {
+  color: var(--color-link);
+  font-weight: 600;
+}
+
+/* Cột QR rộng hơn thông tin chuyển khoản để ảnh vẫn rõ ở màn máy tính. */
+.payment-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.payment-layout > *,
+.payment-sidebar,
+.payment-transfer-text {
+  min-width: 0;
+}
+
+.payment-sidebar {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.payment-qr-card,
+.payment-transfer-card,
+.payment-summary-card {
+  padding: var(--space-5);
+}
+
+.payment-qr-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.payment-qr-head h2,
+.payment-transfer-card h2,
+.payment-summary-card h2,
+.payment-state h2 {
+  margin: var(--space-1) 0 var(--space-4);
+  font-size: var(--text-lg);
+}
+
+.payment-bank-label {
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.payment-qr-image {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.payment-qr-image img {
+  display: block;
+  width: min(100%, 340px);
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.payment-timer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  color: var(--color-ink-secondary);
+}
+
+.payment-timer strong {
+  margin-left: auto;
+  font-size: var(--text-title);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-ink);
+}
+
+/* Mốc dưới năm phút được nhấn bằng nền cảnh báo, không dùng màu lỗi. */
+.payment-timer-urgent {
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+}
+
+.payment-guide {
+  margin: var(--space-4) 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.payment-transfer-list {
+  margin: 0;
+}
+
+.payment-transfer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.payment-transfer-row:last-child {
+  border-bottom: 0;
+}
+
+.payment-transfer-row dt {
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}
+
+.payment-transfer-row dd {
+  overflow-wrap: anywhere;
+  margin: var(--space-1) 0 0;
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.payment-transfer-important dd {
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.payment-transfer-row .btn {
+  flex: none;
+}
+
+.payment-copy-notice {
+  min-height: var(--space-4);
+  margin: var(--space-2) 0 0;
+  color: var(--color-success);
+  font-size: var(--text-sm);
+}
+
+.payment-summary-line {
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+}
+
+.payment-summary-total {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.payment-summary-total strong {
+  font-size: var(--text-lg);
+  color: var(--color-price);
+}
+
+.payment-summary-card > p:last-child {
+  margin-bottom: 0;
+}
+
+.payment-state {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.payment-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  min-height: 360px;
+}
+
+.payment-state-icon {
+  width: var(--space-7);
+  height: var(--space-7);
+  color: var(--color-warning);
+}
+
+.payment-state p {
+  max-width: 40ch;
+  color: var(--color-ink-muted);
+  line-height: 1.6;
+}
+
+.payment-connection {
+  color: var(--color-warning);
+}
+
+@media (max-width: 800px) {
+  .payment-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .payment-qr-card,
+  .payment-transfer-card,
+  .payment-summary-card {
+    padding: var(--space-4);
+  }
+
+  .payment-transfer-row .btn span {
+    display: none;
+  }
+}

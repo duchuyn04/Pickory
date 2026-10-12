@@ -28,6 +28,7 @@ import { VerifyEmailPage } from './features/identity/customer/verify-email-page'
 import { CartPage } from './features/commerce/customer/cart-page';
 import { CheckoutPage } from './features/commerce/customer/checkout/checkout-page';
 import { OrderSuccessPage } from './features/commerce/customer/checkout/order-success-page';
+import { PaymentPage } from './features/commerce/customer/checkout/payment-page';
 import { OrderDetailPage } from './features/commerce/customer/orders/order-detail-page';
 import { CustomerOrdersPage } from './features/commerce/customer/orders/customer-orders-page';
 import { HomePage } from './features/home/home-page';
@@ -82,6 +83,7 @@ export function App() {
           <Route path="/compare" element={<ComparePage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/orders/:code/payment" element={<PaymentPage />} />
           <Route path="/orders/:code/success" element={<OrderSuccessPage />} />
           <Route path="/orders/:code" element={<OrderDetailPage />} />
           <Route path="/me/orders" element={<CustomerOrdersPage />} />
