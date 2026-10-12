@@ -17,8 +17,9 @@ export interface FakeApiReply {
   body: unknown;
 }
 
-// Cho phép test thay phản hồi của từng lệnh gọi. Trả `null` để dùng phản hồi mặc định theo trạng thái giỏ.
-export type FakeApiOverride = (call: RecordedCall) => FakeApiReply | null;
+// Cho phép test thay phản hồi của từng lệnh gọi, và có thể trả `Promise` để giữ phản hồi lại.
+// Trả `null` để dùng phản hồi mặc định theo trạng thái giỏ.
+export type FakeApiOverride = (call: RecordedCall) => FakeApiReply | Promise<FakeApiReply> | null;
 
 // API giả của giỏ: giữ một giỏ trong bộ nhớ và ghi lại mọi lệnh gọi. Mọi route ghi trả lại cả giỏ như backend.
 export function stubCartApi(initialCart: Cart, override: FakeApiOverride = () => null) {
@@ -32,7 +33,7 @@ export function stubCartApi(initialCart: Cart, override: FakeApiOverride = () =>
     const call = { method, path, body };
     calls.push(call);
 
-    const overridden = override(call);
+    const overridden = await override(call);
     if (overridden) return Response.json(overridden.body, { status: overridden.status });
 
     if (path === '/api/me') {

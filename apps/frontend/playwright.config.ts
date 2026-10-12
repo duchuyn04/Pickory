@@ -37,6 +37,8 @@ export default defineConfig({
         E2E_ADMIN_PASSWORD: e2eEnvironment.adminPassword,
         // Tách thư của suite khỏi outbox dev. Spec đọc link mời từ thư mục này.
         DEV_OUTBOX_DIR: e2eEnvironment.outboxDirectory,
+        // Xóa token GHN để API dùng `FakeGhnClient`. Spec đặt hàng cần phí vận chuyển cố định và không gọi mạng.
+        GHN_TOKEN: '',
         // Xóa khóa AI để luồng identity không gọi provider thật.
         LLM_API_KEY: '',
         LLM_MODEL: '',

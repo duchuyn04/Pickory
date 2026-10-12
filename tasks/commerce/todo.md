@@ -173,14 +173,14 @@ Quy ước:
 ### COM-UI2: Trang checkout
 **Mô tả:** Checkout một trang: liên hệ, `AddressPicker` của `shipping`, ghi chú, phương thức thanh toán, thông tin hóa đơn VAT tùy chọn. Trang gọi preview khi địa chỉ hoặc phương thức đổi.
 **Tiêu chí nghiệm thu:**
-- [ ] Hiện tạm tính, phí ship, phần miễn phí và tổng tiền từ preview
-- [ ] Đơn trên hạn mức thì lựa chọn COD tắt, kèm lý do
-- [ ] `SHIPPING_UNAVAILABLE` hiện "Chưa tính được phí vận chuyển, thử lại" và tắt nút đặt hàng
-- [ ] Mỗi lần mở trang sinh một `Idempotency-Key`. Bấm đặt 2 lần nhanh chỉ tạo 1 đơn
-- [ ] `ORDER_TOTAL_CHANGED` hiện tổng mới và yêu cầu khách xác nhận lại
-- [ ] Form kiểm bằng Zod. Lỗi hiện dưới đúng ô bằng `FieldError`
-- [ ] Dùng được bằng bàn phím. Mọi ô có `label`
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Hiện tạm tính, phí ship, phần miễn phí và tổng tiền từ preview
+- [x] Đơn trên hạn mức thì lựa chọn COD tắt, kèm lý do
+- [x] `SHIPPING_UNAVAILABLE` hiện "Chưa tính được phí vận chuyển, thử lại" và tắt nút đặt hàng
+- [x] Mỗi lần mở trang sinh một `Idempotency-Key`. Bấm đặt 2 lần nhanh chỉ tạo 1 đơn
+- [x] `ORDER_TOTAL_CHANGED` hiện tổng mới và yêu cầu khách xác nhận lại
+- [x] Form kiểm bằng Zod. Lỗi hiện dưới đúng ô bằng `FieldError`
+- [x] Dùng được bằng bàn phím. Mọi ô có `label`
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** COM-08, UI-S1 · **Quy mô:** M
 

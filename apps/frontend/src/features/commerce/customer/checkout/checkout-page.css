@@ -1,0 +1,169 @@
+/*
+ * Trang đặt hàng của khách, theo phong cách của trang giỏ hàng.
+ * Khung trang, thẻ, ô nhập, nút và thông báo dùng lại lớp chung của `category-page.css` và `components.css`.
+ */
+
+.checkout-page h1 {
+  margin: var(--space-3) 0 var(--space-4);
+  font-size: var(--text-title);
+  font-weight: 700;
+}
+
+/* Hai cột: form bên trái, tóm tắt tiền bên phải. Cột nhận `min-width: 0` để ô dài không đẩy trang tràn ngang. */
+.checkout-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.checkout-main {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.checkout-section h2,
+.checkout-fieldset legend {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.checkout-section {
+  padding: var(--space-4);
+}
+
+.checkout-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.checkout-fieldset legend {
+  padding: 0;
+}
+
+/* Vùng bấm của nhãn không nhỏ hơn 40 px để dùng được bằng ngón tay. */
+.checkout-radio {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 40px;
+  cursor: pointer;
+}
+
+.checkout-radio input {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+}
+
+.checkout-radio-disabled {
+  color: var(--color-ink-muted);
+  cursor: not-allowed;
+}
+
+.checkout-radio-reason {
+  margin: 0 0 var(--space-2) calc(18px + var(--space-2));
+}
+
+.checkout-invoice-fields {
+  margin-top: var(--space-3);
+}
+
+.checkout-alert {
+  margin-bottom: var(--space-4);
+}
+
+.checkout-alert .btn {
+  margin-top: var(--space-2);
+}
+
+.checkout-summary {
+  position: sticky;
+  top: 88px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--space-4);
+}
+
+.checkout-summary p {
+  margin: 0;
+}
+
+.checkout-summary-title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+.checkout-summary-figures {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.checkout-summary-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.checkout-summary-total {
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+
+.checkout-summary-total strong {
+  color: var(--color-price);
+  font-size: var(--text-lg);
+}
+
+.checkout-summary-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* Nút thử lại không kéo giãn theo bề ngang của thông báo lỗi. */
+.checkout-summary-error .btn {
+  align-self: flex-start;
+}
+
+.checkout-blocked,
+.order-success {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  padding: var(--space-5);
+}
+
+.checkout-blocked h2,
+.checkout-blocked p,
+.order-success h1,
+.order-success p {
+  margin: 0;
+}
+
+.order-success-code {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Màn hẹp: tóm tắt xuống dưới form và không còn dính trên cùng khi cuộn. */
+@media (max-width: 767px) {
+  .checkout-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  .checkout-summary {
+    position: static;
+  }
+}
