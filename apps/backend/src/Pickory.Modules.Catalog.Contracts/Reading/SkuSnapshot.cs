@@ -18,4 +18,6 @@ public sealed record SkuSnapshot(
     int? LengthCm,
     int? WidthCm,
     int? HeightCm,
-    ProductImageInfo? Image);
+    ProductImageInfo? Image,
+    // Mã ảnh trong kho ảnh. Đơn hàng lưu mã này thay cho URL, vì URL đổi theo cấu hình.
+    string? ImagePublicId = null);

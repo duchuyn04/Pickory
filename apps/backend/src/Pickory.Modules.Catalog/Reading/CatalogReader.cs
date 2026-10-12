@@ -92,7 +92,8 @@ public sealed class CatalogReader(
                 row.HeightCm,
                 chosen is null
                     ? null
-                    : new ProductImageInfo(ProductImageUrl.Build(credentials, chosen.PublicId), chosen.Alt, chosen.SkuId));
+                    : new ProductImageInfo(ProductImageUrl.Build(credentials, chosen.PublicId), chosen.Alt, chosen.SkuId),
+                chosen?.PublicId);
         });
 
         // DB không giữ thứ tự của `skuIds`. Sắp lại để giỏ hàng nhận đúng thứ tự đã gửi.

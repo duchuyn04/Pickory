@@ -82,7 +82,8 @@ public class ExceptionHandlingMiddleware
                 context,
                 appException.StatusCode,
                 appException.Code,
-                appException.Message);
+                appException.Message,
+                appException.Details);
         }
         catch (ValidationException validationException)
         {

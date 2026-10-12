@@ -67,12 +67,13 @@ internal sealed class CartTestKit
 
     public async Task<ReadingTestData.SeededProduct> AddProductAsync(
         int price = 100_000, int stock = 10, bool enabled = true, ProductStatus status = ProductStatus.Active,
-        int? compareAtPrice = null)
+        int? compareAtPrice = null, string? imagePublicId = null)
     {
         var productId = Guid.NewGuid().ToString("N");
         return await _catalog.AddProductAsync(new ReadingTestData.ProductSeed(
             productId, _categoryId, status,
-            Skus: [new ReadingTestData.SkuSeed(price, stock, enabled, compareAtPrice)]));
+            Skus: [new ReadingTestData.SkuSeed(price, stock, enabled, compareAtPrice)],
+            Images: imagePublicId is null ? null : [new ReadingTestData.ImageSeed(imagePublicId, 0)]));
     }
 
     // Tạo nhiều sản phẩm một SKU và trả danh sách id SKU theo thứ tự tạo.
@@ -100,9 +101,14 @@ internal sealed class CartTestKit
     // `body` là chuỗi thì gửi nguyên văn như JSON thô. Cách này cho phép test gửi kiểu dữ liệu sai.
     public async Task<HttpResponseMessage> SendAsync(
         HttpMethod method, string path, string anonymousId, object? body = null,
-        string? sessionToken = null, bool withOrigin = true)
+        string? sessionToken = null, bool withOrigin = true, IReadOnlyDictionary<string, string>? headers = null)
     {
         var request = new HttpRequestMessage(method, path);
+        foreach (var header in headers ?? new Dictionary<string, string>())
+        {
+            request.Headers.Add(header.Key, header.Value);
+        }
+
         var cookie = $"pk_anon={anonymousId}";
         if (sessionToken is not null)
         {

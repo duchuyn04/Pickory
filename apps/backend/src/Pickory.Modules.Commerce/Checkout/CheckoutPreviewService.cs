@@ -12,7 +12,7 @@ using Pickory.Shared.Exceptions;
 
 namespace Pickory.Modules.Commerce.Checkout;
 
-// Tính tạm tính, phí vận chuyển và tổng tiền cho giỏ hiện tại. Preview chỉ đọc, không ghi DB và không giữ hàng.
+// Tính tạm tính, phí vận chuyển và tổng tiền cho giỏ hiện tại. Preview chỉ đọc, và đặt đơn dùng lại `CalculateAsync`.
 public sealed class CheckoutPreviewService(
     CartService carts,
     ICatalogReader catalog,
@@ -30,9 +30,29 @@ public sealed class CheckoutPreviewService(
     public async Task<CheckoutPreviewResponse> PreviewAsync(
         CartOwner owner, CheckoutPreviewInput input, CancellationToken cancellationToken)
     {
+        var calculation = await CalculateAsync(owner, input.Address, input.PaymentMethod, cancellationToken);
+
+        return new CheckoutPreviewResponse(
+            calculation.Pricing.Subtotal,
+            calculation.Pricing.ShippingFee,
+            calculation.Pricing.ShippingDiscount,
+            calculation.Pricing.CustomerShippingFee,
+            calculation.Pricing.Total,
+            calculation.Limits.FreeShippingThreshold,
+            calculation.Limits.CodMaxAmount,
+            calculation.CodAllowed,
+            // Ngày giao dạng ISO, không phụ thuộc văn hóa của máy chủ.
+            calculation.ExpectedDeliveryDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            calculation.Address);
+    }
+
+    // Đọc giỏ, kiểm dòng, dựng kiện, báo phí, tính tiền và kiểm COD. Hàm không ghi DB và không giữ hàng.
+    public async Task<CheckoutCalculation> CalculateAsync(
+        CartOwner owner, CheckoutAddressInput address, string paymentMethod, CancellationToken cancellationToken)
+    {
         // Tên tỉnh và phường lấy từ danh mục, không tin client. Mã sai dừng ở đây trước khi đọc giỏ.
         var names = await addressDirectory.FindAsync(
-            input.Address.ProvinceCode, input.Address.WardCode, cancellationToken);
+            address.ProvinceCode, address.WardCode, cancellationToken);
         if (names is null)
         {
             throw new ValidationException([new ValidationFailure(CheckoutPreviewRequests.AddressField, AddressNotFoundMessage)]);
@@ -82,7 +102,7 @@ public sealed class CheckoutPreviewService(
 
         // Báo phí không thu hộ, vì phí không phụ thuộc phương thức thanh toán. Lỗi của shipping đi thẳng ra ngoài với mã gốc.
         var destination = new ShippingAddress(
-            input.Address.ProvinceCode, names.ProvinceName, input.Address.WardCode, names.WardName, input.Address.Line);
+            address.ProvinceCode, names.ProvinceName, address.WardCode, names.WardName, address.Line);
         var quote = await shipping.QuoteAsync(destination, parcel, codAmount: 0, insuredValue: subtotal, cancellationToken);
 
         // Tính tiền với phí thật của quote và ngưỡng miễn phí của cấu hình.
@@ -90,24 +110,20 @@ public sealed class CheckoutPreviewService(
 
         // Kiểm COD sau khi có tổng tiền. Tổng chỉ biết được khi đã có phí vận chuyển.
         var codAllowed = OrderPricing.IsCodAllowed(pricing.Total, limits.CodMaxAmount);
-        if (input.PaymentMethod == CheckoutPaymentMethods.Cod && !codAllowed)
+        if (paymentMethod == CheckoutPaymentMethods.Cod && !codAllowed)
         {
             throw new AppException("COD_NOT_ALLOWED", 422, CodNotAllowedMessage);
         }
 
-        return new CheckoutPreviewResponse(
-            pricing.Subtotal,
-            pricing.ShippingFee,
-            pricing.ShippingDiscount,
-            pricing.CustomerShippingFee,
-            pricing.Total,
-            limits.FreeShippingThreshold,
-            limits.CodMaxAmount,
-            codAllowed,
-            // Ngày giao dạng ISO, không phụ thuộc văn hóa của máy chủ.
-            quote.ExpectedDeliveryDate?.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+        return new CheckoutCalculation(
             new CheckoutPreviewAddress(
-                input.Address.ProvinceCode, names.ProvinceName, input.Address.WardCode, names.WardName, input.Address.Line));
+                address.ProvinceCode, names.ProvinceName, address.WardCode, names.WardName, address.Line),
+            checkoutLines,
+            snapshotsBySkuId,
+            pricing,
+            limits,
+            codAllowed,
+            quote.ExpectedDeliveryDate);
     }
 
     private static CheckoutLine ToCheckoutLine(CartLineInput line, SkuSnapshot sku) =>

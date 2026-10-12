@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Pickory.Modules.Commerce.Carts;
 using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Configuration;
+using Pickory.Modules.Commerce.Orders;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Commerce.Settings;
 using Pickory.Modules.Identity.Contracts.Events;
@@ -39,6 +40,10 @@ public static class CommerceModule
         services.AddScoped<CartMergeService>();
         // Preview đọc giỏ, catalog và shipping, rồi tính tiền mà không ghi DB.
         services.AddScoped<CheckoutPreviewService>();
+        // Đặt đơn dùng lại phần tính tiền của preview, rồi giữ hàng và ghi đơn trong một transaction.
+        services.AddScoped<PlaceOrderService>();
+        // Nguồn mã đơn là singleton không giữ trạng thái. Test thay bằng nguồn có kịch bản để ép tình huống trùng mã.
+        services.AddSingleton<IOrderCodeSource, RandomOrderCodeSource>();
 
         // Bộ đếm tần suất của route preview nằm trong bộ nhớ, nên phải là singleton để mọi request dùng chung một bộ đếm.
         services.AddSingleton<CheckoutPreviewRateLimiter>();
@@ -63,6 +68,7 @@ public static class CommerceModule
         var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("Commerce");
         CartEndpoints.Map(moduleRoutes);
         CheckoutEndpoints.Map(moduleRoutes);
+        OrderEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);
         return endpoints;
     }

@@ -70,7 +70,8 @@ public static class CheckoutPreviewRequests
         return new CheckoutPreviewInput(address, paymentMethod);
     }
 
-    private static CheckoutAddressInput ReadAddress(JsonElement json, List<ValidationFailure> failures)
+    // Route đặt đơn dùng lại hàm này, để địa chỉ của preview và của đơn luôn theo cùng một luật.
+    public static CheckoutAddressInput ReadAddress(JsonElement json, List<ValidationFailure> failures)
     {
         var empty = new CheckoutAddressInput(string.Empty, string.Empty, string.Empty);
 
@@ -120,7 +121,8 @@ public static class CheckoutPreviewRequests
         return string.Empty;
     }
 
-    private static string ReadPaymentMethod(JsonElement json, List<ValidationFailure> failures)
+    // Route đặt đơn dùng lại hàm này, để hai route chấp nhận cùng tập phương thức thanh toán.
+    public static string ReadPaymentMethod(JsonElement json, List<ValidationFailure> failures)
     {
         // So khớp đúng chữ thường. Giá trị `COD` hay `momo` không đại diện cho phương thức nào của shop.
         if (json.TryGetProperty(PaymentMethodField, out var value) && value.ValueKind == JsonValueKind.String)

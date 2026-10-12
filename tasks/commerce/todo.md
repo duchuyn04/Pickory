@@ -158,15 +158,15 @@ Quy ước:
 ### COM-08: Đặt đơn
 **Mô tả:** `POST /api/orders` với header `Idempotency-Key`. Server tính lại tiền, giữ hàng, tạo đơn có snapshot, xóa dòng đã đặt khỏi giỏ, trong một transaction. Đơn COD vào `pending_confirmation`. Đơn SePay vào `pending_payment` với hạn 30 phút. Phát `OrderPlacedEvent` sau commit.
 **Tiêu chí nghiệm thu:**
-- [ ] Thiếu `Idempotency-Key` trả 400 `IDEMPOTENCY_KEY_REQUIRED`
-- [ ] Gửi cùng khóa 2 lần trả cùng mã đơn. Lần đầu 201, lần sau 200. DB có đúng 1 đơn
-- [ ] Số tiền do frontend gửi bị bỏ qua. Tổng khác preview trả 409 `ORDER_TOTAL_CHANGED`
-- [ ] Thiếu hàng trả 409 `INSUFFICIENT_STOCK` kèm danh sách SKU thiếu. Không có đơn và tồn kho không đổi
-- [ ] Lỗi sau bước giữ hàng làm rollback cả đơn lẫn tồn kho (test ép lỗi)
-- [ ] Snapshot lưu tên sản phẩm, mã SKU, tùy chọn, giá, ảnh, địa chỉ gồm mã và tên, phí ship
-- [ ] Liên hệ thiếu tên, SĐT hoặc email trả 400. SĐT kiểm bằng `ContactFieldRules`. Mã số thuế kiểm bằng `TaxCodeRule`
-- [ ] Response trả token xem đơn một lần. DB chỉ lưu hash của token
-- [ ] Phát đúng 1 `OrderPlacedEvent` sau commit, không phát khi lỗi
+- [x] Thiếu `Idempotency-Key` trả 400 `IDEMPOTENCY_KEY_REQUIRED`
+- [x] Gửi cùng khóa 2 lần trả cùng mã đơn. Lần đầu 201, lần sau 200. DB có đúng 1 đơn
+- [x] Số tiền do frontend gửi bị bỏ qua. Tổng khác preview trả 409 `ORDER_TOTAL_CHANGED`
+- [x] Thiếu hàng trả 409 `INSUFFICIENT_STOCK` kèm danh sách SKU thiếu. Không có đơn và tồn kho không đổi
+- [x] Lỗi sau bước giữ hàng làm rollback cả đơn lẫn tồn kho (test ép lỗi)
+- [x] Snapshot lưu tên sản phẩm, mã SKU, tùy chọn, giá, ảnh, địa chỉ gồm mã và tên, phí ship
+- [x] Liên hệ thiếu tên, SĐT hoặc email trả 400. SĐT kiểm bằng `ContactFieldRules`. Mã số thuế kiểm bằng `TaxCodeRule`
+- [x] Response trả token xem đơn một lần. DB chỉ lưu hash của token
+- [x] Phát đúng 1 `OrderPlacedEvent` sau commit, không phát khi lỗi
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-07 · **Quy mô:** M
 

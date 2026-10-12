@@ -148,13 +148,7 @@ public sealed class CartService(
             throw CartItemNotFound();
         }
 
-        // Khóa dòng giỏ cho tới khi commit. Các request ghi cùng giỏ chạy lần lượt, nên khóa chính `(cartId, skuId)` không bao giờ trùng.
-        await database.Database.ExecuteSqlInterpolatedAsync(
-            $"""SELECT "id" FROM carts WHERE "id" = {cartId} FOR UPDATE""", cancellationToken);
-
-        // Đọc dòng giỏ sau khi giữ khóa. Request chờ khóa thấy dữ liệu mà request trước đã commit.
-        var cart = await database.Carts.Include(value => value.Items)
-            .SingleAsync(value => value.Id == cartId, cancellationToken);
+        var cart = await LockAndReadAsync(cartId, cancellationToken);
 
         await mutate(cart);
 
@@ -164,6 +158,30 @@ public sealed class CartService(
         await transaction.CommitAsync(cancellationToken);
 
         return cart.Items.Select(item => new CartLineInput(item.SkuId, item.Quantity)).ToList();
+    }
+
+    // Khóa giỏ của `owner` trong transaction của bên gọi, rồi đọc các dòng. Hàm trả `null` khi `owner` chưa có giỏ.
+    public async Task<Cart?> LockCartAsync(CartOwner owner, CancellationToken cancellationToken)
+    {
+        // Giỏ bị khóa, nên request ghi giỏ khác không chen vào giữa bước so dòng và bước xóa dòng của đặt đơn.
+        var cartId = await FindCartIdAsync(owner, cancellationToken);
+        if (cartId is null)
+        {
+            return null;
+        }
+
+        return await LockAndReadAsync(cartId, cancellationToken);
+    }
+
+    private async Task<Cart> LockAndReadAsync(string cartId, CancellationToken cancellationToken)
+    {
+        // Khóa dòng giỏ cho tới khi commit. Các request ghi cùng giỏ chạy lần lượt, nên khóa chính `(cartId, skuId)` không bao giờ trùng.
+        await database.Database.ExecuteSqlInterpolatedAsync(
+            $"""SELECT "id" FROM carts WHERE "id" = {cartId} FOR UPDATE""", cancellationToken);
+
+        // Đọc dòng giỏ sau khi giữ khóa. Request chờ khóa thấy dữ liệu mà request trước đã commit.
+        return await database.Carts.Include(value => value.Items)
+            .SingleAsync(value => value.Id == cartId, cancellationToken);
     }
 
     // Tạo giỏ nếu chưa có rồi trả id. Hai request đầu tiên không tạo hai giỏ, vì `CartInserter` dùng `ON CONFLICT DO NOTHING`.
