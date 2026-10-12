@@ -8,6 +8,7 @@ using Pickory.Modules.Commerce.Carts;
 using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Configuration;
 using Pickory.Modules.Commerce.Orders;
+using Pickory.Modules.Commerce.Payments;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Commerce.Settings;
 using Pickory.Modules.Identity.Contracts.Events;
@@ -49,6 +50,9 @@ public static class CommerceModule
 
         // Bộ đếm tần suất của route preview nằm trong bộ nhớ, nên phải là singleton để mọi request dùng chung một bộ đếm.
         services.AddSingleton<CheckoutPreviewRateLimiter>();
+        // Webhook giữ bộ đếm chung theo IP, còn dịch vụ khớp dùng context riêng của từng request.
+        services.AddSingleton<SepayWebhookRateLimiter>();
+        services.AddScoped<SepayPaymentService>();
 
         // Gộp giỏ vãng lai khi khách đăng nhập, và xóa giỏ cùng sổ địa chỉ khi khách xóa tài khoản.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, CartLinkHandler>();
@@ -72,6 +76,8 @@ public static class CommerceModule
         CheckoutEndpoints.Map(moduleRoutes);
         OrderEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);
+        // Route SePay có hợp đồng xác thực và phản hồi riêng, không yêu cầu phiên web.
+        SepayWebhookEndpoint.Map(moduleRoutes);
         return endpoints;
     }
 }

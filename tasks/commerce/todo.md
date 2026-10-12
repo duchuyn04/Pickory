@@ -232,20 +232,20 @@ Quy ước:
 ### COM-11: Webhook SePay
 **Mô tả:** `POST /api/webhooks/sepay` nhận giao dịch. Module xác thực API key, kiểm payload, lưu giao dịch thô, rồi khớp đơn theo bảng 5 trường hợp của spec. Định dạng payload lấy từ COM-00.
 **Tiêu chí nghiệm thu:**
-- [ ] Thiếu hoặc sai API key trả 401, không ghi DB
-- [ ] Body trên 16 KB trả 413. Body không phải JSON trả 415
-- [ ] Route không cần `Origin` của web. Các route khác vẫn giữ luật kiểm `Origin`
-- [ ] Giao dịch tiền ra hoặc sai số tài khoản được lưu và bỏ qua, không khớp đơn
-- [ ] Giao dịch được lưu vào `payment_transactions` trước bước khớp đơn
-- [ ] Đúng mã, đơn `pending_payment`, đủ tiền: thanh toán `paid`, đơn `pending_confirmation`, phát `OrderPaidEvent` 1 lần
-- [ ] Đúng mã, thiếu tiền: đơn giữ `pending_payment`, gắn cờ `underpaid`
-- [ ] Đúng mã, thừa tiền: `paid` như trường hợp đủ tiền, gắn cờ `overpaid`
-- [ ] Không thấy mã đơn: giao dịch có `match_status = unmatched`
-- [ ] Gửi cùng giao dịch 3 lần: DB có 1 dòng `payment_transactions` và đơn ghi nhận thanh toán 1 lần
-- [ ] Cả 3 lần gửi đều nhận response thành công
-- [ ] Response đúng định dạng SePay yêu cầu. Thời gian phản hồi dưới 2 giây trong test
-- [ ] Log và response không chứa API key
-- [ ] Quá giới hạn tần suất theo IP trả 429
+- [x] Thiếu hoặc sai API key trả 401, không ghi DB
+- [x] Body trên 16 KB trả 413. Body không phải JSON trả 415
+- [x] Route không cần `Origin` của web. Các route khác vẫn giữ luật kiểm `Origin`
+- [x] Giao dịch tiền ra hoặc sai số tài khoản được lưu và bỏ qua, không khớp đơn
+- [x] Giao dịch được lưu vào `payment_transactions` trước bước khớp đơn
+- [x] Đúng mã, đơn `pending_payment`, đủ tiền: thanh toán `paid`, đơn `pending_confirmation`, phát `OrderPaidEvent` 1 lần
+- [x] Đúng mã, thiếu tiền: đơn giữ `pending_payment`, gắn cờ `underpaid`
+- [x] Đúng mã, thừa tiền: `paid` như trường hợp đủ tiền, gắn cờ `overpaid`
+- [x] Không thấy mã đơn: giao dịch có `match_status = unmatched`
+- [x] Gửi cùng giao dịch 3 lần: DB có 1 dòng `payment_transactions` và đơn ghi nhận thanh toán 1 lần
+- [x] Cả 3 lần gửi đều nhận response thành công
+- [x] Response đúng định dạng SePay yêu cầu. Thời gian phản hồi dưới 2 giây trong test
+- [x] Log và response không chứa API key
+- [x] Quá giới hạn tần suất theo IP trả 429
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-08, COM-00 (phần tài liệu), SHIP-08 · **Quy mô:** M
 
