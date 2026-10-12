@@ -154,7 +154,7 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Thanh toán SePay
-- [x] COM-11 · [ ] COM-12 · [ ] COM-UI4 · [ ] COM-13 · [ ] COM-UI6
+- [x] COM-11 · [x] COM-12 · [ ] COM-UI4 · [ ] COM-13 · [ ] COM-UI6
 
 ### Checkpoint M3
 - [ ] Webhook giả lập đủ 5 trường hợp của spec. Gửi cùng giao dịch 3 lần chỉ ghi nhận 1 lần

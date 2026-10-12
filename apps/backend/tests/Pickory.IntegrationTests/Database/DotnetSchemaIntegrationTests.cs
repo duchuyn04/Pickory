@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Pickory.IntegrationTests.Infrastructure;
@@ -46,11 +47,22 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
         // Metadata thực phải khớp dump, kể cả thứ tự cột, cập nhật khóa ngoại và mô tả extension.
         var actual = await ApplicationDatabaseSchema.ReadAsync(identity);
         var reference = await DatabaseSqlFiles.ReadReferenceAsync(identity);
-        // `reference-schema.sql` là bản chụp schema Prisma nên không có bảng shipping và commerce. Phép so này chỉ xét đối tượng ngoài hai module đó.
-        var actualWithoutShipping = actual.Where(entry => !ApplicationDatabaseSchema.IsShippingObject(entry.Key) &&
-                                                          !ApplicationDatabaseSchema.IsCommerceObject(entry.Key))
-            .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
-        ApplicationDatabaseSchema.AssertEqual(reference, actualWithoutShipping);
+        // Bản chụp Prisma giữ index cũ; so với schema baseline thật thay vì sửa bản tham chiếu.
+        await using (var baselineTransaction = await identity.Database.BeginTransactionAsync())
+        {
+            var migrator = catalog.GetService<IMigrator>();
+            var latest = catalog.GetService<IMigrationsAssembly>().Migrations.Keys.Order(StringComparer.Ordinal).Last();
+            // Hạ riêng Catalog trong transaction để vẫn kiểm đầy đủ metadata gốc của Prisma.
+            await identity.Database.ExecuteSqlRawAsync(migrator.GenerateScript(
+                latest, "20261005125646_PrismaBaseline", MigrationsSqlGenerationOptions.NoTransactions));
+            var baseline = await ApplicationDatabaseSchema.ReadAsync(identity);
+            var baselineWithoutNewModules = baseline.Where(entry => !ApplicationDatabaseSchema.IsShippingObject(entry.Key) &&
+                !ApplicationDatabaseSchema.IsCommerceObject(entry.Key))
+                .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
+            ApplicationDatabaseSchema.AssertEqual(reference, baselineWithoutNewModules);
+            // Rollback khôi phục index mới trước khi so model hiện tại với DB.
+            await baselineTransaction.RollbackAsync();
+        }
 
         // Phép so model với DB thật xét cả shipping và commerce, nên đây là nơi kiểm schema của hai module đó.
         // Metadata Entity Framework Core không biểu diễn thứ tự cột vật lý hoặc mô tả extension.

@@ -200,8 +200,8 @@ public sealed class StockServiceTests : IClassFixture<PickoryWebApplicationFacto
     }
 
     [Fact]
-    // Đơn đã trả hàng mà giữ lại cùng `orderId` nhận `Ok` nhưng không giữ hàng (Decision 7). Đặt lại phải dùng `orderId` mới.
-    public async Task Reserve_AfterRelease_SameOrderId_ReturnsOkWithoutHoldingStock()
+    // Số dư bằng không cho phép giữ lại hàng của đơn hết hạn mà không cần đổi `orderId`.
+    public async Task Reserve_AfterRelease_SameOrderId_HoldsStockAgain()
     {
         var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(5));
         var skuId = product.SkuIds[0];
@@ -212,8 +212,80 @@ public sealed class StockServiceTests : IClassFixture<PickoryWebApplicationFacto
         var again = await ReserveAsync(orderId, new StockItem(skuId, 2));
 
         Assert.True(again.Ok);
-        Assert.Equal(5, await _data.StockOfAsync(skuId));
-        Assert.Single(await MovementsOfTypeAsync(skuId, InventoryMovementType.OrderReserve));
+        Assert.Equal(3, await _data.StockOfAsync(skuId));
+        Assert.Equal(2, (await MovementsOfTypeAsync(skuId, InventoryMovementType.OrderReserve)).Count);
+    }
+
+    [Fact]
+    public async Task ReserveRelease_TwoCyclesWithRepeatedCalls_RestoresEverySku()
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(5), new StockTestData.SkuSeed(7));
+        var orderId = NewOrderId();
+        var items = new[] { new StockItem(product.SkuIds[0], 2), new StockItem(product.SkuIds[1], 3) };
+        // Hai chu kỳ bảo vệ số dư theo từng SKU, không dựa vào sự tồn tại của movement cũ.
+        for (var cycle = 0; cycle < 2; cycle++)
+        {
+            Assert.True((await ReserveAsync(orderId, items)).Ok);
+            Assert.True((await ReserveAsync(orderId, items)).Ok);
+            Assert.Equal(3, await _data.StockOfAsync(product.SkuIds[0]));
+            Assert.Equal(4, await _data.StockOfAsync(product.SkuIds[1]));
+            // Trả lặp phải giữ kho ban đầu, kể cả sau khi đơn đã được giữ lại.
+            await ReleaseAsync(orderId);
+            await ReleaseAsync(orderId);
+            Assert.Equal(5, await _data.StockOfAsync(product.SkuIds[0]));
+            Assert.Equal(7, await _data.StockOfAsync(product.SkuIds[1]));
+        }
+        foreach (var skuId in product.SkuIds)
+        {
+            Assert.Equal(2, (await MovementsOfTypeAsync(skuId, InventoryMovementType.OrderReserve)).Count);
+            Assert.Equal(2, (await MovementsOfTypeAsync(skuId, InventoryMovementType.OrderRelease)).Count);
+        }
+    }
+
+    [Fact]
+    public async Task ReserveRelease_ConcurrentSameOrderAcrossCycles_ChangesStockOnce()
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(5));
+        var skuId = product.SkuIds[0];
+        var orderId = NewOrderId();
+        // Hàng rào đợi hai transaction mở xong, không dùng thời gian ngủ để tạo tranh khóa.
+        async Task RunPairAsync(bool reserve)
+        {
+            var ready = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var participants = 0;
+            async Task RunAsync()
+            {
+                await using var caller = await BeginCallerAsync();
+                if (Interlocked.Increment(ref participants) == 2)
+                {
+                    ready.SetResult();
+                }
+                await ready.Task.WaitAsync(TimeSpan.FromSeconds(10));
+                using var scope = _factory.Services.CreateScope();
+                var service = scope.ServiceProvider.GetRequiredService<IStockService>();
+                // Cùng đơn và cùng transaction thật kiểm tính lặp sau khi bỏ unique index.
+                if (reserve)
+                {
+                    Assert.True((await service.ReserveAsync(orderId, [new StockItem(skuId, 2)], caller.AsCaller(), CancellationToken.None)).Ok);
+                }
+                else
+                {
+                    await service.ReleaseAsync(orderId, caller.AsCaller(), CancellationToken.None);
+                }
+                await caller.Transaction.CommitAsync();
+                await caller.Events.FlushAsync(CancellationToken.None);
+            }
+            await Task.WhenAll(RunAsync(), RunAsync());
+        }
+        for (var cycle = 0; cycle < 2; cycle++)
+        {
+            await RunPairAsync(reserve: true);
+            Assert.Equal(3, await _data.StockOfAsync(skuId));
+            await RunPairAsync(reserve: false);
+            Assert.Equal(5, await _data.StockOfAsync(skuId));
+        }
+        Assert.Equal(2, (await MovementsOfTypeAsync(skuId, InventoryMovementType.OrderReserve)).Count);
+        Assert.Equal(2, (await MovementsOfTypeAsync(skuId, InventoryMovementType.OrderRelease)).Count);
     }
 
     [Fact]

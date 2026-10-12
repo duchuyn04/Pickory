@@ -53,6 +53,12 @@ public static class CommerceModule
         // Webhook giữ bộ đếm chung theo IP, còn dịch vụ khớp dùng context riêng của từng request.
         services.AddSingleton<SepayWebhookRateLimiter>();
         services.AddScoped<SepayPaymentService>();
+        // Luật tiền về muộn giữ kho trong cùng context và transaction khớp webhook.
+        services.AddScoped<SepayLatePaymentMatcher>();
+        // Processor dùng scope riêng để từng vòng đọc lại đơn và trả kho trong transaction của Commerce.
+        services.AddScoped<ExpiredPaymentProcessor>();
+        // Worker kiểm hạn mỗi phút ngay cả khi không có request từ khách.
+        services.AddHostedService<ExpiredPaymentWorker>();
 
         // Gộp giỏ vãng lai khi khách đăng nhập, và xóa giỏ cùng sổ địa chỉ khi khách xóa tài khoản.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, CartLinkHandler>();

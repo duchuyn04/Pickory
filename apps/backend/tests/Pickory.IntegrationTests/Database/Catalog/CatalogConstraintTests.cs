@@ -54,23 +54,6 @@ public sealed class CatalogConstraintTests(IntegrationDatabaseFixture database) 
     }
 
     [Fact]
-    // Hai movement cùng `orderId`, `skuId` và `type` bị từ chối. Đơn hàng không giữ hàng hai lần.
-    public async Task InventoryMovement_IsUniquePerOrderSkuAndType()
-    {
-        await using var catalog = database.CreateCatalogContext();
-        var sku = await CreateSkuAsync(catalog, stock: 10);
-        var orderId = $"order-{Guid.NewGuid():N}";
-        catalog.InventoryMovements.Add(new InventoryMovement { SkuId = sku.Id, Delta = -1, Type = InventoryMovementType.OrderReserve, OrderId = orderId, Reason = "Giữ hàng cho đơn hàng" });
-        // Tồn kho trừ cùng lần lưu với movement thứ nhất, để bất biến vẫn đúng sau test.
-        sku.Stock = 9;
-        await catalog.SaveChangesAsync();
-
-        catalog.InventoryMovements.Add(new InventoryMovement { SkuId = sku.Id, Delta = -1, Type = InventoryMovementType.OrderReserve, OrderId = orderId, Reason = "Giữ hàng cho đơn hàng" });
-
-        await Assert.ThrowsAsync<DbUpdateException>(() => catalog.SaveChangesAsync());
-    }
-
-    [Fact]
     // Cột `specs` có chỉ mục GIN, để lọc theo thông số không phải quét cả bảng.
     public async Task Products_HaveSpecsGinIndex()
     {

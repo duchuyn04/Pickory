@@ -252,11 +252,11 @@ Quy ước:
 ### COM-12: Job hết hạn thanh toán và tiền về muộn
 **Mô tả:** Job chạy mỗi phút hủy đơn `pending_payment` quá 30 phút và trả hàng. Bổ sung trường hợp thứ năm của webhook: tiền về cho đơn đã hủy vì quá hạn.
 **Tiêu chí nghiệm thu:**
-- [ ] Đơn quá 30 phút chuyển `cancelled` với lý do quá hạn, gọi `ReleaseAsync`, phát `OrderStatusChangedEvent`
-- [ ] Đơn chưa tới hạn không đổi. Đơn COD không bị job chạm tới
-- [ ] Tiền về sau khi hủy, còn đủ hàng: giữ hàng lại, đơn về `pending_confirmation`, thanh toán `paid`
-- [ ] Tiền về sau khi hủy, thiếu hàng: đơn giữ `cancelled`, thanh toán `refund_pending`
-- [ ] Chu kỳ job là 1 phút
+- [x] Đơn quá 30 phút chuyển `cancelled` với lý do quá hạn, gọi `ReleaseAsync`, phát `OrderStatusChangedEvent`
+- [x] Đơn chưa tới hạn không đổi. Đơn COD không bị job chạm tới
+- [x] Tiền về sau khi hủy, còn đủ hàng: giữ hàng lại, đơn về `pending_confirmation`, thanh toán `paid`
+- [x] Tiền về sau khi hủy, thiếu hàng: đơn giữ `cancelled`, thanh toán `refund_pending`
+- [x] Chu kỳ job là 1 phút
 **Kiểm tra:** test tích hợp gọi processor với `TimeProvider` giả
 **Phụ thuộc:** COM-11 · **Quy mô:** M
 

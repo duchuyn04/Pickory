@@ -16,6 +16,12 @@ public sealed class StockService(CatalogDbContext database, IEventDispatcher dis
 {
     // Vùng khóa riêng cho khóa theo `orderId`. Tách khỏi `ProductWriteLockKey` để hai loại khóa không đụng nhau.
     private const int OrderLockNamespace = 8101;
+    private const string ReservedBalancesSql = """
+        SELECT "skuId", CAST(SUM(delta) AS integer)
+        FROM inventory_movements
+        WHERE "orderId" = @orderId AND type IN ('order_reserve', 'order_release')
+        GROUP BY "skuId" HAVING SUM(delta) <> 0
+        """;
 
     public async Task<ReserveResult> ReserveAsync(
         string orderId, IReadOnlyList<StockItem> items, StockCallerTransaction? caller, CancellationToken cancellationToken)
@@ -31,8 +37,8 @@ public sealed class StockService(CatalogDbContext database, IEventDispatcher dis
         return await RunAsync(caller, async (transaction, events) =>
         {
             await LockOrderAsync(transaction, orderId, cancellationToken);
-            // Đơn đã giữ hàng thì trả `Ok` mà không trừ thêm. Gọi lặp do thử lại không làm mất hàng hai lần.
-            if (await HasMovementAsync(transaction, orderId, InventoryMovementType.OrderReserve, cancellationToken))
+            // Số dư khác không nghĩa là đơn đang giữ hàng, nên retry không được trừ kho thêm.
+            if (await HasReservedAsync(transaction, orderId, cancellationToken))
             {
                 return ReserveResult.Success;
             }
@@ -57,10 +63,9 @@ public sealed class StockService(CatalogDbContext database, IEventDispatcher dis
         await RunAsync(caller, async (transaction, events) =>
         {
             await LockOrderAsync(transaction, orderId, cancellationToken);
-            // Chỉ trả hàng đã giữ. Đơn chưa giữ hàng hoặc đã trả rồi thì không có gì để cộng lại.
+            // Số dư gộp cả giữ và trả cho phép hoàn đúng hàng của chu kỳ hiện tại.
             var reserved = await ReadReservedAsync(transaction, orderId, cancellationToken);
-            if (reserved.Count == 0
-                || await HasMovementAsync(transaction, orderId, InventoryMovementType.OrderRelease, cancellationToken))
+            if (reserved.Count == 0)
             {
                 return true;
             }
@@ -102,7 +107,7 @@ public sealed class StockService(CatalogDbContext database, IEventDispatcher dis
             events => action(database.Database.CurrentTransaction!.GetDbTransaction(), events), cancellationToken);
     }
 
-    // Khóa theo `orderId` trong transaction. Hai lời gọi cùng đơn chạy nối tiếp, nên lời gọi sau thấy movement của lời gọi trước.
+    // Khóa `pg_advisory_xact_lock` theo `orderId` chặn thao tác lặp vì DB không còn unique theo movement.
     private static async Task LockOrderAsync(DbTransaction transaction, string orderId, CancellationToken cancellationToken)
     {
         await using var command = Command(transaction, "SELECT pg_advisory_xact_lock(@namespace, hashtext(@orderId))");
@@ -111,23 +116,21 @@ public sealed class StockService(CatalogDbContext database, IEventDispatcher dis
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task<bool> HasMovementAsync(
-        DbTransaction transaction, string orderId, InventoryMovementType type, CancellationToken cancellationToken)
+    private static async Task<bool> HasReservedAsync(
+        DbTransaction transaction, string orderId, CancellationToken cancellationToken)
     {
-        await using var command = Command(transaction,
-            "SELECT 1 FROM inventory_movements WHERE \"orderId\" = @orderId AND type = CAST(@type AS \"InventoryMovementType\") LIMIT 1");
+        // Chỉ kiểm tồn tại để retry không cấp phát danh sách số dư của mọi SKU.
+        await using var command = Command(transaction, "SELECT EXISTS (" + ReservedBalancesSql + ")");
         command.Parameters.AddWithValue("orderId", orderId);
-        command.Parameters.AddWithValue("type", MovementTypeNames.ToName(type));
-        return await command.ExecuteScalarAsync(cancellationToken) is not null;
+        return await command.ExecuteScalarAsync(cancellationToken) is true;
     }
 
     private static async Task<List<StockDelta>> ReadReservedAsync(
         DbTransaction transaction, string orderId, CancellationToken cancellationToken)
     {
-        await using var command = Command(transaction,
-            "SELECT \"skuId\", delta FROM inventory_movements WHERE \"orderId\" = @orderId AND type = CAST(@type AS \"InventoryMovementType\")");
+        // Gộp mọi chu kỳ để số dư phản ánh hàng đang giữ, không phải tổng hàng từng giữ.
+        await using var command = Command(transaction, ReservedBalancesSql);
         command.Parameters.AddWithValue("orderId", orderId);
-        command.Parameters.AddWithValue("type", MovementTypeNames.ToName(InventoryMovementType.OrderReserve));
         var reserved = new List<StockDelta>();
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))

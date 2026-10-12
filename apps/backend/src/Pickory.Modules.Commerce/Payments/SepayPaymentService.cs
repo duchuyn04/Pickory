@@ -12,7 +12,8 @@ using Pickory.Shared.Events;
 namespace Pickory.Modules.Commerce.Payments;
 
 internal sealed class SepayPaymentService(
-    CommerceDbContext database, IEventDispatcher dispatcher, TimeProvider clock, ILogger<SepayPaymentService> logger)
+    CommerceDbContext database, IEventDispatcher dispatcher, TimeProvider clock,
+    SepayLatePaymentMatcher latePayments, ILogger<SepayPaymentService> logger)
 {
     public async Task ReceiveAsync(SepayWebhookPayload payload, CancellationToken cancellationToken)
     {
@@ -97,7 +98,16 @@ internal sealed class SepayPaymentService(
         {
             return;
         }
-        // COM-12 mới khôi phục đơn hết hạn, còn webhook này không đổi đơn COD, đã trả hoặc đã hủy.
+        // Chỉ đơn hết hạn chưa trả tiền được giữ lại hàng, không khôi phục đơn khách tự hủy.
+        if (order.Status == OrderStatus.Cancelled && order.Flags.Contains("payment_expired")
+            && order.PaymentMethod == PaymentMethod.Sepay && order.PaymentStatus == PaymentStatus.Unpaid)
+        {
+            // Chỉ khôi phục cần dòng hàng, nên chứng từ thường không tải snapshot sản phẩm thừa.
+            await database.Entry(order).Collection(row => row.Items).LoadAsync(cancellationToken);
+            await latePayments.MatchAsync(order, payment, events, cancellationToken);
+            return;
+        }
+        // Đơn COD, đã trả hoặc hủy vì lý do khác giữ chứng từ chưa khớp cho đối soát.
         if (order.Status != OrderStatus.PendingPayment || order.PaymentMethod != PaymentMethod.Sepay || order.PaymentStatus != PaymentStatus.Unpaid)
         {
             logger.LogInformation("Giao dịch SePay không khớp đơn {OrderCode} ở trạng thái {Status}.", order.Code, order.Status);

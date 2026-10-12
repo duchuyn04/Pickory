@@ -26,10 +26,9 @@ internal sealed class InventoryMovementConfiguration : IEntityTypeConfiguration<
         entity.HasIndex(value => new { value.SkuId, value.CreatedAt })
             .HasDatabaseName("inventory_movements_skuId_createdAt_idx");
 
-        // Giữ khóa duy nhất theo đơn hàng để cùng loại biến động không được ghi hai lần.
+        // Index hỗ trợ đọc số dư; khóa theo đơn chặn thao tác lặp mà vẫn cho phép giữ hàng lại.
         entity.HasIndex(value => new { value.OrderId, value.SkuId, value.Type })
-            .IsUnique()
-            .HasDatabaseName("inventory_movements_orderId_skuId_type_key");
+            .HasDatabaseName("inventory_movements_orderId_skuId_type_idx");
 
         // Chặn xóa biến thể đã có biến động để giữ lịch sử tồn kho.
         entity.HasOne(value => value.Sku)

@@ -22,7 +22,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
     [Theory]
     [InlineData("identity", "ef_identity", "20261005125639_PrismaBaseline")]
     [InlineData("ai_gateway", "ef_ai_gateway", "20261005125642_PrismaBaseline")]
-    [InlineData("catalog", "ef_catalog", "20261005125646_PrismaBaseline")]
+    [InlineData("catalog", "ef_catalog", "20261012142008_MakeInventoryMovementOrderIndexNonUnique")]
     [InlineData("shipping", "ef_shipping", "20261010041544_InitialShipping")]
     [InlineData("commerce", "ef_commerce", "20261011172706_AddCartAnonymousIdUniqueIndex")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(
@@ -81,6 +81,40 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
         }
         AssertHistoriesEqual(originalHistory, await ReadHistoryAsync(context));
         ApplicationDatabaseSchema.AssertEqual(original, await ApplicationDatabaseSchema.ReadAsync(context));
+    }
+
+    [Fact]
+    public async Task CatalogMigration_EmptySchemaCreatesNonUniqueOrderMovementIndex()
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
+        DotnetSchemaIntegrationTests.AssertTestConnection(context);
+        var migrator = context.GetService<IMigrator>();
+        var latest = context.GetService<IMigrationsAssembly>().Migrations.Keys.Order(StringComparer.Ordinal).Last();
+        // Rollback giữ nguyên fixture khi kiểm schema Catalog rỗng qua SQL migration thật.
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        try
+        {
+            await context.Database.ExecuteSqlRawAsync(migrator.GenerateScript(latest, Migration.InitialDatabase, MigrationsSqlGenerationOptions.NoTransactions));
+            await context.Database.ExecuteSqlRawAsync(migrator.GenerateScript(Migration.InitialDatabase, latest, MigrationsSqlGenerationOptions.NoTransactions));
+            await using var command = context.Database.GetDbConnection().CreateCommand();
+            command.Transaction = transaction.GetDbTransaction();
+            // Catalog PostgreSQL chứng minh index mới tồn tại mà không còn chặn chu kỳ giữ hàng.
+            command.CommandText = """
+                SELECT indexname, indexdef FROM pg_indexes
+                WHERE schemaname = 'public' AND indexname IN
+                ('inventory_movements_orderId_skuId_type_key', 'inventory_movements_orderId_skuId_type_idx')
+                """;
+            await using var reader = await command.ExecuteReaderAsync();
+            Assert.True(await reader.ReadAsync());
+            Assert.Equal("inventory_movements_orderId_skuId_type_idx", reader.GetString(0));
+            Assert.DoesNotContain("UNIQUE", reader.GetString(1));
+            Assert.False(await reader.ReadAsync());
+        }
+        finally
+        {
+            await transaction.RollbackAsync();
+        }
     }
 
     private static List<string> AppliedIds(IReadOnlyList<HistoryRow> rows) =>

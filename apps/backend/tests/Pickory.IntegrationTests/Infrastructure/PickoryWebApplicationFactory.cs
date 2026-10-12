@@ -9,6 +9,7 @@ using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Commerce.Contracts.Events;
+using Pickory.Modules.Commerce.Payments;
 using Pickory.Shared.Email;
 using Pickory.Modules.Shipping.Addresses;
 using Pickory.Modules.Shipping.Contracts.Events;
@@ -169,6 +170,14 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             if (workerRegistration is not null)
             {
                 services.Remove(workerRegistration);
+            }
+
+            // Test gọi processor trực tiếp để worker không tự hủy đơn giữa các assertion.
+            var expiryWorkerRegistration = services.SingleOrDefault(descriptor =>
+                descriptor.ServiceType == typeof(IHostedService) && descriptor.ImplementationType == typeof(ExpiredPaymentWorker));
+            if (expiryWorkerRegistration is not null)
+            {
+                services.Remove(expiryWorkerRegistration);
             }
 
             // Bỏ worker đồng bộ địa chỉ. Test gọi `AddressSyncProcessor` trực tiếp, để worker không ghi đè danh mục test đang dựng.
