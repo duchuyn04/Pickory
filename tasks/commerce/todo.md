@@ -145,13 +145,13 @@ Quy ước:
 ### COM-07: Checkout preview
 **Mô tả:** `POST /api/checkout/previews` nhận địa chỉ, phương thức thanh toán và các dòng của giỏ hiện tại. Route trả tạm tính, phí ship, phần shop chịu, tổng tiền. Route này là route báo phí cho giỏ theo quyết định 19 của `tasks/shipping/plan.md`.
 **Tiêu chí nghiệm thu:**
-- [ ] Phí lấy từ `IShippingService.QuoteAsync`. Kiện hàng dựng bằng `BuildParcel` từ cân nặng và kích thước của SKU
-- [ ] Tạm tính bằng hoặc trên ngưỡng thì phí khách trả bằng 0
-- [ ] Chọn COD cho tổng trên hạn mức trả 422 `COD_NOT_ALLOWED`
-- [ ] `shipping` lỗi trả 503 `SHIPPING_UNAVAILABLE`, không trả phí ước đoán
-- [ ] Mã địa chỉ không có trong danh mục trả 400 (sau khi Câu hỏi mở 4 được chốt)
-- [ ] Quá 20 lần mỗi phút cho mỗi khách trả 429
-- [ ] Giỏ có dòng không mua được trả 422 `SKU_UNAVAILABLE`
+- [x] Phí lấy từ `IShippingService.QuoteAsync`. Kiện hàng dựng bằng `BuildParcel` từ cân nặng và kích thước của SKU
+- [x] Tạm tính bằng hoặc trên ngưỡng thì phí khách trả bằng 0
+- [x] Chọn COD cho tổng trên hạn mức trả 422 `COD_NOT_ALLOWED`
+- [x] `shipping` lỗi trả 503 `SHIPPING_UNAVAILABLE`, không trả phí ước đoán
+- [x] Mã địa chỉ không có trong danh mục trả 400 (sau khi Câu hỏi mở 4 được chốt)
+- [x] Quá 20 lần mỗi phút cho mỗi khách trả 429
+- [x] Giỏ có dòng không mua được trả 422 `SKU_UNAVAILABLE`
 **Kiểm tra:** test tích hợp với `FakeGhnClient`
 **Phụ thuộc:** COM-06, SHIP-08 (`RateLimiter` trong `Pickory.Shared`), Câu hỏi mở 4 · **Quy mô:** M
 

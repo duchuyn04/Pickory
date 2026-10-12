@@ -112,6 +112,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
         Assert.Equal("AI Gateway", FirstTag(paths, "/api/admin/ai/usage", "get"));
         Assert.Equal("Shipping", FirstTag(paths, "/api/addresses/provinces", "get"));
         Assert.Equal("Commerce", FirstTag(paths, "/api/cart", "get"));
+        Assert.Equal("Commerce", FirstTag(paths, "/api/checkout/previews", "post"));
         Assert.Equal("Commerce", FirstTag(paths, "/api/admin/commerce/settings", "get"));
     }
 

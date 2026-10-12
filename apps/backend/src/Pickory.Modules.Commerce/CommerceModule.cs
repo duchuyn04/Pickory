@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Pickory.Modules.Commerce.Carts;
+using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Configuration;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Commerce.Settings;
@@ -36,6 +37,11 @@ public static class CommerceModule
         services.AddScoped<CommerceSettingsStore>();
         services.AddScoped<CartService>();
         services.AddScoped<CartMergeService>();
+        // Preview đọc giỏ, catalog và shipping, rồi tính tiền mà không ghi DB.
+        services.AddScoped<CheckoutPreviewService>();
+
+        // Bộ đếm tần suất của route preview nằm trong bộ nhớ, nên phải là singleton để mọi request dùng chung một bộ đếm.
+        services.AddSingleton<CheckoutPreviewRateLimiter>();
 
         // Gộp giỏ vãng lai khi khách đăng nhập, và xóa giỏ cùng sổ địa chỉ khi khách xóa tài khoản.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, CartLinkHandler>();
@@ -56,6 +62,7 @@ public static class CommerceModule
         // Nhóm không thêm tiền tố, và gắn tag `Commerce` cho mọi route của module trong tài liệu OpenAPI.
         var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("Commerce");
         CartEndpoints.Map(moduleRoutes);
+        CheckoutEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);
         return endpoints;
     }

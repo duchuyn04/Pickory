@@ -23,19 +23,24 @@ public sealed class CartService(
     public async Task<CartResponse> GetAsync(CartOwner owner, CancellationToken cancellationToken)
     {
         var limits = await settings.GetLimitsAsync(cancellationToken);
+        var lines = await GetLinesAsync(owner, cancellationToken);
+        return await BuildResponseAsync(lines, limits, cancellationToken);
+    }
 
-        // Giỏ chưa tồn tại thì trả giỏ rỗng và không ghi DB. Khách chỉ xem giỏ không tạo dòng rác.
+    // Đọc các dòng giỏ của `owner` mà không gọi catalog. Checkout cần dòng thô để tự ghép dữ liệu SKU.
+    public async Task<IReadOnlyList<CartLineInput>> GetLinesAsync(CartOwner owner, CancellationToken cancellationToken)
+    {
+        // Giỏ chưa tồn tại thì trả danh sách rỗng và không ghi DB. Khách chỉ xem giỏ không tạo dòng rác.
         var cartId = await FindCartIdAsync(owner, cancellationToken);
         if (cartId is null)
         {
-            return CartResponseBuilder.Build([], new Dictionary<string, SkuSnapshot>(), limits);
+            return [];
         }
 
-        var lines = await database.CartItems.AsNoTracking()
+        return await database.CartItems.AsNoTracking()
             .Where(item => item.CartId == cartId)
             .Select(item => new CartLineInput(item.SkuId, item.Quantity))
             .ToListAsync(cancellationToken);
-        return await BuildResponseAsync(lines, limits, cancellationToken);
     }
 
     public async Task<CartResponse> AddItemAsync(CartOwner owner, AddCartItemInput input, CancellationToken cancellationToken)

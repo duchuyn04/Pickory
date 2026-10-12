@@ -51,7 +51,8 @@ internal static class CartEndpoints
         return Results.Ok(new ApiResponse<CartResponse>(cart));
     }
 
-    private static CartOwner OwnerOf(HttpContext context)
+    // Route checkout đọc đúng giỏ này, nên hàm dùng chung thay vì lặp luật chọn chủ giỏ.
+    internal static CartOwner OwnerOf(HttpContext context)
     {
         // Actor luôn có `AnonymousId`. `UserId` chỉ có khi khách đã đăng nhập.
         var actor = context.GetActor();

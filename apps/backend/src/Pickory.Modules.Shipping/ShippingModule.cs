@@ -9,6 +9,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Pickory.Modules.Shipping.Addresses;
 using Pickory.Modules.Shipping.Configuration;
 using Pickory.Modules.Shipping.Contracts;
+using Pickory.Modules.Shipping.Contracts.Addresses;
 using Pickory.Modules.Shipping.Features.AdminSettings;
 using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Shipping.Persistence;
@@ -60,6 +61,9 @@ public static class ShippingModule
 
         // Cổng công khai cho module `commerce`. Vòng đời scoped vì dịch vụ giữ `ShippingDbContext` của request.
         services.AddScoped<IShippingService, ShippingService>();
+
+        // Cổng tra danh mục địa chỉ cho `commerce`. Checkout dùng cổng này để lấy tên tỉnh và phường chuẩn.
+        services.AddScoped<IAddressDirectory, AddressDirectory>();
         return services;
     }
 
