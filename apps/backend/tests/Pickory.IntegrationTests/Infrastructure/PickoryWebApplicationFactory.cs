@@ -9,7 +9,7 @@ using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Commerce.Contracts.Events;
-using Pickory.Modules.Identity.Emails;
+using Pickory.Shared.Email;
 using Pickory.Modules.Shipping.Addresses;
 using Pickory.Modules.Shipping.Contracts.Events;
 using Pickory.Modules.Shipping.Ghn;

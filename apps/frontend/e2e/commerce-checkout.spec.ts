@@ -1,5 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 import { e2eEnvironment } from './environment';
+import { readOrderConfirmation } from './outbox';
 
 // Ảnh PNG 1x1 trả cho mọi yêu cầu ảnh sản phẩm, để trình duyệt không ghi lỗi tải ảnh vào console.
 const tinyPng = Buffer.from(
@@ -368,6 +369,17 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
     );
     // Giỏ đã được xóa sau khi đặt đơn.
     await expect(page.getByRole('button', { name: 'Giỏ hàng, trống' })).toBeVisible();
+
+    // Thư xác nhận nằm trong outbox dev. Liên kết trong thư phải trùng nút "Xem đơn hàng" của trang thành công.
+    const confirmation = await readOrderConfirmation('an@example.com', orderCode.trim());
+    const emailUrl = new URL(confirmation.link);
+    expect(emailUrl.origin).toBe(e2eEnvironment.webOrigin);
+    expect(emailUrl.pathname).toBe(`/orders/${orderCode.trim()}`);
+    expect(emailUrl.searchParams.get('t')).toBeTruthy();
+    const viewOrderHref = await page
+      .getByRole('link', { name: 'Xem đơn hàng' })
+      .getAttribute('href');
+    expect(`${emailUrl.pathname}${emailUrl.search}`).toBe(viewOrderHref);
     await checkLayoutAtBothWidths(page, 'checkout-success');
 
     expect(issues).toEqual([]);

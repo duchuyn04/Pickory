@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Pickory.Modules.Identity.EmailTokens;
-using Pickory.Modules.Identity.Emails;
+using Pickory.Shared.Email;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Passwords;
 using Pickory.Modules.Identity.Persistence;

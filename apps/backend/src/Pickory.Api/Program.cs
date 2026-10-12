@@ -12,6 +12,7 @@ using Pickory.Modules.Identity;
 using Pickory.Modules.Shipping;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.DependencyInjection;
+using Pickory.Shared.Email;
 using Pickory.Shared.Http;
 using Pickory.Shared.Json;
 using Pickory.Shared.Persistence;
@@ -76,10 +77,14 @@ builder.WebHost.ConfigureKestrel(options =>
 // Đăng ký các dịch vụ nền tảng dùng chung gồm bộ điều phối sự kiện.
 builder.Services.AddSharedInfrastructure();
 
-// Mỗi module tự đăng ký dữ liệu và dịch vụ. `Program.cs` không phụ thuộc vào phần bên trong module.
+// Cổng email dùng chung của mọi module. Commerce và Identity cùng gửi thư qua bộ gửi này.
+builder.Services.AddDevOutboxEmail();
+
 // Mọi module dùng chung một chuỗi kết nối, nên một giới hạn `DATABASE_POOL_MAX` áp cho cả API và worker nền.
 var databaseConnectionString = PostgresConnectionString.WithMaxPoolSize(
     PostgresConnectionString.Convert(config.DatabaseUrl), config.DatabasePoolMax);
+
+// Mỗi module tự đăng ký dữ liệu và dịch vụ. `Program.cs` không phụ thuộc vào phần bên trong module.
 builder.Services.AddIdentityModule(databaseConnectionString);
 builder.Services.AddAiGatewayModule(databaseConnectionString);
 // Catalog cần biết môi trường để dừng production khi thiếu khóa Cloudinary.

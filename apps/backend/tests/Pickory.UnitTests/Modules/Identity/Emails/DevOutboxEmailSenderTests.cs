@@ -1,6 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
-using Pickory.Modules.Identity.Emails;
+using Pickory.Shared.Email;
 using Pickory.UnitTests.TestDoubles;
 using Xunit;
 
@@ -34,6 +34,29 @@ public sealed class DevOutboxEmailSenderTests : IDisposable
         Assert.Equal("Khach+1@pickory.local", document.RootElement.GetProperty("to").GetString());
         Assert.Equal("Đặt lại mật khẩu Pickory", document.RootElement.GetProperty("subject").GetString());
         Assert.Equal("token-1", document.RootElement.GetProperty("metadata").GetProperty("token").GetString());
+    }
+
+    [Fact]
+    // Thư xác nhận đơn của commerce đi qua cùng bộ gửi. E2E đọc `to`, `text` và `metadata.purpose` từ file này.
+    public async Task SendAsync_WritesToSubjectTextAndPurposeOfOrderConfirmation()
+    {
+        var sender = new DevOutboxEmailSender(_outboxDirectory, _time, NullLogger<DevOutboxEmailSender>.Instance);
+        var message = new EmailMessage(
+            "khach@pickory.local",
+            "Pickory: xác nhận đơn hàng PK-ABC123",
+            "Xem đơn hàng: http://localhost:5173/orders/PK-ABC123?t=abc",
+            new Dictionary<string, string> { ["purpose"] = "order-confirmation", ["orderCode"] = "PK-ABC123" });
+
+        await sender.SendAsync(message, CancellationToken.None);
+
+        var filePath = Assert.Single(Directory.GetFiles(_outboxDirectory));
+        using var document = JsonDocument.Parse(await File.ReadAllTextAsync(filePath));
+        var root = document.RootElement;
+        Assert.Equal("khach@pickory.local", root.GetProperty("to").GetString());
+        Assert.Equal("Pickory: xác nhận đơn hàng PK-ABC123", root.GetProperty("subject").GetString());
+        Assert.Equal("Xem đơn hàng: http://localhost:5173/orders/PK-ABC123?t=abc", root.GetProperty("text").GetString());
+        Assert.Equal("order-confirmation", root.GetProperty("metadata").GetProperty("purpose").GetString());
+        Assert.Equal("PK-ABC123", root.GetProperty("metadata").GetProperty("orderCode").GetString());
     }
 
     [Fact]

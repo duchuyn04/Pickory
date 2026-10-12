@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Pickory.Modules.Catalog.Contracts.Stock;
 using Pickory.Modules.Commerce.Carts;
@@ -9,6 +10,8 @@ using Pickory.Modules.Commerce.Contracts.Events;
 using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Entities;
 using Pickory.Modules.Commerce.Persistence;
+using Pickory.Shared.Configuration;
+using Pickory.Shared.Email;
 using Pickory.Shared.Events;
 using Pickory.Shared.Exceptions;
 using Pickory.Shared.Http;
@@ -24,6 +27,9 @@ public sealed class PlaceOrderService(
     IStockService stock,
     IOrderCodeSource codeSource,
     IEventDispatcher dispatcher,
+    IEmailSender emailSender,
+    AppConfig config,
+    ILogger<PlaceOrderService> logger,
     TimeProvider clock)
 {
     // Tên ràng buộc unique của cột `orders.idempotency_key`, khai báo ở `OrderConfiguration`.
@@ -58,10 +64,10 @@ public sealed class PlaceOrderService(
         }
 
         var events = new DomainEventCollector(dispatcher);
-        PlaceOrderResult result;
+        CreatedOrder created;
         try
         {
-            result = await CreateOrderAsync(owner, idempotencyKey, input, calculation, events, cancellationToken);
+            created = await CreateOrderAsync(owner, idempotencyKey, input, calculation, events, cancellationToken);
         }
         catch (DbUpdateException exception) when (IsIdempotencyKeyViolation(exception))
         {
@@ -83,10 +89,34 @@ public sealed class PlaceOrderService(
 
         // Phát sau commit. Handler của module khác không nhận sự kiện về dữ liệu chưa lưu.
         await events.FlushAsync(cancellationToken);
-        return result;
+
+        // Chỉ request tạo đơn mới có dữ liệu thư. Gửi lại cùng khóa và request thua cuộc đồng thời không gửi thư.
+        if (created.Confirmation is not null)
+        {
+            await SendConfirmationAsync(created.Confirmation);
+        }
+
+        return created.Result;
     }
 
-    private async Task<PlaceOrderResult> CreateOrderAsync(
+    // Gửi thư sau commit và sau khi phát sự kiện. Mọi lỗi ở bước này chỉ ghi log, vì đơn đã tạo xong.
+    private async Task SendConfirmationAsync(OrderConfirmationInput confirmation)
+    {
+        try
+        {
+            var message = OrderConfirmationEmail.Build(confirmation, config.WebOrigin);
+
+            // Không truyền token hủy của request. Khách ngắt kết nối sau commit không được làm mất thư.
+            await emailSender.SendAsync(message, CancellationToken.None);
+        }
+        catch (Exception exception)
+        {
+            // Log chỉ có mã đơn và exception. Token, link và nội dung thư không được vào log.
+            logger.LogError(exception, "Gửi email xác nhận đơn {OrderCode} thất bại.", confirmation.OrderCode);
+        }
+    }
+
+    private async Task<CreatedOrder> CreateOrderAsync(
         CartOwner owner,
         string idempotencyKey,
         PlaceOrderInput input,
@@ -104,7 +134,7 @@ public sealed class PlaceOrderService(
         var concurrentOrder = await FindOrderByKeyAsync(idempotencyKey, cancellationToken);
         if (concurrentOrder is not null)
         {
-            return Replay(concurrentOrder, owner);
+            return new CreatedOrder(Replay(concurrentOrder, owner), Confirmation: null);
         }
 
         // Giỏ có thể đã đổi từ lúc tính tiền, kể cả khi tổng tiền vẫn bằng nhau. Giỏ lệch thì dừng, vì giá đã tính không còn đúng.
@@ -149,8 +179,23 @@ public sealed class PlaceOrderService(
             order.Id, order.Code, order.UserId, order.AnonymousId, order.Total, order.PaymentMethod));
 
         await transaction.CommitAsync(cancellationToken);
-        return new PlaceOrderResult(ToResponse(order, accessToken.Token), Created: true);
+
+        // Dữ liệu thư lấy từ đơn đã commit. Token gốc chỉ tồn tại ở đây và trong response của lần tạo đơn.
+        var confirmation = new OrderConfirmationInput(
+            order.Code,
+            input.Contact.Email,
+            order.Items.Select(item => new OrderConfirmationLine(item.NameSnapshot, item.Quantity, item.UnitPrice)).ToList(),
+            order.Subtotal,
+            order.ShippingFee,
+            order.ShippingDiscount,
+            order.Total,
+            order.PaymentMethod,
+            accessToken.Token);
+        return new CreatedOrder(new PlaceOrderResult(ToResponse(order, accessToken.Token), Created: true), confirmation);
     }
+
+    // Kết quả tạo đơn. `Confirmation` chỉ có khi request này tạo đơn mới và cần gửi thư.
+    private sealed record CreatedOrder(PlaceOrderResult Result, OrderConfirmationInput? Confirmation);
 
     private static Order BuildOrder(
         string orderId,

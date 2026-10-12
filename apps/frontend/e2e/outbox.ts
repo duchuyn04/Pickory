@@ -73,3 +73,62 @@ export function readPasswordResetLink(recipient: string) {
 export function readEmailVerificationLink(recipient: string) {
   return readOutboxLink(recipient, 'verify', '/verify-email');
 }
+
+// Thư xác nhận đơn trong outbox dev. `link` là liên kết xem đơn đầy đủ trong thân thư.
+export interface OrderConfirmationEmail {
+  link: string;
+  orderCode: string;
+  text: string;
+}
+
+// Đọc thư xác nhận của một đơn gửi tới `recipient`. Lọc theo `purpose` và `orderCode` nên không lẫn thư đơn khác.
+export async function readOrderConfirmation(
+  recipient: string,
+  orderCode: string,
+): Promise<OrderConfirmationEmail> {
+  let confirmation: OrderConfirmationEmail | undefined;
+  // Chờ đúng thư xuất hiện trên đĩa. Không dùng sleep cố định.
+  await expect
+    .poll(
+      async () => {
+        const rawEntries = await readdir(e2eEnvironment.outboxDirectory, { withFileTypes: true });
+        for (const entry of rawEntries) {
+          // Bỏ qua symlink và file không phải JSON để không đọc ngoài outbox.
+          if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+          const message: unknown = JSON.parse(
+            await readFile(join(e2eEnvironment.outboxDirectory, entry.name), 'utf8'),
+          );
+          if (
+            typeof message !== 'object' ||
+            message === null ||
+            !('to' in message) ||
+            message.to !== recipient ||
+            !('text' in message) ||
+            typeof message.text !== 'string' ||
+            !('metadata' in message) ||
+            typeof message.metadata !== 'object' ||
+            message.metadata === null ||
+            !('purpose' in message.metadata) ||
+            message.metadata.purpose !== 'order-confirmation' ||
+            !('orderCode' in message.metadata) ||
+            message.metadata.orderCode !== orderCode
+          ) {
+            continue;
+          }
+          const link = message.text.match(/https?:\/\/[^\s]+\/orders\/[^\s]+/)?.[0];
+          if (!link) throw new Error('Thư xác nhận đơn không có liên kết xem đơn.');
+          confirmation = { link, orderCode, text: message.text };
+          return true;
+        }
+        return false;
+      },
+      {
+        message: `Chờ thư xác nhận đơn ${orderCode} của ${recipient} trong outbox dev`,
+        timeout: 10000,
+      },
+    )
+    .toBe(true);
+  // Không dựng liên kết giả khi outbox thiếu thư.
+  if (!confirmation) throw new Error('Không đọc được thư xác nhận đơn từ outbox dev.');
+  return confirmation;
+}

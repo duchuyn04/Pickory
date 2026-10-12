@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using Pickory.Modules.Identity.Emails;
+using Pickory.Shared.Email;
 
 namespace Pickory.IntegrationTests.Infrastructure;
 

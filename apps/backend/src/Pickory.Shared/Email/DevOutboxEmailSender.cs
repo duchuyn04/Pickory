@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
 
-namespace Pickory.Modules.Identity.Emails;
+namespace Pickory.Shared.Email;
 
 // Dự án chưa nối dịch vụ gửi thư thật. Bộ gửi này ghi thư ra file để người dev mở file lấy link.
 public sealed partial class DevOutboxEmailSender(string outboxDirectory, TimeProvider timeProvider, ILogger<DevOutboxEmailSender> logger)

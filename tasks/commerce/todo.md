@@ -188,9 +188,9 @@ Quy ước:
 **Mô tả:** Gửi email xác nhận sau khi đặt đơn. Email có mã đơn, danh sách sản phẩm, tổng tiền, link `/orders/{code}?t={token}`.
 **Trạng thái:** Câu hỏi mở 2 của plan đã chốt ngày 2026-10-11. `IEmailSender` chuyển sang `Pickory.Shared/Email/`.
 **Tiêu chí nghiệm thu:**
-- [ ] Email gửi sau commit. Email lỗi chỉ ghi log, đơn vẫn tạo thành công
-- [ ] Môi trường dev ghi email vào outbox dev, để Playwright đọc được link
-- [ ] Log không chứa token xem đơn
+- [x] Email gửi sau commit. Email lỗi chỉ ghi log, đơn vẫn tạo thành công
+- [x] Môi trường dev ghi email vào outbox dev, để Playwright đọc được link
+- [x] Log không chứa token xem đơn
 **Kiểm tra:** test tích hợp với cổng email giả có chế độ lỗi
 **Phụ thuộc:** COM-08, Câu hỏi mở 2 · **Quy mô:** S
 

@@ -14,7 +14,6 @@ using Pickory.Modules.Identity.Audit;
 using Pickory.Modules.Identity.Consent;
 using Pickory.Modules.Identity.Contracts.Audit;
 using Pickory.Modules.Identity.Contracts.Events;
-using Pickory.Modules.Identity.Emails;
 using Pickory.Modules.Identity.Features.AdminAuditLogs;
 using Pickory.Modules.Identity.Features.AdminCustomers;
 using Pickory.Modules.Identity.Features.AdminRoles;
@@ -45,9 +44,9 @@ public static class IdentityModule
 {
     public static IServiceCollection AddIdentityModule(this IServiceCollection services, string databaseConnectionString)
     {
-        // Dùng cùng tùy chọn với migration để ứng dụng đọc đúng enum và lịch sử. Ứng dụng không tự chạy migration khi khởi động.
         // Enum của module vào data source chung. Mọi module chia nhau một pool kết nối, nên `DATABASE_POOL_MAX` áp cho cả tiến trình.
         services.AddSharedDataSource(databaseConnectionString, IdentityDbContext.MapEnums);
+        // Dùng cùng tùy chọn với migration để ứng dụng đọc đúng enum và lịch sử. Ứng dụng không tự chạy migration khi khởi động.
         services.AddDbContext<IdentityDbContext>((provider, options) =>
             IdentityDbContext.ConfigureOptions(options, provider.GetRequiredService<NpgsqlDataSource>()));
 
@@ -55,8 +54,6 @@ public static class IdentityModule
         services.TryAddSingleton(TimeProvider.System);
         // Bộ đếm phải là singleton. Bộ đếm mới cho mỗi request không giới hạn được gì.
         services.AddSingleton<IdentityRateLimiters>();
-        // Dự án chưa nối dịch vụ gửi thư thật. Thư được ghi ra file để người dev mở link.
-        services.AddSingleton<IEmailSender>(CreateDevOutboxEmailSender);
         // Route nhận validator qua DI. Mỗi validator nằm cạnh request trong thư mục của tính năng.
         services.AddValidatorsFromAssembly(typeof(IdentityModule).Assembly, includeInternalTypes: true);
         // Handler dùng `DbContext` scoped. Mỗi request nhận một handler riêng.
@@ -135,18 +132,5 @@ public static class IdentityModule
         AdminCustomersEndpoints.Map(moduleRoutes);
         AdminAuditLogsEndpoints.Map(moduleRoutes);
         return endpoints;
-    }
-
-    // `DEV_OUTBOX_DIR` cho phép E2E tách thư riêng. Mặc định là `.dev-outbox` trong thư mục chạy API, giống bản Node.
-    private static DevOutboxEmailSender CreateDevOutboxEmailSender(IServiceProvider provider)
-    {
-        var configuredDirectory = provider.GetRequiredService<IConfiguration>()["DEV_OUTBOX_DIR"];
-        var outboxDirectory = string.IsNullOrWhiteSpace(configuredDirectory)
-            ? Path.Combine(Directory.GetCurrentDirectory(), ".dev-outbox")
-            : configuredDirectory;
-        return new DevOutboxEmailSender(
-            outboxDirectory,
-            provider.GetRequiredService<TimeProvider>(),
-            provider.GetRequiredService<ILogger<DevOutboxEmailSender>>());
     }
 }
