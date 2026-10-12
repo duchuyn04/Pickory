@@ -263,10 +263,11 @@ Quy ước:
 ## Phase 5: E2E và nghiệm thu
 
 ### ACT-E2E1: Luồng E2E của activity-tracking
-**Mô tả:** Playwright chạy luồng của spec trong `apps/frontend/e2e/activity-tracking-profile.spec.ts`. Test gọi endpoint chỉ có ở môi trường E2E để chạy job hồ sơ ngay, không chờ 5 phút. Seed hiện chưa có danh mục "Laptop gaming", xem Câu hỏi mở 8 của plan.
+**Mô tả:** Playwright chạy luồng của spec trong `apps/frontend/e2e/activity-tracking-profile.spec.ts`. Test gọi endpoint chỉ có ở môi trường E2E để chạy job hồ sơ ngay, không chờ 5 phút. Spec tự tạo danh mục "Laptop gaming" và 3 sản phẩm qua API admin, theo Câu hỏi mở 8 của plan.
 **Tiêu chí nghiệm thu:**
+- [ ] Spec tạo danh mục "Laptop gaming" và 3 sản phẩm đang bán qua API admin trước luồng
 - [ ] Khách bấm đồng ý trên banner
-- [ ] Khách xem 3 laptop gaming của dữ liệu seed
+- [ ] Khách xem 3 laptop gaming do spec tạo
 - [ ] Trang `/privacy` hiện "Laptop gaming" trong sở thích
 - [ ] Khách bấm "Xóa lịch sử" và xác nhận. Phần sở thích hiện trống
 - [ ] Khách chưa đồng ý xem 3 sản phẩm: trang `/privacy` không có dữ liệu sở thích

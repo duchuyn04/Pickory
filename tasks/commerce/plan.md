@@ -237,5 +237,6 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 8. **GHN tự hủy vận đơn khi đơn đang `shipping`.** Spec không nói đơn chuyển sang đâu. Đề xuất: đơn về `confirmed`, gắn cờ `shipment_cancelled`, để `sales` tạo lại vận đơn hoặc hủy đơn.
    - **Đã chốt (2026-10-11):** đơn về `confirmed` và có cờ `shipment_cancelled`.
 9. **Báo cáo vi phạm đánh giá.** Spec chỉ có `reportCount`. Một khách có thể báo cáo 3 lần một đánh giá. Đề xuất: thêm bảng `review_reports` với khóa unique `(review_id, user_id)`.
-   - **Đã chốt (2026-10-11):** thêm bảng `review_reports`. Migration của COM-20 tạo bảng này, vì migration đầu tiên của COM-03 đã xong.
+   - **Đã chốt (2026-10-11):** thêm bảng `review_reports`. Migration đầu tiên của COM-03 đã xong, nên bảng cần một migration riêng.
+   - **Sửa (2026-10-12):** migration của COM-19 tạo bảng này. COM-19 có route báo cáo đánh giá, và route này cần bảng trước COM-20.
 10. Các Open Questions của spec: ngưỡng 500.000 đ và 20.000.000 đ giữ mặc định, cấu hình được. Chưa làm yêu cầu đổi trả trên web. Định dạng SePay chờ COM-00.

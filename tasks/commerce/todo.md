@@ -389,7 +389,7 @@ Quy ước:
 **Phụ thuộc:** COM-18, COM-UI2 · **Quy mô:** M
 
 ### COM-19: Đánh giá sản phẩm
-**Mô tả:** `GET /api/products/{id}/reviews` công khai, trả điểm trung bình, phân bố số sao, trang đánh giá đang hiện. `POST /api/products/{id}/reviews` và `PATCH /api/products/{id}/reviews/mine` cho người đã nhận hàng. `POST /api/reviews/{id}/reports` cho khách đã đăng nhập.
+**Mô tả:** `GET /api/products/{id}/reviews` công khai, trả điểm trung bình, phân bố số sao, trang đánh giá đang hiện. `POST /api/products/{id}/reviews` và `PATCH /api/products/{id}/reviews/mine` cho người đã nhận hàng. `POST /api/reviews/{id}/reports` cho khách đã đăng nhập. Migration của task này tạo bảng `review_reports` theo Câu hỏi mở 9.
 **Tiêu chí nghiệm thu:**
 - [ ] Người chưa có đơn `delivered` chứa sản phẩm nhận 403 `REVIEW_NOT_ALLOWED`
 - [ ] Đánh giá thứ hai của cùng người cho cùng sản phẩm trả 409
