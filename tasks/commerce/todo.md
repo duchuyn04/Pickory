@@ -197,12 +197,12 @@ Quy ước:
 ### COM-10: Theo dõi đơn và khách tự hủy
 **Mô tả:** `GET /api/orders` cho khách đã đăng nhập. `GET /api/orders/{code}`, `GET /api/orders/{code}/payment`, `POST /api/orders/{code}/cancellation` cho chủ đơn, hoặc người có token.
 **Tiêu chí nghiệm thu:**
-- [ ] Chủ đơn là người có `UserId` của đơn. Đơn vãng lai cần token đúng trong query `t`
-- [ ] Không phải chủ đơn và không có token đúng trả 404 `ORDER_NOT_FOUND`, không tiết lộ đơn có tồn tại
-- [ ] Token sai và token của đơn khác đều trả 404
-- [ ] Tự hủy ở `pending_payment` hoặc `pending_confirmation` thành công, gọi `ReleaseAsync`, phát `OrderStatusChangedEvent`
-- [ ] Tự hủy ở trạng thái khác trả 409 `INVALID_ORDER_TRANSITION`
-- [ ] Route `payment` trả trạng thái thanh toán và hạn thanh toán, không trả dữ liệu cá nhân
+- [x] Chủ đơn là người có `UserId` của đơn. Đơn vãng lai cần token đúng trong query `t`
+- [x] Không phải chủ đơn và không có token đúng trả 404 `ORDER_NOT_FOUND`, không tiết lộ đơn có tồn tại
+- [x] Token sai và token của đơn khác đều trả 404
+- [x] Tự hủy ở `pending_payment` hoặc `pending_confirmation` thành công, gọi `ReleaseAsync`, phát `OrderStatusChangedEvent`
+- [x] Tự hủy ở trạng thái khác trả 409 `INVALID_ORDER_TRANSITION`
+- [x] Route `payment` trả trạng thái thanh toán và hạn thanh toán, không trả dữ liệu cá nhân
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-08 · **Quy mô:** M
 

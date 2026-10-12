@@ -42,6 +42,8 @@ public static class CommerceModule
         services.AddScoped<CheckoutPreviewService>();
         // Đặt đơn dùng lại phần tính tiền của preview, rồi giữ hàng và ghi đơn trong một transaction.
         services.AddScoped<PlaceOrderService>();
+        // Dịch vụ theo dõi và tự hủy đơn hàng phục vụ các route phía khách hàng.
+        services.AddScoped<OrderTrackingService>();
         // Nguồn mã đơn là singleton không giữ trạng thái. Test thay bằng nguồn có kịch bản để ép tình huống trùng mã.
         services.AddSingleton<IOrderCodeSource, RandomOrderCodeSource>();
 
