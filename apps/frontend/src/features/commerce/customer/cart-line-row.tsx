@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { formatProductPrice } from '../../catalog/customer/product-display';
 import type { CartLine } from './cart-api';
-import { CartLineImage } from './cart-line-image';
+import { ProductThumbnail } from './product-thumbnail';
 import { canIncreaseQuantity, parseQuantityInput, unavailableLabel } from './cart-labels';
 
 interface CartLineRowProps {
@@ -68,7 +68,7 @@ export function CartLineRow({
 
   return (
     <li className="cart-line" data-sku-id={line.skuId}>
-      <CartLineImage line={line} size={96} />
+      <ProductThumbnail imageUrl={line.image?.url} size={96} className="cart-line-image" />
 
       <div className="cart-line-main">
         <p className="cart-line-name">

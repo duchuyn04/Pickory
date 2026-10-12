@@ -12,13 +12,15 @@ public sealed record OrderListItemResponse(
     DateTime CreatedAt,
     int ItemCount,
     string FirstItemName,
-    string? FirstItemImagePublicId);
+    string? FirstItemImagePublicId,
+    string? FirstItemImageUrl);
 
 // Chi tiết một dòng sản phẩm trong đơn hàng.
 public sealed record OrderDetailItemResponse(
     string Name,
     string? VariantName,
     string? ImagePublicId,
+    string? ImageUrl,
     int Quantity,
     int UnitPrice,
     int LineTotal);

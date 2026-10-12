@@ -23,4 +23,7 @@ public interface ICatalogReader
 
     // Đếm SKU đang bật có tồn kho không vượt ngưỡng sắp hết hàng. Badge của trang quản trị dùng số này.
     Task<int> CountLowStockAsync(CancellationToken cancellationToken);
+
+    // Dựng URL ảnh khi module khác chỉ có mã ảnh trong bản chụp để giữ định dạng đồng nhất với catalog.
+    string BuildProductImageUrl(string publicId);
 }

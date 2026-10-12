@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
+using Pickory.Modules.Catalog.Contracts.Reading;
 using Pickory.Modules.Catalog.Contracts.Stock;
 using Pickory.Modules.Commerce.Contracts.Events;
 using Pickory.Modules.Commerce.Contracts.Orders;
@@ -16,6 +17,7 @@ namespace Pickory.Modules.Commerce.Orders;
 // Dịch vụ theo dõi danh sách, chi tiết và thực hiện tự hủy đơn hàng cho khách.
 public sealed class OrderTrackingService(
     CommerceDbContext database,
+    ICatalogReader catalogReader,
     IStockService stock,
     IEventDispatcher dispatcher,
     TimeProvider clock)
@@ -57,7 +59,8 @@ public sealed class OrderTrackingService(
                 order.CreatedAt,
                 order.Items.Sum(item => item.Quantity),
                 firstItem?.NameSnapshot ?? string.Empty,
-                firstItem?.ImagePublicId);
+                firstItem?.ImagePublicId,
+                ResolveImageUrl(firstItem?.ImagePublicId));
         }).ToList();
 
         return new PagedResponse<OrderListItemResponse>(items, total, page.Page, page.Limit);
@@ -194,7 +197,7 @@ public sealed class OrderTrackingService(
         return ToDetailResponse(order);
     }
 
-    private static OrderDetailResponse ToDetailResponse(Order order)
+    private OrderDetailResponse ToDetailResponse(Order order)
     {
         // Tính toán cờ cho phép hủy để giao diện hiển thị nút hành động.
         var canCancel = OrderTransitions.Evaluate(
@@ -208,6 +211,7 @@ public sealed class OrderTrackingService(
                 item.NameSnapshot,
                 FormatVariantName(item.OptionValues),
                 item.ImagePublicId,
+                ResolveImageUrl(item.ImagePublicId),
                 item.Quantity,
                 item.UnitPrice,
                 checked(item.UnitPrice * item.Quantity)
@@ -267,4 +271,8 @@ public sealed class OrderTrackingService(
 
     private static DateTime TruncateToMicroseconds(DateTime value) =>
         new(value.Ticks - (value.Ticks % 10), DateTimeKind.Utc);
+
+    // Dựng URL ảnh sản phẩm qua catalog khi có mã ảnh trong bản chụp.
+    private string? ResolveImageUrl(string? publicId) =>
+        string.IsNullOrEmpty(publicId) ? null : catalogReader.BuildProductImageUrl(publicId);
 }

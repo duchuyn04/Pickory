@@ -209,11 +209,11 @@ Quy ước:
 ### COM-UI3: Đặt hàng thành công và đơn hàng của tôi
 **Mô tả:** Trang đặt hàng thành công, trang "Đơn hàng của tôi", trang chi tiết đơn có tiến trình giao hàng và nút tự hủy.
 **Tiêu chí nghiệm thu:**
-- [ ] Trang thành công hiện mã đơn và link xem đơn, kể cả khi email lỗi
-- [ ] Chi tiết đơn hiện trạng thái đơn, trạng thái thanh toán, mã vận đơn khi có
-- [ ] Nút hủy chỉ hiện ở trạng thái khách được hủy. Bấm hủy cần xác nhận
-- [ ] Khách vãng lai mở link có token xem được đơn mà không đăng nhập
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Trang thành công hiện mã đơn và link xem đơn, kể cả khi email lỗi
+- [x] Chi tiết đơn hiện trạng thái đơn, trạng thái thanh toán, mã vận đơn khi có
+- [x] Nút hủy chỉ hiện ở trạng thái khách được hủy. Bấm hủy cần xác nhận
+- [x] Khách vãng lai mở link có token xem được đơn mà không đăng nhập
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** COM-10 · **Quy mô:** M
 

@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.IntegrationTests.Shipping;
+using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Contracts.Events;
 using Pickory.Modules.Commerce.Contracts.Orders;
@@ -66,10 +67,11 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
         int quantity = 2,
         int stock = 10,
         string paymentMethod = "cod",
-        string? sessionToken = null)
+        string? sessionToken = null,
+        string? imagePublicId = null)
     {
         // Thêm sản phẩm vào giỏ trước khi gọi đặt đơn.
-        var product = await _kit.AddProductAsync(price: price, stock: stock);
+        var product = await _kit.AddProductAsync(price: price, stock: stock, imagePublicId: imagePublicId);
         var skuId = product.SkuIds[0];
         var addResponse = await _kit.AddAsync(anonymousId, skuId, quantity, sessionToken: sessionToken);
         Assert.Equal(HttpStatusCode.OK, addResponse.StatusCode);
@@ -189,6 +191,59 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
         Assert.Equal("pending_confirmation", data.GetProperty("status").GetString());
         Assert.True(data.GetProperty("canCancel").GetBoolean());
         Assert.Null(data.GetProperty("trackingCode").GetString());
+    }
+
+    // Chi tiết đơn trả URL ảnh đúng cấu hình Cloudinary khi có ảnh và trả null khi không có ảnh.
+    [Fact]
+    public async Task GetDetail_ReturnsImageUrlMatchingCloudinaryConfig_AndNullWhenNoImage()
+    {
+        var cloudName = _factory.Services.GetRequiredService<CloudinaryCredentials>().CloudName;
+        var anonymousId = _kit.NewAnonymousId();
+        var (codeWithImg, tokenWithImg, _) = await CreateOrderAsync(anonymousId, imagePublicId: "test-img-pub");
+        var (codeNoImg, tokenNoImg, _) = await CreateOrderAsync(anonymousId, imagePublicId: null);
+
+        // Kiểm tra dòng có ảnh trong chi tiết đơn.
+        var resWithImg = await SendGetAsync($"{OrdersPath}/{codeWithImg}", anonymousId, tokenQuery: tokenWithImg);
+        Assert.Equal(HttpStatusCode.OK, resWithImg.StatusCode);
+        var jsonWithImg = await CartTestKit.ReadJsonAsync(resWithImg);
+        var itemWithImg = jsonWithImg.GetProperty("data").GetProperty("items").EnumerateArray().First();
+        Assert.Equal("test-img-pub", itemWithImg.GetProperty("imagePublicId").GetString());
+        Assert.Equal($"https://res.cloudinary.com/{cloudName}/image/upload/test-img-pub", itemWithImg.GetProperty("imageUrl").GetString());
+
+        // Kiểm tra dòng không có ảnh trong chi tiết đơn.
+        var resNoImg = await SendGetAsync($"{OrdersPath}/{codeNoImg}", anonymousId, tokenQuery: tokenNoImg);
+        Assert.Equal(HttpStatusCode.OK, resNoImg.StatusCode);
+        var jsonNoImg = await CartTestKit.ReadJsonAsync(resNoImg);
+        var itemNoImg = jsonNoImg.GetProperty("data").GetProperty("items").EnumerateArray().First();
+        Assert.Null(itemNoImg.GetProperty("imagePublicId").GetString());
+        Assert.Null(itemNoImg.GetProperty("imageUrl").GetString());
+    }
+
+    // Danh sách đơn trả URL ảnh của sản phẩm đầu tiên khi có ảnh và trả null khi không có ảnh.
+    [Fact]
+    public async Task GetOrders_ReturnsFirstItemImageUrl_AndNullWhenNoImage()
+    {
+        var cloudName = _factory.Services.GetRequiredService<CloudinaryCredentials>().CloudName;
+        var customer = await _kit.CreateCustomerAsync();
+        var anonymousId = _kit.NewAnonymousId();
+        var (codeWithImg, _, _) = await CreateOrderAsync(anonymousId, sessionToken: customer.SessionToken, imagePublicId: "first-item-img");
+        // Tạo đơn không ảnh cho cùng khách để kiểm tra hai trường hợp trong một danh sách.
+        var (codeNoImg, _, _) = await CreateOrderAsync(anonymousId, sessionToken: customer.SessionToken, imagePublicId: null);
+
+        var response = await SendGetAsync(OrdersPath, anonymousId, sessionToken: customer.SessionToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var json = await CartTestKit.ReadJsonAsync(response);
+        var items = json.GetProperty("data").GetProperty("items").EnumerateArray().ToList();
+
+        // Tìm đơn theo mã để kiểm tra ảnh độc lập với thứ tự sắp xếp.
+        var itemWithImg = items.First(item => item.GetProperty("code").GetString() == codeWithImg);
+        Assert.Equal("first-item-img", itemWithImg.GetProperty("firstItemImagePublicId").GetString());
+        Assert.Equal($"https://res.cloudinary.com/{cloudName}/image/upload/first-item-img", itemWithImg.GetProperty("firstItemImageUrl").GetString());
+
+        // Kiểm tra đơn không có ảnh trả null cho thông tin ảnh.
+        var itemNoImg = items.First(item => item.GetProperty("code").GetString() == codeNoImg);
+        Assert.Null(itemNoImg.GetProperty("firstItemImagePublicId").GetString());
+        Assert.Null(itemNoImg.GetProperty("firstItemImageUrl").GetString());
     }
 
     // Khách vãng lai có token hợp lệ xem được đơn. Cùng cookie nhưng không có token thì trả 404.

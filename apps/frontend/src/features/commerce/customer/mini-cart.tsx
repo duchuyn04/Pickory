@@ -5,7 +5,7 @@ import { Icon } from '../../../shared/icons';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import { formatProductPrice } from '../../catalog/customer/product-display';
 import type { Cart, CartLine } from './cart-api';
-import { CartLineImage } from './cart-line-image';
+import { ProductThumbnail } from './product-thumbnail';
 import { cartButtonLabel, unavailableLabel } from './cart-labels';
 import { useCart, useRefreshCartOnActorChange } from './use-cart';
 import './mini-cart.css';
@@ -14,7 +14,7 @@ function MiniCartLine({ line }: { line: CartLine }) {
   const reason = unavailableLabel(line);
   return (
     <li className="mini-cart-line">
-      <CartLineImage line={line} size={48} />
+      <ProductThumbnail imageUrl={line.image?.url} size={48} className="cart-line-image" />
       <div className="mini-cart-line-body">
         <p className="mini-cart-line-name">{line.productName ?? 'Sản phẩm đã gỡ'}</p>
         <p className="mini-cart-line-meta">

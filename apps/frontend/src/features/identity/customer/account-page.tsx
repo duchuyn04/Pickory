@@ -155,6 +155,16 @@ export function AccountPage() {
           </div>
         </form>
       </section>
+      {/* Khu vực điều hướng tới danh sách đơn hàng của khách */}
+      <section className="card account-section account-row">
+        <div>
+          <h2>Đơn hàng của tôi</h2>
+          <p className="muted small">Theo dõi tiến trình vận chuyển và lịch sử mua sắm của bạn.</p>
+        </div>
+        <Link to="/me/orders" className="btn">
+          Xem đơn hàng
+        </Link>
+      </section>
 
       {/* Khu vực thay đổi mật khẩu đăng nhập */}
       <ChangePasswordForm />

@@ -19,6 +19,10 @@ public sealed class CatalogReader(
     public Task<ProductDetail?> GetProductAsync(string idOrSlug, CancellationToken cancellationToken) =>
         detailService.FindByIdOrSlugAsync(idOrSlug, cancellationToken);
 
+    // Dựng URL ảnh bằng hàm chung của catalog để module khác không cần tự ghép chuỗi URL.
+    public string BuildProductImageUrl(string publicId) =>
+        ProductImageUrl.Build(credentials, publicId);
+
     public async Task<IReadOnlyList<ProductSummary>> GetProductsAsync(
         IReadOnlyList<string> ids, CancellationToken cancellationToken)
     {

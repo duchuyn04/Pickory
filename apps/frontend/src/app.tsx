@@ -28,6 +28,8 @@ import { VerifyEmailPage } from './features/identity/customer/verify-email-page'
 import { CartPage } from './features/commerce/customer/cart-page';
 import { CheckoutPage } from './features/commerce/customer/checkout/checkout-page';
 import { OrderSuccessPage } from './features/commerce/customer/checkout/order-success-page';
+import { OrderDetailPage } from './features/commerce/customer/orders/order-detail-page';
+import { CustomerOrdersPage } from './features/commerce/customer/orders/customer-orders-page';
 import { HomePage } from './features/home/home-page';
 import { Header } from './shared/header';
 // Tách trình soạn mô tả khỏi bundle trang khách, chỉ tải khi nhân viên mở trang sản phẩm.
@@ -81,6 +83,8 @@ export function App() {
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
           <Route path="/orders/:code/success" element={<OrderSuccessPage />} />
+          <Route path="/orders/:code" element={<OrderDetailPage />} />
+          <Route path="/me/orders" element={<CustomerOrdersPage />} />
         </Route>
         <Route path="/admin/login" element={<StaffLoginPage />} />
         <Route path="/admin" element={<AdminLayout />}>

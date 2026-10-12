@@ -265,7 +265,7 @@ export function CheckoutPage() {
       // Token đi qua state của router, không đi vào URL, để không lọt vào lịch sử trình duyệt và log.
       navigate(`/orders/${encodeURIComponent(order.code)}/success`, {
         replace: true,
-        state: { accessToken: order.accessToken },
+        state: { accessToken: order.accessToken, paymentMethod: order.paymentMethod },
       });
     } catch (error) {
       await handleOrderFailure(error as ApiError);
