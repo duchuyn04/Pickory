@@ -20,13 +20,14 @@ Quy ước:
 **Mô tả:** Chốt các điểm Open Question 1 của spec trước COM-11. Ghi kết quả vào `docs/adr/0004-sepay-payment-integration.md`. Phần tài liệu làm ngay. Phần webhook thật cần khóa SePay do người dùng cung cấp.
 **Trạng thái:** phần cần khóa chờ người dùng. Các task khác không chờ task này, trừ COM-11 chờ phần tài liệu.
 **Tiêu chí nghiệm thu:**
-- [ ] Theo tài liệu: tên trường và kiểu dữ liệu của payload webhook, kèm ví dụ
-- [ ] Theo tài liệu: cách SePay gửi API key (tên header, định dạng giá trị)
-- [ ] Theo tài liệu: response SePay mong đợi, mã HTTP thành công, chính sách thử lại
-- [ ] Theo tài liệu: trường phân biệt tiền vào và tiền ra, trường mã giao dịch dùng để chống trùng
-- [ ] Theo tài liệu: định dạng URL ảnh VietQR theo số tài khoản, mã ngân hàng, số tiền, nội dung
+- [x] Theo tài liệu: tên trường và kiểu dữ liệu của payload webhook, kèm ví dụ
+- [x] Theo tài liệu: cách SePay gửi API key (tên header, định dạng giá trị)
+- [x] Theo tài liệu: response SePay mong đợi, mã HTTP thành công, chính sách thử lại
+- [x] Theo tài liệu: trường phân biệt tiền vào và tiền ra, trường mã giao dịch dùng để chống trùng
+- [x] Theo tài liệu: định dạng URL ảnh VietQR theo số tài khoản, mã ngân hàng, số tiền, nội dung
 - [ ] Khi có khóa: một webhook thật đã che khóa, đối chiếu với giả định ở trên
-- [ ] Không có khóa: ADR ghi rõ phần chưa đối chiếu và lý do
+  - Chờ người dùng cấp khóa SePay để đối chiếu webhook thật trong COM-00.
+- [x] Không có khóa: ADR ghi rõ phần chưa đối chiếu và lý do
 **Kiểm tra:** đọc tài liệu SePay; webhook thật khi có khóa
 **Phụ thuộc:** không · **Quy mô:** S
 **File:** `docs/adr/0004-sepay-payment-integration.md`
@@ -219,7 +220,9 @@ Quy ước:
 
 ### Checkpoint M2
 - [ ] Khách vãng lai thêm giỏ, chọn địa chỉ, thấy phí ship và đặt được đơn COD trên `pnpm dev`
+  - Chưa đạt (2026-10-12): GHN sandbox trả 404 cho mọi đường dẫn, nên preview trả `503 SHIPPING_UNAVAILABLE`. Chạy lại M2 khi sandbox hoạt động.
 - [ ] Gửi cùng `Idempotency-Key` 2 lần chỉ tạo 1 đơn
+  - Chưa kiểm: luồng COD dừng ở bước tính phí ship. Kiểm sau khi GHN sandbox hoạt động.
 - [ ] Review với người dùng
 
 ---

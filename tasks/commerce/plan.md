@@ -148,7 +148,9 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 
 ### Checkpoint M2
 - [ ] Khách vãng lai thêm giỏ, chọn địa chỉ, thấy phí ship và đặt được đơn COD trên `pnpm dev`
+  - Chưa đạt (2026-10-12): GHN sandbox trả 404 cho mọi đường dẫn, nên preview trả `503 SHIPPING_UNAVAILABLE`. Chạy lại M2 khi sandbox hoạt động.
 - [ ] Gửi cùng `Idempotency-Key` 2 lần chỉ tạo 1 đơn
+  - Chưa kiểm: luồng COD dừng ở bước tính phí ship. Kiểm sau khi GHN sandbox hoạt động.
 - [ ] Review với người dùng
 
 ### Phase 3: Thanh toán SePay
