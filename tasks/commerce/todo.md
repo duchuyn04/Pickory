@@ -275,12 +275,12 @@ Quy ước:
 ### COM-13: Đối soát SePay tay
 **Mô tả:** `GET /api/admin/payments/transactions` (`payments:read`) lọc theo trạng thái khớp. `PATCH /api/admin/payments/transactions/{id}` (`payments:reconcile`) gắn giao dịch vào một đơn, hoặc đánh dấu không thuộc đơn nào.
 **Tiêu chí nghiệm thu:**
-- [ ] Danh sách lọc được giao dịch chưa khớp, đơn có cờ `underpaid` và `overpaid`
-- [ ] Gắn tay vào đơn `pending_payment` đủ tiền chuyển đơn như webhook khớp tự động, phát `OrderPaidEvent` 1 lần
-- [ ] Gắn vào đơn không tồn tại trả 404. Gắn giao dịch đã khớp trả 409
-- [ ] Đánh dấu không thuộc đơn nào đặt `match_status = ignored`
-- [ ] Mỗi thao tác ghi đúng 1 dòng audit
-- [ ] `support` nhận 403. Endpoint mới có trong ma trận quyền
+- [x] Danh sách lọc được giao dịch chưa khớp, đơn có cờ `underpaid` và `overpaid`
+- [x] Gắn tay vào đơn `pending_payment` đủ tiền chuyển đơn như webhook khớp tự động, phát `OrderPaidEvent` 1 lần
+- [x] Gắn vào đơn không tồn tại trả 404. Gắn giao dịch đã khớp trả 409
+- [x] Đánh dấu không thuộc đơn nào đặt `match_status = ignored`
+- [x] Mỗi thao tác ghi đúng 1 dòng audit
+- [x] `support` nhận 403. Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-11 · **Quy mô:** M
 

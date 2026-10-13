@@ -12,7 +12,8 @@ namespace Pickory.Modules.Commerce.Payments;
 // Bên gọi đã khóa đơn; giữ lại kho dùng đúng transaction đang khớp chứng từ.
 internal sealed class SepayLatePaymentMatcher(CommerceDbContext database, IStockService stock, TimeProvider clock)
 {
-    public async Task MatchAsync(Order order, PaymentTransaction payment, DomainEventCollector events, CancellationToken cancellationToken)
+    public async Task MatchAsync(
+        Order order, PaymentTransaction payment, DomainEventCollector events, string? actorId, CancellationToken cancellationToken)
     {
         // Tiền về muộn vẫn phải gắn chứng từ cho đơn kể cả khi cần hoàn tiền.
         payment.MatchStatus = "matched";
@@ -53,10 +54,10 @@ internal sealed class SepayLatePaymentMatcher(CommerceDbContext database, IStock
             // Tiền thừa cần đối soát, không đổi tổng tiền đã chốt khi đặt đơn.
             AddFlag(order, "overpaid");
         }
-        // Lịch sử khôi phục phải commit cùng trạng thái và movement giữ lại hàng.
+        // Lịch sử khôi phục phải commit cùng trạng thái và movement giữ lại hàng. `actorId` chỉ có khi nhân viên gắn tay.
         database.OrderStatusHistory.Add(new OrderStatusHistory
         {
-            OrderId = order.Id, FromStatus = previousStatus, ToStatus = order.Status,
+            OrderId = order.Id, FromStatus = previousStatus, ToStatus = order.Status, ActorId = actorId,
             Reason = "SePay nhận đủ tiền sau khi hết hạn.", CreatedAt = clock.GetUtcNow().UtcDateTime,
         });
         // Collector của transaction khớp hoãn cả hai sự kiện đến sau commit.

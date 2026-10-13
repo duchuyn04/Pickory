@@ -13,7 +13,7 @@ namespace Pickory.Modules.Commerce.Payments;
 
 internal sealed class SepayPaymentService(
     CommerceDbContext database, IEventDispatcher dispatcher, TimeProvider clock,
-    SepayLatePaymentMatcher latePayments, ILogger<SepayPaymentService> logger)
+    SepayOrderMatcher orderMatcher, ILogger<SepayPaymentService> logger)
 {
     public async Task ReceiveAsync(SepayWebhookPayload payload, CancellationToken cancellationToken)
     {
@@ -98,61 +98,12 @@ internal sealed class SepayPaymentService(
         {
             return;
         }
-        // Chỉ đơn hết hạn chưa trả tiền được giữ lại hàng, không khôi phục đơn khách tự hủy.
-        if (order.Status == OrderStatus.Cancelled && order.Flags.Contains("payment_expired")
-            && order.PaymentMethod == PaymentMethod.Sepay && order.PaymentStatus == PaymentStatus.Unpaid)
-        {
-            // Chỉ khôi phục cần dòng hàng, nên chứng từ thường không tải snapshot sản phẩm thừa.
-            await database.Entry(order).Collection(row => row.Items).LoadAsync(cancellationToken);
-            await latePayments.MatchAsync(order, payment, events, cancellationToken);
-            return;
-        }
+        // Luật khớp dùng chung với route gắn tay, nên webhook không giữ bản sao của luật.
+        var matched = await orderMatcher.TryMatchAsync(order, payment, events, actorId: null, cancellationToken);
         // Đơn COD, đã trả hoặc hủy vì lý do khác giữ chứng từ chưa khớp cho đối soát.
-        if (order.Status != OrderStatus.PendingPayment || order.PaymentMethod != PaymentMethod.Sepay || order.PaymentStatus != PaymentStatus.Unpaid)
+        if (!matched)
         {
             logger.LogInformation("Giao dịch SePay không khớp đơn {OrderCode} ở trạng thái {Status}.", order.Code, order.Status);
-            return;
-        }
-        // Chỉ dòng `matched` được gắn `OrderId`, hai trường phải commit cùng nhau.
-        payment.MatchStatus = "matched";
-        payment.OrderId = order.Id;
-        // So từng giao dịch với tổng đơn, không cộng dồn nhiều lần chuyển thiếu tiền.
-        if (payment.Amount >= order.Total)
-        {
-            var decision = OrderTransitions.Evaluate(order.Status, OrderStatus.PendingConfirmation, TransitionActor.System, hasActiveShipment: false);
-            // Máy trạng thái là nguồn luật duy nhất cho bước đổi trạng thái đơn.
-            if (!decision.IsAllowed)
-            {
-                throw new InvalidOperationException("Máy trạng thái từ chối ghi nhận thanh toán.");
-            }
-            var previousStatus = order.Status;
-            order.PaymentStatus = PaymentStatus.Paid;
-            order.Status = OrderStatus.PendingConfirmation;
-            // Lịch sử và trạng thái phải cùng commit để người đối soát thấy nguyên nhân chuyển đơn.
-            database.OrderStatusHistory.Add(new OrderStatusHistory
-            {
-                OrderId = order.Id, FromStatus = previousStatus, ToStatus = order.Status,
-                Reason = "SePay đã nhận đủ tiền.", CreatedAt = clock.GetUtcNow().UtcDateTime,
-            });
-            // Tiền thừa cần cờ đối soát, không đổi số tiền phải trả của đơn.
-            if (payment.Amount > order.Total)
-            {
-                AddFlag(order, "overpaid");
-            }
-            // Collector hoãn sự kiện đến sau commit, không gọi handler trong transaction.
-            events.Emit(new OrderPaidEvent(order.Id, order.Code, order.UserId, order.AnonymousId, payment.Amount));
-            return;
-        }
-        // Chuyển thiếu giữ đơn chưa trả, chỉ gắn cờ để nhân viên đối soát.
-        AddFlag(order, "underpaid");
-    }
-
-    private static void AddFlag(Order order, string flag)
-    {
-        // Các giao dịch khác nhau có thể cùng thiếu tiền, nhưng cờ chỉ xuất hiện một lần.
-        if (!order.Flags.Contains(flag))
-        {
-            order.Flags.Add(flag);
         }
     }
 }
