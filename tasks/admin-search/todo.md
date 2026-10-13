@@ -98,10 +98,10 @@ Quy ước:
 ### FLT-UI3: Màn sản phẩm, tồn kho và biến động kho
 **Mô tả:** Màn `/admin/products` giữ bộ lọc trên URL. Màn `/admin/inventory` thêm ô tìm kiếm. Màn biến động kho của SKU thêm lọc loại biến động.
 **Tiêu chí nghiệm thu:**
-- [ ] Ba màn dùng hook và component của FLT-UI1
-- [ ] Mở lại link có bộ lọc cho cùng danh sách
-- [ ] Ô tìm kiếm sản phẩm không gửi request ở mỗi phím gõ
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Ba màn dùng hook và component của FLT-UI1
+- [x] Mở lại link có bộ lọc cho cùng danh sách
+- [x] Ô tìm kiếm sản phẩm không gửi request ở mỗi phím gõ
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI1, FLT-04 · **Quy mô:** M
 

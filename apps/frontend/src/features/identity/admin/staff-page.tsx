@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
 import { Pager } from '../../../shared/pager';
 import { SearchInput } from '../../../shared/search-input';
 import { useListFilters } from '../../../shared/use-list-filters';
@@ -199,16 +200,7 @@ export function StaffPage() {
             className="identity-table-alert"
           />
         ) : staffList.length === 0 && (hasFilters || page > 1) ? (
-          // Có bộ lọc hoặc đang ở trang sau mà không có dòng nào. Nói rõ nguyên nhân là bộ lọc, không phải hệ thống chưa có nhân viên.
-          <div className="empty-state">
-            <p role="status">Không có kết quả phù hợp với bộ lọc.</p>
-            {/* Link `page=99` vượt quá số trang. Nút đưa người dùng về trang có dữ liệu. */}
-            {page > 1 && (
-              <button type="button" className="btn btn-sm" onClick={() => setPage(1)}>
-                Về trang 1
-              </button>
-            )}
-          </div>
+          <FilteredEmptyState page={page} onFirstPage={() => setPage(1)} />
         ) : (
           <div className="table-wrap">
             <table className="tbl identity-table">

@@ -281,7 +281,7 @@ test('UI-C5b: đăng bán, ẩn, bán lại, xóa sản phẩm và quyền của
     expect((await deleted).status()).toBe(204);
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin/products`);
     await page.getByLabel('Tên hoặc mã SKU').fill(doomedProduct.name);
-    await expect(page.getByText('Không có sản phẩm phù hợp.')).toBeVisible();
+    await expect(page.getByText('Không có kết quả phù hợp với bộ lọc.')).toBeVisible();
     await expect(page.locator('tbody tr').filter({ hasText: doomedProduct.name })).toHaveCount(0);
   });
 

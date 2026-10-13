@@ -2,6 +2,9 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
+import { Pager } from '../../../shared/pager';
+import { useListFilters } from '../../../shared/use-list-filters';
 import { useCan } from '../../identity/hooks/use-actor';
 import { AdjustStockDialog } from './adjust-stock-dialog';
 import { toCatalogErrorMessage } from './catalog-errors';
@@ -9,6 +12,7 @@ import {
   describeOptionValues,
   formatDelta,
   formatMovementTime,
+  MOVEMENT_TYPE_OPTIONS,
   movementTypeLabel,
   stockBadge,
   type AdjustStockResult,
@@ -21,6 +25,9 @@ import './products.css';
 import './inventory.css';
 
 const PAGE_SIZE = 20;
+
+// Tên tham số bộ lọc trên URL. Trùng tên tham số của `GET /api/admin/skus/{id}/movements`.
+const FILTER_NAMES = ['type'] as const;
 
 // Mã đơn hoặc người làm của một movement. Chỉ có mã người dùng nên rút gọn 8 ký tự, tên đầy đủ nằm ở `title`.
 function MovementSource({ movement }: { movement: InventoryMovement }) {
@@ -40,7 +47,8 @@ export function SkuInventoryPage() {
   const { productId = '', skuId = '' } = useParams();
   const canAdjust = useCan('inventory:write');
   const queryClient = useQueryClient();
-  const [page, setPage] = useState(1);
+  // Loại biến động và trang nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
+  const { values, page, setFilter, setPage } = useListFilters(FILTER_NAMES);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -50,14 +58,18 @@ export function SkuInventoryPage() {
     queryFn: () => apiRequest(`/api/admin/products/${productId}`),
   });
   const movementsQuery = useQuery<PagedList<InventoryMovement>>({
-    queryKey: ['sku-movements', skuId, page],
-    queryFn: () => apiRequest(`/api/admin/skus/${skuId}/movements?page=${page}&limit=${PAGE_SIZE}`),
+    queryKey: ['sku-movements', skuId, values, page],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+      if (values.type !== '') params.set('type', values.type);
+      return apiRequest(`/api/admin/skus/${skuId}/movements?${params}`);
+    },
   });
 
   const product = productQuery.data;
   const sku = product?.variants.find((variant) => variant.id === skuId);
   const movements = movementsQuery.data;
-  const pageCount = Math.ceil((movements?.total ?? 0) / (movements?.limit ?? PAGE_SIZE));
+  const hasFilters = values.type !== '';
 
   function handleAdjusted(result: AdjustStockResult) {
     // Ghi kết quả vào cache ngay để số tồn và lịch sử đổi mà không chờ lần tải lại.
@@ -71,8 +83,9 @@ export function SkuInventoryPage() {
           }
         : current,
     );
+    // Chỉ danh sách trang 1 không lọc chắc chắn có movement mới ở đầu. Danh sách đã lọc theo loại khác được tải lại bằng `invalidateQueries`.
     queryClient.setQueryData<PagedList<InventoryMovement>>(
-      ['sku-movements', skuId, 1],
+      ['sku-movements', skuId, { type: '' }, 1],
       (current) =>
         current
           ? {
@@ -82,8 +95,8 @@ export function SkuInventoryPage() {
             }
           : current,
     );
-    // Movement mới nằm ở trang đầu, nên quay về trang đầu để admin thấy ngay.
-    setPage(1);
+    // Movement mới là loại điều chỉnh và nằm đầu danh sách không lọc. Bỏ loại đã chọn và về trang 1 để admin thấy ngay.
+    setFilter('type', '');
     setSuccessMessage(
       `Đã điều chỉnh ${formatDelta(result.movement.delta)}. Tồn kho hiện tại: ${result.stock}.`,
     );
@@ -193,6 +206,23 @@ export function SkuInventoryPage() {
         </dl>
       </section>
       <section className="card card-flush">
+        <div className="filters-row">
+          <div className="field">
+            <label htmlFor="movement-type">Loại biến động</label>
+            <select
+              id="movement-type"
+              value={values.type}
+              onChange={(event) => setFilter('type', event.target.value)}
+            >
+              <option value="">Tất cả</option>
+              {MOVEMENT_TYPE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
         <div className="product-list-head">
           <h2>Lịch sử tồn kho</h2>
           {movements && <span className="muted small">{movements.total} lần thay đổi</span>}
@@ -208,7 +238,10 @@ export function SkuInventoryPage() {
             className="product-list-alert"
           />
         )}
-        {movements && movements.items.length === 0 && (
+        {movements && movements.items.length === 0 && (hasFilters || page > 1) && (
+          <FilteredEmptyState page={page} onFirstPage={() => setPage(1)} />
+        )}
+        {movements && movements.items.length === 0 && !hasFilters && page === 1 && (
           <p className="empty-state">SKU này chưa có thay đổi tồn kho.</p>
         )}
         {movements && movements.items.length > 0 && (
@@ -245,28 +278,14 @@ export function SkuInventoryPage() {
             </table>
           </div>
         )}
-        {movements && pageCount > 1 && (
-          <nav className="pager" aria-label="Phân trang lịch sử tồn kho">
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-            >
-              Trang trước
-            </button>
-            <span>
-              Trang {movements.page} / {pageCount}
-            </span>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={page >= pageCount}
-              onClick={() => setPage(page + 1)}
-            >
-              Trang sau
-            </button>
-          </nav>
+        {movements && (
+          <Pager
+            page={page}
+            total={movements.total}
+            limit={movements.limit}
+            onPageChange={setPage}
+            label="Phân trang lịch sử tồn kho"
+          />
         )}
       </section>
       {canAdjust && isDialogOpen && (

@@ -3,22 +3,25 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { useListFilters } from '../../../src/shared/use-list-filters';
+import { useListFilters, type ListFilters } from '../../../src/shared/use-list-filters';
 
-type ListFilters = ReturnType<typeof useListFilters>;
+type ScreenFilters = ListFilters<'search' | 'status'>;
 
 let container: HTMLDivElement;
 let root: Root;
-let filters: ListFilters;
+let filters: ScreenFilters;
 let location: ReturnType<typeof useLocation>;
 let goBack: () => void;
+// Mỗi lần vẽ ghi lại giá trị hook và chuỗi query của router, để thấy thứ tự cập nhật.
+let renders: { searchValue: string; urlSearch: string }[];
 
-const filterNames = ['search', 'status'];
+const filterNames = ['search', 'status'] as const;
 
 // Component thăm dò: lưu kết quả hook và vị trí hiện tại ra biến của test để assert.
 function Probe() {
   filters = useListFilters(filterNames);
   location = useLocation();
+  renders.push({ searchValue: filters.values.search, urlSearch: location.search });
   const navigate = useNavigate();
   goBack = () => navigate(-1);
   return null;
@@ -35,6 +38,7 @@ async function renderAt(entries: string[], index = entries.length - 1) {
 }
 
 beforeEach(() => {
+  renders = [];
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   container = document.createElement('div');
   document.body.append(container);
@@ -120,6 +124,32 @@ describe('useListFilters', () => {
     const params = new URLSearchParams(location.search);
     expect(params.get('page')).toBe('2');
     expect(params.get('search')).toBe('an');
+  });
+
+  it('hai lần ghi liền nhau chưa kịp vẽ lại đều còn trên URL', async () => {
+    // Ô tìm kiếm ghi sau 300 ms, có thể đúng lúc người dùng vừa đổi một bộ lọc khác.
+    await renderAt(['/admin/staff']);
+
+    await act(async () => {
+      filters.setFilter('status', 'active');
+      filters.setFilter('search', 'an');
+    });
+
+    const params = new URLSearchParams(location.search);
+    expect(params.get('status')).toBe('active');
+    expect(params.get('search')).toBe('an');
+  });
+
+  it('values đổi ngay sau setFilter, trước khi router cập nhật địa chỉ', async () => {
+    // Router cập nhật địa chỉ trong một chuyển cảnh. Ô điều khiển phải thấy giá trị mới ở lần vẽ khẩn trước đó.
+    await renderAt(['/admin/staff']);
+    renders = [];
+
+    await act(async () => filters.setFilter('search', 'an'));
+
+    const firstRenderWithNewValue = renders.find((entry) => entry.searchValue === 'an');
+    expect(firstRenderWithNewValue).toEqual({ searchValue: 'an', urlSearch: '' });
+    expect(new URLSearchParams(location.search).get('search')).toBe('an');
   });
 
   it('giữ nguyên tham số ngoài danh sách khi ghi', async () => {

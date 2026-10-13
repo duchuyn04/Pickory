@@ -61,6 +61,14 @@ const movementTypeLabels: Record<MovementType, string> = {
   order_release: 'Trả hàng về kho',
 };
 
+// Thứ tự các loại trong ô chọn lọc: việc nhân viên làm tay trước, rồi tới biến động do đơn hàng. Giá trị là mã gửi cho API.
+const MOVEMENT_TYPE_ORDER: MovementType[] = ['manual', 'order_reserve', 'order_release', 'return'];
+
+export const MOVEMENT_TYPE_OPTIONS = MOVEMENT_TYPE_ORDER.map((type) => ({
+  value: type,
+  label: movementTypeLabels[type],
+}));
+
 // Chỉ nhận chuỗi số nguyên có dấu tùy chọn. `Number()` cho phép dạng như `1e3` hoặc chuỗi rỗng nên không đủ chặt.
 const integerPattern = /^[+-]?\d+$/;
 

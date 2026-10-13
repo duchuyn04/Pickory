@@ -230,7 +230,7 @@ test('UI-C5 và UI-C8: tạo, lọc, xem sản phẩm và soạn mô tả', asyn
   await page.getByRole('checkbox', { name: /Sắp hết hàng/ }).check();
   await expect(page.getByRole('row', { name: /Laptop UI C5/ })).toBeVisible();
   await page.getByLabel('Trạng thái').selectOption('active');
-  await expect(page.getByText('Không có sản phẩm phù hợp.')).toBeVisible();
+  await expect(page.getByText('Không có kết quả phù hợp với bộ lọc.')).toBeVisible();
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(savedUrl);

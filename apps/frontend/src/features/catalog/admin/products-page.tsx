@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
+import { Pager } from '../../../shared/pager';
+import { SearchInput } from '../../../shared/search-input';
+import { useListFilters } from '../../../shared/use-list-filters';
 import { LOW_STOCK_THRESHOLD } from '../../../shared/catalog/inventory';
 import { useCan } from '../../identity/hooks/use-actor';
 import { toCatalogErrorMessage } from './catalog-errors';
@@ -20,20 +23,24 @@ interface PagedProducts {
   page: number;
   limit: number;
 }
+
+// Tên tham số bộ lọc trên URL. Trùng tên tham số của `GET /api/admin/products`.
+const FILTER_NAMES = ['search', 'status', 'categoryId', 'lowStock'] as const;
+
 export function ProductsPage() {
   const canWrite = useCan('products:write');
-  const [search, setSearch] = useState('');
-  const [status, setStatus] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const [lowStock, setLowStock] = useState(false);
-  const [page, setPage] = useState(1);
+  // Bộ lọc và trang nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
+  const { values, page, setFilter, setPage } = useListFilters(FILTER_NAMES);
+  const { search, status, categoryId } = values;
+  const lowStock = values.lowStock === 'true';
+  const hasFilters = FILTER_NAMES.some((name) => values[name] !== '');
   const categoriesQuery = useQuery<ProductCategory[]>({
     queryKey: ['admin-categories'],
     queryFn: () => apiRequest('/api/admin/categories'),
   });
   // Mỗi bộ lọc và số trang thuộc khóa cache để không hiển thị danh sách từ truy vấn khác.
   const productsQuery = useQuery<PagedProducts>({
-    queryKey: ['admin-products', search, status, categoryId, lowStock, page],
+    queryKey: ['admin-products', values, page],
     queryFn: () => {
       // Mã hóa từng bộ lọc để tên hoặc mã SKU có ký tự đặc biệt không đổi ý nghĩa URL.
       const params = new URLSearchParams({ page: String(page), limit: '20' });
@@ -45,8 +52,6 @@ export function ProductsPage() {
     },
   });
   const products = productsQuery.data;
-  // Dùng tổng do API trả để khóa nút trang sau ở trang cuối.
-  const pageCount = Math.ceil((products?.total ?? 0) / (products?.limit ?? 20));
   return (
     <div className="page product-page">
       <div className="page-head">
@@ -68,29 +73,17 @@ export function ProductsPage() {
       )}
       <section className="card card-flush">
         <div className="filters-row">
-          <div className="field">
-            <label htmlFor="filter-search">Tên hoặc mã SKU</label>
-            <input
-              id="filter-search"
-              type="search"
-              value={search}
-              onChange={(event) => {
-                setSearch(event.target.value);
-                // Bộ lọc mới bắt đầu từ trang đầu để không rơi vào trang trống của kết quả cũ.
-                setPage(1);
-              }}
-            />
-          </div>
+          <SearchInput
+            label="Tên hoặc mã SKU"
+            value={search}
+            onSearch={(text) => setFilter('search', text)}
+          />
           <div className="field">
             <label htmlFor="filter-status">Trạng thái</label>
             <select
               id="filter-status"
               value={status}
-              onChange={(event) => {
-                setStatus(event.target.value);
-                // Trạng thái mới có thể giảm tổng số trang nên quay lại trang đầu.
-                setPage(1);
-              }}
+              onChange={(event) => setFilter('status', event.target.value)}
             >
               <option value="">Mọi trạng thái</option>
               {Object.entries(PRODUCT_STATUS_NAMES).map(([value, label]) => (
@@ -105,11 +98,7 @@ export function ProductsPage() {
             <select
               id="filter-category"
               value={categoryId}
-              onChange={(event) => {
-                setCategoryId(event.target.value);
-                // Danh mục khác có thể giảm tổng số trang nên quay lại trang đầu.
-                setPage(1);
-              }}
+              onChange={(event) => setFilter('categoryId', event.target.value)}
             >
               <option value="">Mọi danh mục</option>
               {categoriesQuery.data?.map((category) => (
@@ -123,11 +112,8 @@ export function ProductsPage() {
             <input
               type="checkbox"
               checked={lowStock}
-              onChange={(event) => {
-                setLowStock(event.target.checked);
-                // Bộ lọc tồn kho thay đổi tổng số trang nên quay lại trang đầu.
-                setPage(1);
-              }}
+              // Tắt ô thì xóa tham số. URL không giữ `lowStock=false` vô nghĩa.
+              onChange={(event) => setFilter('lowStock', event.target.checked ? 'true' : '')}
             />
             Sắp hết hàng (tối đa {LOW_STOCK_THRESHOLD})
           </label>
@@ -147,7 +133,10 @@ export function ProductsPage() {
             className="product-list-alert"
           />
         )}
-        {products && products.items.length === 0 && (
+        {products && products.items.length === 0 && (hasFilters || page > 1) && (
+          <FilteredEmptyState page={page} onFirstPage={() => setPage(1)} />
+        )}
+        {products && products.items.length === 0 && !hasFilters && page === 1 && (
           <p className="empty-state">Không có sản phẩm phù hợp.</p>
         )}
         {products && products.items.length > 0 && (
@@ -208,28 +197,14 @@ export function ProductsPage() {
             </table>
           </div>
         )}
-        {products && pageCount > 1 && (
-          <nav className="pager" aria-label="Phân trang sản phẩm">
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-            >
-              Trang trước
-            </button>
-            <span>
-              Trang {products.page} / {pageCount}
-            </span>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={page >= pageCount}
-              onClick={() => setPage(page + 1)}
-            >
-              Trang sau
-            </button>
-          </nav>
+        {products && (
+          <Pager
+            page={page}
+            total={products.total}
+            limit={products.limit}
+            onPageChange={setPage}
+            label="Phân trang sản phẩm"
+          />
         )}
       </section>
     </div>

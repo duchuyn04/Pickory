@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
+import { Pager } from '../../../shared/pager';
+import { SearchInput } from '../../../shared/search-input';
+import { useListFilters } from '../../../shared/use-list-filters';
 import { LOW_STOCK_THRESHOLD } from '../../../shared/catalog/inventory';
 import { toCatalogErrorMessage } from './catalog-errors';
 import {
@@ -16,17 +19,25 @@ import './inventory.css';
 
 const PAGE_SIZE = 20;
 
+// Tên tham số bộ lọc trên URL. Trùng tên tham số của `GET /api/admin/inventory/low-stock`.
+const FILTER_NAMES = ['search'] as const;
+
 // Danh sách SKU đang bật có tồn kho từ ngưỡng trở xuống. Nhân viên có quyền xem sản phẩm đều mở được.
 export function InventoryPage() {
-  const [page, setPage] = useState(1);
-  // Số trang thuộc khóa cache để không hiện danh sách của trang khác.
+  // Từ khóa và trang nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
+  const { values, page, setFilter, setPage } = useListFilters(FILTER_NAMES);
+  // Từ khóa và số trang thuộc khóa cache để không hiện danh sách của truy vấn khác.
   const lowStockQuery = useQuery<PagedList<LowStockSku>>({
-    queryKey: ['admin-low-stock', page],
-    queryFn: () => apiRequest(`/api/admin/inventory/low-stock?page=${page}&limit=${PAGE_SIZE}`),
+    queryKey: ['admin-low-stock', values, page],
+    queryFn: () => {
+      // `URLSearchParams` mã hóa ký tự đặc biệt trong từ khóa để URL không sai.
+      const params = new URLSearchParams({ page: String(page), limit: String(PAGE_SIZE) });
+      if (values.search !== '') params.set('search', values.search);
+      return apiRequest(`/api/admin/inventory/low-stock?${params}`);
+    },
   });
   const lowStock = lowStockQuery.data;
-  // Dùng tổng do API trả để khóa nút trang sau ở trang cuối.
-  const pageCount = Math.ceil((lowStock?.total ?? 0) / (lowStock?.limit ?? PAGE_SIZE));
+  const hasFilters = values.search !== '';
 
   return (
     <div className="page">
@@ -40,6 +51,13 @@ export function InventoryPage() {
         </div>
       </div>
       <section className="card card-flush">
+        <div className="filters-row">
+          <SearchInput
+            label="Tìm theo mã SKU hoặc tên sản phẩm"
+            value={values.search}
+            onSearch={(text) => setFilter('search', text)}
+          />
+        </div>
         <div className="product-list-head">
           <h2>SKU sắp hết hàng</h2>
           {lowStock && <span className="muted small">{lowStock.total} SKU</span>}
@@ -58,7 +76,10 @@ export function InventoryPage() {
             className="product-list-alert"
           />
         )}
-        {lowStock && lowStock.items.length === 0 && (
+        {lowStock && lowStock.items.length === 0 && (hasFilters || page > 1) && (
+          <FilteredEmptyState page={page} onFirstPage={() => setPage(1)} />
+        )}
+        {lowStock && lowStock.items.length === 0 && !hasFilters && page === 1 && (
           <p className="empty-state">Không có SKU nào sắp hết hàng.</p>
         )}
         {lowStock && lowStock.items.length > 0 && (
@@ -113,28 +134,14 @@ export function InventoryPage() {
             </table>
           </div>
         )}
-        {lowStock && pageCount > 1 && (
-          <nav className="pager" aria-label="Phân trang tồn kho">
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-            >
-              Trang trước
-            </button>
-            <span>
-              Trang {lowStock.page} / {pageCount}
-            </span>
-            <button
-              type="button"
-              className="btn btn-sm"
-              disabled={page >= pageCount}
-              onClick={() => setPage(page + 1)}
-            >
-              Trang sau
-            </button>
-          </nav>
+        {lowStock && (
+          <Pager
+            page={page}
+            total={lowStock.total}
+            limit={lowStock.limit}
+            onPageChange={setPage}
+            label="Phân trang tồn kho"
+          />
         )}
       </section>
     </div>
