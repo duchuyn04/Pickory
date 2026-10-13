@@ -23,6 +23,8 @@ public sealed class Order
     public int ShippingDiscount { get; set; }
     public int Total { get; set; }
     public DateTime? PaymentDeadline { get; set; }
+    // Mã giao dịch hoàn tiền do nhân viên nhập khi đánh dấu `refunded`. Đơn chưa hoàn tiền để `null`.
+    public string? RefundTransactionRef { get; set; }
     public string AccessTokenHash { get; set; } = string.Empty;
     public string IdempotencyKey { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }

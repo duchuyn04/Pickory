@@ -35,7 +35,7 @@ public sealed record AdminOrderShipmentResponse(
 public sealed record AdminOrderParcelResponse(int WeightGrams, int LengthCm, int WidthCm, int HeightCm);
 
 // Chi tiết một đơn cho nhân viên, gồm bản chụp liên hệ, địa chỉ và hóa đơn lúc đặt.
-// `Invoice`, `Shipment` và `SuggestedParcel` là `null` khi thiếu dữ liệu tương ứng, và gợi ý kiện chỉ có khi đơn `confirmed`.
+// `Invoice`, `Shipment`, `SuggestedParcel` và `RefundTransactionRef` là `null` khi thiếu dữ liệu, và gợi ý kiện chỉ có khi đơn `confirmed`.
 public sealed record AdminOrderDetailResponse(
     string Code,
     string Status,
@@ -54,4 +54,5 @@ public sealed record AdminOrderDetailResponse(
     int Total,
     IReadOnlyList<AdminOrderStatusHistoryResponse> StatusHistory,
     AdminOrderShipmentResponse? Shipment,
-    AdminOrderParcelResponse? SuggestedParcel);
+    AdminOrderParcelResponse? SuggestedParcel,
+    string? RefundTransactionRef);

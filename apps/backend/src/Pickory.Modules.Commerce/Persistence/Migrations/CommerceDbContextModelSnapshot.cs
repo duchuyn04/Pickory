@@ -186,6 +186,11 @@ namespace Pickory.Modules.Commerce.Persistence.Migrations
                         .HasColumnType("\"PaymentStatus\"")
                         .HasColumnName("paymentStatus");
 
+                    b.Property<string>("RefundTransactionRef")
+                        .HasMaxLength(100)
+                        .HasColumnType("text")
+                        .HasColumnName("refundTransactionRef");
+
                     b.Property<JsonDocument>("ShippingAddress")
                         .IsRequired()
                         .HasColumnType("jsonb")

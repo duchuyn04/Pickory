@@ -344,11 +344,11 @@ Quy ước:
 ### COM-17: Nhận tiền COD và đã hoàn tiền
 **Mô tả:** `PUT /api/admin/orders/{code}/cod-receipt` (`payments:reconcile`). `PUT /api/admin/orders/{code}/refund` (`refunds:manage`) kèm mã giao dịch hoàn tiền.
 **Tiêu chí nghiệm thu:**
-- [ ] Nhận COD chỉ được với đơn COD đã `delivered` và `unpaid`, nếu không trả 409. Thành công thì thanh toán `paid`
-- [ ] Danh sách đơn của COM-14 lọc được đơn COD đã giao chưa nhận tiền
-- [ ] Hoàn tiền chỉ được từ `refund_pending`, nếu không trả 409. Thiếu mã giao dịch trả 400
-- [ ] Không có đường nào tự chuyển sang `refunded` mà không qua route này
-- [ ] Mỗi thao tác ghi 1 dòng audit. `support` nhận 403. `sales` gọi route hoàn tiền nhận 403
+- [x] Nhận COD chỉ được với đơn COD đã `delivered` và `unpaid`, nếu không trả 409. Thành công thì thanh toán `paid`
+- [x] Danh sách đơn của COM-14 lọc được đơn COD đã giao chưa nhận tiền
+- [x] Hoàn tiền chỉ được từ `refund_pending`, nếu không trả 409. Thiếu mã giao dịch trả 400
+- [x] Không có đường nào tự chuyển sang `refunded` mà không qua route này
+- [x] Mỗi thao tác ghi 1 dòng audit. `support` nhận 403. `sales` gọi route hoàn tiền nhận 403
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-14 · **Quy mô:** S
 

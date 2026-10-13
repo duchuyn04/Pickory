@@ -68,6 +68,34 @@ public sealed class PaymentTransitionsTests
     }
 
     [Fact]
+    // Khách và hệ thống không có đường nào sang `refunded`, từ bất kỳ trạng thái thanh toán nào.
+    public void Evaluate_CustomerAndSystem_CannotReachRefundedFromAnyStatus()
+    {
+        TransitionActor[] nonStaffActors = [TransitionActor.Customer, TransitionActor.System];
+
+        foreach (var from in AllStatuses)
+        {
+            foreach (var actor in nonStaffActors)
+            {
+                Assert.False(PaymentTransitions.Evaluate(from, PaymentStatus.Refunded, actor).IsAllowed);
+            }
+        }
+    }
+
+    [Fact]
+    // Mọi trạng thái khác `refund_pending` bị từ chối vì cặp nằm ngoài bảng, kể cả khi người chuyển là nhân viên.
+    public void Evaluate_StaffToRefundedFromOtherStatuses_IsOutsideTransitionTable()
+    {
+        foreach (var from in AllStatuses.Where(status => status != PaymentStatus.RefundPending))
+        {
+            var decision = PaymentTransitions.Evaluate(from, PaymentStatus.Refunded, TransitionActor.Staff);
+
+            Assert.False(decision.IsAllowed);
+            Assert.Equal(TransitionRejection.NotInTransitionTable, decision.Rejection);
+        }
+    }
+
+    [Fact]
     // Đã trả rồi không quay về chưa trả, và `refunded` là trạng thái cuối.
     public void Evaluate_BackwardAndTerminalPairs_AreRejected()
     {
