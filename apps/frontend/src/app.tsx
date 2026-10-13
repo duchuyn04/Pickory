@@ -29,6 +29,8 @@ import { CartPage } from './features/commerce/customer/cart-page';
 import { CheckoutPage } from './features/commerce/customer/checkout/checkout-page';
 import { OrderSuccessPage } from './features/commerce/customer/checkout/order-success-page';
 import { PaymentPage } from './features/commerce/customer/checkout/payment-page';
+import { AdminOrderDetailPage } from './features/commerce/admin/orders/admin-order-detail-page';
+import { AdminOrdersPage } from './features/commerce/admin/orders/admin-orders-page';
 import { OrderDetailPage } from './features/commerce/customer/orders/order-detail-page';
 import { CustomerOrdersPage } from './features/commerce/customer/orders/customer-orders-page';
 import { HomePage } from './features/home/home-page';
@@ -95,7 +97,8 @@ export function App() {
           <Route path="staff" element={<StaffPage />} />
           <Route path="customers" element={<CustomersPage />} />
           <Route path="audit-logs" element={<AuditLogPage />} />
-          <Route path="orders" element={<AdminPlaceholderPage title="Quản lý đơn hàng" />} />
+          <Route path="orders" element={<AdminOrdersPage />} />
+          <Route path="orders/:code" element={<AdminOrderDetailPage />} />
           <Route
             path="products"
             element={

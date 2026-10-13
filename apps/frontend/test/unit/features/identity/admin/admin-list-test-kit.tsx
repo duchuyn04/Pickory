@@ -47,7 +47,10 @@ export function createHarness(
       const url = String(input);
       if (url === '/api/me') return new Response(JSON.stringify({ data: actor }));
       requestedUrls.push(url);
-      return new Response(JSON.stringify({ data: respond(url) ?? [] }));
+      const result = respond(url);
+      // Test cần lỗi HTTP thì trả sẵn `Response`. Bộ dựng không bọc lại.
+      if (result instanceof Response) return result;
+      return new Response(JSON.stringify({ data: result ?? [] }));
     }),
   );
 

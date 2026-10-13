@@ -4,7 +4,7 @@ import { useActor } from '../../../identity/hooks/use-actor';
 import { ErrorAlert } from '../../../../shared/error-alert';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
 import { ProductThumbnail } from '../product-thumbnail';
-import { formatOrderStatus } from './order-labels';
+import { formatOrderStatus } from '../../order-labels';
 import { formatDateTime } from './order-format';
 import { fetchCustomerOrders } from './orders-api';
 import './orders.css';

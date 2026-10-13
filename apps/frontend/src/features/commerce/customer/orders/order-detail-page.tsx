@@ -6,7 +6,7 @@ import { ErrorAlert } from '../../../../shared/error-alert';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
 import { CancelOrderDialog } from './cancel-order-dialog';
 import { ProductThumbnail } from '../product-thumbnail';
-import { formatOrderStatus, formatPaymentMethod, formatPaymentStatus } from './order-labels';
+import { formatOrderStatus, formatPaymentMethod, formatPaymentStatus } from '../../order-labels';
 import { formatDateTime } from './order-format';
 import { cancelOrder, fetchOrderDetail } from './orders-api';
 import './orders.css';

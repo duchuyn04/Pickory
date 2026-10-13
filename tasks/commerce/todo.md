@@ -358,7 +358,7 @@ Quy ước:
 - [ ] Nút xác nhận, tạo vận đơn, hủy vận đơn, hủy đơn, hóa đơn, nhận COD, hoàn tiền chỉ hiện khi người dùng có quyền
 - [ ] Form tạo vận đơn điền sẵn kích thước kiện từ `BuildParcel` và cho sửa
 - [ ] Hủy đơn bắt buộc nhập lý do
-- [ ] Danh sách có ô tìm kiếm theo mã đơn, tên, số điện thoại, email (FLT-05 của `tasks/admin-search/todo.md`). Bộ lọc nằm trên URL
+- [x] Danh sách có ô tìm kiếm theo mã đơn, tên, số điện thoại, email (FLT-05 của `tasks/admin-search/todo.md`). Bộ lọc nằm trên URL
 - [ ] Lỗi 409 và 422 hiện thông báo tiếng Việt của API
 - [ ] Bảng dùng được bằng bàn phím. Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
