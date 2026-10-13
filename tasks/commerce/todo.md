@@ -387,9 +387,9 @@ Quy ước:
 ### COM-UI8: Sổ địa chỉ
 **Mô tả:** Mục sổ địa chỉ trong trang tài khoản dùng `AddressPicker`. Checkout cho khách đã đăng nhập chọn địa chỉ đã lưu.
 **Tiêu chí nghiệm thu:**
-- [ ] Thêm, sửa, xóa, đặt mặc định trên giao diện
-- [ ] Checkout điền sẵn địa chỉ mặc định
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Thêm, sửa, xóa, đặt mặc định trên giao diện
+- [x] Checkout điền sẵn địa chỉ mặc định
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** COM-18, COM-UI2 · **Quy mô:** M
 

@@ -5,6 +5,7 @@ import type { ApiError } from '../../../../shared/api';
 import { ErrorAlert } from '../../../../shared/error-alert';
 import { FieldError, fieldErrorProps, hasFieldErrors } from '../../../../shared/field-error';
 import { useActor } from '../../../identity/hooks/use-actor';
+import { describeAddress, useSavedAddresses } from '../addresses/addresses-api';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
 import { AddressPicker, EMPTY_ADDRESS, type AddressValue } from '../../../shipping/address-picker';
 import { canCheckout, checkoutHint } from '../cart-labels';
@@ -91,6 +92,8 @@ export function CheckoutPage() {
   // Ref chặn bấm đúp ngay trong cùng tick, trước khi React kịp vẽ lại nút đã tắt.
   const isSubmittingRef = useRef(false);
   const hasPrefilledRef = useRef(false);
+  // Địa chỉ đã lưu mà khách đang chọn trong ô "Địa chỉ đã lưu". Chuỗi rỗng là chưa chọn.
+  const [selectedSavedId, setSelectedSavedId] = useState('');
 
   const cart = cartQuery.data;
   const isCartReady = cart !== undefined && canCheckout(cart);
@@ -101,19 +104,33 @@ export function CheckoutPage() {
     [preview.error],
   );
 
-  // Điền sẵn liên hệ một lần khi khách đã đăng nhập. Ô khách đã gõ không bị ghi đè.
+  // Chỉ khách đã đăng nhập mới có sổ địa chỉ. Khách vãng lai và nhân viên không gọi API này.
+  const isCustomer = actor?.kind === 'customer';
+  const savedAddressesQuery = useSavedAddresses(isCustomer);
+  const savedAddresses = savedAddressesQuery.data ?? [];
+
+  // Điền sẵn liên hệ và địa chỉ một lần khi khách đã đăng nhập. Ô khách đã gõ không bị ghi đè.
   useEffect(() => {
     if (hasPrefilledRef.current || !actor || actor.userId === null) return;
+    // Chờ sổ địa chỉ tải xong để địa chỉ mặc định được ưu tiên hơn hồ sơ. Tải lỗi thì vẫn điền từ hồ sơ.
+    if (isCustomer && savedAddressesQuery.isPending) return;
     hasPrefilledRef.current = true;
-    setValues((current) => ({
-      ...current,
-      contact: {
-        name: current.contact.name || actor.name || '',
-        phone: current.contact.phone || actor.phone || '',
-        email: current.contact.email || actor.email || '',
-      },
-    }));
-  }, [actor]);
+    const defaultAddress = savedAddresses.find((saved) => saved.isDefault);
+    setValues((current) => {
+      // Chỉ điền địa chỉ khi cả địa chỉ còn trống, để không ghi đè lựa chọn dở dang của khách.
+      const isAddressEmpty = current.address.provinceCode === '' && current.address.line === '';
+      return {
+        ...current,
+        contact: {
+          name: current.contact.name || defaultAddress?.name || actor.name || '',
+          phone: current.contact.phone || defaultAddress?.phone || actor.phone || '',
+          email: current.contact.email || actor.email || '',
+        },
+        address: isAddressEmpty && defaultAddress ? defaultAddress.address : current.address,
+      };
+    });
+    if (defaultAddress) setSelectedSavedId(defaultAddress.id);
+  }, [actor, isCustomer, savedAddressesQuery.isPending, savedAddresses]);
 
   // Preview báo vượt hạn mức COD thì đổi sang chuyển khoản. Đổi phương thức làm preview tự gọi lại.
   useEffect(() => {
@@ -155,6 +172,28 @@ export function CheckoutPage() {
     setValues((current) => ({ ...current, address: next }));
     setFieldErrors((current) => ({
       ...current,
+      address: null,
+      'address.provinceCode': null,
+      'address.wardCode': null,
+      'address.line': null,
+    }));
+  }
+
+  // Chọn một địa chỉ đã lưu thì điền lại người nhận và địa chỉ. Khách vẫn sửa tay được sau đó.
+  function chooseSavedAddress(id: string) {
+    setSelectedSavedId(id);
+    const saved = savedAddresses.find((candidate) => candidate.id === id);
+    // Chọn dòng gợi ý "Nhập địa chỉ khác" thì giữ nguyên các ô đang có.
+    if (!saved) return;
+    setValues((current) => ({
+      ...current,
+      contact: { ...current.contact, name: saved.name, phone: saved.phone },
+      address: saved.address,
+    }));
+    setFieldErrors((current) => ({
+      ...current,
+      'contact.name': null,
+      'contact.phone': null,
       address: null,
       'address.provinceCode': null,
       'address.wardCode': null,
@@ -452,6 +491,24 @@ export function CheckoutPage() {
 
           <section className="card checkout-section" aria-labelledby="checkout-address-title">
             <h2 id="checkout-address-title">Địa chỉ nhận hàng</h2>
+            {savedAddresses.length > 0 && (
+              <div className="field">
+                <label htmlFor="checkout-saved-address">Địa chỉ đã lưu</label>
+                <select
+                  id="checkout-saved-address"
+                  disabled={isSubmitting}
+                  value={selectedSavedId}
+                  onChange={(event) => chooseSavedAddress(event.target.value)}
+                >
+                  <option value="">Nhập địa chỉ khác</option>
+                  {savedAddresses.map((saved) => (
+                    <option key={saved.id} value={saved.id}>
+                      {saved.label}: {describeAddress(saved.address)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div id={ADDRESS_ERROR_ANCHOR_ID} onBlur={handleAddressBlur}>
               <AddressPicker
                 value={values.address}

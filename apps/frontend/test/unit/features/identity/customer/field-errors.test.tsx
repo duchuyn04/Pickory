@@ -60,6 +60,10 @@ async function renderPage(url: string, actor: ActorData = guest) {
         postRequests.push(String(input));
         requestBodies.push(String(init.body ?? ''));
       }
+      // Trang tài khoản có thẻ sổ địa chỉ. Trả sổ rỗng đúng dạng mảng của API.
+      if (String(input) === '/api/me/addresses') {
+        return new Response(JSON.stringify({ data: [] }));
+      }
       // Header có mini cart nên trang nào cũng đọc giỏ. Trả giỏ trống đúng dạng của API.
       if (String(input) === '/api/cart') {
         return new Response(

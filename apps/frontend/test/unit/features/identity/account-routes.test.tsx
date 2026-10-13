@@ -57,6 +57,10 @@ function stubFetch(actor: ActorData) {
       if (method === 'GET' && String(input) === '/api/me') {
         return new Response(JSON.stringify({ data: actor }));
       }
+      // Trang tài khoản có thẻ sổ địa chỉ. Trả sổ rỗng đúng dạng mảng của API.
+      if (method === 'GET' && String(input) === '/api/me/addresses') {
+        return new Response(JSON.stringify({ data: [] }));
+      }
       // Đăng ký xong đưa khách về trang chủ. Trang chủ cần cây danh mục dạng mảng.
       if (method === 'GET' && String(input) === '/api/categories') {
         return new Response(JSON.stringify({ data: [] }));
@@ -75,8 +79,8 @@ function stubFetch(actor: ActorData) {
           }),
         );
       }
-      // Banner và các lưới sản phẩm của trang chủ cần dữ liệu đúng dạng. Test này không kiểm sản phẩm,
-      // nên API sản phẩm trả 404: banner bỏ máy không tìm thấy, các lưới hiện lỗi thay vì đọc dữ liệu rỗng.
+      // Test này không kiểm sản phẩm nên API sản phẩm trả 404.
+      // Banner bỏ máy không tìm thấy và các lưới hiện lỗi, thay vì đọc dữ liệu rỗng sai dạng.
       if (method === 'GET' && String(input).startsWith('/api/products')) {
         return new Response(
           JSON.stringify({ error: { code: 'NOT_FOUND', message: 'Không tìm thấy.' } }),

@@ -9,6 +9,7 @@ import {
   type FieldErrors,
 } from '../../../shared/field-error';
 import { getNameError, getPhoneError } from '../../../shared/identity-validation';
+import { AddressBook } from '../../commerce/customer/addresses/address-book';
 import { ChangePasswordForm } from '../components/change-password-form';
 import { DeleteAccountDialog } from '../components/delete-account-dialog';
 import { useActor } from '../hooks/use-actor';
@@ -155,6 +156,10 @@ export function AccountPage() {
           </div>
         </form>
       </section>
+
+      {/* Sổ địa chỉ giao hàng. Component tự quản lý dữ liệu, trang chỉ ghép vào. */}
+      <AddressBook />
+
       {/* Khu vực điều hướng tới danh sách đơn hàng của khách */}
       <section className="card account-section account-row">
         <div>
