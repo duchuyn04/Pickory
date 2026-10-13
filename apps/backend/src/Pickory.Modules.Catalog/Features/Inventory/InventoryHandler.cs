@@ -59,7 +59,7 @@ public sealed class InventoryHandler(
     }
 
     public async Task<PagedResponse<InventoryMovementResponse>> GetMovementsAsync(
-        string skuId, PageQuery page, CancellationToken cancellationToken)
+        string skuId, PageQuery page, InventoryMovementType? type, CancellationToken cancellationToken)
     {
         // SKU thiếu nhận 404 thay vì danh sách rỗng, để giao diện phân biệt SKU sai với SKU chưa có lịch sử.
         if (!await database.Skus.AnyAsync(sku => sku.Id == skuId, cancellationToken))
@@ -68,6 +68,11 @@ public sealed class InventoryHandler(
         }
 
         var movements = database.InventoryMovements.AsNoTracking().Where(movement => movement.SkuId == skuId);
+        if (type is { } movementType)
+        {
+            movements = movements.Where(movement => movement.Type == movementType);
+        }
+
         var total = await movements.CountAsync(cancellationToken);
         // Thứ tự phụ theo định danh giữ phân trang ổn định khi hai movement cùng thời điểm.
         var items = await movements.OrderByDescending(movement => movement.CreatedAt).ThenByDescending(movement => movement.Id)
@@ -78,10 +83,22 @@ public sealed class InventoryHandler(
             total, page.Page, page.Limit);
     }
 
-    public async Task<PagedResponse<LowStockSkuResponse>> GetLowStockAsync(PageQuery page, CancellationToken cancellationToken)
+    public async Task<PagedResponse<LowStockSkuResponse>> GetLowStockAsync(
+        PageQuery page, SearchTerm? search, CancellationToken cancellationToken)
     {
         // Dùng chung định nghĩa với `CountLowStockAsync` của `ICatalogReader`, để badge và danh sách cho cùng một số.
         var lowStock = database.Skus.AsNoTracking().WhereLowStock();
+
+        // Điều kiện tìm áp sau định nghĩa sắp hết hàng, nên tìm kiếm không đổi tập SKU gốc mà badge đang đếm.
+        if (search is { } term)
+        {
+            // Mã SKU không có dấu nên không cần `unaccent`. Tên sản phẩm so sánh không dấu, và từ khóa đi qua `unaccent` như cột.
+            var pattern = term.LikePattern;
+            lowStock = lowStock.Where(sku =>
+                EF.Functions.ILike(sku.Code, pattern, SearchTerm.EscapeCharacter)
+                || EF.Functions.ILike(EF.Functions.Unaccent(sku.Product!.Name), EF.Functions.Unaccent(pattern), SearchTerm.EscapeCharacter));
+        }
+
         var total = await lowStock.CountAsync(cancellationToken);
         // Thứ tự phụ theo mã SKU giữ phân trang ổn định khi nhiều SKU cùng số tồn.
         var rows = await lowStock.OrderBy(sku => sku.Stock).ThenBy(sku => sku.Code)

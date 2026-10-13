@@ -3,6 +3,8 @@ using FluentValidation.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Pickory.Modules.Catalog.Entities;
+using Pickory.Modules.Catalog.Stock;
 using Pickory.Modules.Identity.Contracts.Actors;
 using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Shared.Http;
@@ -42,28 +44,48 @@ public static class InventoryEndpoints
 
     private static async Task<IResult> GetMovementsAsync(HttpContext context, string id, InventoryHandler handler)
     {
-        var page = ReadPage(context);
-        var movements = await handler.GetMovementsAsync(id, page, context.RequestAborted);
-        return Results.Ok(new ApiResponse<PagedResponse<InventoryMovementResponse>>(movements));
-    }
-
-    private static async Task<IResult> GetLowStockAsync(HttpContext context, InventoryHandler handler)
-    {
-        var page = ReadPage(context);
-        var lowStock = await handler.GetLowStockAsync(page, context.RequestAborted);
-        return Results.Ok(new ApiResponse<PagedResponse<LowStockSkuResponse>>(lowStock));
-    }
-
-    private static PageQuery ReadPage(HttpContext context)
-    {
-        // Gom mọi lỗi query string thành một lỗi `VALIDATION_ERROR`, giống danh sách sản phẩm.
+        // Kiểm mọi tham số trước khi chạm DB. Tham số sai nhận 400 dù SKU có tồn tại hay không.
         var failures = new List<ValidationFailure>();
         var page = PageQuery.Read(context.Request.Query, failures);
+        var type = ReadMovementType(context.Request.Query, failures);
         if (failures.Count > 0)
         {
             throw new ValidationException(failures);
         }
 
-        return page;
+        var movements = await handler.GetMovementsAsync(id, page, type, context.RequestAborted);
+        return Results.Ok(new ApiResponse<PagedResponse<InventoryMovementResponse>>(movements));
+    }
+
+    private static async Task<IResult> GetLowStockAsync(HttpContext context, InventoryHandler handler)
+    {
+        var failures = new List<ValidationFailure>();
+        var page = PageQuery.Read(context.Request.Query, failures);
+        var search = SearchTerm.Read(context.Request.Query, failures);
+        if (failures.Count > 0)
+        {
+            throw new ValidationException(failures);
+        }
+
+        var lowStock = await handler.GetLowStockAsync(page, search, context.RequestAborted);
+        return Results.Ok(new ApiResponse<PagedResponse<LowStockSkuResponse>>(lowStock));
+    }
+
+    // Chỉ nhận đúng bốn tên của API. Giá trị lạ nhận lỗi, vì danh sách không lọc làm nhân viên hiểu sai lịch sử.
+    private static InventoryMovementType? ReadMovementType(IQueryCollection query, List<ValidationFailure> failures)
+    {
+        var raw = QueryParameter.ReadSingle(query, "type", failures);
+        if (raw is null)
+        {
+            return null;
+        }
+
+        if (!MovementTypeNames.TryParse(raw, out var type))
+        {
+            failures.Add(new ValidationFailure("type", "Loại biến động phải là `manual`, `order_reserve`, `order_release` hoặc `return`."));
+            return null;
+        }
+
+        return type;
     }
 }

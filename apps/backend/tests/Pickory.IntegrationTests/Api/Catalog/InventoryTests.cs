@@ -394,6 +394,223 @@ public sealed class InventoryTests : IClassFixture<PickoryWebApplicationFactory>
         Assert.Equal(1, data.GetProperty("limit").GetInt32());
     }
 
+    // Đổi tên sản phẩm seed để test tìm theo tên có dấu. Tên mặc định của seed không có dấu đặc biệt.
+    private async Task RenameProductAsync(string productId, string name)
+    {
+        await using var context = _database.CreateCatalogContext();
+        await context.Products.Where(product => product.Id == productId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(product => product.Name, name));
+    }
+
+    private async Task<List<string>> CodesOfAsync(IReadOnlyList<string> skuIds)
+    {
+        await using var context = _database.CreateCatalogContext();
+        var rows = await context.Skus.AsNoTracking().Where(sku => skuIds.Contains(sku.Id))
+            .Select(sku => new { sku.Id, sku.Code }).ToListAsync();
+        return skuIds.Select(id => rows.Single(row => row.Id == id).Code).ToList();
+    }
+
+    private async Task<(List<JsonElement> Items, int Total)> ReadLowStockAsync(string query)
+    {
+        var response = await GetAsync($"/api/admin/inventory/low-stock?{query}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var data = json.RootElement.GetProperty("data");
+        var items = data.GetProperty("items").EnumerateArray().Select(item => item.Clone()).ToList();
+        return (items, data.GetProperty("total").GetInt32());
+    }
+
+    private static async Task AssertValidationErrorForFieldAsync(HttpResponseMessage response, string field)
+    {
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var error = json.RootElement.GetProperty("error");
+        Assert.Equal("VALIDATION_ERROR", error.GetProperty("code").GetString());
+        Assert.Contains($"{field}:", error.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    // Tìm theo mã SKU. Chỉ SKU có mã khớp hiện ra, dù sản phẩm có nhiều SKU sắp hết hàng.
+    public async Task LowStock_SearchBySkuCode_ReturnsOnlyMatchingSku()
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(1), new StockTestData.SkuSeed(2));
+        var codes = await CodesOfAsync(product.SkuIds);
+
+        var (items, total) = await ReadLowStockAsync($"search={Uri.EscapeDataString(codes[0])}&limit=100");
+
+        Assert.Equal([product.SkuIds[0]], items.Select(item => item.GetProperty("skuId").GetString()));
+        Assert.Equal(1, total);
+    }
+
+    [Theory]
+    [InlineData("dien thoai")]
+    [InlineData("DIEN THOAI")]
+    [InlineData("Điện thoại")]
+    // Tên sản phẩm lưu có dấu. Từ khóa không dấu, viết hoa hoặc có dấu đều tìm được cả hai SKU sắp hết hàng.
+    public async Task LowStock_SearchByProductName_IgnoresDiacriticsAndCase(string keyword)
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(1), new StockTestData.SkuSeed(2));
+        await RenameProductAsync(product.ProductId, $"Điện thoại {_suffix}");
+
+        var (items, total) = await ReadLowStockAsync($"search={Uri.EscapeDataString($"{keyword} {_suffix}")}&limit=100");
+
+        Assert.Equal(
+            product.SkuIds.Order(StringComparer.Ordinal),
+            items.Select(item => item.GetProperty("skuId").GetString()!).Order(StringComparer.Ordinal));
+        Assert.Equal(2, total);
+    }
+
+    [Fact]
+    // `total` đếm cùng điều kiện tìm và vẫn chỉ tính SKU sắp hết hàng. SKU đủ hàng cùng sản phẩm không được tính.
+    public async Task LowStock_TotalCountsSearchedLowStockRowsOnly()
+    {
+        var product = await _data.CreateProductAsync(
+            new StockTestData.SkuSeed(1), new StockTestData.SkuSeed(2), new StockTestData.SkuSeed(3), new StockTestData.SkuSeed(50));
+        await RenameProductAsync(product.ProductId, $"Tổng {_suffix}");
+
+        var (items, total) = await ReadLowStockAsync($"search={Uri.EscapeDataString($"tong {_suffix}")}&limit=1");
+
+        Assert.Single(items);
+        Assert.Equal(3, total);
+    }
+
+    [Fact]
+    // Sáu SKU cùng số tồn nằm ở ba trang liền nhau. Thứ tự phụ theo mã SKU giữ cho không lặp và không mất dòng.
+    public async Task LowStock_SameStockAcrossPages_NoDuplicateAndNoMissingRow()
+    {
+        var product = await _data.CreateProductAsync(
+            Enumerable.Range(0, 6).Select(_ => new StockTestData.SkuSeed(1)).ToArray());
+        await RenameProductAsync(product.ProductId, $"Phân trang {_suffix}");
+        var codes = await CodesOfAsync(product.SkuIds);
+
+        // Mỗi `UPDATE` ghi bản dòng mới ở cuối bảng. Cập nhật theo mã SKU giảm dần đặt thứ tự lưu ngược với mã SKU.
+        foreach (var code in codes.OrderByDescending(code => code, StringComparer.Ordinal))
+        {
+            await using var context = _database.CreateCatalogContext();
+            await context.Skus.Where(sku => sku.Code == code)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(sku => sku.UpdatedAt, DateTime.UtcNow));
+        }
+
+        var collectedCodes = new List<string>();
+        foreach (var pageNumber in new[] { 1, 2, 3 })
+        {
+            var (items, total) = await ReadLowStockAsync(
+                $"search={Uri.EscapeDataString($"phan trang {_suffix}")}&limit=2&page={pageNumber}");
+            Assert.Equal(6, total);
+            collectedCodes.AddRange(items.Select(item => item.GetProperty("code").GetString()!));
+        }
+
+        Assert.Equal(codes.Order(StringComparer.Ordinal).ToList(), collectedCodes);
+    }
+
+    [Fact]
+    // `%` trong từ khóa là ký tự thường. Từ khóa có `%` không khớp SKU nào, dù có SKU sắp hết hàng.
+    public async Task LowStock_SearchPercentSign_IsNotWildcard()
+    {
+        await _data.CreateProductAsync(new StockTestData.SkuSeed(1));
+
+        var (items, total) = await ReadLowStockAsync($"search={Uri.EscapeDataString($"%{_suffix}")}&limit=100");
+
+        Assert.Empty(items);
+        Assert.Equal(0, total);
+    }
+
+    [Fact]
+    // `search` lặp lại và từ khóa 101 ký tự nhận 400 `VALIDATION_ERROR` cho trường `search`.
+    public async Task LowStock_InvalidSearch_Returns400()
+    {
+        var repeated = await GetAsync("/api/admin/inventory/low-stock?search=a&search=b");
+        var tooLong = await GetAsync($"/api/admin/inventory/low-stock?search={new string('a', 101)}");
+
+        await AssertValidationErrorForFieldAsync(repeated, "search");
+        await AssertValidationErrorForFieldAsync(tooLong, "search");
+    }
+
+    private async Task SeedTypedMovementAsync(string skuId, int delta, InventoryMovementType type, DateTime createdAt)
+    {
+        await using var context = _database.CreateCatalogContext();
+        context.InventoryMovements.Add(new InventoryMovement
+        {
+            Id = Guid.NewGuid().ToString("N"), SkuId = skuId, Delta = delta, Type = type,
+            Reason = $"Movement {type}", CreatedAt = createdAt,
+        });
+        // Tồn kho đổi cùng movement để bất biến tồn kho vẫn đúng.
+        await context.Database.ExecuteSqlInterpolatedAsync($"UPDATE skus SET stock = stock + {delta} WHERE id = {skuId}");
+        await context.SaveChangesAsync();
+    }
+
+    private async Task<(List<JsonElement> Items, int Total)> ReadMovementsAsync(string skuId, string query)
+    {
+        var response = await GetAsync($"/api/admin/skus/{skuId}/movements?{query}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var data = json.RootElement.GetProperty("data");
+        var items = data.GetProperty("items").EnumerateArray().Select(item => item.Clone()).ToList();
+        return (items, data.GetProperty("total").GetInt32());
+    }
+
+    [Theory]
+    [InlineData("manual", 2)]
+    [InlineData("return", 1)]
+    [InlineData("order_reserve", 0)]
+    // Mỗi `type` chỉ trả biến động đúng loại, và `total` đếm cùng điều kiện lọc. SKU có hai `manual` và một `return`.
+    public async Task Movements_TypeFilter_ReturnsOnlyThatTypeAndCountsSameCondition(string type, int expectedCount)
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(0));
+        var skuId = product.SkuIds[0];
+        var start = DateTime.UtcNow.AddHours(-1);
+        await SeedTypedMovementAsync(skuId, 1, InventoryMovementType.Manual, start);
+        await SeedTypedMovementAsync(skuId, 2, InventoryMovementType.Return, start.AddMinutes(1));
+        await SeedTypedMovementAsync(skuId, 3, InventoryMovementType.Manual, start.AddMinutes(2));
+
+        var (items, total) = await ReadMovementsAsync(skuId, $"type={type}&limit=1");
+
+        Assert.Equal(expectedCount, total);
+        Assert.Equal(Math.Min(expectedCount, 1), items.Count);
+        Assert.All(items, item => Assert.Equal(type, item.GetProperty("type").GetString()));
+    }
+
+    [Fact]
+    // Không gửi `type` thì trả mọi loại, như trước khi thêm bộ lọc. Giá trị trống được coi như không gửi.
+    public async Task Movements_NoTypeOrBlankType_ReturnsEveryType()
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(0));
+        var skuId = product.SkuIds[0];
+        var start = DateTime.UtcNow.AddHours(-1);
+        await SeedTypedMovementAsync(skuId, 1, InventoryMovementType.Manual, start);
+        await SeedTypedMovementAsync(skuId, 2, InventoryMovementType.Return, start.AddMinutes(1));
+
+        var (_, withoutType) = await ReadMovementsAsync(skuId, "limit=100");
+        var (_, blankType) = await ReadMovementsAsync(skuId, "type=&limit=100");
+
+        Assert.Equal(2, withoutType);
+        Assert.Equal(2, blankType);
+    }
+
+    [Theory]
+    [InlineData("type=MANUAL")]
+    [InlineData("type=0")]
+    [InlineData("type=khong-biet")]
+    [InlineData("type=manual&type=return")]
+    // `type` lạ, viết hoa, chuỗi số và `type` lặp nhận 400 `VALIDATION_ERROR` cho trường `type`.
+    public async Task Movements_InvalidType_Returns400(string query)
+    {
+        var product = await _data.CreateProductAsync(new StockTestData.SkuSeed(1));
+
+        var response = await GetAsync($"/api/admin/skus/{product.SkuIds[0]}/movements?{query}");
+
+        await AssertValidationErrorForFieldAsync(response, "type");
+    }
+
+    [Fact]
+    // SKU không tồn tại vẫn nhận 404 khi `type` hợp lệ. Kiểm SKU chạy trước bộ lọc.
+    public async Task Movements_UnknownSkuWithValidType_Returns404()
+    {
+        var response = await GetAsync($"/api/admin/skus/{Guid.NewGuid():N}/movements?type=manual");
+
+        await AssertErrorAsync(response, HttpStatusCode.NotFound, "SKU_NOT_FOUND");
+    }
+
     [Fact]
     public async Task LowStock_InvalidPage_Returns400()
     {

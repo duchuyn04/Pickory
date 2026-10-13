@@ -52,11 +52,11 @@ Quy ước:
 ### FLT-04: Sản phẩm, tồn kho và biến động kho
 **Mô tả:** Migration `unaccent` cho `catalog`. `GET /api/admin/products` đổi sang tìm không dấu. `GET /api/admin/inventory/low-stock` nhận `search`. `GET /api/admin/skus/{id}/movements` nhận `type`.
 **Tiêu chí nghiệm thu:**
-- [ ] Gõ `ao thun` tìm được sản phẩm `Áo thun`. Tìm theo mã SKU vẫn đạt như trước
-- [ ] Test lọc sản phẩm hiện có vẫn đạt
-- [ ] Danh sách sắp hết hàng tìm được theo mã SKU và tên sản phẩm
-- [ ] Biến động kho lọc được theo `type=manual|order_reserve|order_release|return`. Giá trị lạ trả 400 `VALIDATION_ERROR`
-- [ ] Danh sách sắp hết hàng sắp theo `Stock`, rồi theo `Code`. Hai trang liền nhau không lặp dòng
+- [x] Gõ `ao thun` tìm được sản phẩm `Áo thun`. Tìm theo mã SKU vẫn đạt như trước
+- [x] Test lọc sản phẩm hiện có vẫn đạt
+- [x] Danh sách sắp hết hàng tìm được theo mã SKU và tên sản phẩm
+- [x] Biến động kho lọc được theo `type=manual|order_reserve|order_release|return`. Giá trị lạ trả 400 `VALIDATION_ERROR`
+- [x] Danh sách sắp hết hàng sắp theo `Stock`, rồi theo `Code`. Hai trang liền nhau không lặp dòng
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** FLT-01 · **Quy mô:** M
 

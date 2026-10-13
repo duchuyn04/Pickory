@@ -48,13 +48,13 @@ public static class ProductsEndpoints
         var status = ReadStatus(context.Request.Query, failures);
         // Đọc cờ lọc tồn kho thấp để phát hiện sản phẩm sắp hết hàng.
         var lowStock = ReadLowStock(context.Request.Query, failures);
+        // Từ khóa lặp lại hoặc dài quá giới hạn nhận lỗi, thay vì âm thầm bỏ bộ lọc.
+        var search = SearchTerm.Read(context.Request.Query, failures);
         if (failures.Count > 0)
         {
             throw new ValidationException(failures);
         }
 
-        // Giữ nguyên truy vấn tìm kiếm để handler áp dụng trên tên và mã SKU.
-        var search = context.Request.Query["search"].FirstOrDefault();
         // Mã danh mục giữ nguyên để handler lọc cả danh mục gốc và danh mục lá.
         var categoryId = context.Request.Query["categoryId"].FirstOrDefault();
 

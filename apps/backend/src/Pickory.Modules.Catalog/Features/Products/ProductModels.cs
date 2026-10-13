@@ -55,7 +55,7 @@ public static class ProductStatusNames
 // Bộ lọc danh sách sản phẩm quản trị phục vụ tìm kiếm, phân loại và cảnh báo tồn kho.
 public sealed record ProductListQuery(
     PageQuery Page,
-    string? Search = null,
+    SearchTerm? Search = null,
     string? CategoryId = null,
     ProductStatus? Status = null,
     bool LowStock = false);

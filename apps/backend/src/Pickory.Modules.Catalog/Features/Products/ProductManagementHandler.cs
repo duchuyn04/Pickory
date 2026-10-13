@@ -38,13 +38,14 @@ public sealed class ProductManagementHandler(
     {
         // Nhân viên cần xem mọi trạng thái, kể cả sản phẩm chưa đăng bán.
         var products = database.Products.AsNoTracking();
-        var term = query.Search?.Trim();
-        if (!string.IsNullOrEmpty(term))
+        if (query.Search is { } term)
         {
-            // So sánh không phân biệt hoa thường. Ký tự `%` và `_` giữ nghĩa ký tự thường.
-            var lowerTerm = term.ToLowerInvariant();
-            products = products.Where(product => product.Name.ToLower().Contains(lowerTerm)
-                || product.Skus.Any(sku => sku.Code.ToLower().Contains(lowerTerm)));
+            // Tên so sánh không dấu và không phân biệt hoa thường. Từ khóa đi qua `unaccent` như cột, để hai phía cùng dạng.
+            var pattern = term.LikePattern;
+            products = products.Where(product =>
+                EF.Functions.ILike(EF.Functions.Unaccent(product.Name), EF.Functions.Unaccent(pattern), SearchTerm.EscapeCharacter)
+                // Mã SKU không có dấu, nên không cần `unaccent`. Mẫu đã escape `%` và `_` trong từ khóa.
+                || product.Skus.Any(sku => EF.Functions.ILike(sku.Code, pattern, SearchTerm.EscapeCharacter)));
         }
 
         // Lọc danh mục bao gồm cả các sản phẩm thuộc danh mục con trực thuộc.

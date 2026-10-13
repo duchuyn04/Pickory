@@ -3210,6 +3210,126 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
         Assert.Contains(items, item => item.GetProperty("id").GetString() == product.Id);
     }
 
+    // Gọi danh sách sản phẩm với `search` đã mã hóa URL và trả mã sản phẩm khớp cùng `total`.
+    private async Task<(List<string> Ids, int Total)> SearchProductsAsync(string search)
+    {
+        var request = ActorHttp.CreateRequest(
+            HttpMethod.Get, $"/api/admin/products?search={Uri.EscapeDataString(search)}&limit=100", _adminCookie);
+        var response = await _client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var data = json.RootElement.GetProperty("data");
+        var ids = data.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("id").GetString()!).ToList();
+        return (ids, data.GetProperty("total").GetInt32());
+    }
+
+    [Theory]
+    [InlineData("ao thun")]
+    [InlineData("AO THUN")]
+    [InlineData("Áo thun")]
+    // Tên lưu có dấu. Từ khóa không dấu, viết hoa hoặc có dấu đều tìm được.
+    public async Task GetProducts_SearchName_IgnoresDiacriticsAndCase(string keyword)
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var category = await CreateCategoryInDbAsync($"Danh Mục {suffix}", null, []);
+        var brand = await CreateBrandInDbAsync($"Thương Hiệu {suffix}");
+        var product = await SeedProductInDbAsync(category.Id, brand.Id, $"Áo thun {suffix}",
+            [new SkuSeed($"AT-{suffix}", new Dictionary<string, string>(), 100000, 5, true)]);
+        _createdProductIds.Add(product.Id);
+
+        var (ids, total) = await SearchProductsAsync($"{keyword} {suffix}");
+
+        Assert.Equal([product.Id], ids);
+        Assert.Equal(1, total);
+    }
+
+    [Fact]
+    // Một phần mã SKU tìm được sản phẩm, như trước khi đổi sang tìm không dấu.
+    public async Task GetProducts_SearchPartialSkuCode_FindsProduct()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var category = await CreateCategoryInDbAsync($"Danh Mục {suffix}", null, []);
+        var brand = await CreateBrandInDbAsync($"Thương Hiệu {suffix}");
+        var product = await SeedProductInDbAsync(category.Id, brand.Id, $"Sản phẩm mã một phần {suffix}",
+            [new SkuSeed($"ABC-{suffix}-XYZ", new Dictionary<string, string>(), 100000, 5, true)]);
+        _createdProductIds.Add(product.Id);
+
+        // Từ khóa nằm giữa mã SKU và không khớp tên sản phẩm.
+        var (ids, _) = await SearchProductsAsync($"{suffix}-xy");
+
+        Assert.Equal([product.Id], ids);
+    }
+
+    [Fact]
+    // `%` trong từ khóa là ký tự thường. Sản phẩm `100x` cùng suffix không được khớp từ khóa `100%`.
+    public async Task GetProducts_SearchPercentSign_MatchesOnlyLiteralPercent()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var category = await CreateCategoryInDbAsync($"Danh Mục {suffix}", null, []);
+        var brand = await CreateBrandInDbAsync($"Thương Hiệu {suffix}");
+        var withPercent = await SeedProductInDbAsync(category.Id, brand.Id, $"Giảm 100%{suffix}",
+            [new SkuSeed($"PCT-A-{suffix}", new Dictionary<string, string>(), 100000, 5, true)]);
+        var withoutPercent = await SeedProductInDbAsync(category.Id, brand.Id, $"Giảm 100x{suffix}",
+            [new SkuSeed($"PCT-B-{suffix}", new Dictionary<string, string>(), 100000, 5, true)]);
+        _createdProductIds.AddRange([withPercent.Id, withoutPercent.Id]);
+
+        var (ids, total) = await SearchProductsAsync($"100%{suffix}");
+
+        Assert.Equal([withPercent.Id], ids);
+        Assert.Equal(1, total);
+    }
+
+    [Fact]
+    // `_` trong từ khóa là ký tự thường. Mã SKU `AXB` không được khớp từ khóa `A_B`.
+    public async Task GetProducts_SearchUnderscoreInSkuCode_MatchesOnlyLiteralUnderscore()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var category = await CreateCategoryInDbAsync($"Danh Mục {suffix}", null, []);
+        var brand = await CreateBrandInDbAsync($"Thương Hiệu {suffix}");
+        var withUnderscore = await SeedProductInDbAsync(category.Id, brand.Id, $"Gạch dưới một {suffix}",
+            [new SkuSeed($"A_B-{suffix}", new Dictionary<string, string>(), 100000, 5, true)]);
+        var withoutUnderscore = await SeedProductInDbAsync(category.Id, brand.Id, $"Gạch dưới hai {suffix}",
+            [new SkuSeed($"AXB-{suffix}", new Dictionary<string, string>(), 100000, 5, true)]);
+        _createdProductIds.AddRange([withUnderscore.Id, withoutUnderscore.Id]);
+
+        var (ids, _) = await SearchProductsAsync($"a_b-{suffix}");
+
+        Assert.Equal([withUnderscore.Id], ids);
+    }
+
+    [Fact]
+    // Tham số `search` lặp lại nhận 400 `VALIDATION_ERROR` cho trường `search`.
+    public async Task GetProducts_RepeatedSearch_Returns400ForSearchField()
+    {
+        var request = ActorHttp.CreateRequest(HttpMethod.Get, "/api/admin/products?search=a&search=b", _adminCookie);
+
+        var response = await _client.SendAsync(request);
+
+        await AssertSearchValidationErrorAsync(response);
+    }
+
+    [Fact]
+    // Từ khóa dài hơn 100 ký tự nhận 400 `VALIDATION_ERROR` cho trường `search`. Đúng 100 ký tự vẫn đạt.
+    public async Task GetProducts_SearchOverMaxLength_Returns400AndExactMaxLengthIsAccepted()
+    {
+        var tooLong = await _client.SendAsync(ActorHttp.CreateRequest(
+            HttpMethod.Get, $"/api/admin/products?search={new string('a', 101)}", _adminCookie));
+        var exact = await _client.SendAsync(ActorHttp.CreateRequest(
+            HttpMethod.Get, $"/api/admin/products?search={new string('a', 100)}", _adminCookie));
+
+        await AssertSearchValidationErrorAsync(tooLong);
+        Assert.Equal(HttpStatusCode.OK, exact.StatusCode);
+    }
+
+    private static async Task AssertSearchValidationErrorAsync(HttpResponseMessage response)
+    {
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var error = json.RootElement.GetProperty("error");
+        Assert.Equal("VALIDATION_ERROR", error.GetProperty("code").GetString());
+        Assert.Contains("search:", error.GetProperty("message").GetString());
+    }
+
     [Fact]
     // Phân trang trả về danh sách phần tử riêng biệt ở các trang và tổng số dòng chính xác.
     public async Task GetProducts_Paging_ReturnsLimitedDistinctPagesAndExactFilteredTotal()
