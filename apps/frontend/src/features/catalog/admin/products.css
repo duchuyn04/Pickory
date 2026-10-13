@@ -99,6 +99,12 @@
   min-width: 100px;
 }
 
+/* Ô tiền cần chỗ cho 13 ký tự `2.147.483.647` và hậu tố `đ`. Chừa lề phải để chữ số không đè hậu tố. */
+.product-table .money-input .money-input-field {
+  min-width: 150px;
+  padding-right: calc(var(--space-2) + var(--space-5));
+}
+
 .product-table .form-error {
   display: block;
   margin-top: var(--space-1);

@@ -1,5 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { FieldError, fieldErrorProps } from '../../../shared/field-error';
+import { MoneyInput } from '../../../shared/money-input';
 import type { AttributeFacet, ProductFacets } from './catalog-api';
 import {
   attributeRangeKey,
@@ -76,6 +77,15 @@ interface RangeGroupProps {
   onApply: (minValue: string, maxValue: string) => void;
 }
 
+// Ô tiền trả số hoặc `null`. Trạng thái của hai ô giữ chuỗi chữ số để dùng chung luật kiểm với ô thuộc tính.
+function moneyToText(amount: number | null): string {
+  return amount === null ? '' : String(amount);
+}
+
+function textToMoney(text: string): number | null {
+  return text === '' ? null : Number(text);
+}
+
 // Hai ô "Từ" và "Đến" chỉ áp khi bấm "Áp dụng" hoặc Enter, để mỗi phím gõ không gọi API.
 function RangeGroup({
   legend,
@@ -119,30 +129,51 @@ function RangeGroup({
       <form className="catalog-range" onSubmit={handleSubmit} noValidate>
         <div className="field">
           <label htmlFor={minId}>Từ</label>
-          <input
-            id={minId}
-            type="number"
-            inputMode={kind === 'integer' ? 'numeric' : 'decimal'}
-            step={kind === 'integer' ? 1 : 'any'}
-            placeholder={minPlaceholder}
-            value={minValue}
-            onChange={(event) => setMinValue(event.target.value)}
-            {...fieldErrorProps(minId, errors.minError)}
-          />
+          {kind === 'integer' ? (
+            // Khoảng giá là tiền VND nên dùng ô tiền chung. Thuộc tính số thập phân giữ ô số thường.
+            <MoneyInput
+              id={minId}
+              placeholder={minPlaceholder}
+              value={textToMoney(minValue)}
+              onChange={(amount) => setMinValue(moneyToText(amount))}
+              {...fieldErrorProps(minId, errors.minError)}
+            />
+          ) : (
+            <input
+              id={minId}
+              type="number"
+              inputMode="decimal"
+              step="any"
+              placeholder={minPlaceholder}
+              value={minValue}
+              onChange={(event) => setMinValue(event.target.value)}
+              {...fieldErrorProps(minId, errors.minError)}
+            />
+          )}
           <FieldError inputId={minId} message={errors.minError} />
         </div>
         <div className="field">
           <label htmlFor={maxId}>Đến</label>
-          <input
-            id={maxId}
-            type="number"
-            inputMode={kind === 'integer' ? 'numeric' : 'decimal'}
-            step={kind === 'integer' ? 1 : 'any'}
-            placeholder={maxPlaceholder}
-            value={maxValue}
-            onChange={(event) => setMaxValue(event.target.value)}
-            {...fieldErrorProps(maxId, errors.maxError)}
-          />
+          {kind === 'integer' ? (
+            <MoneyInput
+              id={maxId}
+              placeholder={maxPlaceholder}
+              value={textToMoney(maxValue)}
+              onChange={(amount) => setMaxValue(moneyToText(amount))}
+              {...fieldErrorProps(maxId, errors.maxError)}
+            />
+          ) : (
+            <input
+              id={maxId}
+              type="number"
+              inputMode="decimal"
+              step="any"
+              placeholder={maxPlaceholder}
+              value={maxValue}
+              onChange={(event) => setMaxValue(event.target.value)}
+              {...fieldErrorProps(maxId, errors.maxError)}
+            />
+          )}
           <FieldError inputId={maxId} message={errors.maxError} />
         </div>
         <button type="submit" className="btn btn-sm catalog-range-apply">
@@ -269,7 +300,7 @@ export function ProductFilters({ facets, query, brandNames, onChange }: ProductF
   return (
     <div className="catalog-filter-groups">
       <RangeGroup
-        legend="Mức giá (đ)"
+        legend="Mức giá"
         idPrefix="filter-price"
         kind="integer"
         initialMin={query.priceMin}

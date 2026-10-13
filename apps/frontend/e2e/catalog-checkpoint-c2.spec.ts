@@ -94,8 +94,9 @@ test('Checkpoint C2: admin tạo danh mục, sản phẩm bốn SKU, ảnh và �
   for (let index = 0; index < 4; index += 1) {
     const variant = page.locator('[data-variant-row]').nth(index);
     await expect(variant.locator(`[name="variant-code-${index}"]`)).toHaveValue(/\S/);
+    // Ô giá hiện dấu chấm phân cách nghìn: 100.000, 110.000, 120.000, 130.000.
     await expect(variant.locator(`[name="variant-price-${index}"]`)).toHaveValue(
-      String(100000 + index * 10000),
+      `${100 + index * 10}.000`,
     );
     await expect(variant.locator(`[name="variant-weight-grams-${index}"]`)).toHaveValue('450');
     await expect(variant.locator(`[name="variant-length-cm-${index}"]`)).toHaveValue('20');

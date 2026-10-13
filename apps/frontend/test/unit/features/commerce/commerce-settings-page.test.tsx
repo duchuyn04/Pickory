@@ -213,8 +213,8 @@ describe('CommerceSettingsPage: tải và điền form', () => {
     stubServer({ settings: defaultSettings });
     await renderPage(managerActor);
 
-    expect(inputValue(FIELD_IDS.freeShippingThreshold)).toBe('500000');
-    expect(inputValue(FIELD_IDS.codMaxAmount)).toBe('20000000');
+    expect(inputValue(FIELD_IDS.freeShippingThreshold)).toBe('500.000');
+    expect(inputValue(FIELD_IDS.codMaxAmount)).toBe('20.000.000');
     expect(inputValue(FIELD_IDS.maxQuantityPerSku)).toBe('5');
     expect(inputValue(FIELD_IDS.maxCartLines)).toBe('20');
     expect(inputValue(FIELD_IDS.sepayAccountNumber)).toBe('');
@@ -225,8 +225,8 @@ describe('CommerceSettingsPage: tải và điền form', () => {
     stubServer({ settings: storedSettings });
     await renderPage(managerActor);
 
-    expect(inputValue(FIELD_IDS.freeShippingThreshold)).toBe('700000');
-    expect(inputValue(FIELD_IDS.codMaxAmount)).toBe('15000000');
+    expect(inputValue(FIELD_IDS.freeShippingThreshold)).toBe('700.000');
+    expect(inputValue(FIELD_IDS.codMaxAmount)).toBe('15.000.000');
     expect(inputValue(FIELD_IDS.maxQuantityPerSku)).toBe('3');
     expect(inputValue(FIELD_IDS.maxCartLines)).toBe('10');
     expect(inputValue(FIELD_IDS.sepayAccountNumber)).toBe('0123456789');
@@ -241,8 +241,8 @@ describe('CommerceSettingsPage: tải và điền form', () => {
       (label) => label.textContent,
     );
     expect(labels).toEqual([
-      'Ngưỡng miễn phí giao hàng (đ)',
-      'Hạn mức thanh toán COD (đ)',
+      'Ngưỡng miễn phí giao hàng',
+      'Hạn mức thanh toán COD',
       'Số lượng tối đa mỗi sản phẩm',
       'Số dòng tối đa mỗi giỏ',
       'Số tài khoản',
@@ -254,25 +254,27 @@ describe('CommerceSettingsPage: tải và điền form', () => {
     expect(headings).toEqual(['Giỏ hàng và giao hàng', 'Tài khoản nhận chuyển khoản']);
   });
 
-  it('ô tiền hiện số theo định dạng VND và gợi ý giới hạn', async () => {
+  it('gợi ý dưới ô tiền chỉ nêu khoảng giới hạn, số đang nhập đã hiện trong ô', async () => {
     stubServer({ settings: defaultSettings });
     await renderPage(managerActor);
 
     const thresholdHint = container.querySelector(`#${FIELD_IDS.freeShippingThreshold}-hint`);
-    expect(thresholdHint?.textContent).toContain('500.000 đ');
-    expect(thresholdHint?.textContent).toContain('0 đến 1.000.000.000');
+    expect(thresholdHint?.textContent).toBe('Từ 0 đến 1.000.000.000 đ.');
     const codHint = container.querySelector(`#${FIELD_IDS.codMaxAmount}-hint`);
-    expect(codHint?.textContent).toContain('20.000.000 đ');
+    expect(codHint?.textContent).toBe('Từ 0 đến 1.000.000.000 đ.');
+    expect(inputValue(FIELD_IDS.freeShippingThreshold)).toBe('500.000');
+    expect(inputValue(FIELD_IDS.codMaxAmount)).toBe('20.000.000');
   });
 
-  it('gợi ý định dạng đổi theo số đang nhập', async () => {
+  it('gợi ý không đổi theo số đang nhập vì ô đã hiện số theo định dạng VND', async () => {
     stubServer({ settings: defaultSettings });
     await renderPage(managerActor);
 
     await typeInto(FIELD_IDS.codMaxAmount, '1500000');
 
-    expect(container.querySelector(`#${FIELD_IDS.codMaxAmount}-hint`)?.textContent).toContain(
-      '1.500.000 đ',
+    expect(inputValue(FIELD_IDS.codMaxAmount)).toBe('1.500.000');
+    expect(container.querySelector(`#${FIELD_IDS.codMaxAmount}-hint`)?.textContent).toBe(
+      'Từ 0 đến 1.000.000.000 đ.',
     );
   });
 
@@ -304,10 +306,11 @@ describe('CommerceSettingsPage: tải và điền form', () => {
 });
 
 describe('CommerceSettingsPage: kiểm phía client', () => {
-  it('số âm thì lỗi hiện dưới đúng ô và không gửi PUT', async () => {
+  // Ô tiền bỏ dấu trừ khi gõ nên không thể nhập số âm. Xóa trống ô là cách còn lại để ép lỗi ở ô tiền.
+  it('ô tiền để trống thì lỗi hiện dưới đúng ô và không gửi PUT', async () => {
     stubServer({ settings: storedSettings });
     await renderPage(managerActor);
-    await typeInto(FIELD_IDS.freeShippingThreshold, '-1');
+    await typeInto(FIELD_IDS.freeShippingThreshold, '');
 
     await clickSave();
 
@@ -551,5 +554,77 @@ describe('CommerceSettingsPage: lưu', () => {
       'Đã lưu cấu hình bán hàng.',
     );
     expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+});
+
+describe('CommerceSettingsPage: ô tiền VND', () => {
+  it('gõ số hiện dấu chấm nghìn và PUT số nguyên đồng', async () => {
+    stubServer({
+      settings: storedSettings,
+      putHandler: () => jsonResponse({ data: storedSettings }),
+    });
+    await renderPage(managerActor);
+
+    await typeInto(FIELD_IDS.freeShippingThreshold, '1250000');
+    expect(inputValue(FIELD_IDS.freeShippingThreshold)).toBe('1.250.000');
+    await clickSave();
+
+    expect(putBodies()[0]).toEqual(expect.objectContaining({ freeShippingThreshold: 1250000 }));
+  });
+
+  it('dán chuỗi có đơn vị ra cùng số đồng', async () => {
+    stubServer({ settings: storedSettings });
+    await renderPage(managerActor);
+
+    await typeInto(FIELD_IDS.codMaxAmount, '12.500.000 đ');
+
+    expect(inputValue(FIELD_IDS.codMaxAmount)).toBe('12.500.000');
+  });
+
+  it('bỏ dấu trừ khi gõ nên ô tiền không nhận số âm', async () => {
+    stubServer({ settings: storedSettings });
+    await renderPage(managerActor);
+
+    await typeInto(FIELD_IDS.freeShippingThreshold, '-1');
+
+    expect(inputValue(FIELD_IDS.freeShippingThreshold)).toBe('1');
+  });
+
+  it('hai ô tiền có hậu tố đ, hai ô đếm thì không', async () => {
+    stubServer({ settings: defaultSettings });
+    await renderPage(managerActor);
+
+    const isMoneyInput = (id: string) =>
+      container.querySelector(`#${id}`)?.parentElement?.classList.contains('money-input');
+    expect(isMoneyInput(FIELD_IDS.freeShippingThreshold)).toBe(true);
+    expect(isMoneyInput(FIELD_IDS.codMaxAmount)).toBe(true);
+    expect(isMoneyInput(FIELD_IDS.maxQuantityPerSku)).toBe(false);
+    expect(isMoneyInput(FIELD_IDS.maxCartLines)).toBe(false);
+  });
+
+  it('ô tiền sai giữ câu lỗi đứng đầu aria-describedby và có thêm đơn vị', async () => {
+    stubServer({ settings: storedSettings });
+    await renderPage(managerActor);
+    await typeInto(FIELD_IDS.freeShippingThreshold, '');
+
+    await clickSave();
+
+    const input = container.querySelector(`#${FIELD_IDS.freeShippingThreshold}`);
+    expect(input?.getAttribute('aria-invalid')).toBe('true');
+    const describedBy = (input?.getAttribute('aria-describedby') ?? '').split(' ');
+    expect(describedBy[0]).toBe(`${FIELD_IDS.freeShippingThreshold}-error`);
+    expect(document.getElementById(describedBy[1]!)?.textContent).toBe('đồng');
+    expect(errorText(FIELD_IDS.freeShippingThreshold)).not.toBeNull();
+  });
+});
+
+describe('CommerceSettingsPage: căn lề ô tiền', () => {
+  it('hai ô tiền căn trái như các ô đếm ngay bên dưới', async () => {
+    stubServer({ settings: defaultSettings });
+    await renderPage(managerActor);
+
+    const frames = [...container.querySelectorAll('.money-input')];
+    expect(frames).toHaveLength(2);
+    expect(frames.some((frame) => frame.classList.contains('money-input-end'))).toBe(false);
   });
 });

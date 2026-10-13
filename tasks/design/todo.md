@@ -84,3 +84,14 @@ Playwright đạt 7/7 ở chế độ có giao diện và chế độ ẩn. Spec
 Spec mới kiểm header nền `rgb(215, 0, 24)`, hai nút banner cookie cùng kích thước, lỗi đăng nhập dưới ô email và không tràn trang.
 Hai đột biến làm test đỏ: bỏ `aria-invalid` của ô email đăng nhập, đổi nền header sang màu tối.
 Trước DS-05, lỗi nhập liệu chỉ hiện ở thông báo chung đầu form. DS-05 chuyển lỗi xuống dưới từng ô, lỗi API vẫn ở đầu form.
+
+### DS-06: Ô nhập tiền theo VND
+**Mô tả:** Các ô nhập số tiền hiện là ô số trần, không có dấu phân cách nghìn và không ghi đơn vị. Admin dễ gõ thừa hoặc thiếu một số 0. Task thêm một component ô nhập tiền dùng chung và thay vào mọi ô nhập số tiền.
+**Tiêu chí nghiệm thu:**
+- [x] Ô hiện dấu chấm phân cách nghìn khi gõ và hiện đơn vị `đ` cạnh ô. Giá trị gửi API vẫn là số nguyên đồng
+- [x] Dán `1.250.000 đ` hoặc `1250000` đều ra 1.250.000. Ký tự khác số bị bỏ, con trỏ không nhảy về cuối khi sửa giữa số
+- [x] Mọi ô số tiền của admin và bộ lọc giá của khách dùng component chung. Ô không phải tiền (tồn kho, cân nặng, bảo hành) giữ nguyên
+- [x] Nhãn truy cập được có đơn vị; lỗi validate vẫn hiện dưới ô; điện thoại mở bàn phím số
+- [x] Ảnh 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo; bộ E2E của repo đạt
+**Kiểm tra:** Vitest; Playwright có giao diện
+**Phụ thuộc:** DS-01 · **Quy mô:** M

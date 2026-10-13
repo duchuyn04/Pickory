@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { MoneyInput } from '../../../shared/money-input';
 import { toCombinationKey, type ProductVariant } from './product-logic';
 
 interface VariantTableProps {
@@ -12,13 +13,18 @@ interface VariantTableProps {
 }
 
 type NumericField = 'compareAtPrice' | 'weightGrams' | 'lengthCm' | 'widthCm' | 'heightCm';
-const numericColumns: { field: NumericField; title: string }[] = [
-  { field: 'compareAtPrice', title: 'Giá niêm yết' },
-  { field: 'weightGrams', title: 'Cân nặng (g)' },
-  { field: 'lengthCm', title: 'Dài (cm)' },
-  { field: 'widthCm', title: 'Rộng (cm)' },
-  { field: 'heightCm', title: 'Cao (cm)' },
+const numericColumns: { field: NumericField; title: string; isMoney: boolean }[] = [
+  { field: 'compareAtPrice', title: 'Giá niêm yết', isMoney: true },
+  { field: 'weightGrams', title: 'Cân nặng (g)', isMoney: false },
+  { field: 'lengthCm', title: 'Dài (cm)', isMoney: false },
+  { field: 'widthCm', title: 'Rộng (cm)', isMoney: false },
+  { field: 'heightCm', title: 'Cao (cm)', isMoney: false },
 ];
+
+// Trường tiền có thể là chuỗi rỗng (ô chưa nhập) hoặc `null`. Ô tiền chỉ nhận số hoặc `null`.
+function toMoneyValue(value: number | string | null | undefined): number | null {
+  return typeof value === 'number' ? value : null;
+}
 
 // Bảng dùng cùng khóa tổ hợp với form để gắn lỗi giá đúng SKU.
 export function VariantTable({
@@ -79,21 +85,19 @@ export function VariantTable({
                   </td>
                   <td>
                     {/* Giá bán cần lỗi ngay dưới ô; không để ràng buộc min chặn sự kiện gửi form. */}
-                    <input
+                    <MoneyInput
+                      align="end"
                       aria-label={`Giá bán ${combinationName}`}
                       name={`variant-price-${index}`}
-                      type="number"
                       aria-invalid={priceError ? true : undefined}
                       aria-describedby={priceError ? priceErrorId : undefined}
-                      value={variant.price ?? ''}
+                      value={toMoneyValue(variant.price)}
                       disabled={disabled}
-                      onChange={(event) => {
+                      onChange={(amount) => {
                         // Sửa giá chỉ xóa lỗi của tổ hợp này, không xóa lỗi ở biến thể khác.
                         onPriceChange(variant.optionValues);
                         // Ô giá trống không được lưu thành số 0 để người dùng nhận lỗi thiếu giá.
-                        updateVariant(index, {
-                          price: event.target.value === '' ? '' : Number(event.target.value),
-                        });
+                        updateVariant(index, { price: amount ?? '' });
                       }}
                     />
                     {priceError && (
@@ -131,22 +135,35 @@ export function VariantTable({
                     </label>
                   </td>
                   {/* Thông tin đóng gói nằm sau thao tác bán để nút bật luôn hiện trên màn 1280 px. */}
-                  {numericColumns.map(({ field, title }) => (
+                  {numericColumns.map(({ field, title, isMoney }) => (
                     <td key={field}>
-                      <input
-                        aria-label={`${title} ${combinationName}`}
-                        name={`variant-${field.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}-${index}`}
-                        type="number"
-                        min={0}
-                        value={variant[field] ?? ''}
-                        disabled={disabled}
-                        onChange={(event) => {
-                          // Ô trống phải là null vì API phân biệt thiếu số đo với giá trị 0.
-                          updateVariant(index, {
-                            [field]: event.target.value === '' ? null : Number(event.target.value),
-                          });
-                        }}
-                      />
+                      {isMoney ? (
+                        <MoneyInput
+                          align="end"
+                          aria-label={`${title} ${combinationName}`}
+                          name={`variant-${field.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}-${index}`}
+                          value={toMoneyValue(variant[field])}
+                          disabled={disabled}
+                          // Ô trống phải là null vì API phân biệt chưa có giá niêm yết với giá 0.
+                          onChange={(amount) => updateVariant(index, { [field]: amount })}
+                        />
+                      ) : (
+                        <input
+                          aria-label={`${title} ${combinationName}`}
+                          name={`variant-${field.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)}-${index}`}
+                          type="number"
+                          min={0}
+                          value={variant[field] ?? ''}
+                          disabled={disabled}
+                          onChange={(event) => {
+                            // Ô trống phải là null vì API phân biệt thiếu số đo với giá trị 0.
+                            updateVariant(index, {
+                              [field]:
+                                event.target.value === '' ? null : Number(event.target.value),
+                            });
+                          }}
+                        />
+                      )}
                     </td>
                   ))}
                 </tr>

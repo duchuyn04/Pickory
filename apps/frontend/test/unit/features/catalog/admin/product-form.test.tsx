@@ -226,7 +226,8 @@ describe('ProductFormView', () => {
     const invalidPrice = container.querySelector<HTMLInputElement>('[name="variant-price-1"]')!;
     expect(validPrice.getAttribute('aria-invalid')).toBeNull();
     expect(invalidPrice.getAttribute('aria-invalid')).toBe('true');
-    const errorId = invalidPrice.getAttribute('aria-describedby');
+    // Id câu lỗi đứng đầu danh sách. Id đơn vị `đồng` của ô tiền đứng sau.
+    const errorId = invalidPrice.getAttribute('aria-describedby')?.split(' ')[0];
     expect(document.getElementById(errorId!)?.textContent).toContain('giá bán lớn hơn 0');
     expect(onSave).not.toHaveBeenCalled();
 
@@ -257,7 +258,8 @@ describe('ProductFormView', () => {
     );
 
     const priceInput = container.querySelector<HTMLInputElement>('[name="variant-price-0"]')!;
-    const priceErrorId = priceInput.getAttribute('aria-describedby');
+    // Id câu lỗi đứng đầu danh sách. Id đơn vị `đồng` của ô tiền đứng sau.
+    const priceErrorId = priceInput.getAttribute('aria-describedby')?.split(' ')[0];
     expect(priceInput.getAttribute('aria-invalid')).toBe('true');
     expect(priceErrorId).toBeTruthy();
     expect(document.getElementById(priceErrorId!)?.textContent).toBe('Nhập giá bán lớn hơn 0.');

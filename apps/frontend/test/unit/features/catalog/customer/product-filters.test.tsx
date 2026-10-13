@@ -128,7 +128,7 @@ describe('nhãn bộ lọc có số đếm', () => {
       (legend) => legend.textContent,
     );
     expect(legends).toEqual([
-      'Mức giá (đ)',
+      'Mức giá',
       'Tình trạng',
       'Thương hiệu',
       'RAM (GB)',
@@ -233,11 +233,11 @@ describe('ô "Từ" và "Đến"', () => {
   it('gõ phím chưa gọi cập nhật, chỉ áp khi gửi form', async () => {
     await renderFilters();
 
-    await type(inputByLabel('Mức giá (đ)', 'Từ'), '1000000');
-    await type(inputByLabel('Mức giá (đ)', 'Đến'), '30000000');
+    await type(inputByLabel('Mức giá', 'Từ'), '1000000');
+    await type(inputByLabel('Mức giá', 'Đến'), '30000000');
     expect(onChange).not.toHaveBeenCalled();
 
-    await submitRange('Mức giá (đ)');
+    await submitRange('Mức giá');
     expect(onChange).toHaveBeenCalledWith({
       ...EMPTY_CATEGORY_QUERY,
       priceMin: '1000000',
@@ -261,21 +261,68 @@ describe('ô "Từ" và "Đến"', () => {
   it('khoảng ngược hiện lỗi dưới ô "Từ" và không áp bộ lọc', async () => {
     await renderFilters();
 
-    await type(inputByLabel('Mức giá (đ)', 'Từ'), '50');
-    await type(inputByLabel('Mức giá (đ)', 'Đến'), '10');
-    await submitRange('Mức giá (đ)');
+    await type(inputByLabel('Mức giá', 'Từ'), '50');
+    await type(inputByLabel('Mức giá', 'Đến'), '10');
+    await submitRange('Mức giá');
 
     expect(onChange).not.toHaveBeenCalled();
-    const minInput = inputByLabel('Mức giá (đ)', 'Từ');
+    const minInput = inputByLabel('Mức giá', 'Từ');
     expect(minInput.getAttribute('aria-invalid')).toBe('true');
-    expect(group('Mức giá (đ)').textContent).toContain('Giá trị "Từ" không được lớn hơn "Đến".');
+    expect(group('Mức giá').textContent).toContain('Giá trị "Từ" không được lớn hơn "Đến".');
   });
 
   it('ô nạp lại giá trị khi bộ lọc đổi từ bên ngoài', async () => {
     await renderFilters({ ...EMPTY_CATEGORY_QUERY, priceMin: '500' });
-    expect(inputByLabel('Mức giá (đ)', 'Từ').value).toBe('500');
+    expect(inputByLabel('Mức giá', 'Từ').value).toBe('500');
 
     await renderFilters({ ...EMPTY_CATEGORY_QUERY, priceMin: '900' });
-    expect(inputByLabel('Mức giá (đ)', 'Từ').value).toBe('900');
+    expect(inputByLabel('Mức giá', 'Từ').value).toBe('900');
+  });
+});
+
+describe('ô khoảng giá theo VND', () => {
+  it('ô giá là ô tiền chung có hậu tố đ, ô thuộc tính số giữ ô số', async () => {
+    await renderFilters();
+
+    const priceMin = inputByLabel('Mức giá', 'Từ');
+    expect(priceMin.type).toBe('text');
+    expect(priceMin.inputMode).toBe('numeric');
+    expect(priceMin.parentElement?.classList.contains('money-input')).toBe(true);
+
+    const screenMin = inputByLabel('Màn hình (inch)', 'Từ');
+    expect(screenMin.type).toBe('number');
+    expect(screenMin.parentElement?.classList.contains('money-input')).toBe(false);
+  });
+
+  it('gõ giá có đơn vị hiện dấu chấm nghìn và áp chuỗi chữ số', async () => {
+    await renderFilters();
+
+    await type(inputByLabel('Mức giá', 'Từ'), '1.000.000 đ');
+    await type(inputByLabel('Mức giá', 'Đến'), '30000000');
+    expect(inputByLabel('Mức giá', 'Từ').value).toBe('1.000.000');
+    expect(inputByLabel('Mức giá', 'Đến').value).toBe('30.000.000');
+
+    await submitRange('Mức giá');
+    expect(onChange).toHaveBeenCalledWith({
+      ...EMPTY_CATEGORY_QUERY,
+      priceMin: '1000000',
+      priceMax: '30000000',
+    });
+  });
+
+  it('giá lấy từ URL hiện có dấu chấm nghìn', async () => {
+    await renderFilters({ ...EMPTY_CATEGORY_QUERY, priceMin: '1250000' });
+
+    expect(inputByLabel('Mức giá', 'Từ').value).toBe('1.250.000');
+  });
+});
+
+describe('căn lề ô khoảng giá', () => {
+  it('ô giá căn trái như ô nhập khác của form', async () => {
+    await renderFilters();
+
+    const frame = inputByLabel('Mức giá', 'Từ').parentElement;
+    expect(frame?.classList.contains('money-input')).toBe(true);
+    expect(frame?.classList.contains('money-input-end')).toBe(false);
   });
 });

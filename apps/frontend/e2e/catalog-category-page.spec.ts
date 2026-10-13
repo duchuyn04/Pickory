@@ -577,7 +577,7 @@ test.describe('UI-C1: trang danh mục của khách', () => {
     await expect(page.locator('.catalog-grid .product-card')).toHaveCount(7);
     const requestsBeforeTyping = productRequests;
 
-    const priceGroup = page.getByRole('group', { name: 'Mức giá (đ)' });
+    const priceGroup = page.getByRole('group', { name: 'Mức giá' });
     await priceGroup.getByLabel('Từ').pressSequentially('18000000');
     await priceGroup.getByLabel('Đến').pressSequentially('31000000');
     // Mỗi phím gõ không được gọi API.
@@ -618,7 +618,7 @@ test.describe('UI-C1: trang danh mục của khách', () => {
       const panel = page.getByRole('complementary', { name: 'Bộ lọc sản phẩm' });
       await expect(panel).toBeVisible();
 
-      for (const legend of ['Mức giá (đ)', 'Màn hình']) {
+      for (const legend of ['Mức giá', 'Màn hình']) {
         const group = panel.getByRole('group', {
           name: new RegExp(`^${legend.replace('(', '\\(').replace(')', '\\)')}`),
         });
@@ -635,7 +635,7 @@ test.describe('UI-C1: trang danh mục của khách', () => {
           );
         }
         if (screenshotDirectory) {
-          const shotName = legend === 'Mức giá (đ)' ? 'price' : 'attribute';
+          const shotName = legend === 'Mức giá' ? 'price' : 'attribute';
           await group.screenshot({
             path: `${screenshotDirectory}/range-${shotName}-${viewport.width}.png`,
           });
@@ -689,7 +689,7 @@ test.describe('UI-C1: trang danh mục của khách', () => {
     });
 
     await test.step('Enter trong ô giá áp khoảng giá lên URL', async () => {
-      const priceMin = panel.getByRole('group', { name: 'Mức giá (đ)' }).getByLabel('Từ');
+      const priceMin = panel.getByRole('group', { name: 'Mức giá' }).getByLabel('Từ');
       await tabUntilFocused(page, priceMin, 'Shift+Tab');
       await page.keyboard.type('16000000');
       await page.keyboard.press('Enter');

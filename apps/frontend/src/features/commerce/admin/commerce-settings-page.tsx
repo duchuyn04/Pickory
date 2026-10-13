@@ -4,6 +4,8 @@ import { ApiError } from '../../../shared/api';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { FieldError, hasFieldErrors } from '../../../shared/field-error';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
+import { MoneyInput } from '../../../shared/money-input';
+import { parseVndInput } from '../../../shared/money-input-format';
 import { useCan } from '../../identity/hooks/use-actor';
 import {
   commerceSettingsQueryKey,
@@ -16,9 +18,7 @@ import {
   MAX_QUANTITY_PER_SKU_UPPER_BOUND,
   MONEY_MAX_AMOUNT,
   formatCount,
-  formatVnd,
   mapServerErrors,
-  parseBoundedInteger,
   validateCommerceForm,
   type CommerceFieldErrors,
   type CommerceFieldName,
@@ -29,6 +29,9 @@ import './commerce-settings.css';
 const COMMERCE_SETTINGS_PERMISSION = 'commerce-settings:manage';
 
 const SAVED_MESSAGE = 'Đã lưu cấu hình bán hàng.';
+
+// Hai ô này là số tiền VND và dùng ô nhập tiền chung. Các ô còn lại là số đếm hoặc chuỗi.
+const MONEY_FIELDS: readonly CommerceFieldName[] = ['freeShippingThreshold', 'codMaxAmount'];
 
 // Id ổn định cho từng ô, để nhãn, gợi ý, lỗi và E2E nối với đúng ô.
 const FIELD_IDS: Record<CommerceFieldName, string> = {
@@ -184,12 +187,8 @@ function CommerceSettingsForm({ initialSettings }: CommerceSettingsFormProps) {
     }
   }
 
-  // Gợi ý dưới ô tiền: khoảng hợp lệ và số đang nhập theo định dạng VND.
-  function moneyHint(field: 'freeShippingThreshold' | 'codMaxAmount'): string {
-    const range = `Từ 0 đến ${formatCount(MONEY_MAX_AMOUNT)} đ.`;
-    const amount = parseBoundedInteger(values[field], 0, MONEY_MAX_AMOUNT);
-    return amount === null ? range : `${range} Đang nhập: ${formatVnd(amount)}.`;
-  }
+  // Gợi ý dưới ô tiền chỉ nêu khoảng hợp lệ. Số đang nhập đã hiện trong ô tiền theo định dạng VND.
+  const moneyHint = `Từ 0 đến ${formatCount(MONEY_MAX_AMOUNT)} đ.`;
 
   return (
     <>
@@ -208,8 +207,8 @@ function CommerceSettingsForm({ initialSettings }: CommerceSettingsFormProps) {
         <div className="form-grid form-grid-2">
           <SettingsField
             field="freeShippingThreshold"
-            label="Ngưỡng miễn phí giao hàng (đ)"
-            hint={moneyHint('freeShippingThreshold')}
+            label="Ngưỡng miễn phí giao hàng"
+            hint={moneyHint}
             values={values}
             errors={fieldErrors}
             disabled={isSubmitting}
@@ -217,8 +216,8 @@ function CommerceSettingsForm({ initialSettings }: CommerceSettingsFormProps) {
           />
           <SettingsField
             field="codMaxAmount"
-            label="Hạn mức thanh toán COD (đ)"
-            hint={moneyHint('codMaxAmount')}
+            label="Hạn mức thanh toán COD"
+            hint={moneyHint}
             values={values}
             errors={fieldErrors}
             disabled={isSubmitting}
@@ -304,23 +303,36 @@ function SettingsField({
   const inputId = FIELD_IDS[field];
   const hintId = `${inputId}-hint`;
   const error = errors[field];
+  // Có lỗi thì trình đọc màn hình đọc câu lỗi. Không có lỗi thì đọc gợi ý giới hạn.
+  const describedById = error ? `${inputId}-error` : hintId;
 
   return (
     <div className="field">
       <label htmlFor={inputId}>{label}</label>
-      <input
-        id={inputId}
-        type="text"
-        // Ô số mở bàn phím số trên điện thoại. Kiểu ô giữ là chữ để người dùng nhập số âm và thấy lỗi dưới ô.
-        inputMode={field === 'sepayBankCode' ? 'text' : 'numeric'}
-        autoComplete="off"
-        disabled={disabled}
-        value={values[field]}
-        onChange={(event) => onChange(field, event.target.value)}
-        aria-invalid={error ? true : undefined}
-        // Có lỗi thì trình đọc màn hình đọc câu lỗi. Không có lỗi thì đọc gợi ý giới hạn.
-        aria-describedby={error ? `${inputId}-error` : hintId}
-      />
+      {MONEY_FIELDS.includes(field) ? (
+        <MoneyInput
+          id={inputId}
+          disabled={disabled}
+          // Ô trống là chuỗi rỗng để luật kiểm báo thiếu số, thay vì lưu thành số 0.
+          value={parseVndInput(values[field])}
+          onChange={(amount) => onChange(field, amount === null ? '' : String(amount))}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedById}
+        />
+      ) : (
+        <input
+          id={inputId}
+          type="text"
+          // Ô số mở bàn phím số trên điện thoại. Kiểu ô giữ là chữ để người dùng nhập số âm và thấy lỗi dưới ô.
+          inputMode={field === 'sepayBankCode' ? 'text' : 'numeric'}
+          autoComplete="off"
+          disabled={disabled}
+          value={values[field]}
+          onChange={(event) => onChange(field, event.target.value)}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={describedById}
+        />
+      )}
       <FieldError inputId={inputId} message={error} />
       <span id={hintId} className="commerce-settings-hint">
         {hint}

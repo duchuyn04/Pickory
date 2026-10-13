@@ -1,0 +1,27 @@
+/* Khung ô tiền: hậu tố `đ` nằm trong khung, căn phải. */
+.money-input {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+/* Chừa chỗ bên phải cho hậu tố. Mặc định căn trái như ô nhập khác của design system. */
+.money-input .money-input-field {
+  width: 100%;
+  padding-right: calc(var(--space-3) + var(--space-4));
+}
+
+/* Căn phải chỉ dành cho cột bảng, nơi nhiều số tiền xếp thẳng hàng. Hậu tố vẫn ở mép phải. */
+.money-input-end .money-input-field {
+  text-align: right;
+}
+
+/* Hậu tố không nhận chuột, nên bấm vào hậu tố là bấm vào ô nhập bên dưới và focus không mất. */
+.money-input-suffix {
+  position: absolute;
+  top: 50%;
+  right: var(--space-3);
+  transform: translateY(-50%);
+  color: var(--color-ink-muted);
+  pointer-events: none;
+}

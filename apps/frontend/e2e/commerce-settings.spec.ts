@@ -79,10 +79,14 @@ async function openSettingsPage(page: Page) {
   await expect(page.getByLabel('Số dòng tối đa mỗi giỏ', { exact: true })).toBeVisible();
 }
 
-async function capture(page: Page, name: string) {
+// Ảnh chụp ô tiền VND cho người duyệt. Nằm ngoài repo nên không lẫn vào Git.
+const MONEY_SCREENSHOT_DIRECTORY =
+  'C:/Users/juven/AppData/Local/Temp/claude/C--Users-juven-Desktop-pickory/c0628d6e-6470-493e-8673-a94b5488add7/scratchpad/ds06-shots';
+
+async function capture(page: Page, name: string, directory = SCREENSHOT_DIRECTORY) {
   // Cuộn lên đầu để thanh menu cố định trên màn hẹp không đè lên tiêu đề trong ảnh chụp cả trang.
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.screenshot({ path: `${SCREENSHOT_DIRECTORY}/${name}.png`, fullPage: true });
+  await page.screenshot({ path: `${directory}/${name}.png`, fullPage: true });
 }
 
 test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên thiếu quyền bị chặn', async ({
@@ -132,11 +136,11 @@ test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên
     for (const width of [1280, 375]) {
       await page.setViewportSize({ width, height: width === 375 ? 812 : 800 });
       await openSettingsPage(page);
-      await expect(page.getByLabel('Ngưỡng miễn phí giao hàng (đ)', { exact: true })).toHaveValue(
-        '500000',
+      await expect(page.getByLabel('Ngưỡng miễn phí giao hàng', { exact: true })).toHaveValue(
+        '500.000',
       );
-      await expect(page.getByLabel('Hạn mức thanh toán COD (đ)', { exact: true })).toHaveValue(
-        '20000000',
+      await expect(page.getByLabel('Hạn mức thanh toán COD', { exact: true })).toHaveValue(
+        '20.000.000',
       );
       await expect(page.getByLabel('Số lượng tối đa mỗi sản phẩm', { exact: true })).toHaveValue(
         '5',
@@ -144,8 +148,9 @@ test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên
       await expect(page.getByLabel('Số dòng tối đa mỗi giỏ', { exact: true })).toHaveValue('20');
       await expect(page.getByLabel('Số tài khoản', { exact: true })).toHaveValue('');
       await expect(page.getByLabel('Mã ngân hàng', { exact: true })).toHaveValue('');
-      await expect(page.getByText('Đang nhập: 500.000 đ.')).toBeVisible();
-      await expect(page.getByText('Đang nhập: 20.000.000 đ.')).toBeVisible();
+      // Gợi ý chỉ nêu khoảng hợp lệ của hai ô tiền. Số đang nhập đã hiện trong ô.
+      await expect(page.getByText('Từ 0 đến 1.000.000.000 đ.')).toHaveCount(2);
+      await expect(page.getByText('Đang nhập')).toHaveCount(0);
       await expectNoHorizontalOverflow(page);
       await capture(page, `commerce-default-${width}`);
     }
@@ -153,11 +158,12 @@ test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên
     expect(countRequests('PUT')).toBe(0);
   });
 
-  await test.step('Nhập số âm: lỗi hiện dưới đúng ô và không gửi PUT', async () => {
+  // Ô tiền bỏ dấu trừ khi gõ nên không nhập được số âm. Để trống ô là cách ép lỗi ở ô tiền.
+  await test.step('Để trống ô tiền: lỗi hiện dưới đúng ô và không gửi PUT', async () => {
     for (const width of [1280, 375]) {
       await page.setViewportSize({ width, height: width === 375 ? 812 : 800 });
       await openSettingsPage(page);
-      await page.getByLabel('Ngưỡng miễn phí giao hàng (đ)', { exact: true }).fill('-1');
+      await page.getByLabel('Ngưỡng miễn phí giao hàng', { exact: true }).fill('');
       await page.getByLabel('Số tài khoản', { exact: true }).fill('0123456789');
 
       await page.getByRole('button', { name: 'Lưu', exact: true }).click();
@@ -180,8 +186,8 @@ test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên
   await test.step('Điền hợp lệ và lưu: hiện thông báo, mã ngân hàng đổi sang chữ hoa', async () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await openSettingsPage(page);
-    await page.getByLabel('Ngưỡng miễn phí giao hàng (đ)', { exact: true }).fill('700000');
-    await page.getByLabel('Hạn mức thanh toán COD (đ)', { exact: true }).fill('15000000');
+    await page.getByLabel('Ngưỡng miễn phí giao hàng', { exact: true }).fill('700000');
+    await page.getByLabel('Hạn mức thanh toán COD', { exact: true }).fill('15000000');
     await page.getByLabel('Số lượng tối đa mỗi sản phẩm', { exact: true }).fill('3');
     await page.getByLabel('Số dòng tối đa mỗi giỏ', { exact: true }).fill('10');
     await page.getByLabel('Số tài khoản', { exact: true }).fill('0123456789');
@@ -211,11 +217,11 @@ test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên
     for (const width of [1280, 375]) {
       await page.setViewportSize({ width, height: width === 375 ? 812 : 800 });
       await openSettingsPage(page);
-      await expect(page.getByLabel('Ngưỡng miễn phí giao hàng (đ)', { exact: true })).toHaveValue(
-        '700000',
+      await expect(page.getByLabel('Ngưỡng miễn phí giao hàng', { exact: true })).toHaveValue(
+        '700.000',
       );
-      await expect(page.getByLabel('Hạn mức thanh toán COD (đ)', { exact: true })).toHaveValue(
-        '15000000',
+      await expect(page.getByLabel('Hạn mức thanh toán COD', { exact: true })).toHaveValue(
+        '15.000.000',
       );
       await expect(page.getByLabel('Số lượng tối đa mỗi sản phẩm', { exact: true })).toHaveValue(
         '3',
@@ -227,6 +233,67 @@ test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên
       await expectNoHorizontalOverflow(page);
       await capture(page, `commerce-reloaded-${width}`);
     }
+  });
+
+  await test.step('Ô tiền VND: dấu chấm nghìn, hậu tố đ, con trỏ giữ chỗ và PUT số nguyên', async () => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openSettingsPage(page);
+    const threshold = page.getByLabel('Ngưỡng miễn phí giao hàng', { exact: true });
+
+    // Hai ô tiền có hậu tố đ trong khung ô. Hai ô đếm không có.
+    await expect(page.locator('.money-input .money-input-suffix')).toHaveCount(2);
+    await expect(page.locator('.money-input .money-input-suffix').first()).toHaveText('đ');
+    await expect(page.getByLabel('Số dòng tối đa mỗi giỏ', { exact: true })).toHaveAttribute(
+      'type',
+      'text',
+    );
+
+    // Trong form, ô tiền căn trái như các ô đếm bên dưới.
+    await expect(threshold).toHaveCSS('text-align', 'start');
+    await expect(page.getByLabel('Số dòng tối đa mỗi giỏ', { exact: true })).toHaveCSS(
+      'text-align',
+      'start',
+    );
+
+    // Gõ từng phím: dấu chấm hiện ngay trong lúc gõ.
+    await threshold.fill('');
+    await threshold.pressSequentially('1250000');
+    await expect(threshold).toHaveValue('1.250.000');
+
+    // Con trỏ sau `1.2`, gõ `9`: con trỏ ở sau chữ số mới, không nhảy về cuối.
+    await threshold.evaluate((element) => (element as HTMLInputElement).setSelectionRange(3, 3));
+    await threshold.press('9');
+    await expect(threshold).toHaveValue('12.950.000');
+    expect(
+      await threshold.evaluate((element) => (element as HTMLInputElement).selectionStart),
+    ).toBe(4);
+
+    // Dán chuỗi có đơn vị và ký tự lạ ra cùng số với chuỗi chỉ có chữ số.
+    await threshold.fill('1.250.000 đ');
+    await expect(threshold).toHaveValue('1.250.000');
+    await threshold.fill('abc-1250000');
+    await expect(threshold).toHaveValue('1.250.000');
+    await capture(page, 'commerce-money-1280', MONEY_SCREENSHOT_DIRECTORY);
+
+    await page.getByRole('button', { name: 'Lưu', exact: true }).click();
+    await expect(page.getByRole('status')).toHaveText('Đã lưu cấu hình bán hàng.');
+    expect(countRequests('PUT')).toBe(2);
+    // API nhận số nguyên đồng, không nhận chuỗi đã định dạng.
+    expect(JSON.parse(settingsRequestBodies[1] ?? '')).toEqual(
+      expect.objectContaining({ freeShippingThreshold: 1250000 }),
+    );
+    await expect(threshold).toHaveValue('1.250.000');
+
+    // Ở 375 px khung ô và hậu tố không làm trang tràn ngang, chữ số không bị cắt.
+    await page.setViewportSize({ width: 375, height: 812 });
+    await openSettingsPage(page);
+    await expectNoHorizontalOverflow(page);
+    const widths = await threshold.evaluate((element) => ({
+      scrollWidth: element.scrollWidth,
+      clientWidth: element.clientWidth,
+    }));
+    expect(widths.scrollWidth).toBeLessThanOrEqual(widths.clientWidth);
+    await capture(page, 'commerce-money-375', MONEY_SCREENSHOT_DIRECTORY);
   });
 
   await test.step('Lỗi 400 từ backend hiện dưới đúng ô', async () => {

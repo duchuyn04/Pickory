@@ -27,6 +27,10 @@ async function createCategory(
   return (await response.json()).data.id as string;
 }
 
+// Ảnh chụp ô tiền cho người duyệt. Nằm ngoài repo nên không lẫn vào Git.
+const DS06_SCREENSHOT_DIRECTORY =
+  'C:/Users/juven/AppData/Local/Temp/claude/C--Users-juven-Desktop-pickory/c0628d6e-6470-493e-8673-a94b5488add7/scratchpad/ds06-shots';
+
 async function assertNoPageOverflow(page: Page) {
   const widths = await page.evaluate(() => ({
     viewport: document.documentElement.clientWidth,
@@ -111,6 +115,52 @@ test('UI-C5 và UI-C8: tạo, lọc, xem sản phẩm và soạn mô tả', asyn
   for (let index = 0; index < 4; index++)
     await page.locator(`[name="variant-price-${index}"]`).fill(String(100000 + index * 10000));
 
+  // DS-06: ô giá hiện dấu chấm nghìn và hậu tố đ, còn giá trị gửi API vẫn là số nguyên đồng.
+  const firstPrice = page.locator('[name="variant-price-0"]');
+  await expect(firstPrice).toHaveValue('100.000');
+  const firstPriceFrame = page
+    .locator('[data-variant-row]')
+    .first()
+    .locator('.money-input')
+    .first();
+  await expect(firstPriceFrame.locator('.money-input-suffix')).toHaveText('đ');
+  // Trong bảng biến thể, số tiền căn phải để các giá xếp thẳng cột.
+  await expect(firstPrice).toHaveCSS('text-align', 'right');
+  // Cân nặng không phải tiền nên giữ ô số trần.
+  await expect(page.locator('[name="variant-weight-grams-0"]')).toHaveAttribute('type', 'number');
+  await firstPrice.fill('');
+  await firstPrice.pressSequentially('1250000');
+  await expect(firstPrice).toHaveValue('1.250.000');
+  // Con trỏ sau `1.2`, gõ thêm `9`: con trỏ phải ở sau chữ số mới, không nhảy về cuối.
+  await firstPrice.evaluate((element) => (element as HTMLInputElement).setSelectionRange(3, 3));
+  await firstPrice.press('9');
+  await expect(firstPrice).toHaveValue('12.950.000');
+  expect(await firstPrice.evaluate((element) => (element as HTMLInputElement).selectionStart)).toBe(
+    4,
+  );
+  // Dán chuỗi có đơn vị ra cùng số với chuỗi chỉ có chữ số.
+  await firstPrice.fill('1.250.000 đ');
+  await expect(firstPrice).toHaveValue('1.250.000');
+  await firstPrice.fill('1250000');
+  await expect(firstPrice).toHaveValue('1.250.000');
+  await page.setViewportSize({ width: 375, height: 812 });
+  await assertNoPageOverflow(page);
+  // Chữ số không bị cắt trong ô giá ở màn hẹp.
+  const priceWidths = await firstPrice.evaluate((element) => ({
+    scrollWidth: element.scrollWidth,
+    clientWidth: element.clientWidth,
+  }));
+  expect(priceWidths.scrollWidth).toBeLessThanOrEqual(priceWidths.clientWidth);
+  // Bảng tự cuộn ngang trong khung riêng. Cuộn cột giá vào khung trước khi chụp để ảnh có ô giá.
+  await firstPrice.scrollIntoViewIfNeeded();
+  await page
+    .locator('.product-table-scroll')
+    .screenshot({ path: `${DS06_SCREENSHOT_DIRECTORY}/variant-table-375.png` });
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page
+    .locator('.product-table-scroll')
+    .screenshot({ path: `${DS06_SCREENSHOT_DIRECTORY}/variant-table-1280.png` });
+
   const editor = page.getByRole('textbox', { name: 'Nội dung mô tả chi tiết sản phẩm' });
   await editor.click();
   await editor.pressSequentially('Mô tả ');
@@ -140,13 +190,20 @@ test('UI-C5 và UI-C8: tạo, lọc, xem sản phẩm và soạn mô tả', asyn
   await expect(editor).toContainText('Danh sách');
   await expect(editor.locator('img, script, a, ul, li')).toHaveCount(0);
 
+  const createRequest = page.waitForRequest(
+    (request) => request.method() === 'POST' && /\/api\/admin\/products$/.test(request.url()),
+  );
   await page.getByRole('button', { name: 'Lưu sản phẩm' }).click();
+  // DS-06: API nhận số nguyên đồng, không nhận chuỗi đã định dạng.
+  const createdVariants = (await createRequest).postDataJSON().variants as { price: unknown }[];
+  expect(createdVariants[0]?.price).toBe(1250000);
+  expect(createdVariants[2]?.price).toBe(120000);
   await expect(page).toHaveURL(/\/admin\/products\/[0-9a-f]{32}$/);
   const savedUrl = page.url();
   await page.reload();
   await expect(page.getByLabel('Tên sản phẩm')).toHaveValue('Laptop UI C5');
   await expect(page.locator('[data-variant-row]')).toHaveCount(4);
-  await expect(page.locator('[name="variant-price-2"]')).toHaveValue('120000');
+  await expect(page.locator('[name="variant-price-2"]')).toHaveValue('120.000');
   await expect(editor.locator('strong')).toContainText('đậm');
   await expect(editor.locator('em')).toContainText('nghiêng');
   // Mở lại bằng liên kết để phát hiện cache chi tiết cũ, vì tải lại trang sẽ che lỗi ghi đè giá.
@@ -163,7 +220,7 @@ test('UI-C5 và UI-C8: tạo, lọc, xem sản phẩm và soạn mô tả', asyn
     .getByRole('row', { name: /Laptop UI C5/ })
     .getByRole('link', { name: 'Chỉnh sửa' })
     .click();
-  await expect(page.locator('[name="variant-price-2"]')).toHaveValue('150000');
+  await expect(page.locator('[name="variant-price-2"]')).toHaveValue('150.000');
 
   await page.goto('/admin/products');
   await page.getByLabel('Tên hoặc mã SKU').fill('Laptop UI C5');
