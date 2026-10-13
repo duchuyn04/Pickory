@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  filterAddressOptions,
-  normalizeForSearch,
-} from '../../../../src/features/shipping/address-search';
+import { filterAddressOptions } from '../../../../src/features/shipping/address-search';
+import { normalizeForSearch } from '../../../../src/shared/search-text';
 
 const options = [
   { code: '1', name: 'Cần Thơ' },

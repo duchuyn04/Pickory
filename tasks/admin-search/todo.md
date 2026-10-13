@@ -75,11 +75,11 @@ Quy ước:
 ### FLT-UI1: Hook và component dùng chung cho bộ lọc
 **Mô tả:** Hook đọc và ghi bộ lọc trên URL. Component ô tìm kiếm chờ 300 ms và thanh phân trang. Chuyển `normalizeForSearch` sang `apps/frontend/src/shared/`.
 **Tiêu chí nghiệm thu:**
-- [ ] Hook đọc bộ lọc từ query string. Đổi bộ lọc thì ghi lại query string và về trang 1
-- [ ] Ô tìm kiếm gọi cập nhật một lần sau 300 ms kể từ lần gõ cuối
-- [ ] Thanh phân trang tắt nút trang trước ở trang 1 và nút trang sau ở trang cuối
-- [ ] Test hiện có của `address-search` vẫn đạt sau khi chuyển `normalizeForSearch`
-- [ ] Ô tìm kiếm và nút phân trang có nhãn cho trình đọc màn hình
+- [x] Hook đọc bộ lọc từ query string. Đổi bộ lọc thì ghi lại query string và về trang 1
+- [x] Ô tìm kiếm gọi cập nhật một lần sau 300 ms kể từ lần gõ cuối
+- [x] Thanh phân trang tắt nút trang trước ở trang 1 và nút trang sau ở trang cuối
+- [x] Test hiện có của `address-search` vẫn đạt sau khi chuyển `normalizeForSearch`
+- [x] Ô tìm kiếm và nút phân trang có nhãn cho trình đọc màn hình
 **Kiểm tra:** Vitest
 **Phụ thuộc:** không · **Quy mô:** M
 
