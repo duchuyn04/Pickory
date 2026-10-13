@@ -1,5 +1,6 @@
 using System.Text.Json;
 using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -25,7 +26,16 @@ public static class AdminStaffEndpoints
 
     private static async Task<IResult> ListAsync(HttpContext context, StaffManagementHandler handler)
     {
-        return Results.Ok(new ApiResponse<IReadOnlyList<StaffListItemResponse>>(await handler.ListAsync(context.RequestAborted)));
+        // Kiểm tra mọi tham số của query string trước khi truy vấn. Giá trị sai nhận lỗi `VALIDATION_ERROR`.
+        var failures = new List<ValidationFailure>();
+        var query = StaffListQuery.Read(context.Request.Query, failures);
+        if (failures.Count > 0)
+        {
+            throw new ValidationException(failures);
+        }
+
+        var result = await handler.ListAsync(query, context.RequestAborted);
+        return Results.Ok(new ApiResponse<PagedResponse<StaffListItemResponse>>(result));
     }
 
     private static async Task<IResult> InviteAsync(

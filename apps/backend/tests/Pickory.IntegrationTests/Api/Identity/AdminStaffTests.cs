@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -39,16 +40,303 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         var (sales, _) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales", "list-sales");
         var customer = await IdentityTestData.CreateUserAsync(_database, IdentityTestData.NewEmail("list-customer"), UserKind.Customer, "customer");
 
-        var response = await SendAsync(HttpMethod.Get, "/api/admin/staff", body: null, adminSession);
+        // DB dùng chung có nhiều nhân viên, nên nhân viên của test không chắc nằm ở trang 1. Tìm theo email riêng của test.
+        var salesResponse = await SendAsync(
+            HttpMethod.Get, $"/api/admin/staff?search={Uri.EscapeDataString(sales.Email)}", body: null, adminSession);
+        var customerResponse = await SendAsync(
+            HttpMethod.Get, $"/api/admin/staff?search={Uri.EscapeDataString(customer.Email)}", body: null, adminSession);
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var document = await ActorHttp.ReadJsonAsync(response);
-        var staff = document.RootElement.GetProperty("data").EnumerateArray().ToList();
+        Assert.Equal(HttpStatusCode.OK, salesResponse.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(salesResponse);
+        var staff = document.RootElement.GetProperty("data").GetProperty("items").EnumerateArray().ToList();
         var salesRow = staff.Single(row => row.GetProperty("id").GetString() == sales.Id);
         Assert.Equal(["sales"], salesRow.GetProperty("roles").EnumerateArray().Select(role => role.GetString()));
         Assert.Equal("staff", salesRow.GetProperty("kind").GetString());
         Assert.False(salesRow.TryGetProperty("passwordHash", out _));
-        Assert.DoesNotContain(staff, row => row.GetProperty("id").GetString() == customer.Id);
+
+        // Khách không nằm trong danh sách nhân viên, kể cả khi tìm đúng email của khách.
+        using var customerDocument = await ActorHttp.ReadJsonAsync(customerResponse);
+        var customerData = customerDocument.RootElement.GetProperty("data");
+        Assert.Empty(customerData.GetProperty("items").EnumerateArray());
+        Assert.Equal(0, customerData.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    // Response có `items`, `total`, `page`, `limit`. Giá trị mặc định là trang 1 và 20 dòng.
+    public async Task ListStaff_ReturnsPagedEnvelope()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+
+        var response = await SendAsync(HttpMethod.Get, "/api/admin/staff", body: null, adminSession);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        var data = document.RootElement.GetProperty("data");
+        Assert.Equal(JsonValueKind.Array, data.GetProperty("items").ValueKind);
+        Assert.True(data.GetProperty("total").GetInt32() >= 1);
+        Assert.Equal(1, data.GetProperty("page").GetInt32());
+        Assert.Equal(20, data.GetProperty("limit").GetInt32());
+    }
+
+    // Marker chỉ gồm chữ thường và số, không dấu. Tìm kiếm trên DB dùng chung chỉ khớp nhân viên của test.
+    private static string NewMarker() => Guid.NewGuid().ToString("N")[..12];
+
+    // Tạo nhân viên có tên riêng. `password` null nghĩa là chưa nhận lời mời.
+    private async Task<User> CreateStaffAsync(
+        string prefix, string roleCode, string name, string? password = IdentityTestData.DefaultPassword, bool locked = false)
+    {
+        var staff = await IdentityTestData.CreateUserAsync(
+            _database, IdentityTestData.NewEmail(prefix), UserKind.Staff, roleCode, password: password, locked: locked);
+        await using var identity = _database.CreateIdentityContext();
+        await identity.Users.Where(user => user.Id == staff.Id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(user => user.Name, name));
+        return staff;
+    }
+
+    private async Task<(List<JsonElement> Items, int Total)> ListStaffAsync(string sessionToken, string query)
+    {
+        var response = await SendAsync(HttpMethod.Get, $"/api/admin/staff?{query}", body: null, sessionToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        var data = document.RootElement.GetProperty("data");
+        var items = data.GetProperty("items").EnumerateArray().Select(item => item.Clone()).ToList();
+
+        // Mọi dòng của mọi truy vấn đều không có hash mật khẩu. Response liệt kê từng trường.
+        Assert.All(items, item => Assert.False(item.TryGetProperty("passwordHash", out _)));
+        return (items, data.GetProperty("total").GetInt32());
+    }
+
+    private static List<string> IdsOf(IEnumerable<JsonElement> items) =>
+        items.Select(item => item.GetProperty("id").GetString()!).ToList();
+
+    [Theory]
+    [InlineData("nguyen")]
+    [InlineData("NGUYEN")]
+    [InlineData("Nguyễn")]
+    // Tên lưu có dấu. Từ khóa không dấu, viết hoa hoặc có dấu đều tìm được.
+    public async Task ListStaff_SearchIgnoresDiacriticsAndCaseByName(string keyword)
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var marker = NewMarker();
+        var staff = await CreateStaffAsync("diacritics", "sales", $"Nguyễn Văn {marker}");
+
+        var (items, total) = await ListStaffAsync(adminSession, $"search={Uri.EscapeDataString($"{keyword} van {marker}")}");
+
+        Assert.Equal([staff.Id], IdsOf(items));
+        Assert.Equal(1, total);
+    }
+
+    [Fact]
+    // Tìm theo email. Phần trước `@` chứa marker nên chỉ khớp nhân viên của test.
+    public async Task ListStaff_SearchesByEmail()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var staff = await CreateStaffAsync("email-search", "sales", "Không liên quan");
+
+        var (items, _) = await ListStaffAsync(adminSession, $"search={Uri.EscapeDataString(staff.Email.ToUpperInvariant())}");
+
+        Assert.Equal([staff.Id], IdsOf(items));
+    }
+
+    private sealed record StatusFixture(User Active, User Invited, User LockedWithoutPassword, User LockedWithPassword, string Marker);
+
+    // Bốn nhân viên cùng marker. Nhân viên khóa chưa có mật khẩu chỉ được thuộc `locked`.
+    private async Task<StatusFixture> CreateStatusFixtureAsync()
+    {
+        var marker = NewMarker();
+        var name = $"Trạng thái {marker}";
+        var active = await CreateStaffAsync("st-active", "sales", name);
+        var invited = await CreateStaffAsync("st-invited", "sales", name, password: null);
+        var lockedWithoutPassword = await CreateStaffAsync("st-locked-a", "sales", name, password: null, locked: true);
+        var lockedWithPassword = await CreateStaffAsync("st-locked-b", "sales", name, locked: true);
+        return new StatusFixture(active, invited, lockedWithoutPassword, lockedWithPassword, marker);
+    }
+
+    [Fact]
+    // `status=invited` chỉ trả nhân viên chưa khóa và chưa có mật khẩu.
+    public async Task ListStaff_StatusInvitedReturnsOnlyUnlockedWithoutPassword()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var fixture = await CreateStatusFixtureAsync();
+
+        var (items, total) = await ListStaffAsync(adminSession, $"search={fixture.Marker}&status=invited");
+
+        Assert.Equal([fixture.Invited.Id], IdsOf(items));
+        Assert.Equal(1, total);
+    }
+
+    [Fact]
+    // `status=active` chỉ trả nhân viên chưa khóa và đã có mật khẩu.
+    public async Task ListStaff_StatusActiveReturnsOnlyUnlockedWithPassword()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var fixture = await CreateStatusFixtureAsync();
+
+        var (items, total) = await ListStaffAsync(adminSession, $"search={fixture.Marker}&status=active");
+
+        Assert.Equal([fixture.Active.Id], IdsOf(items));
+        Assert.Equal(1, total);
+    }
+
+    [Fact]
+    // `status=locked` trả mọi nhân viên đã khóa, kể cả nhân viên chưa có mật khẩu. Nhân viên này không thuộc `invited`.
+    public async Task ListStaff_StatusLockedIncludesLockedWithoutPassword()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var fixture = await CreateStatusFixtureAsync();
+
+        var (items, total) = await ListStaffAsync(adminSession, $"search={fixture.Marker}&status=locked");
+
+        Assert.Equal(
+            new[] { fixture.LockedWithoutPassword.Id, fixture.LockedWithPassword.Id }.Order(StringComparer.Ordinal),
+            IdsOf(items).Order(StringComparer.Ordinal));
+        Assert.Equal(2, total);
+    }
+
+    [Fact]
+    // Mỗi dòng có `status` theo cùng luật với bộ lọc. Nhân viên khóa chưa có mật khẩu là `locked`, không phải `invited`.
+    public async Task ListStaff_EachRowHasStatusFollowingFilterRule()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var fixture = await CreateStatusFixtureAsync();
+
+        var (items, _) = await ListStaffAsync(adminSession, $"search={fixture.Marker}");
+
+        var statusById = items.ToDictionary(
+            item => item.GetProperty("id").GetString()!, item => item.GetProperty("status").GetString());
+        Assert.Equal(4, statusById.Count);
+        Assert.Equal("active", statusById[fixture.Active.Id]);
+        Assert.Equal("invited", statusById[fixture.Invited.Id]);
+        Assert.Equal("locked", statusById[fixture.LockedWithoutPassword.Id]);
+        Assert.Equal("locked", statusById[fixture.LockedWithPassword.Id]);
+    }
+
+    [Theory]
+    [InlineData("active")]
+    [InlineData("invited")]
+    [InlineData("locked")]
+    // Luật của bộ lọc và luật của trường khớp nhau: mọi dòng lọc theo một giá trị mang đúng giá trị đó.
+    public async Task ListStaff_FilteredRowsCarryTheFilteredStatus(string status)
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var fixture = await CreateStatusFixtureAsync();
+
+        var (items, total) = await ListStaffAsync(adminSession, $"search={fixture.Marker}&status={status}");
+
+        Assert.NotEmpty(items);
+        Assert.Equal(items.Count, total);
+        Assert.All(items, item => Assert.Equal(status, item.GetProperty("status").GetString()));
+    }
+
+    [Fact]
+    // `role=sales` chỉ trả nhân viên có role `sales`. Nhân viên nhiều role vẫn hiện đủ mã role, không chỉ role đã lọc.
+    public async Task ListStaff_RoleFilterKeepsEveryRoleCodeOfMatchingStaff()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var marker = NewMarker();
+        var name = $"Vai trò {marker}";
+        var salesOnly = await CreateStaffAsync("role-sales", "sales", name);
+        var supportOnly = await CreateStaffAsync("role-support", "support", name);
+        var both = await CreateStaffAsync("role-both", "sales", name);
+        await using (var identity = _database.CreateIdentityContext())
+        {
+            var supportRoleId = await identity.Roles.Where(role => role.Code == "support").Select(role => role.Id).SingleAsync();
+            identity.UserRoles.Add(new UserRole { UserId = both.Id, RoleId = supportRoleId });
+            await identity.SaveChangesAsync();
+        }
+
+        var (items, total) = await ListStaffAsync(adminSession, $"search={marker}&role=sales");
+
+        Assert.Equal(new[] { salesOnly.Id, both.Id }.Order(StringComparer.Ordinal), IdsOf(items).Order(StringComparer.Ordinal));
+        Assert.Equal(2, total);
+        Assert.DoesNotContain(supportOnly.Id, IdsOf(items));
+        var bothRow = items.Single(item => item.GetProperty("id").GetString() == both.Id);
+        Assert.Equal(
+            ["sales", "support"],
+            bothRow.GetProperty("roles").EnumerateArray().Select(role => role.GetString()!).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    // Mã role không tồn tại không phải lỗi. Danh sách rỗng và `total` bằng 0.
+    public async Task ListStaff_UnknownRoleCodeReturnsEmptyList()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+
+        var (items, total) = await ListStaffAsync(adminSession, $"role=khong-ton-tai-{NewMarker()}");
+
+        Assert.Empty(items);
+        Assert.Equal(0, total);
+    }
+
+    [Theory]
+    [InlineData("status=blocked", "status")]
+    [InlineData("status=ACTIVE", "status")]
+    [InlineData("status=active&status=locked", "status")]
+    [InlineData("role=sales&role=support", "role")]
+    [InlineData("search=a&search=b", "search")]
+    // Giá trị lạ hoặc tham số lặp lại nhận 400 với đúng tên trường.
+    public async Task ListStaff_InvalidFilterIsRejected(string query, string field)
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+
+        var response = await SendAsync(HttpMethod.Get, $"/api/admin/staff?{query}", body: null, adminSession);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        var error = document.RootElement.GetProperty("error");
+        Assert.Equal("VALIDATION_ERROR", error.GetProperty("code").GetString());
+        Assert.Contains($"{field}:", error.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    // `total` đếm theo cùng điều kiện lọc. `limit` nhỏ hơn số dòng khớp chỉ cắt dòng trả về.
+    public async Task ListStaff_TotalCountsFilteredRowsNotPageRows()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var marker = NewMarker();
+        var name = $"Đếm {marker}";
+        await CreateStaffAsync("count-a", "sales", name);
+        await CreateStaffAsync("count-b", "sales", name);
+        await CreateStaffAsync("count-c", "sales", name);
+        await CreateStaffAsync("count-d", "sales", name, password: null);
+
+        var (items, total) = await ListStaffAsync(adminSession, $"search={marker}&status=active&limit=1");
+
+        Assert.Single(items);
+        Assert.Equal(3, total);
+    }
+
+    [Fact]
+    // Nhân viên cùng `CreatedAt` nằm ở các trang liền nhau. Thứ tự phụ theo `Id` giữ cho không lặp và không mất dòng.
+    public async Task ListStaff_SameCreatedAtAcrossPages_NoDuplicateAndNoMissingRow()
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        var marker = NewMarker();
+        var staffIds = new List<string>();
+        for (var index = 0; index < 6; index++)
+        {
+            staffIds.Add((await CreateStaffAsync($"tie-{index}", "sales", $"Cùng giờ {marker}")).Id);
+        }
+
+        // Mỗi `UPDATE` ghi bản dòng mới ở cuối bảng, nên cập nhật theo `Id` giảm dần đặt thứ tự lưu ngược với `Id`.
+        // Truy vấn thiếu thứ tự phụ sẽ trả sai thứ tự `Id`.
+        var sameInstant = DateTime.UtcNow.AddMinutes(-5);
+        foreach (var staffId in staffIds.OrderByDescending(id => id, StringComparer.Ordinal))
+        {
+            await using var identity = _database.CreateIdentityContext();
+            await identity.Users.Where(user => user.Id == staffId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(user => user.CreatedAt, sameInstant));
+        }
+
+        var collectedIds = new List<string>();
+        foreach (var pageNumber in new[] { 1, 2, 3 })
+        {
+            var (items, total) = await ListStaffAsync(adminSession, $"search={marker}&limit=2&page={pageNumber}");
+            Assert.Equal(6, total);
+            collectedIds.AddRange(IdsOf(items));
+        }
+
+        Assert.Equal(staffIds.Order(StringComparer.Ordinal).ToList(), collectedIds);
     }
 
     [Fact]

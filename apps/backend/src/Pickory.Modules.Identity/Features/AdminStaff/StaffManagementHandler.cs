@@ -9,6 +9,7 @@ using Pickory.Modules.Identity.Roles;
 using Pickory.Modules.Identity.Users;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.Exceptions;
+using Pickory.Shared.Http;
 using Pickory.Shared.Persistence;
 
 namespace Pickory.Modules.Identity.Features.AdminStaff;
@@ -22,19 +23,56 @@ public sealed class StaffManagementHandler(
 {
     private const string StaffNotFoundMessage = "Không tìm thấy tài khoản nhân viên.";
 
-    public async Task<IReadOnlyList<StaffListItemResponse>> ListAsync(CancellationToken cancellationToken)
+    public async Task<PagedResponse<StaffListItemResponse>> ListAsync(StaffListQuery query, CancellationToken cancellationToken)
     {
-        // Nhân viên mới nhất lên đầu, giống bản Node.
-        var staff = await database.Users
-            .AsNoTracking()
-            .Include(user => user.Roles)
-            .ThenInclude(userRole => userRole.Role)
-            .Where(user => user.Kind == UserKind.Staff)
-            .OrderByDescending(user => user.CreatedAt)
-            .ToListAsync(cancellationToken);
+        var page = query.Page;
 
-        // Chọn từng trường thay vì trả cả entity. Hash mật khẩu không bao giờ rời API.
-        return staff
+        // Chỉ lấy nhân viên. Khách có trang quản lý riêng và không lẫn vào danh sách này.
+        var staff = database.Users.AsNoTracking().Where(user => user.Kind == UserKind.Staff);
+
+        if (query.Search is { } term)
+        {
+            // Tìm theo tên và email, không dấu và không phân biệt hoa thường. Từ khóa đi qua `unaccent` như cột.
+            var pattern = term.LikePattern;
+            staff = staff.Where(user =>
+                EF.Functions.ILike(EF.Functions.Unaccent(user.Email), EF.Functions.Unaccent(pattern), SearchTerm.EscapeCharacter)
+                || (user.Name != null
+                    && EF.Functions.ILike(EF.Functions.Unaccent(user.Name), EF.Functions.Unaccent(pattern), SearchTerm.EscapeCharacter)));
+        }
+
+        // Trạng thái suy ra từ cột có sẵn. Nhân viên đã khóa luôn là `locked`, dù chưa có mật khẩu.
+        if (query.Status == StaffStatusFilter.Locked)
+        {
+            staff = staff.Where(user => user.LockedAt != null);
+        }
+        else if (query.Status == StaffStatusFilter.Invited)
+        {
+            // Nhân viên không đăng nhập bằng Google, nên chưa có mật khẩu nghĩa là chưa nhận lời mời.
+            staff = staff.Where(user => user.LockedAt == null && user.PasswordHash == null);
+        }
+        else if (query.Status == StaffStatusFilter.Active)
+        {
+            staff = staff.Where(user => user.LockedAt == null && user.PasswordHash != null);
+        }
+
+        if (query.RoleCode is { } roleCode)
+        {
+            // Lọc bằng `Any` để nhân viên nhiều role chỉ xuất hiện một dòng và vẫn giữ đủ mã role khi chọn ra.
+            staff = staff.Where(user => user.Roles.Any(userRole => userRole.Role!.Code == roleCode));
+        }
+
+        // Đếm cùng điều kiện lọc. Giao diện biết có bao nhiêu trang.
+        var total = await staff.CountAsync(cancellationToken);
+
+        var items = await staff
+            // Nhân viên mới nhất lên đầu, giống bản Node.
+            .OrderByDescending(user => user.CreatedAt)
+            // Thứ tự phụ theo `Id` giữ hai dòng cùng `CreatedAt` không đổi chỗ giữa hai trang.
+            .ThenBy(user => user.Id)
+            .Skip(page.Skip)
+            .Take(page.Limit)
+            // Chọn từng trường thay vì trả cả entity, nên hash mật khẩu không bao giờ rời API.
+            // Cột `PasswordHash` chỉ nằm trong biểu thức `Status` của câu SQL.
             .Select(user => new StaffListItemResponse(
                 user.Id,
                 user.Email,
@@ -43,9 +81,15 @@ public sealed class StaffManagementHandler(
                 user.EmailVerified,
                 UserSummaryResponse.StaffKind,
                 user.LockedAt,
+                // Cùng luật với bộ lọc. Kiểm khóa trước, vì nhân viên đã khóa luôn là `locked` dù chưa có mật khẩu.
+                user.LockedAt != null
+                    ? StaffStatusLabels.Locked
+                    : user.PasswordHash == null ? StaffStatusLabels.Invited : StaffStatusLabels.Active,
                 user.CreatedAt,
-                user.Roles.Select(userRole => userRole.Role!.Code).ToList()))
-            .ToList();
+                user.Roles.Select(userRole => userRole.Role!.Code).OrderBy(code => code).ToList()))
+            .ToListAsync(cancellationToken);
+
+        return new PagedResponse<StaffListItemResponse>(items, total, page.Page, page.Limit);
     }
 
     public async Task<InvitedStaffResponse> InviteAsync(Actor actor, InviteStaffRequest request, CancellationToken cancellationToken)

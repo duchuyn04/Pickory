@@ -1,6 +1,6 @@
 namespace Pickory.Modules.Identity.Features.AdminStaff;
 
-// Một dòng trên trang quản lý nhân viên. `LockedAt` có giá trị nghĩa là nhân viên đang bị khóa.
+// Một dòng trên trang quản lý nhân viên. `Status` là `active`, `invited` hoặc `locked`, theo cùng luật với bộ lọc `status`.
 public sealed record StaffListItemResponse(
     string Id,
     string Email,
@@ -9,5 +9,6 @@ public sealed record StaffListItemResponse(
     bool EmailVerified,
     string Kind,
     DateTime? LockedAt,
+    string Status,
     DateTime CreatedAt,
     IReadOnlyList<string> Roles);

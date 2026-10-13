@@ -39,12 +39,13 @@ Quy ước:
 ### FLT-03: Nhân viên: phân trang, tìm kiếm, lọc trạng thái và vai trò
 **Mô tả:** `GET /api/admin/staff` nhận `PageQuery`, `search`, `status=active|locked|invited` và `role=<mã vai trò>`. Response đổi sang `PagedResponse`, theo quyết định 7 và 8 của plan.
 **Tiêu chí nghiệm thu:**
-- [ ] Response có `items`, `total`, `page`, `limit`. `total` đếm cùng điều kiện lọc
-- [ ] Tìm không dấu theo tên và email
-- [ ] `status=invited` chỉ trả nhân viên chưa khóa và chưa đặt mật khẩu. `status=locked` chỉ trả nhân viên đã khóa
-- [ ] `role=sales` chỉ trả nhân viên có vai trò `sales`. Mã vai trò không tồn tại trả danh sách rỗng
-- [ ] Giá trị `status` lạ trả 400 `VALIDATION_ERROR`
-- [ ] Response không có hash mật khẩu
+- [x] Response có `items`, `total`, `page`, `limit`. `total` đếm cùng điều kiện lọc
+- [x] Tìm không dấu theo tên và email
+- [x] `status=invited` chỉ trả nhân viên chưa khóa và chưa đặt mật khẩu. `status=locked` chỉ trả nhân viên đã khóa
+- [x] `role=sales` chỉ trả nhân viên có vai trò `sales`. Mã vai trò không tồn tại trả danh sách rỗng
+- [x] Giá trị `status` lạ trả 400 `VALIDATION_ERROR`
+- [x] Response không có hash mật khẩu
+- [x] Mỗi dòng có `status` là `active`, `invited` hoặc `locked`, theo cùng luật với bộ lọc `status`
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** FLT-02 · **Quy mô:** S
 
@@ -89,6 +90,7 @@ Quy ước:
 - [ ] Mở lại link có bộ lọc cho cùng danh sách
 - [ ] Danh sách rỗng hiện thông báo không có kết quả phù hợp
 - [ ] Màn nhân viên đọc response `PagedResponse` mới
+- [ ] Cột trạng thái của màn nhân viên hiện nhãn riêng cho nhân viên `invited`, đọc từ trường `status`
 - [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI1, FLT-02, FLT-03 · **Quy mô:** M

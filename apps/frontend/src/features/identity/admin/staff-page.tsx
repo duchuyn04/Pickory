@@ -9,6 +9,17 @@ import type { RoleData } from '../components/role-form';
 import { ErrorAlert } from '../../../shared/error-alert';
 import './identity-admin.css';
 
+// API trả danh sách nhân viên theo trang. Màn này chưa có phân trang và bộ lọc, nên chỉ đọc `items`.
+interface StaffListResponse {
+  items: StaffRow[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+// Một trang 100 dòng đủ cho số nhân viên của giai đoạn demo. FLT-UI2 sẽ thay bằng phân trang và bộ lọc.
+const STAFF_PAGE_LIMIT = 100;
+
 // Trang quản lý nhân viên: xem danh sách, mời, đổi role, khóa và mở khóa.
 export function StaffPage() {
   // Hai quyền tách nhau: người chỉ có staff:read xem được danh sách nhưng không thấy các nút thao tác.
@@ -29,7 +40,13 @@ export function StaffPage() {
     error: staffError,
   } = useQuery<StaffRow[]>({
     queryKey: ['admin-staff'],
-    queryFn: () => apiRequest<StaffRow[]>('/api/admin/staff'),
+    // Lấy `items` từ response phân trang để phần còn lại của màn vẫn làm việc với mảng nhân viên.
+    queryFn: async () => {
+      const page = await apiRequest<StaffListResponse>(
+        `/api/admin/staff?limit=${STAFF_PAGE_LIMIT}`,
+      );
+      return page.items;
+    },
     // Không gọi API khi không có quyền, vì chắc chắn bị từ chối với 403.
     enabled: canReadStaff,
   });

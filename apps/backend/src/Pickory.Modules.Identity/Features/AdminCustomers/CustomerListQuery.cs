@@ -30,7 +30,7 @@ public sealed record CustomerListQuery(
 
     private static CustomerStatusFilter? ReadStatus(IQueryCollection query, List<ValidationFailure> failures)
     {
-        var raw = ReadSingleValue(query, "status", failures);
+        var raw = QueryParameter.ReadSingle(query, "status", failures);
         if (raw is null)
         {
             return null;
@@ -47,7 +47,7 @@ public sealed record CustomerListQuery(
 
     private static bool? ReadEmailVerified(IQueryCollection query, List<ValidationFailure> failures)
     {
-        var raw = ReadSingleValue(query, "emailVerified", failures);
+        var raw = QueryParameter.ReadSingle(query, "emailVerified", failures);
         if (raw is null)
         {
             return null;
@@ -59,25 +59,6 @@ public sealed record CustomerListQuery(
             "false" => false,
             _ => AddFailure<bool>(failures, "emailVerified", "Trạng thái xác minh email phải là `true` hoặc `false`."),
         };
-    }
-
-    // Tham số trống được coi như không gửi, để form lọc để trống ô không gây lỗi.
-    // Tham số lặp lại là lỗi, vì không rõ giá trị nào là ý của người dùng.
-    private static string? ReadSingleValue(IQueryCollection query, string name, List<ValidationFailure> failures)
-    {
-        if (!query.TryGetValue(name, out var values))
-        {
-            return null;
-        }
-
-        if (values.Count > 1)
-        {
-            failures.Add(new ValidationFailure(name, $"Tham số `{name}` chỉ được gửi một lần."));
-            return null;
-        }
-
-        var raw = values.ToString();
-        return string.IsNullOrWhiteSpace(raw) ? null : raw;
     }
 
     private static TValue? AddFailure<TValue>(List<ValidationFailure> failures, string name, string message)

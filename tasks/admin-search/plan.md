@@ -69,7 +69,7 @@ FLT-UI1 hook và component dùng chung cho bộ lọc
 Chi tiết từng task ở `tasks/admin-search/todo.md`.
 
 ### Phase 1: Backend
-- [x] FLT-01 · [x] FLT-02 · [ ] FLT-03 · [ ] FLT-04 · [ ] FLT-05
+- [x] FLT-01 · [x] FLT-02 · [x] FLT-03 · [ ] FLT-04 · [ ] FLT-05
 
 ### Checkpoint S1
 - [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
