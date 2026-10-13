@@ -102,18 +102,19 @@ public static class PlaceOrderRequests
             return empty;
         }
 
-        var name = ReadName(contact, failures);
-        var phone = ReadPhone(contact, failures);
+        var name = ReadName(contact, ContactNameField, failures);
+        var phone = ReadPhone(contact, ContactPhoneField, failures);
         var email = ReadEmail(contact, "email", ContactEmailField, failures);
         return new OrderContactInput(name, phone, email);
     }
 
-    private static string ReadName(JsonElement contact, List<ValidationFailure> failures)
+    // Sổ địa chỉ dùng lại hàm này, để tên người nhận của sổ và của đơn theo cùng một luật.
+    internal static string ReadName(JsonElement parent, string field, List<ValidationFailure> failures)
     {
-        var name = ReadTrimmedString(contact, "name");
+        var name = ReadTrimmedString(parent, "name");
         if (string.IsNullOrEmpty(name))
         {
-            failures.Add(new ValidationFailure(ContactNameField, NameRequiredMessage));
+            failures.Add(new ValidationFailure(field, NameRequiredMessage));
             return string.Empty;
         }
 
@@ -121,19 +122,20 @@ public static class PlaceOrderRequests
         var error = ContactFieldRules.GetNameError(name);
         if (error is not null)
         {
-            failures.Add(new ValidationFailure(ContactNameField, error));
+            failures.Add(new ValidationFailure(field, error));
             return string.Empty;
         }
 
         return name;
     }
 
-    private static string ReadPhone(JsonElement contact, List<ValidationFailure> failures)
+    // Sổ địa chỉ dùng lại hàm này, để số điện thoại của sổ và của đơn theo cùng một luật.
+    internal static string ReadPhone(JsonElement parent, string field, List<ValidationFailure> failures)
     {
-        var phone = ReadTrimmedString(contact, "phone");
+        var phone = ReadTrimmedString(parent, "phone");
         if (string.IsNullOrEmpty(phone))
         {
-            failures.Add(new ValidationFailure(ContactPhoneField, PhoneRequiredMessage));
+            failures.Add(new ValidationFailure(field, PhoneRequiredMessage));
             return string.Empty;
         }
 
@@ -141,7 +143,7 @@ public static class PlaceOrderRequests
         var normalized = ContactFieldRules.NormalizePhone(phone);
         if (normalized is null)
         {
-            failures.Add(new ValidationFailure(ContactPhoneField, ContactFieldRules.PhoneInvalidMessage));
+            failures.Add(new ValidationFailure(field, ContactFieldRules.PhoneInvalidMessage));
             return string.Empty;
         }
 

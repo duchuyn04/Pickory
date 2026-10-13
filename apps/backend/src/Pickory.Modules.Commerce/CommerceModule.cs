@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Pickory.Modules.Commerce.Addresses;
 using Pickory.Modules.Commerce.Carts;
 using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Configuration;
@@ -42,6 +43,8 @@ public static class CommerceModule
         services.AddScoped<CommerceSettingsStore>();
         services.AddScoped<CartService>();
         services.AddScoped<CartMergeService>();
+        // Sổ địa chỉ giữ khóa theo khách cho mỗi thao tác ghi, nên dịch vụ có vòng đời theo request.
+        services.AddScoped<SavedAddressService>();
         // Preview đọc giỏ, catalog và shipping, rồi tính tiền mà không ghi DB.
         services.AddScoped<CheckoutPreviewService>();
         // Đặt đơn dùng lại phần tính tiền của preview, rồi giữ hàng và ghi đơn trong một transaction.
@@ -101,6 +104,7 @@ public static class CommerceModule
         CartEndpoints.Map(moduleRoutes);
         CheckoutEndpoints.Map(moduleRoutes);
         OrderEndpoints.Map(moduleRoutes);
+        SavedAddressEndpoints.Map(moduleRoutes);
         AdminOrderEndpoints.Map(moduleRoutes);
         AdminPaymentEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);

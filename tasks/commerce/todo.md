@@ -376,11 +376,11 @@ Quy ước:
 ### COM-18: Sổ địa chỉ
 **Mô tả:** `GET`, `POST`, `PATCH`, `DELETE /api/me/addresses[/{id}]` cho khách đã đăng nhập. Địa chỉ dùng mã của danh mục `shipping`.
 **Tiêu chí nghiệm thu:**
-- [ ] Khách chưa đăng nhập nhận 401
-- [ ] Địa chỉ thứ 11 trả 422
-- [ ] Chọn địa chỉ mặc định mới thì địa chỉ mặc định cũ bỏ cờ. Luôn có tối đa 1 địa chỉ mặc định
-- [ ] Mã địa chỉ không có trong danh mục trả 400 (sau khi Câu hỏi mở 4 được chốt)
-- [ ] Sửa hoặc xóa địa chỉ của người khác trả 404
+- [x] Khách chưa đăng nhập nhận 401
+- [x] Địa chỉ thứ 11 trả 422
+- [x] Chọn địa chỉ mặc định mới thì địa chỉ mặc định cũ bỏ cờ. Luôn có tối đa 1 địa chỉ mặc định
+- [x] Mã địa chỉ không có trong danh mục trả 400 (sau khi Câu hỏi mở 4 được chốt)
+- [x] Sửa hoặc xóa địa chỉ của người khác trả 404
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-03, Câu hỏi mở 4 · **Quy mô:** S
 
