@@ -59,6 +59,28 @@ public sealed class AdminOrderService(
             orders = orders.Where(order => order.CreatedAt < toExclusiveUtc);
         }
 
+        if (filter.Search is { } term)
+        {
+            // Nhân viên có thể chỉ biết mã đơn, tên, số điện thoại hoặc email khi khách gọi tới. Điều kiện kết hợp theo OR.
+            var pattern = term.LikePattern;
+
+            // Đơn thiếu khóa JSON cho giá trị NULL trong SQL, và `ILIKE` với NULL không khớp. Dấu `!` chỉ để biên dịch chấp nhận kiểu.
+            orders = orders.Where(order =>
+                // Mã đơn và số điện thoại không có dấu, nên không cần `unaccent`. Mẫu đã escape `%` và `_` trong từ khóa.
+                EF.Functions.ILike(order.Code, pattern, SearchTerm.EscapeCharacter)
+                || EF.Functions.ILike(order.Contact.RootElement.GetProperty("phone").GetString()!, pattern, SearchTerm.EscapeCharacter)
+                // Tên và email không dấu và không phân biệt hoa thường. Từ khóa đi qua `unaccent` như cột, để hai phía cùng dạng.
+                || EF.Functions.ILike(
+                    EF.Functions.Unaccent(order.Contact.RootElement.GetProperty("name").GetString()!),
+                    EF.Functions.Unaccent(pattern),
+                    SearchTerm.EscapeCharacter)
+                || EF.Functions.ILike(
+                    EF.Functions.Unaccent(order.Contact.RootElement.GetProperty("email").GetString()!),
+                    EF.Functions.Unaccent(pattern),
+                    SearchTerm.EscapeCharacter));
+        }
+
+        // Đếm cùng điều kiện lọc, gồm cả từ khóa. Giao diện biết có bao nhiêu trang.
         var total = await orders.CountAsync(cancellationToken);
 
         // Sắp xếp theo ngày tạo giảm dần rồi theo `Id`. Thiếu `Id` thì phân trang lặp hoặc sót các đơn cùng ngày tạo.

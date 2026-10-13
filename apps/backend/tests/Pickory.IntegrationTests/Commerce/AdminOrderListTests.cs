@@ -297,4 +297,198 @@ public sealed class AdminOrderListTests : IClassFixture<PickoryWebApplicationFac
             ActorHttp.CreateRequest(HttpMethod.Get, OrdersPath, $"pk_session={session}"));
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    private static async Task AssertValidationErrorForFieldAsync(
+        HttpResponseMessage response, string field, string? messagePart = null)
+    {
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        var error = document.RootElement.GetProperty("error");
+        Assert.Equal("VALIDATION_ERROR", error.GetProperty("code").GetString());
+        var message = error.GetProperty("message").GetString();
+        Assert.Contains($"{field}:", message);
+        if (messagePart is not null)
+        {
+            Assert.Contains(messagePart, message);
+        }
+    }
+
+    private async Task<string[]> SearchCodesAsync(string search, string extraQuery = "")
+    {
+        var query = $"search={Uri.EscapeDataString(search)}&limit=100{extraQuery}";
+        return CodesOf(await ReadDataAsync(await GetAsync(query)));
+    }
+
+    [Theory]
+    [InlineData("status=shipping&status=pending_confirmation", "status")]
+    [InlineData("paymentStatus=paid&paymentStatus=unpaid", "paymentStatus")]
+    [InlineData("paymentMethod=cod&paymentMethod=sepay", "paymentMethod")]
+    [InlineData("flag=underpaid&flag=overpaid", "flag")]
+    [InlineData("from=2026-10-05&from=2026-10-06", "from")]
+    [InlineData("to=2026-10-05&to=2026-10-06", "to")]
+    // Tham số lặp lại nhận 400 `VALIDATION_ERROR` cho đúng trường, giống danh sách khách và nhân viên.
+    public async Task List_RepeatedFilterParameter_Returns400ForThatField(string query, string field)
+    {
+        await _kit.AddOrderAsync("REP1", BaseTime);
+
+        var response = await GetAsync(query);
+
+        // Thông báo riêng của tham số lặp phân biệt lỗi này với lỗi giá trị lạ của chuỗi gộp `a,b`.
+        await AssertValidationErrorForFieldAsync(response, field, "chỉ được gửi một lần");
+    }
+
+    [Theory]
+    [InlineData("b-123")]
+    [InlineData("AB-12")]
+    // Một phần mã đơn tìm được đơn, không phân biệt hoa thường.
+    public async Task Search_PartialOrderCode_FindsOrder(string keyword)
+    {
+        await _kit.AddOrderAsync("AB-12345", BaseTime.AddMinutes(1));
+        await _kit.AddOrderAsync("CD-99999", BaseTime.AddMinutes(2));
+
+        Assert.Equal(["AB-12345"], await SearchCodesAsync(keyword));
+    }
+
+    [Theory]
+    [InlineData("nguyen")]
+    [InlineData("NGUYEN")]
+    [InlineData("Nguyễn")]
+    // Tên người nhận lưu có dấu. Từ khóa không dấu, viết hoa hoặc có dấu đều tìm được đơn.
+    public async Task Search_RecipientName_IgnoresDiacriticsAndCase(string keyword)
+    {
+        await _kit.AddOrderAsync("NM-1", BaseTime.AddMinutes(1), recipientName: "Nguyễn Văn An");
+        await _kit.AddOrderAsync("NM-2", BaseTime.AddMinutes(2), recipientName: "Trần Thị Bình");
+
+        Assert.Equal(["NM-1"], await SearchCodesAsync(keyword));
+    }
+
+    [Fact]
+    // Chữ `Đ` không tách được thành `D` cộng dấu. `duc` phải tìm được `Đức` nhờ bảng quy tắc của `unaccent`.
+    public async Task Search_RecipientNameWithStroke_FindsDuc()
+    {
+        await _kit.AddOrderAsync("DT-1", BaseTime.AddMinutes(1), recipientName: "Đức Minh");
+        await _kit.AddOrderAsync("DT-2", BaseTime.AddMinutes(2), recipientName: "Lan Anh");
+
+        Assert.Equal(["DT-1"], await SearchCodesAsync("duc"));
+    }
+
+    [Fact]
+    // Một phần số điện thoại tìm được đơn.
+    public async Task Search_PartialPhone_FindsOrder()
+    {
+        await _kit.AddOrderAsync("PH-1", BaseTime.AddMinutes(1), recipientPhone: "0987654321");
+        await _kit.AddOrderAsync("PH-2", BaseTime.AddMinutes(2), recipientPhone: "0911111111");
+
+        Assert.Equal(["PH-1"], await SearchCodesAsync("876543"));
+    }
+
+    [Fact]
+    // Một phần email tìm được đơn, không phân biệt hoa thường.
+    public async Task Search_PartialEmail_FindsOrder()
+    {
+        await _kit.AddOrderAsync("EM-1", BaseTime.AddMinutes(1), recipientEmail: "lan.tran@example.com");
+        await _kit.AddOrderAsync("EM-2", BaseTime.AddMinutes(2), recipientEmail: "khac@example.com");
+
+        Assert.Equal(["EM-1"], await SearchCodesAsync("LAN.TR"));
+    }
+
+    [Fact]
+    // `%` trong từ khóa là ký tự thường. Đơn `100x` không được khớp từ khóa `100%`.
+    public async Task Search_PercentSign_MatchesOnlyLiteralPercent()
+    {
+        await _kit.AddOrderAsync("PCT-1", BaseTime.AddMinutes(1), recipientName: "Giảm 100% An");
+        await _kit.AddOrderAsync("PCT-2", BaseTime.AddMinutes(2), recipientName: "Giảm 100x An");
+
+        Assert.Equal(["PCT-1"], await SearchCodesAsync("100%"));
+    }
+
+    [Fact]
+    // `_` trong từ khóa là ký tự thường. Đơn `axb` không được khớp từ khóa `a_b`.
+    public async Task Search_Underscore_MatchesOnlyLiteralUnderscore()
+    {
+        await _kit.AddOrderAsync("UND-1", BaseTime.AddMinutes(1), recipientName: "Bạn a_b");
+        await _kit.AddOrderAsync("UND-2", BaseTime.AddMinutes(2), recipientName: "Bạn axb");
+
+        Assert.Equal(["UND-1"], await SearchCodesAsync("a_b"));
+    }
+
+    [Fact]
+    // `search` kết hợp với `status`, `paymentStatus`, `flag`, `from` và `to` theo AND. Mỗi đơn nhiễu sai đúng một điều kiện.
+    public async Task Search_CombinesWithEveryOtherFilterUsingAnd()
+    {
+        var inRange = BaseTime.AddMinutes(1);
+        await _kit.AddOrderAsync(
+            "AND-HIT", inRange, OrderStatus.Shipping, PaymentStatus.Paid, flags: ["underpaid"], recipientName: "Nguyễn An");
+        await _kit.AddOrderAsync(
+            "AND-STATUS", inRange, OrderStatus.Delivered, PaymentStatus.Paid, flags: ["underpaid"], recipientName: "Nguyễn An");
+        await _kit.AddOrderAsync(
+            "AND-PAY", inRange, OrderStatus.Shipping, PaymentStatus.Unpaid, flags: ["underpaid"], recipientName: "Nguyễn An");
+        await _kit.AddOrderAsync(
+            "AND-FLAG", inRange, OrderStatus.Shipping, PaymentStatus.Paid, flags: ["overpaid"], recipientName: "Nguyễn An");
+        await _kit.AddOrderAsync(
+            "AND-DATE", BaseTime.AddDays(10), OrderStatus.Shipping, PaymentStatus.Paid, flags: ["underpaid"], recipientName: "Nguyễn An");
+        await _kit.AddOrderAsync(
+            "AND-NAME", inRange, OrderStatus.Shipping, PaymentStatus.Paid, flags: ["underpaid"], recipientName: "Trần Bình");
+
+        var codes = await SearchCodesAsync(
+            "nguyen", "&status=shipping&paymentStatus=paid&flag=underpaid&from=2026-10-05&to=2026-10-05");
+
+        Assert.Equal(["AND-HIT"], codes);
+    }
+
+    [Fact]
+    // `total` đếm cùng điều kiện tìm. `limit` nhỏ hơn số dòng khớp chỉ cắt dòng trả về.
+    public async Task Search_TotalCountsMatchingOrdersNotPageRows()
+    {
+        await _kit.AddOrderAsync("CNT-1", BaseTime.AddMinutes(1), recipientName: "Lê Văn Tổng");
+        await _kit.AddOrderAsync("CNT-2", BaseTime.AddMinutes(2), recipientName: "Lê Văn Tổng");
+        await _kit.AddOrderAsync("CNT-3", BaseTime.AddMinutes(3), recipientName: "Lê Văn Tổng");
+        await _kit.AddOrderAsync("CNT-4", BaseTime.AddMinutes(4), recipientName: "Người khác");
+
+        var data = await ReadDataAsync(await GetAsync($"search={Uri.EscapeDataString("le van tong")}&limit=1"));
+
+        Assert.Single(CodesOf(data));
+        Assert.Equal(3, data.GetProperty("total").GetInt32());
+    }
+
+    [Fact]
+    // Đơn có `contact` thiếu `email` vẫn trả 200. Đơn đó khớp theo tên và chỉ không khớp theo email.
+    public async Task Search_OrderWithoutEmail_IsNotAnErrorAndMatchesOtherFields()
+    {
+        await _kit.AddOrderAsync("NOEM-1", BaseTime.AddMinutes(1), recipientName: "Phạm Không Email", omitRecipientEmail: true);
+        await _kit.AddOrderAsync("NOEM-2", BaseTime.AddMinutes(2), recipientName: "Người Có Email", recipientEmail: "co.email@example.com");
+
+        var byName = await SearchCodesAsync("pham khong");
+        var byEmail = await SearchCodesAsync("co.email");
+
+        Assert.Equal(["NOEM-1"], byName);
+        Assert.Equal(["NOEM-2"], byEmail);
+    }
+
+    [Fact]
+    // `search` lặp lại và từ khóa 101 ký tự nhận 400 `VALIDATION_ERROR` cho trường `search`. Đúng 100 ký tự vẫn đạt.
+    public async Task Search_RepeatedOrTooLong_Returns400()
+    {
+        await _kit.AddOrderAsync("SRCH-1", BaseTime);
+
+        var repeated = await GetAsync("search=a&search=b");
+        var tooLong = await GetAsync($"search={new string('a', 101)}");
+        var exact = await GetAsync($"search={new string('a', 100)}");
+
+        await AssertValidationErrorForFieldAsync(repeated, "search");
+        await AssertValidationErrorForFieldAsync(tooLong, "search");
+        Assert.Equal(HttpStatusCode.OK, exact.StatusCode);
+    }
+
+    [Fact]
+    // Từ khóa trống được coi như không gửi. Form lọc để trống ô không gây lỗi và không lọc.
+    public async Task Search_BlankValue_ReturnsEveryOrder()
+    {
+        await _kit.AddOrderAsync("BLK-1", BaseTime.AddMinutes(1));
+        await _kit.AddOrderAsync("BLK-2", BaseTime.AddMinutes(2));
+
+        var data = await ReadDataAsync(await GetAsync("search=%20%20"));
+
+        Assert.Equal(2, data.GetProperty("total").GetInt32());
+    }
 }

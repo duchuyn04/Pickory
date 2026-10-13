@@ -14,7 +14,8 @@ public sealed record AdminOrderListQuery(
     PaymentMethod? PaymentMethod,
     string? Flag,
     DateOnly? From,
-    DateOnly? To)
+    DateOnly? To,
+    SearchTerm? Search)
 {
     // Cờ đơn ghi vào `orders.flags`. Bốn cờ đầu do luồng thanh toán ghi (`SepayPaymentService`, `SepayLatePaymentMatcher`,
     // `ExpiredPaymentProcessor`), `invoice_issued` do nhân viên đánh dấu, còn `shipment_cancelled` do `ShipmentStatusChangedHandler` ghi.
@@ -40,6 +41,7 @@ public sealed record AdminOrderListQuery(
         var flag = ReadFlag(query, failures);
         var from = ReadDate(query, "from", failures);
         var to = ReadDate(query, "to", failures);
+        var search = SearchTerm.Read(query, failures);
 
         // Khoảng ngược không có đơn nào khớp. Báo lỗi để người dùng sửa thay vì nhận danh sách rỗng khó hiểu.
         if (from is not null && to is not null && from > to)
@@ -47,25 +49,13 @@ public sealed record AdminOrderListQuery(
             failures.Add(new ValidationFailure("from", "Ngày bắt đầu không được sau ngày kết thúc."));
         }
 
-        return new AdminOrderListQuery(page, status, paymentStatus, paymentMethod, flag, from, to);
-    }
-
-    // Tham số trống được coi như không gửi, để form lọc để trống ô không gây lỗi.
-    private static string? ReadRaw(IQueryCollection query, string name)
-    {
-        if (!query.TryGetValue(name, out var values))
-        {
-            return null;
-        }
-
-        var raw = values.ToString();
-        return string.IsNullOrWhiteSpace(raw) ? null : raw;
+        return new AdminOrderListQuery(page, status, paymentStatus, paymentMethod, flag, from, to, search);
     }
 
     private static TEnum? ReadLabel<TEnum>(IQueryCollection query, string name, List<ValidationFailure> failures)
         where TEnum : struct, Enum
     {
-        var raw = ReadRaw(query, name);
+        var raw = QueryParameter.ReadSingle(query, name, failures);
         if (raw is null)
         {
             return null;
@@ -82,7 +72,7 @@ public sealed record AdminOrderListQuery(
 
     private static string? ReadFlag(IQueryCollection query, List<ValidationFailure> failures)
     {
-        var raw = ReadRaw(query, "flag");
+        var raw = QueryParameter.ReadSingle(query, "flag", failures);
         if (raw is null)
         {
             return null;
@@ -99,7 +89,7 @@ public sealed record AdminOrderListQuery(
 
     private static DateOnly? ReadDate(IQueryCollection query, string name, List<ValidationFailure> failures)
     {
-        var raw = ReadRaw(query, name);
+        var raw = QueryParameter.ReadSingle(query, name, failures);
         if (raw is null)
         {
             return null;

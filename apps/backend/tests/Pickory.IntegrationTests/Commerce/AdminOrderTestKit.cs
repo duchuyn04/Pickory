@@ -33,7 +33,9 @@ internal sealed class AdminOrderTestKit(IntegrationDatabaseFixture database)
         string? id = null,
         string recipientName = "Nguyễn Văn An",
         string recipientPhone = "0901234567",
-        bool withInvoice = false)
+        bool withInvoice = false,
+        string recipientEmail = "an@example.com",
+        bool omitRecipientEmail = false)
     {
         var orderId = id ?? Guid.NewGuid().ToString();
         var order = new Order
@@ -41,7 +43,10 @@ internal sealed class AdminOrderTestKit(IntegrationDatabaseFixture database)
             Id = orderId,
             Code = code,
             AnonymousId = "anon-" + code,
-            Contact = Json(new { name = recipientName, phone = recipientPhone, email = "an@example.com", note = "Giao giờ hành chính" }),
+            // Đơn cũ hoặc đơn nhập tay có thể thiếu email, nên kit cho bỏ hẳn khóa `email` khỏi `contact`.
+            Contact = omitRecipientEmail
+                ? Json(new { name = recipientName, phone = recipientPhone, note = "Giao giờ hành chính" })
+                : Json(new { name = recipientName, phone = recipientPhone, email = recipientEmail, note = "Giao giờ hành chính" }),
             ShippingAddress = Json(new
             {
                 provinceCode = "1000001",

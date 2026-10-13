@@ -63,10 +63,10 @@ Quy ước:
 ### FLT-05: Đơn hàng: tìm theo mã, tên, số điện thoại, email
 **Mô tả:** Migration `unaccent` cho `commerce`. `GET /api/admin/orders` nhận `search`. Tên, số điện thoại và email đọc từ bản chụp `Contact` của đơn.
 **Tiêu chí nghiệm thu:**
-- [ ] Tìm được đơn theo một phần mã đơn
-- [ ] Tìm không dấu theo tên người nhận. Tìm theo số điện thoại và email
-- [ ] `search` kết hợp được với `status`, `paymentStatus`, `flag` và khoảng ngày
-- [ ] `total` đếm cùng điều kiện lọc
+- [x] Tìm được đơn theo một phần mã đơn
+- [x] Tìm không dấu theo tên người nhận. Tìm theo số điện thoại và email
+- [x] `search` kết hợp được với `status`, `paymentStatus`, `flag` và khoảng ngày
+- [x] `total` đếm cùng điều kiện lọc
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** FLT-01 · **Quy mô:** S
 
