@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Pickory.Modules.AiGateway.Calendar;
+using Pickory.Shared.Calendar;
 using Pickory.Modules.AiGateway.Contracts.Calls;
 using Pickory.Modules.AiGateway.Contracts.Errors;
 using Pickory.Modules.AiGateway.Persistence;

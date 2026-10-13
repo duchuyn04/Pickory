@@ -307,6 +307,16 @@ internal sealed class ShippingService : IShippingService
         return shipment is null ? null : ToContract(shipment);
     }
 
+    public async Task<Shipment?> GetShipmentByRefAsync(string reference, CancellationToken cancellationToken)
+    {
+        // Mã đơn rỗng là lỗi lập trình của bên gọi, giống `GetShipmentAsync` với mã vận đơn rỗng.
+        ArgumentException.ThrowIfNullOrWhiteSpace(reference);
+
+        // Tra theo `ref` giống luồng tạo vận đơn. Vận đơn đã hủy có `ref` đã đổi nên không khớp.
+        var shipment = await FindShipmentByRefAsync(reference, cancellationToken);
+        return shipment is null ? null : ToContract(shipment);
+    }
+
     public Parcel BuildParcel(IReadOnlyList<ParcelItem> items) => ParcelBuilder.Build(items);
 
     // Lỗi lập trình của bên gọi. Thiếu dữ liệu bắt buộc thì không có gì để gửi GHN.

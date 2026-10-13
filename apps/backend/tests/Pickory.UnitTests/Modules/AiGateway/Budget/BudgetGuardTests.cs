@@ -1,5 +1,5 @@
 using Pickory.Modules.AiGateway.Budget;
-using Pickory.Modules.AiGateway.Calendar;
+using Pickory.Shared.Calendar;
 using Pickory.Modules.AiGateway.Contracts.Calls;
 using Pickory.Modules.AiGateway.Contracts.Errors;
 using Xunit;

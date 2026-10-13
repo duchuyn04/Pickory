@@ -8,6 +8,7 @@ using Pickory.Modules.Commerce.Carts;
 using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Configuration;
 using Pickory.Modules.Commerce.Orders;
+using Pickory.Modules.Commerce.Orders.Admin;
 using Pickory.Modules.Commerce.Payments;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Commerce.Settings;
@@ -45,6 +46,8 @@ public static class CommerceModule
         services.AddScoped<PlaceOrderService>();
         // Dịch vụ theo dõi và tự hủy đơn hàng phục vụ các route phía khách hàng.
         services.AddScoped<OrderTrackingService>();
+        // Danh sách và chi tiết đơn của nhân viên đọc mọi đơn, nên tách khỏi dịch vụ theo dõi của khách.
+        services.AddScoped<AdminOrderService>();
         // Nguồn mã đơn là singleton không giữ trạng thái. Test thay bằng nguồn có kịch bản để ép tình huống trùng mã.
         services.AddSingleton<IOrderCodeSource, RandomOrderCodeSource>();
 
@@ -81,6 +84,7 @@ public static class CommerceModule
         CartEndpoints.Map(moduleRoutes);
         CheckoutEndpoints.Map(moduleRoutes);
         OrderEndpoints.Map(moduleRoutes);
+        AdminOrderEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);
         // Route SePay có hợp đồng xác thực và phản hồi riêng, không yêu cầu phiên web.
         SepayWebhookEndpoint.Map(moduleRoutes);

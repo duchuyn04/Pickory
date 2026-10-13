@@ -306,10 +306,10 @@ Quy ước:
 ### COM-14: Danh sách và chi tiết đơn cho nhân viên
 **Mô tả:** `GET /api/admin/orders` và `GET /api/admin/orders/{code}` với quyền `orders:read`. Danh sách lọc theo trạng thái đơn, trạng thái thanh toán, ngày tạo, cờ.
 **Tiêu chí nghiệm thu:**
-- [ ] Danh sách phân trang theo `PageQuery` của `Pickory.Shared`
-- [ ] Chi tiết có liên hệ, địa chỉ, sản phẩm, thông tin hóa đơn VAT, lịch sử trạng thái, vận đơn
-- [ ] Ngày lọc tính theo giờ `Asia/Ho_Chi_Minh`
-- [ ] `sales` và `support` đọc được. Người không có `orders:read` nhận 403. Endpoint mới có trong ma trận quyền
+- [x] Danh sách phân trang theo `PageQuery` của `Pickory.Shared`
+- [x] Chi tiết có liên hệ, địa chỉ, sản phẩm, thông tin hóa đơn VAT, lịch sử trạng thái, vận đơn
+- [x] Ngày lọc tính theo giờ `Asia/Ho_Chi_Minh`
+- [x] `sales` và `support` đọc được. Người không có `orders:read` nhận 403. Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-08 · **Quy mô:** M
 

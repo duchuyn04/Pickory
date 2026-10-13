@@ -162,7 +162,7 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 4: Back-office đơn hàng và vận chuyển
-- [ ] COM-14 · [ ] COM-15 · [ ] COM-16 · [ ] COM-17 · [ ] COM-UI5
+- [x] COM-14 · [ ] COM-15 · [ ] COM-16 · [ ] COM-17 · [ ] COM-UI5
 
 ### Checkpoint M4
 - [ ] `sales` xác nhận đơn và tạo vận đơn bằng `FakeGhnClient`. Trạng thái giao hàng tự cập nhật vào đơn

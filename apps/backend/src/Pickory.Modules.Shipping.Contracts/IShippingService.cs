@@ -21,6 +21,9 @@ public interface IShippingService
     // Trả `null` khi không có vận đơn.
     Task<Shipment?> GetShipmentAsync(string shipmentId, CancellationToken cancellationToken);
 
+    // Tra vận đơn còn hiệu lực theo mã đơn gốc (`Ref`). Trả `null` khi đơn chưa có vận đơn, hoặc vận đơn của đơn đã hủy.
+    Task<Shipment?> GetShipmentByRefAsync(string reference, CancellationToken cancellationToken);
+
     // Gộp các dòng hàng thành một kiện.
     Parcel BuildParcel(IReadOnlyList<ParcelItem> items);
 }

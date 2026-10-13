@@ -1,4 +1,3 @@
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Pickory.Modules.Catalog.Contracts.Reading;
@@ -10,7 +9,6 @@ using Pickory.Modules.Commerce.Persistence;
 using Pickory.Shared.Events;
 using Pickory.Shared.Exceptions;
 using Pickory.Shared.Http;
-using Pickory.Shared.Json;
 
 namespace Pickory.Modules.Commerce.Orders;
 
@@ -222,20 +220,8 @@ public sealed class OrderTrackingService(
         var canCancel = OrderTransitions.Evaluate(
             order.Status, OrderStatus.Cancelled, TransitionActor.Customer, hasActiveShipment: false).IsAllowed;
 
-        // Sắp xếp các dòng hàng theo tên và mã SKU để thứ tự hiển thị luôn xác định.
-        var items = order.Items
-            .OrderBy(item => item.NameSnapshot)
-            .ThenBy(item => item.SkuId)
-            .Select(item => new OrderDetailItemResponse(
-                item.SkuId,
-                item.NameSnapshot,
-                FormatVariantName(item.OptionValues),
-                item.ImagePublicId,
-                ResolveImageUrl(item.ImagePublicId),
-                item.Quantity,
-                item.UnitPrice,
-                checked(item.UnitPrice * item.Quantity)
-            )).ToList();
+        // Dòng hàng dùng chung bộ đổi với trang nhân viên để hai bên luôn thấy cùng một bản chụp.
+        var items = OrderItemMapper.ToResponses(order.Items, catalogReader);
 
         // Sắp xếp lịch sử chuyển trạng thái theo thứ tự thời gian tăng dần.
         var statusHistory = order.StatusHistory
@@ -266,33 +252,10 @@ public sealed class OrderTrackingService(
             TrackingCode: null);
     }
 
-    private static string? FormatVariantName(JsonDocument? optionValues)
-    {
-        // Bỏ qua định dạng khi dòng đơn không có tùy chọn biến thể.
-        if (optionValues is null)
-        {
-            return null;
-        }
-
-        try
-        {
-            var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(
-                optionValues.RootElement.GetRawText(), PickoryJsonDefaults.Options);
-
-            // Nối các giá trị biến thể thành chuỗi ngăn cách bởi dấu phẩy.
-            return dict is not null && dict.Count > 0 ? string.Join(", ", dict.Values) : null;
-        }
-        catch (JsonException)
-        {
-            // Trả null khi tài liệu JSON không đúng cấu trúc từ điển.
-            return null;
-        }
-    }
-
     private static DateTime TruncateToMicroseconds(DateTime value) =>
         new(value.Ticks - (value.Ticks % 10), DateTimeKind.Utc);
 
     // Dựng URL ảnh sản phẩm qua catalog khi có mã ảnh trong bản chụp.
     private string? ResolveImageUrl(string? publicId) =>
-        string.IsNullOrEmpty(publicId) ? null : catalogReader.BuildProductImageUrl(publicId);
+        OrderItemMapper.ResolveImageUrl(catalogReader, publicId);
 }

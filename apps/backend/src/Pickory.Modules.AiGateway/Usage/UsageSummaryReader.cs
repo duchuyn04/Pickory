@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Pickory.Modules.AiGateway.Calendar;
+using Pickory.Shared.Calendar;
 using Pickory.Modules.AiGateway.Persistence;
 using Pickory.Modules.AiGateway.Settings;
 

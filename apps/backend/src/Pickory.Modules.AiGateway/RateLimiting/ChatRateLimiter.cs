@@ -1,4 +1,4 @@
-using Pickory.Modules.AiGateway.Calendar;
+using Pickory.Shared.Calendar;
 using Pickory.Modules.AiGateway.Contracts.Errors;
 using Pickory.Shared.Exceptions;
 

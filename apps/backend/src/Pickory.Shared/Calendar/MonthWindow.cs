@@ -1,4 +1,4 @@
-namespace Pickory.Modules.AiGateway.Calendar;
+namespace Pickory.Shared.Calendar;
 
 // Khoảng thời gian của một tháng theo giờ Việt Nam, đổi sang UTC. `NextStartUtc` không thuộc tháng.
 public sealed record MonthWindow(DateTime StartUtc, DateTime NextStartUtc);

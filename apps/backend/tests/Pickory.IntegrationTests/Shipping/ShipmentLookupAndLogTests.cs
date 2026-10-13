@@ -65,6 +65,56 @@ public sealed class ShipmentLookupAndLogTests(PickoryWebApplicationFactory facto
     }
 
     [Fact]
+    // COM-14: nhân viên xem chi tiết đơn nên tra vận đơn theo mã đơn (`ref`), không cần biết mã vận đơn nội bộ.
+    public async Task GetByRef_ExistingShipment_ReturnsContractValues()
+    {
+        var created = await WithServiceAsync(_ghn, service => service.CreateShipmentAsync(
+            ShipmentTestSetup.SampleRequest, CancellationToken.None));
+
+        var found = await WithServiceAsync(_ghn, service =>
+            service.GetShipmentByRefAsync("ship07-ref-1", CancellationToken.None));
+
+        Assert.Equal(created, found);
+        Assert.Equal("ship07-ref-1", found!.Ref);
+    }
+
+    [Fact]
+    // Đơn chưa có vận đơn thì trả `null`, không ném lỗi.
+    public async Task GetByRef_UnknownRef_ReturnsNull()
+    {
+        var found = await WithServiceAsync(_ghn, service =>
+            service.GetShipmentByRefAsync("ship-khong-ton-tai", CancellationToken.None));
+
+        Assert.Null(found);
+    }
+
+    [Fact]
+    // Vận đơn đã hủy bị đổi `ref` sang `{ref}#cancelled#{n}`, nên đơn không còn vận đơn còn hiệu lực.
+    public async Task GetByRef_CancelledShipment_ReturnsNull()
+    {
+        var created = await WithServiceAsync(_ghn, service => service.CreateShipmentAsync(
+            ShipmentTestSetup.CreateRequest("ship14-cancelled"), CancellationToken.None));
+        await WithServiceAsync(_ghn, async service =>
+        {
+            await service.CancelShipmentAsync(created.Id, CancellationToken.None);
+            return true;
+        });
+
+        var found = await WithServiceAsync(_ghn, service =>
+            service.GetShipmentByRefAsync("ship14-cancelled", CancellationToken.None));
+
+        Assert.Null(found);
+    }
+
+    [Fact]
+    // Mã đơn rỗng là lỗi lập trình của bên gọi, giống `GetShipmentAsync` với mã vận đơn rỗng.
+    public async Task GetByRef_BlankRef_Throws()
+    {
+        await Assert.ThrowsAsync<ArgumentException>(() => WithServiceAsync(_ghn, service =>
+            service.GetShipmentByRefAsync(" ", CancellationToken.None)));
+    }
+
+    [Fact]
     public async Task Get_UnknownShipment_ReturnsNull()
     {
         var found = await WithServiceAsync(_ghn, service =>
