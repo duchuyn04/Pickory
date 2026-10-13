@@ -35,13 +35,13 @@
   font-weight: 700;
 }
 
-/* Sáu ô lọc nằm trên một hàng ở màn rộng. Ô tìm kiếm rộng hơn vì từ khóa dài hơn các ô chọn. */
+/* Ô tìm kiếm chiếm một hàng riêng để nhãn dài nằm trên một dòng. Năm ô lọc còn lại chia đều hàng dưới. */
 .filters-row.order-filters .field {
   flex: 1 1 130px;
 }
 
 .filters-row.order-filters .field:first-child {
-  flex-basis: 200px;
+  flex-basis: 100%;
 }
 
 /* Lỗi tải nằm trong thẻ bảng, nên cần lề để không dính vào viền thẻ. */

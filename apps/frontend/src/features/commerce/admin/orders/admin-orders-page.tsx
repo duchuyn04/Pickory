@@ -7,7 +7,7 @@ import { ForbiddenNotice } from '../../../../shared/forbidden-notice';
 import { Pager } from '../../../../shared/pager';
 import { SearchInput } from '../../../../shared/search-input';
 import { useListFilters } from '../../../../shared/use-list-filters';
-import { formatMovementTime } from '../../../catalog/admin/inventory-logic';
+import { formatVietnamDateTime } from '../../../../shared/vietnam-time';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
 import { useCan } from '../../../identity/hooks/use-actor';
 import {
@@ -234,7 +234,7 @@ export function AdminOrdersPage() {
                           {order.code}
                         </Link>
                       </th>
-                      <td className="order-time">{formatMovementTime(order.createdAt)}</td>
+                      <td className="order-time">{formatVietnamDateTime(order.createdAt)}</td>
                       <td>
                         {order.recipientName || 'Chưa có tên'}
                         <span className="cell-sub">{order.recipientPhone || 'Chưa có'}</span>

@@ -355,12 +355,12 @@ Quy ước:
 ### COM-UI5: Màn đơn hàng back-office
 **Mô tả:** Thay trang giữ chỗ `/admin/orders` trong `apps/frontend/src/app.tsx`. Danh sách có tab theo trạng thái và bộ lọc cờ. Chi tiết đơn có nút thao tác theo quyền và lịch sử trạng thái.
 **Tiêu chí nghiệm thu:**
-- [ ] Nút xác nhận, tạo vận đơn, hủy vận đơn, hủy đơn, hóa đơn, nhận COD, hoàn tiền chỉ hiện khi người dùng có quyền
-- [ ] Form tạo vận đơn điền sẵn kích thước kiện từ `BuildParcel` và cho sửa
-- [ ] Hủy đơn bắt buộc nhập lý do
+- [x] Nút xác nhận, tạo vận đơn, hủy vận đơn, hủy đơn, hóa đơn, nhận COD, hoàn tiền chỉ hiện khi người dùng có quyền
+- [x] Form tạo vận đơn điền sẵn kích thước kiện từ `BuildParcel` và cho sửa
+- [x] Hủy đơn bắt buộc nhập lý do
 - [x] Danh sách có ô tìm kiếm theo mã đơn, tên, số điện thoại, email (FLT-05 của `tasks/admin-search/todo.md`). Bộ lọc nằm trên URL
-- [ ] Lỗi 409 và 422 hiện thông báo tiếng Việt của API
-- [ ] Bảng dùng được bằng bàn phím. Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Lỗi 409 và 422 hiện thông báo tiếng Việt của API
+- [x] Bảng dùng được bằng bàn phím. Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** COM-15, COM-16, COM-17 · **Quy mô:** M
 

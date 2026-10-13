@@ -81,6 +81,14 @@ export interface AdminOrderInvoice {
   email?: string;
 }
 
+// Kiện hàng gợi ý để form tạo vận đơn điền sẵn. Chỉ có khi đơn `confirmed`.
+export interface AdminOrderSuggestedParcel {
+  weightGrams: number;
+  lengthCm: number;
+  widthCm: number;
+  heightCm: number;
+}
+
 export interface AdminOrderDetail {
   code: string;
   status: string;
@@ -99,6 +107,7 @@ export interface AdminOrderDetail {
   total: number;
   statusHistory: AdminOrderHistoryEntry[];
   shipment: AdminOrderShipment | null;
+  suggestedParcel: AdminOrderSuggestedParcel | null;
   refundTransactionRef: string | null;
 }
 
@@ -121,4 +130,44 @@ export function fetchAdminOrders(values: Record<string, string>, page: number) {
 
 export function fetchAdminOrderDetail(code: string) {
   return apiRequest<AdminOrderDetail>(`/api/admin/orders/${encodeURIComponent(code)}`);
+}
+
+// Thao tác ghi lên một đơn. Mỗi thao tác là một tài nguyên con của đơn, theo `AdminOrderEndpoints`.
+export type OrderMutation =
+  | { kind: 'confirm' }
+  | { kind: 'cancel'; reason: string }
+  | { kind: 'issueInvoice' }
+  | { kind: 'createShipment'; parcel: AdminOrderSuggestedParcel }
+  | { kind: 'cancelShipment' }
+  | { kind: 'receiveCod' }
+  | { kind: 'refund'; transactionRef: string };
+
+// Gọi route của thao tác và trả chi tiết đơn mới. Lỗi 400, 409, 422 thành `ApiError` mang thông báo của API.
+export function runOrderMutation(code: string, mutation: OrderMutation) {
+  const base = `/api/admin/orders/${encodeURIComponent(code)}`;
+  switch (mutation.kind) {
+    case 'confirm':
+      return apiRequest<AdminOrderDetail>(`${base}/confirmation`, { method: 'POST' });
+    case 'cancel':
+      return apiRequest<AdminOrderDetail>(`${base}/cancellation`, {
+        method: 'POST',
+        body: JSON.stringify({ reason: mutation.reason }),
+      });
+    case 'issueInvoice':
+      return apiRequest<AdminOrderDetail>(`${base}/invoice-issuance`, { method: 'PUT' });
+    case 'createShipment':
+      return apiRequest<AdminOrderDetail>(`${base}/shipment`, {
+        method: 'POST',
+        body: JSON.stringify({ parcel: mutation.parcel }),
+      });
+    case 'cancelShipment':
+      return apiRequest<AdminOrderDetail>(`${base}/shipment`, { method: 'DELETE' });
+    case 'receiveCod':
+      return apiRequest<AdminOrderDetail>(`${base}/cod-receipt`, { method: 'PUT' });
+    case 'refund':
+      return apiRequest<AdminOrderDetail>(`${base}/refund`, {
+        method: 'PUT',
+        body: JSON.stringify({ transactionRef: mutation.transactionRef }),
+      });
+  }
 }

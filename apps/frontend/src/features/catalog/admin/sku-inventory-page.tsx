@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
+import { formatVietnamDateTime } from '../../../shared/vietnam-time';
 import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
 import { Pager } from '../../../shared/pager';
 import { useListFilters } from '../../../shared/use-list-filters';
@@ -11,7 +12,6 @@ import { toCatalogErrorMessage } from './catalog-errors';
 import {
   describeOptionValues,
   formatDelta,
-  formatMovementTime,
   MOVEMENT_TYPE_OPTIONS,
   movementTypeLabel,
   stockBadge,
@@ -261,7 +261,7 @@ export function SkuInventoryPage() {
               <tbody>
                 {movements.items.map((movement) => (
                   <tr key={movement.id}>
-                    <td>{formatMovementTime(movement.createdAt)}</td>
+                    <td>{formatVietnamDateTime(movement.createdAt)}</td>
                     <td>{movementTypeLabel(movement.type)}</td>
                     <td className="num">
                       <span className={movement.delta > 0 ? 'delta-up' : 'delta-down'}>

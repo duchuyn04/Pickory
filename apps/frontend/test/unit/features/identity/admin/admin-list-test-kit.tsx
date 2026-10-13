@@ -11,6 +11,8 @@ export interface AdminListHarness {
   container: HTMLDivElement;
   // Mọi URL `GET` đã gọi, theo thứ tự.
   requestedUrls: string[];
+  // Mọi request ghi (khác `GET`), kèm body đã giải mã JSON.
+  writes: { method: string; url: string; body: unknown }[];
   render: (url: string) => Promise<void>;
   cleanup: () => Promise<void>;
 }
@@ -31,7 +33,7 @@ export function actorWith(permissions: string[]): ActorData {
 // `respond` trả phần `data` của response cho từng URL. Trả `undefined` thì dùng mảng rỗng.
 export function createHarness(
   actor: ActorData,
-  respond: (url: string) => unknown,
+  respond: (url: string, init?: RequestInit) => unknown,
 ): AdminListHarness {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   const container = document.createElement('div');
@@ -39,15 +41,23 @@ export function createHarness(
   const root: Root = createRoot(container);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const requestedUrls: string[] = [];
+  const writes: { method: string; url: string; body: unknown }[] = [];
   localStorage.clear();
 
   vi.stubGlobal(
     'fetch',
-    vi.fn(async (input: RequestInfo | URL) => {
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url === '/api/me') return new Response(JSON.stringify({ data: actor }));
-      requestedUrls.push(url);
-      const result = respond(url);
+      const method = init?.method ?? 'GET';
+      if (method === 'GET') {
+        requestedUrls.push(url);
+      } else {
+        const body = typeof init?.body === 'string' ? JSON.parse(init.body) : null;
+        writes.push({ method, url, body });
+      }
+      // Test có thể trả một lời hứa chưa hoàn tất để giữ request đang chờ.
+      const result = await respond(url, init);
       // Test cần lỗi HTTP thì trả sẵn `Response`. Bộ dựng không bọc lại.
       if (result instanceof Response) return result;
       return new Response(JSON.stringify({ data: result ?? [] }));
@@ -57,6 +67,7 @@ export function createHarness(
   return {
     container,
     requestedUrls,
+    writes,
     render: (url) =>
       act(async () => {
         root.render(

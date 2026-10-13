@@ -1,9 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ApiError } from '../../../../shared/api';
 import { ErrorAlert } from '../../../../shared/error-alert';
 import { ForbiddenNotice } from '../../../../shared/forbidden-notice';
-import { formatMovementTime } from '../../../catalog/admin/inventory-logic';
+import { formatVietnamDateTime } from '../../../../shared/vietnam-time';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
 import { useCan } from '../../../identity/hooks/use-actor';
 import {
@@ -13,6 +14,7 @@ import {
   formatPaymentStatus,
   formatShipmentStatus,
 } from '../../order-labels';
+import { OrderActions } from './admin-order-actions';
 import {
   fetchAdminOrderDetail,
   type AdminOrderDetail,
@@ -53,6 +55,8 @@ function orderAddressLine(address: AdminOrderDetail['shippingAddress']): string 
 export function AdminOrderDetailPage() {
   const { code = '' } = useParams();
   const canReadOrders = useCan('orders:read');
+  // Thông báo của thao tác vừa xong. Nằm ở màn vì hộp thoại đã đóng khi thao tác thành công.
+  const [notice, setNotice] = useState<string | null>(null);
 
   const {
     data: order,
@@ -114,11 +118,17 @@ export function AdminOrderDetailPage() {
       <div className="page-head">
         <div className="page-head-text">
           <h1>Đơn hàng {order.code}</h1>
-          <p>Đặt lúc {formatMovementTime(order.createdAt)}</p>
+          <p>Đặt lúc {formatVietnamDateTime(order.createdAt)}</p>
         </div>
-        {/* Chỗ đặt các nút thao tác theo quyền (xác nhận, tạo vận đơn, hủy, hóa đơn, COD, hoàn tiền). Phần 2 của COM-UI5 thêm vào đây. */}
-        <div className="order-actions" />
+        {/* Nút thao tác theo quyền và trạng thái đơn. Component tự ẩn nút khi thiếu quyền. */}
+        <OrderActions order={order} onDone={setNotice} />
       </div>
+
+      {notice && (
+        <p role="status" className="alert alert-ok">
+          {notice}
+        </p>
+      )}
 
       <section className="card" aria-label="Tổng quan đơn">
         <dl className="order-overview">
@@ -145,7 +155,7 @@ export function AdminOrderDetailPage() {
           {order.paymentDeadline && (
             <div>
               <dt>Hạn thanh toán</dt>
-              <dd>{formatMovementTime(order.paymentDeadline)}</dd>
+              <dd>{formatVietnamDateTime(order.paymentDeadline)}</dd>
             </div>
           )}
           {order.flags.length > 0 && (
@@ -223,7 +233,7 @@ export function AdminOrderDetailPage() {
                   <tbody>
                     {history.map((entry, index) => (
                       <tr key={`${entry.createdAt}-${index}`}>
-                        <td className="order-time">{formatMovementTime(entry.createdAt)}</td>
+                        <td className="order-time">{formatVietnamDateTime(entry.createdAt)}</td>
                         <td>{formatOrderStatus(entry.fromStatus)}</td>
                         <td>{formatOrderStatus(entry.toStatus)}</td>
                         <td className="wrap-anywhere">{entry.reason ?? ''}</td>

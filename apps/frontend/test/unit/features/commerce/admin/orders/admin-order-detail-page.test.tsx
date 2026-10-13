@@ -183,7 +183,7 @@ describe('màn chi tiết đơn hàng của nhân viên', () => {
     expect(link.getAttribute('href')).toBe('/admin/orders');
   });
 
-  it('không render nút thao tác nào trong phần 1', async () => {
+  it('người chỉ có orders:read không thấy nút thao tác nào', async () => {
     await open(fullOrder());
     await waitFor(() => text().includes('PK-1001'), 'mã đơn');
 
