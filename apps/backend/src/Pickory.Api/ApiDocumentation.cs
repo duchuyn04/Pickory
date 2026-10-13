@@ -7,10 +7,10 @@ namespace Pickory.Api;
 // Chế độ của trang tài liệu. Chế độ quyết định người đọc có gửi được request từ Swagger UI hay không.
 public enum ApiDocumentationMode
 {
-    // Development: có nút "Try it out" để dev gọi thử API qua proxy của Vite.
+    // Development hoặc production bật `API_DOCS_INTERACTIVE`: có nút "Try it out" để gọi thử API từ trang docs.
     Interactive,
 
-    // Môi trường khác: người đọc chỉ xem route và schema. Trang không có nút gửi request.
+    // Môi trường khác Development: người đọc chỉ xem route và schema. Trang không có nút gửi request.
     ReadOnly,
 }
 
@@ -23,7 +23,8 @@ public static class ApiDocumentation
     public const string UiRoutePrefix = "api/docs";
 
     // Trả null khi không gắn tài liệu. Môi trường khác Development chỉ có tài liệu khi người triển khai bật `API_DOCS_ENABLED`.
-    public static ApiDocumentationMode? SelectMode(bool isDevelopment, bool apiDocsEnabled)
+    // Nút "Try it out" ở môi trường khác Development cần thêm `API_DOCS_INTERACTIVE`, và cờ này không có tác dụng khi tài liệu tắt.
+    public static ApiDocumentationMode? SelectMode(bool isDevelopment, bool apiDocsEnabled, bool apiDocsInteractive = false)
     {
         if (isDevelopment)
         {
@@ -32,7 +33,7 @@ public static class ApiDocumentation
 
         if (apiDocsEnabled)
         {
-            return ApiDocumentationMode.ReadOnly;
+            return apiDocsInteractive ? ApiDocumentationMode.Interactive : ApiDocumentationMode.ReadOnly;
         }
 
         return null;

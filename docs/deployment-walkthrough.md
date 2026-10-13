@@ -392,13 +392,15 @@ Swagger UI có tùy chọn `SupportedSubmitMethods`. Danh sách rỗng làm tran
 | Development | Bất kỳ | Có tài liệu, có "Try it out" |
 | Production | Không đặt hoặc `0` | `/api/docs` trả 404 |
 | Production | `1` | Có tài liệu, chỉ xem |
+| Production | `1` kèm `API_DOCS_INTERACTIVE=1` | Có tài liệu, có "Try it out" |
 
 Các thay đổi trong code:
 
 - `AppConfig` đọc `API_DOCS_ENABLED` bằng `ReadZeroOrOneFlag`. Hàm này chỉ nhận `0` hoặc `1`, giống `GHN_LIVE_TESTS`.
 - `ApiDocumentation.SelectMode` chọn chế độ `Interactive`, `ReadOnly` hoặc không gắn tài liệu.
 - `ApiDocumentation.Map` đặt `SupportedSubmitMethods` rỗng ở chế độ `ReadOnly`.
-- `render.yaml` đặt `API_DOCS_ENABLED` bằng `"1"`.
+- `API_DOCS_INTERACTIVE` cũng chỉ nhận `0` hoặc `1`. Biến này không có tác dụng khi `API_DOCS_ENABLED` tắt.
+- `render.yaml` đặt `API_DOCS_ENABLED` và `API_DOCS_INTERACTIVE` bằng `"1"`.
 
 Chế độ chỉ xem là giới hạn của giao diện, không phải lớp bảo mật. Người biết route vẫn gọi API bằng `curl`. RBAC (Role-Based Access Control) vẫn chặn route admin khi người gọi không có quyền.
 

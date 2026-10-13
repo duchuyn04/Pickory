@@ -79,6 +79,9 @@ public record AppConfig
     // Bật tài liệu API chỉ xem ở môi trường khác Development. Mặc định tắt, vì tài liệu liệt kê cả route admin.
     public bool ApiDocsEnabled { get; init; }
 
+    // Cho gọi thử API từ trang tài liệu ở môi trường khác Development. Mặc định tắt, và chỉ có tác dụng khi `ApiDocsEnabled` bật.
+    public bool ApiDocsInteractive { get; init; }
+
     // Có đủ bộ ba khóa thì dùng Cloudinary thật. `Load` đã chặn trường hợp chỉ có một phần.
     public bool HasCloudinary => CloudinaryCloudName.Length > 0;
 
@@ -240,6 +243,7 @@ public record AppConfig
             GhnWebhookSecret = (configuration["GHN_WEBHOOK_SECRET"] ?? string.Empty).Trim(),
             GhnLiveTests = ReadZeroOrOneFlag(configuration, "GHN_LIVE_TESTS"),
             ApiDocsEnabled = ReadZeroOrOneFlag(configuration, "API_DOCS_ENABLED"),
+            ApiDocsInteractive = ReadZeroOrOneFlag(configuration, "API_DOCS_INTERACTIVE"),
         };
     }
 
