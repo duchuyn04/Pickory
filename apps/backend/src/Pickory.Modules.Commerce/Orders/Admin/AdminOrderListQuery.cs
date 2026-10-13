@@ -17,9 +17,16 @@ public sealed record AdminOrderListQuery(
     DateOnly? To)
 {
     // Cờ đơn ghi vào `orders.flags`. Bốn cờ đầu do luồng thanh toán ghi (`SepayPaymentService`, `SepayLatePaymentMatcher`,
-    // `ExpiredPaymentProcessor`), còn `invoice_issued` do nhân viên đánh dấu.
+    // `ExpiredPaymentProcessor`), `invoice_issued` do nhân viên đánh dấu, còn `shipment_cancelled` do `ShipmentStatusChangedHandler` ghi.
     public static readonly IReadOnlyList<string> KnownFlags =
-        ["underpaid", "overpaid", "late_payment", "payment_expired", AdminOrderActionService.InvoiceIssuedFlag];
+    [
+        "underpaid",
+        "overpaid",
+        "late_payment",
+        "payment_expired",
+        AdminOrderActionService.InvoiceIssuedFlag,
+        ShipmentStatusChangedHandler.ShipmentCancelledFlag,
+    ];
 
     private const string DateFormat = "yyyy-MM-dd";
 

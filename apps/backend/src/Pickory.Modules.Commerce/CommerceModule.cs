@@ -13,6 +13,7 @@ using Pickory.Modules.Commerce.Payments;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Commerce.Settings;
 using Pickory.Modules.Identity.Contracts.Events;
+using Pickory.Modules.Shipping.Contracts.Events;
 using Pickory.Shared.Events;
 using Pickory.Shared.Configuration;
 
@@ -52,6 +53,9 @@ public static class CommerceModule
         services.AddScoped<AdminOrderService>();
         // Thao tác ghi của nhân viên (xác nhận, hủy, đánh dấu hóa đơn) tách khỏi dịch vụ đọc để phạm vi quyền rõ ràng.
         services.AddScoped<AdminOrderActionService>();
+        // Tạo và hủy vận đơn gọi GHN ngoài transaction, nên tách riêng để khóa dòng ngắn.
+        services.AddScoped<OrderParcelResolver>();
+        services.AddScoped<AdminOrderShipmentService>();
         // Nguồn mã đơn là singleton không giữ trạng thái. Test thay bằng nguồn có kịch bản để ép tình huống trùng mã.
         services.AddSingleton<IOrderCodeSource, RandomOrderCodeSource>();
 
@@ -70,6 +74,8 @@ public static class CommerceModule
         // Gộp giỏ vãng lai khi khách đăng nhập, và xóa giỏ cùng sổ địa chỉ khi khách xóa tài khoản.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, CartLinkHandler>();
         services.AddScoped<IDomainEventHandler<UserDeletedEvent>, UserDeletedCommerceHandler>();
+        // Vận đơn báo đã giao hoặc đã hoàn thì đơn đổi trạng thái tương ứng.
+        services.AddScoped<IDomainEventHandler<ShipmentStatusChangedEvent>, ShipmentStatusChangedHandler>();
         return services;
     }
 

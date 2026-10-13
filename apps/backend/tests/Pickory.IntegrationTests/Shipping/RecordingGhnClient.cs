@@ -46,11 +46,20 @@ internal sealed class RecordingGhnClient(IGhnClient inner) : IGhnClient
         return inner.GetLeadTimeAsync(request, cancellationToken);
     }
 
-    public Task<GhnCreatedOrder> CreateOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken)
+    // Chạy ngay sau khi GHN tạo đơn xong, trước khi bên gọi lưu DB. Test dùng để chèn thao tác khác đúng vào khe này.
+    public Func<Task>? AfterCreateOrder { get; set; }
+
+    public async Task<GhnCreatedOrder> CreateOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken)
     {
         TotalCallCount++;
         CreateOrderRequests.Add(request);
-        return inner.CreateOrderAsync(request, cancellationToken);
+        var created = await inner.CreateOrderAsync(request, cancellationToken);
+        if (AfterCreateOrder is { } afterCreateOrder)
+        {
+            await afterCreateOrder();
+        }
+
+        return created;
     }
 
     public Task CancelOrderAsync(string orderCode, string reasonCode, string? reason, CancellationToken cancellationToken)

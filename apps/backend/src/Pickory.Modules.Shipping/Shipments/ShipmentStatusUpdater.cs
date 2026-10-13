@@ -95,9 +95,15 @@ internal sealed class ShipmentStatusUpdater(
             // Chỉ phát sự kiện khi trạng thái chuẩn đổi. Đổi trạng thái gốc trong cùng trạng thái chuẩn thì module khác không cần biết.
             if (statusChanged)
             {
+                // Nguồn `Manual` là thao tác của shop, còn webhook và job đồng bộ là tin từ hãng vận chuyển.
+                // Bên nhận cần phân biệt hai nguồn này để không đổi đơn hai lần khi nhân viên hủy vận đơn.
+                var changeSource = source == ShipmentEventSource.Manual
+                    ? ShipmentStatusChangeSource.Shop
+                    : ShipmentStatusChangeSource.Carrier;
+
                 // `Ref` trong sự kiện là mã gốc, vì bên nhận biết đơn theo mã đó chứ không biết hậu tố nội bộ.
                 events.Emit(new ShipmentStatusChangedEvent(
-                    shipment.Id, shipment.Ref, newStatus.Value, shipment.Status, now));
+                    shipment.Id, shipment.Ref, newStatus.Value, shipment.Status, now, changeSource));
             }
 
             await transaction.CommitAsync(CancellationToken.None);

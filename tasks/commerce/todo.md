@@ -328,15 +328,16 @@ Quy ước:
 ### COM-16: Vận đơn GHN và trạng thái giao hàng
 **Mô tả:** `POST /api/admin/orders/{code}/shipment` tạo vận đơn, cho sửa kích thước kiện. `DELETE /api/admin/orders/{code}/shipment` hủy vận đơn. Cả hai cần `orders:fulfill`. Handler `ShipmentStatusChangedEvent` cập nhật đơn theo quyết định 9 của plan.
 **Tiêu chí nghiệm thu:**
-- [ ] Tạo vận đơn chỉ được khi đơn `confirmed`. Thành công thì đơn sang `shipping` và lưu `ShipmentId`, mã vận đơn
-- [ ] Đơn COD gửi `CodAmount` bằng tổng tiền. Đơn SePay gửi `CodAmount = 0`
-- [ ] `Ref` là mã đơn. Bấm lại sau `SHIPPING_UNAVAILABLE` không tạo vận đơn thứ hai
-- [ ] `SHIPPING_REJECTED` trả 422 với thông báo của `shipping`. Đơn giữ `confirmed`
-- [ ] Hủy vận đơn thành công thì đơn về `confirmed`. Sau đó nhân viên hủy đơn được
-- [ ] Sự kiện `Delivered` chuyển đơn sang `delivered`. Sự kiện `Returned` chuyển đơn sang `returned`. Hàng không tự nhập lại kho
-- [ ] Sự kiện có `ShipmentId` khác vận đơn hiện tại bị bỏ qua
-- [ ] Nhận cùng sự kiện 2 lần không ghi lịch sử 2 lần
-- [ ] `support` nhận 403. Endpoint mới có trong ma trận quyền. Mỗi thao tác ghi 1 dòng audit
+- [x] Tạo vận đơn chỉ được khi đơn `confirmed`. Thành công thì đơn sang `shipping` và lưu `ShipmentId`, mã vận đơn
+- [x] Đơn COD gửi `CodAmount` bằng tổng tiền. Đơn SePay gửi `CodAmount = 0`
+- [x] `Ref` là mã đơn. Bấm lại sau `SHIPPING_UNAVAILABLE` không tạo vận đơn thứ hai
+- [x] `SHIPPING_REJECTED` trả 422 với thông báo của `shipping`. Đơn giữ `confirmed`
+- [x] Hủy vận đơn thành công thì đơn về `confirmed`. Sau đó nhân viên hủy đơn được
+- [x] Sự kiện `Delivered` chuyển đơn sang `delivered`. Sự kiện `Returned` chuyển đơn sang `returned`. Hàng không tự nhập lại kho
+- [x] Sự kiện có `ShipmentId` khác vận đơn hiện tại bị bỏ qua
+- [x] Nhận cùng sự kiện 2 lần không ghi lịch sử 2 lần
+- [x] `support` nhận 403. Endpoint mới có trong ma trận quyền. Mỗi thao tác ghi 1 dòng audit
+- [x] GHN tự hủy vận đơn khi đơn `shipping` thì đơn về `confirmed` và có cờ `shipment_cancelled`. Nhân viên hủy vận đơn không gắn cờ này (Câu hỏi mở 8 của plan, đã chốt 2026-10-11)
 **Kiểm tra:** test tích hợp với `FakeGhnClient` và sự kiện phát trực tiếp
 **Phụ thuộc:** COM-15, SHIP-08 · **Quy mô:** M
 
@@ -357,6 +358,7 @@ Quy ước:
 - [ ] Nút xác nhận, tạo vận đơn, hủy vận đơn, hủy đơn, hóa đơn, nhận COD, hoàn tiền chỉ hiện khi người dùng có quyền
 - [ ] Form tạo vận đơn điền sẵn kích thước kiện từ `BuildParcel` và cho sửa
 - [ ] Hủy đơn bắt buộc nhập lý do
+- [ ] Danh sách có ô tìm kiếm theo mã đơn, tên, số điện thoại, email (FLT-05 của `tasks/admin-search/todo.md`). Bộ lọc nằm trên URL
 - [ ] Lỗi 409 và 422 hiện thông báo tiếng Việt của API
 - [ ] Bảng dùng được bằng bàn phím. Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`

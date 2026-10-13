@@ -217,7 +217,7 @@ internal sealed class ShippingService : IShippingService
 
             // `PreviousStatus` là null vì đây là lần ghi trạng thái đầu tiên của vận đơn.
             events.Emit(new ShipmentStatusChangedEvent(
-                shipment.Id, shipment.Ref, shipment.Status, PreviousStatus: null, now));
+                shipment.Id, shipment.Ref, shipment.Status, PreviousStatus: null, now, ShipmentStatusChangeSource.Shop));
             await transaction.CommitAsync(CancellationToken.None);
         }
         catch (DbUpdateException exception) when (IsShipmentUniqueViolation(exception))

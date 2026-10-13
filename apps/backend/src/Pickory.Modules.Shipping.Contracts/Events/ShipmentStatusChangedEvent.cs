@@ -9,4 +9,5 @@ public sealed record ShipmentStatusChangedEvent(
     string Ref,
     ShipmentStatus Status,
     ShipmentStatus? PreviousStatus,
-    DateTimeOffset OccurredAt) : IDomainEvent;
+    DateTimeOffset OccurredAt,
+    ShipmentStatusChangeSource Source) : IDomainEvent;

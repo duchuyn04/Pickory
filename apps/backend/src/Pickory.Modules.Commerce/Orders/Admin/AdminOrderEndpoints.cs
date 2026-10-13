@@ -28,6 +28,12 @@ internal static class AdminOrderEndpoints
             .RequirePermission(Permissions.OrdersCancel);
         endpoints.MapPut($"{OrdersPath}/{{code}}/invoice-issuance", IssueInvoiceAsync)
             .RequirePermission(Permissions.OrdersUpdateStatus);
+
+        // Vận đơn là tài nguyên con của đơn: tạo bằng POST và hủy bằng DELETE, cùng quyền `orders:fulfill`.
+        endpoints.MapPost($"{OrdersPath}/{{code}}/shipment", CreateShipmentAsync)
+            .RequirePermission(Permissions.OrdersFulfill);
+        endpoints.MapDelete($"{OrdersPath}/{{code}}/shipment", CancelShipmentAsync)
+            .RequirePermission(Permissions.OrdersFulfill);
     }
 
     private static async Task<IResult> ConfirmAsync(string code, HttpContext context, AdminOrderActionService service)
@@ -64,6 +70,33 @@ internal static class AdminOrderEndpoints
 
         var actorId = context.GetActor().UserId!;
         var result = await service.IssueInvoiceAsync(code, actorId, context.RequestAborted);
+        return Results.Ok(new ApiResponse<AdminOrderDetailResponse>(result));
+    }
+
+    private static async Task<IResult> CreateShipmentAsync(
+        string code, HttpContext context, JsonElement? body, AdminOrderShipmentService service)
+    {
+        SetNoStore(context);
+
+        // Kiểm body trước khi gọi GHN. Kích thước sai không tốn một lời gọi mạng.
+        var failures = new List<ValidationFailure>();
+        var parcel = CreateShipmentBody.Read(body, failures);
+        if (failures.Count > 0)
+        {
+            throw new ValidationException(failures);
+        }
+
+        var actorId = context.GetActor().UserId!;
+        var result = await service.CreateAsync(code, actorId, parcel, context.RequestAborted);
+        return Results.Ok(new ApiResponse<AdminOrderDetailResponse>(result));
+    }
+
+    private static async Task<IResult> CancelShipmentAsync(string code, HttpContext context, AdminOrderShipmentService service)
+    {
+        SetNoStore(context);
+
+        var actorId = context.GetActor().UserId!;
+        var result = await service.CancelAsync(code, actorId, context.RequestAborted);
         return Results.Ok(new ApiResponse<AdminOrderDetailResponse>(result));
     }
 

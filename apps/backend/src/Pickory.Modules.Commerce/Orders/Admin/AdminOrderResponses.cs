@@ -31,8 +31,11 @@ public sealed record AdminOrderShipmentResponse(
     string Status,
     int Fee);
 
+// Kiện hàng gợi ý để form tạo vận đơn điền sẵn. Cân nặng tính bằng gam, kích thước tính bằng cm.
+public sealed record AdminOrderParcelResponse(int WeightGrams, int LengthCm, int WidthCm, int HeightCm);
+
 // Chi tiết một đơn cho nhân viên, gồm bản chụp liên hệ, địa chỉ và hóa đơn lúc đặt.
-// `Invoice` là `null` khi không có hóa đơn VAT, và `Shipment` là `null` khi chưa có vận đơn.
+// `Invoice`, `Shipment` và `SuggestedParcel` là `null` khi thiếu dữ liệu tương ứng, và gợi ý kiện chỉ có khi đơn `confirmed`.
 public sealed record AdminOrderDetailResponse(
     string Code,
     string Status,
@@ -50,4 +53,5 @@ public sealed record AdminOrderDetailResponse(
     int ShippingDiscount,
     int Total,
     IReadOnlyList<AdminOrderStatusHistoryResponse> StatusHistory,
-    AdminOrderShipmentResponse? Shipment);
+    AdminOrderShipmentResponse? Shipment,
+    AdminOrderParcelResponse? SuggestedParcel);

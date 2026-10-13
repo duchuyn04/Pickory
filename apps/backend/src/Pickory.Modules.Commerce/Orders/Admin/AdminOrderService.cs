@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Pickory.Modules.Catalog.Contracts.Reading;
+using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Shipping.Contracts;
 using Pickory.Shared.Calendar;
@@ -13,7 +14,8 @@ namespace Pickory.Modules.Commerce.Orders.Admin;
 public sealed class AdminOrderService(
     CommerceDbContext database,
     ICatalogReader catalogReader,
-    IShippingService shipping)
+    IShippingService shipping,
+    OrderParcelResolver parcels)
 {
     private const string OrderNotFoundMessage = "Không tìm thấy đơn hàng.";
 
@@ -124,6 +126,11 @@ public sealed class AdminOrderService(
                 entry.CreatedAt))
             .ToList();
 
+        // Gợi ý kiện chỉ có nghĩa khi đơn sắp tạo vận đơn. Trạng thái khác không tốn truy vấn catalog.
+        var suggestedParcel = order.Status == OrderStatus.Confirmed
+            ? await parcels.BuildAsync(order.Items, cancellationToken)
+            : null;
+
         return new AdminOrderDetailResponse(
             order.Code,
             OrderLabels.ToLabel(order.Status),
@@ -144,7 +151,11 @@ public sealed class AdminOrderService(
             shipment is null
                 ? null
                 : new AdminOrderShipmentResponse(
-                    shipment.Id, shipment.TrackingCode, OrderLabels.ToLabel(shipment.Status), shipment.Fee));
+                    shipment.Id, shipment.TrackingCode, OrderLabels.ToLabel(shipment.Status), shipment.Fee),
+            suggestedParcel is null
+                ? null
+                : new AdminOrderParcelResponse(
+                    suggestedParcel.WeightGrams, suggestedParcel.LengthCm, suggestedParcel.WidthCm, suggestedParcel.HeightCm));
     }
 
     // Tên và số điện thoại nằm trong bản chụp liên hệ. Bản chụp thiếu trường thì trả `null` thay vì ném lỗi.
