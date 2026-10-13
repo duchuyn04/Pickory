@@ -20,7 +20,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
     private static readonly string[] HistorySchemas = ["ef_identity", "ef_ai_gateway", "ef_catalog", "ef_shipping", "ef_commerce"];
 
     [Theory]
-    [InlineData("identity", "ef_identity", "20261005125639_PrismaBaseline")]
+    [InlineData("identity", "ef_identity", "20261013101735_EnableUnaccentExtension")]
     [InlineData("ai_gateway", "ef_ai_gateway", "20261005125642_PrismaBaseline")]
     [InlineData("catalog", "ef_catalog", "20261012142008_MakeInventoryMovementOrderIndexNonUnique")]
     [InlineData("shipping", "ef_shipping", "20261010041544_InitialShipping")]

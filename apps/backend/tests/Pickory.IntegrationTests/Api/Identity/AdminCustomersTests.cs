@@ -97,6 +97,275 @@ public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFac
         await RegisterTests.AssertErrorAsync(response, HttpStatusCode.BadRequest, "VALIDATION_ERROR", expectedMessage);
     }
 
+    // Marker chỉ gồm chữ thường và số, không dấu. Tìm kiếm trên DB dùng chung chỉ khớp khách của test.
+    private static string NewMarker() => Guid.NewGuid().ToString("N")[..12];
+
+    private async Task<(List<string> Ids, int Total)> ListAsync(string sessionToken, string query)
+    {
+        var response = await SendAsync(HttpMethod.Get, $"/api/admin/customers?{query}", sessionToken);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        var data = document.RootElement.GetProperty("data");
+        var ids = data.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("id").GetString()!).ToList();
+        return (ids, data.GetProperty("total").GetInt32());
+    }
+
+    private async Task DeleteCustomersAsync(params string[] customerIds)
+    {
+        await using var identity = _database.CreateIdentityContext();
+        await identity.Users.Where(user => customerIds.Contains(user.Id)).ExecuteDeleteAsync();
+    }
+
+    [Theory]
+    [InlineData("nguyen")]
+    [InlineData("NGUYEN")]
+    [InlineData("Nguyễn")]
+    // Tên lưu có dấu. Từ khóa không dấu, viết hoa hoặc có dấu đều tìm được.
+    public async Task ListCustomers_SearchIgnoresDiacriticsAndCase_ForNguyen(string keyword)
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var marker = NewMarker();
+        var customer = await CreateCustomerAsync($"diacritics-{marker}", name: $"Nguyễn Văn {marker}");
+
+        var (ids, total) = await ListAsync(salesSession, $"search={Uri.EscapeDataString($"{keyword} van {marker}")}");
+
+        Assert.Equal([customer.Id], ids);
+        Assert.Equal(1, total);
+    }
+
+    [Fact]
+    // Chữ `Đ` không tách được thành `D` cộng dấu. Bảng quy tắc của `unaccent` phải có `Đ` thì `duc` mới tìm được `Đức`.
+    public async Task ListCustomers_SearchDucFindsDucWithStroke()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var marker = NewMarker();
+        var customer = await CreateCustomerAsync($"duc-{marker}", name: $"Đức {marker}");
+
+        var (ids, _) = await ListAsync(salesSession, $"search={Uri.EscapeDataString($"duc {marker}")}");
+
+        Assert.Equal([customer.Id], ids);
+    }
+
+    [Fact]
+    // Từ khóa gộp khoảng trắng thừa. Tên có một khoảng trắng vẫn khớp từ khóa có nhiều khoảng trắng liền nhau.
+    public async Task ListCustomers_SearchCollapsesWhitespace()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var marker = NewMarker();
+        var customer = await CreateCustomerAsync($"space-{marker}", name: $"Trần An {marker}");
+
+        var (ids, _) = await ListAsync(salesSession, $"search={Uri.EscapeDataString($"  tran    an   {marker}  ")}");
+
+        Assert.Equal([customer.Id], ids);
+    }
+
+    [Fact]
+    // `%` trong từ khóa là ký tự thường. Khách `100x` cùng marker không được khớp từ khóa `100%`.
+    public async Task ListCustomers_PercentInKeywordMatchesOnlyLiteralPercent()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var marker = NewMarker();
+        var withPercent = await CreateCustomerAsync($"pct-a-{marker}", name: $"100%{marker}");
+        var withoutPercent = await CreateCustomerAsync($"pct-b-{marker}", name: $"100x{marker}");
+        try
+        {
+            var (ids, total) = await ListAsync(salesSession, $"search={Uri.EscapeDataString($"100%{marker}")}");
+
+            Assert.Equal([withPercent.Id], ids);
+            Assert.Equal(1, total);
+            Assert.DoesNotContain(withoutPercent.Id, ids);
+        }
+        finally
+        {
+            // Xóa khách có `%`. Test `PercentSignIsNotWildcard` cũ đếm kết quả của từ khóa `%` trên DB dùng chung.
+            await DeleteCustomersAsync(withPercent.Id, withoutPercent.Id);
+        }
+    }
+
+    [Fact]
+    // `_` trong từ khóa là ký tự thường. Khách `axb` không được khớp từ khóa `a_b`.
+    public async Task ListCustomers_UnderscoreInKeywordMatchesOnlyLiteralUnderscore()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var marker = NewMarker();
+        var withUnderscore = await CreateCustomerAsync($"und-a-{marker}", name: $"a_b{marker}");
+        var withoutUnderscore = await CreateCustomerAsync($"und-b-{marker}", name: $"axb{marker}");
+
+        var (ids, _) = await ListAsync(salesSession, $"search={Uri.EscapeDataString($"a_b{marker}")}");
+
+        Assert.Equal([withUnderscore.Id], ids);
+        Assert.DoesNotContain(withoutUnderscore.Id, ids);
+    }
+
+    [Fact]
+    // Từ khóa `%` chỉ khớp khách có ký tự `%` trong tên, email hoặc số điện thoại. Mọi dòng trả về phải chứa `%`.
+    public async Task ListCustomers_PercentAloneMatchesOnlyCustomersContainingPercent()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var marker = NewMarker();
+        var withPercent = await CreateCustomerAsync($"pct-only-a-{marker}", name: $"Giảm 50% {marker}");
+        var withoutPercent = await CreateCustomerAsync($"pct-only-b-{marker}", name: $"Không có {marker}");
+        try
+        {
+            var response = await SendAsync(HttpMethod.Get, $"/api/admin/customers?search={Uri.EscapeDataString("%")}&limit=100", salesSession);
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            using var document = await ActorHttp.ReadJsonAsync(response);
+            var items = document.RootElement.GetProperty("data").GetProperty("items").EnumerateArray().ToList();
+            Assert.Contains(items, item => item.GetProperty("id").GetString() == withPercent.Id);
+            Assert.DoesNotContain(items, item => item.GetProperty("id").GetString() == withoutPercent.Id);
+            Assert.All(items, item =>
+            {
+                var fields = new[] { "email", "name", "phone" }
+                    .Select(field => item.GetProperty(field).GetString() ?? string.Empty);
+                Assert.Contains(fields, value => value.Contains('%'));
+            });
+        }
+        finally
+        {
+            // Xóa khách có `%`. Test `PercentSignIsNotWildcard` cũ đếm kết quả của từ khóa `%` trên DB dùng chung.
+            await DeleteCustomersAsync(withPercent.Id, withoutPercent.Id);
+        }
+    }
+
+    private sealed record FilterFixture(User Active, User Locked, User Unverified, string Marker);
+
+    // Ba khách cùng marker: đang hoạt động đã xác minh, bị khóa đã xác minh, đang hoạt động chưa xác minh.
+    private async Task<FilterFixture> CreateFilterFixtureAsync()
+    {
+        var marker = NewMarker();
+        var active = await CreateCustomerAsync($"flt-a-{marker}", name: $"Lọc {marker}", emailVerified: true);
+        var locked = await CreateCustomerAsync($"flt-b-{marker}", name: $"Lọc {marker}", emailVerified: true, locked: true);
+        var unverified = await CreateCustomerAsync($"flt-c-{marker}", name: $"Lọc {marker}", emailVerified: false);
+        return new FilterFixture(active, locked, unverified, marker);
+    }
+
+    [Fact]
+    // `status=locked` chỉ trả khách có `LockedAt`. `status=active` chỉ trả khách chưa khóa.
+    public async Task ListCustomers_StatusFilterSeparatesLockedAndActive()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var fixture = await CreateFilterFixtureAsync();
+
+        var (lockedIds, lockedTotal) = await ListAsync(salesSession, $"search={fixture.Marker}&status=locked");
+        var (activeIds, activeTotal) = await ListAsync(salesSession, $"search={fixture.Marker}&status=active");
+
+        Assert.Equal([fixture.Locked.Id], lockedIds);
+        Assert.Equal(1, lockedTotal);
+        Assert.Equal(new[] { fixture.Active.Id, fixture.Unverified.Id }.Order(), activeIds.Order());
+        Assert.Equal(2, activeTotal);
+    }
+
+    [Fact]
+    // `emailVerified=false` chỉ trả khách chưa xác minh. `emailVerified=true` trả khách đã xác minh.
+    public async Task ListCustomers_EmailVerifiedFilterSeparatesVerifiedAndUnverified()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var fixture = await CreateFilterFixtureAsync();
+
+        var (unverifiedIds, _) = await ListAsync(salesSession, $"search={fixture.Marker}&emailVerified=false");
+        var (verifiedIds, _) = await ListAsync(salesSession, $"search={fixture.Marker}&emailVerified=true");
+
+        Assert.Equal([fixture.Unverified.Id], unverifiedIds);
+        Assert.Equal(new[] { fixture.Active.Id, fixture.Locked.Id }.Order(), verifiedIds.Order());
+    }
+
+    [Fact]
+    // Từ khóa kết hợp với hai bộ lọc theo AND. `total` đếm theo cùng điều kiện, không đếm cả ba khách.
+    public async Task ListCustomers_SearchCombinesWithBothFilters_AndTotalMatchesFilter()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var fixture = await CreateFilterFixtureAsync();
+
+        var (ids, total) = await ListAsync(salesSession, $"search={fixture.Marker}&status=active&emailVerified=true");
+
+        Assert.Equal([fixture.Active.Id], ids);
+        Assert.Equal(1, total);
+
+        // Chỉ bộ lọc `status=active` giữ hai khách. `limit=1` chỉ cắt dòng trả về, còn `total` vẫn là 2.
+        var (pageIds, pageTotal) = await ListAsync(salesSession, $"search={fixture.Marker}&status=active&limit=1");
+        Assert.Single(pageIds);
+        Assert.Equal(2, pageTotal);
+    }
+
+    [Theory]
+    [InlineData("status=blocked", "status")]
+    [InlineData("status=ACTIVE", "status")]
+    [InlineData("status=active&status=locked", "status")]
+    [InlineData("emailVerified=yes", "emailVerified")]
+    [InlineData("emailVerified=1", "emailVerified")]
+    [InlineData("emailVerified=true&emailVerified=false", "emailVerified")]
+    [InlineData("search=a&search=b", "search")]
+    // Giá trị lạ hoặc tham số lặp lại nhận 400 với đúng tên trường.
+    public async Task ListCustomers_InvalidFilterIsRejected(string query, string field)
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+
+        var response = await SendAsync(HttpMethod.Get, $"/api/admin/customers?{query}", salesSession);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        var error = document.RootElement.GetProperty("error");
+        Assert.Equal("VALIDATION_ERROR", error.GetProperty("code").GetString());
+        Assert.Contains($"{field}:", error.GetProperty("message").GetString());
+    }
+
+    [Fact]
+    // Hai khách cùng `CreatedAt` nằm ở hai trang liền nhau. Thứ tự phụ theo `Id` giữ cho không lặp dòng và không mất dòng.
+    public async Task ListCustomers_SameCreatedAtAcrossPages_NoDuplicateAndNoMissingRow()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var marker = NewMarker();
+        var customerIds = new List<string>();
+        for (var index = 0; index < 6; index++)
+        {
+            var customer = await CreateCustomerAsync($"tie-{index}-{marker}", name: $"Cùng giờ {marker}");
+            customerIds.Add(customer.Id);
+        }
+
+        // Mỗi `UPDATE` ghi bản dòng mới ở cuối bảng, nên cập nhật theo `Id` giảm dần đặt thứ tự lưu ngược với `Id`.
+        // Truy vấn thiếu thứ tự phụ sẽ trả sai thứ tự `Id`.
+        var sameInstant = DateTime.UtcNow.AddMinutes(-5);
+        foreach (var customerId in customerIds.OrderByDescending(id => id, StringComparer.Ordinal))
+        {
+            await using var identity = _database.CreateIdentityContext();
+            await identity.Users.Where(user => user.Id == customerId)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(user => user.CreatedAt, sameInstant));
+        }
+
+        var collectedIds = new List<string>();
+        foreach (var pageNumber in new[] { 1, 2, 3 })
+        {
+            var (pageIds, total) = await ListAsync(salesSession, $"search={marker}&limit=2&page={pageNumber}");
+            Assert.Equal(6, total);
+            collectedIds.AddRange(pageIds);
+        }
+
+        // Ba trang liền nhau ghép lại đủ sáu khách, không lặp, và theo `Id` tăng dần.
+        Assert.Equal(customerIds.Order(StringComparer.Ordinal).ToList(), collectedIds);
+    }
+
+    [Fact]
+    // Khách mới nhất lên đầu. Thứ tự chính theo `CreatedAt` giảm dần.
+    public async Task ListCustomers_NewestCustomerComesFirst()
+    {
+        var (_, salesSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales");
+        var marker = NewMarker();
+        var older = await CreateCustomerAsync($"order-a-{marker}", name: $"Thứ tự {marker}");
+        var newer = await CreateCustomerAsync($"order-b-{marker}", name: $"Thứ tự {marker}");
+        await using (var identity = _database.CreateIdentityContext())
+        {
+            await identity.Users.Where(user => user.Id == older.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(user => user.CreatedAt, DateTime.UtcNow.AddDays(-2)));
+            await identity.Users.Where(user => user.Id == newer.Id)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(user => user.CreatedAt, DateTime.UtcNow.AddDays(-1)));
+        }
+
+        var (ids, _) = await ListAsync(salesSession, $"search={marker}");
+
+        Assert.Equal([newer.Id, older.Id], ids);
+    }
+
     [Fact]
     // Xem một khách bằng id. Id của nhân viên nhận 404, nên route này không lộ hồ sơ nhân viên.
     public async Task GetCustomer_ReturnsCustomerAndHidesStaff()
@@ -221,15 +490,18 @@ public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFac
         Assert.Null(await ReadLockedAtAsync(customer.Id));
     }
 
-    private Task<User> CreateCustomerAsync(string prefix, string? name = null, string? phone = null)
+    private Task<User> CreateCustomerAsync(
+        string prefix, string? name = null, string? phone = null, bool emailVerified = false, bool locked = false)
     {
-        return CreateCustomerWithProfileAsync(IdentityTestData.NewEmail(prefix), name, phone);
+        return CreateCustomerWithProfileAsync(IdentityTestData.NewEmail(prefix), name, phone, emailVerified, locked);
     }
 
     // Đặt tên và số điện thoại riêng cho từng khách. Tìm kiếm trên DB dùng chung chỉ khớp đúng khách của test.
-    private async Task<User> CreateCustomerWithProfileAsync(string email, string? name, string? phone)
+    private async Task<User> CreateCustomerWithProfileAsync(
+        string email, string? name, string? phone, bool emailVerified = false, bool locked = false)
     {
-        var customer = await IdentityTestData.CreateUserAsync(_database, email, UserKind.Customer, "customer");
+        var customer = await IdentityTestData.CreateUserAsync(
+            _database, email, UserKind.Customer, "customer", emailVerified: emailVerified, locked: locked);
         await using var identity = _database.CreateIdentityContext();
         await identity.Users.Where(user => user.Id == customer.Id).ExecuteUpdateAsync(setters => setters
             .SetProperty(user => user.Name, name ?? customer.Name)

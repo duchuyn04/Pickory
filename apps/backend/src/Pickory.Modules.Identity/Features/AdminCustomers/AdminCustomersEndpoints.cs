@@ -25,15 +25,15 @@ public static class AdminCustomersEndpoints
 
     private static async Task<IResult> ListAsync(HttpContext context, CustomerManagementHandler handler)
     {
-        // Kiểm tra tham số phân trang trước khi truy vấn. Giá trị sai nhận lỗi `VALIDATION_ERROR`.
+        // Kiểm tra mọi tham số của query string trước khi truy vấn. Giá trị sai nhận lỗi `VALIDATION_ERROR`.
         var failures = new List<ValidationFailure>();
-        var page = PageQuery.Read(context.Request.Query, failures);
+        var query = CustomerListQuery.Read(context.Request.Query, failures);
         if (failures.Count > 0)
         {
             throw new ValidationException(failures);
         }
 
-        var result = await handler.ListAsync(context.Request.Query["search"].FirstOrDefault(), page, context.RequestAborted);
+        var result = await handler.ListAsync(query, context.RequestAborted);
         return Results.Ok(new ApiResponse<PagedResponse<CustomerResponse>>(result));
     }
 

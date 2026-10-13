@@ -52,7 +52,10 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             // Shipping và commerce không thuộc schema Prisma cũ nên script nhận schema không đụng tới lịch sử của hai module đó.
             Assert.Equal(originalHistory["ef_shipping"], stamped["ef_shipping"]);
             Assert.Equal(originalHistory["ef_commerce"], stamped["ef_commerce"]);
-            Assert.Empty(await context.Database.GetPendingMigrationsAsync());
+            // Script chỉ ghi nhận migration mốc. Migration sinh sau mốc còn chờ `db:migrate` áp dụng, nên không được ghi nhận nhầm.
+            Assert.Equal(
+                ["20261013101735_EnableUnaccentExtension"],
+                await context.Database.GetPendingMigrationsAsync());
 
             // Lần nhận schema thứ hai phải giữ nguyên lịch sử đã ghi, không thêm dòng hoặc đổi phiên bản.
             await context.Database.ExecuteSqlRawAsync(script);
