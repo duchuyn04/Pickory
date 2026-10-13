@@ -17,6 +17,8 @@ export interface StaffRow {
   lockedAt: string | null;
   createdAt: string;
   roles: string[];
+  // Trạng thái do API tính: `active`, `invited` hoặc `locked`. `lockedAt` chỉ cho biết có bị khóa hay không.
+  status: string;
 }
 
 interface AssignRolesDialogProps {

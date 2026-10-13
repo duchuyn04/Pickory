@@ -2,11 +2,11 @@ import { useSearchParams } from 'react-router-dom';
 
 const PAGE_PARAM = 'page';
 
-export interface ListFilters {
+export interface ListFilters<Name extends string = string> {
   // Giá trị hiện tại của từng bộ lọc trong danh sách tên. Chuỗi rỗng khi URL không có tham số.
-  values: Record<string, string>;
+  values: Record<Name, string>;
   page: number;
-  setFilter: (name: string, value: string) => void;
+  setFilter: (name: Name, value: string) => void;
   setPage: (page: number) => void;
 }
 
@@ -18,11 +18,13 @@ function parsePage(raw: string | null): number {
 }
 
 // Giữ bộ lọc và số trang của màn danh sách trên URL. Mở lại link cho đúng danh sách đó.
-export function useListFilters(filterNames: readonly string[]): ListFilters {
+export function useListFilters<const Name extends string>(
+  filterNames: readonly Name[],
+): ListFilters<Name> {
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Chỉ đọc các tên màn đã khai báo. Tham số lạ trên URL không lọt vào giá trị bộ lọc.
-  const values: Record<string, string> = {};
+  const values = {} as Record<Name, string>;
   for (const name of filterNames) {
     values[name] = searchParams.get(name) ?? '';
   }

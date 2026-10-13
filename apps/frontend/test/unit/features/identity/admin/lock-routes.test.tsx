@@ -92,8 +92,8 @@ function stubFetch(lockedAt: string | null) {
           }),
         );
       }
-      // Màn nhân viên đọc response phân trang và gửi `limit` trong query string.
-      if (url.startsWith('/api/admin/staff?')) {
+      // Màn nhân viên đọc response phân trang. Không có bộ lọc thì URL không có query string.
+      if (url === '/api/admin/staff' || url.startsWith('/api/admin/staff?')) {
         return new Response(
           JSON.stringify({
             data: { items: [staffRow(lockedAt)], total: 1, page: 1, limit: 100 },

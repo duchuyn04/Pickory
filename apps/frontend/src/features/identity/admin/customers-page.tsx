@@ -1,6 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { Pager } from '../../../shared/pager';
+import { SearchInput } from '../../../shared/search-input';
+import { useListFilters } from '../../../shared/use-list-filters';
 import { useCan } from '../hooks/use-actor';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { ErrorAlert } from '../../../shared/error-alert';
@@ -25,6 +28,9 @@ interface CustomersResponse {
   limit: number;
 }
 
+// Tên tham số bộ lọc trên URL. Trùng tên tham số của `GET /api/admin/customers`.
+const FILTER_NAMES = ['search', 'status', 'emailVerified'] as const;
+
 // Trang tra cứu khách hàng, khóa và mở khóa tài khoản.
 export function CustomersPage() {
   // Hai quyền tách nhau: sales và support xem được danh sách nhưng không thấy nút khóa.
@@ -32,21 +38,27 @@ export function CustomersPage() {
   const canManageCustomers = useCan('customers:manage');
   const queryClient = useQueryClient();
 
-  // searchTerm là chữ đang gõ; debouncedSearch chỉ đổi khi bấm tìm, để không gọi API sau mỗi phím gõ.
-  const [searchTerm, setSearchTerm] = useState('');
-  const [debouncedSearch, setDebouncedSearch] = useState('');
+  // Bộ lọc và trang nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
+  const { values, page, setFilter, setPage } = useListFilters(FILTER_NAMES);
+  const hasFilters = FILTER_NAMES.some((name) => values[name] !== '');
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại. Nếu bỏ qua, lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
   const { data, isLoading, isError, error } = useQuery<CustomersResponse>({
-    // Từ khóa nằm trong khóa truy vấn để mỗi từ khóa có cache riêng và đổi từ khóa thì tự gọi lại.
-    queryKey: ['admin-customers', debouncedSearch],
+    // Mọi bộ lọc và số trang nằm trong khóa truy vấn. Mỗi tổ hợp có cache riêng và đổi giá trị thì tự gọi lại.
+    queryKey: ['admin-customers', values, page],
     queryFn: () => {
-      // encodeURIComponent để ký tự đặc biệt trong từ khóa (như & hay #) không làm sai URL.
-      const url = debouncedSearch
-        ? `/api/admin/customers?search=${encodeURIComponent(debouncedSearch)}`
-        : '/api/admin/customers';
-      return apiRequest<CustomersResponse>(url);
+      // `URLSearchParams` mã hóa ký tự đặc biệt trong từ khóa (như & hay #) để URL không sai.
+      const params = new URLSearchParams();
+      for (const name of FILTER_NAMES) {
+        if (values[name] !== '') params.set(name, values[name]);
+      }
+      // Trang 1 là mặc định của API nên không gửi.
+      if (page > 1) params.set('page', String(page));
+      const queryString = params.toString();
+      return apiRequest<CustomersResponse>(
+        queryString ? `/api/admin/customers?${queryString}` : '/api/admin/customers',
+      );
     },
     // Không gọi API khi không có quyền, vì chắc chắn bị từ chối với 403.
     enabled: canReadCustomers,
@@ -55,12 +67,6 @@ export function CustomersPage() {
   // Hook ở trên phải chạy hết trước lệnh return sớm này; backend vẫn chặn mọi request thật sự.
   if (!canReadCustomers) {
     return <ForbiddenNotice permission="customers:read" subject="danh sách khách hàng" />;
-  }
-
-  function handleSearchSubmit(e: React.FormEvent) {
-    // Chặn trình duyệt tải lại trang khi gửi form.
-    e.preventDefault();
-    setDebouncedSearch(searchTerm);
   }
 
   // Một nút dùng cho cả khóa và mở khóa, tùy trạng thái hiện tại của khách.
@@ -105,23 +111,37 @@ export function CustomersPage() {
       {actionError && <ErrorAlert message={actionError} />}
 
       <section className="card card-flush">
-        <form noValidate onSubmit={handleSearchSubmit} className="filters-row">
+        <div className="filters-row">
+          <SearchInput
+            label="Tìm theo tên, email hoặc số điện thoại"
+            value={values.search}
+            onSearch={(text) => setFilter('search', text)}
+          />
           <div className="field">
-            <label htmlFor="customer-search" className="sr">
-              Tìm khách hàng
-            </label>
-            <input
-              id="customer-search"
-              type="search"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Tìm theo email, tên, SĐT..."
-            />
+            <label htmlFor="customer-status">Trạng thái</label>
+            <select
+              id="customer-status"
+              value={values.status}
+              onChange={(event) => setFilter('status', event.target.value)}
+            >
+              <option value="">Tất cả</option>
+              <option value="active">Hoạt động</option>
+              <option value="locked">Đã khóa</option>
+            </select>
           </div>
-          <button type="submit" className="btn btn-primary">
-            Tìm kiếm
-          </button>
-        </form>
+          <div className="field">
+            <label htmlFor="customer-email-verified">Xác thực email</label>
+            <select
+              id="customer-email-verified"
+              value={values.emailVerified}
+              onChange={(event) => setFilter('emailVerified', event.target.value)}
+            >
+              <option value="">Tất cả</option>
+              <option value="true">Đã xác thực</option>
+              <option value="false">Chưa xác thực</option>
+            </select>
+          </div>
+        </div>
 
         {isLoading ? (
           <p role="status" className="empty-state">
@@ -132,6 +152,17 @@ export function CustomersPage() {
             message={error instanceof Error ? error.message : 'Tải danh sách khách hàng thất bại.'}
             className="identity-table-alert"
           />
+        ) : data && data.items.length === 0 && (hasFilters || page > 1) ? (
+          // Có bộ lọc hoặc đang ở trang sau mà không có dòng nào. Nói rõ nguyên nhân là bộ lọc, không phải hệ thống chưa có khách.
+          <div className="empty-state">
+            <p role="status">Không có kết quả phù hợp với bộ lọc.</p>
+            {/* Link `page=99` vượt quá số trang. Nút đưa người dùng về trang có dữ liệu. */}
+            {page > 1 && (
+              <button type="button" className="btn btn-sm" onClick={() => setPage(1)}>
+                Về trang 1
+              </button>
+            )}
+          </div>
         ) : (
           <div className="table-wrap">
             <table className="tbl identity-table">
@@ -195,6 +226,15 @@ export function CustomersPage() {
               </tbody>
             </table>
           </div>
+        )}
+        {data && !isError && (
+          <Pager
+            page={page}
+            total={data.total}
+            limit={data.limit}
+            onPageChange={setPage}
+            label="Phân trang khách hàng"
+          />
         )}
       </section>
     </div>

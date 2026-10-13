@@ -1,6 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { Pager } from '../../../shared/pager';
+import { SearchInput } from '../../../shared/search-input';
+import { useListFilters } from '../../../shared/use-list-filters';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { useCan } from '../hooks/use-actor';
 import { AssignRolesDialog, type StaffRow } from '../components/assign-roles-dialog';
@@ -9,7 +12,6 @@ import type { RoleData } from '../components/role-form';
 import { ErrorAlert } from '../../../shared/error-alert';
 import './identity-admin.css';
 
-// API trả danh sách nhân viên theo trang. Màn này chưa có phân trang và bộ lọc, nên chỉ đọc `items`.
 interface StaffListResponse {
   items: StaffRow[];
   total: number;
@@ -17,8 +19,18 @@ interface StaffListResponse {
   limit: number;
 }
 
-// Một trang 100 dòng đủ cho số nhân viên của giai đoạn demo. FLT-UI2 sẽ thay bằng phân trang và bộ lọc.
-const STAFF_PAGE_LIMIT = 100;
+// Tên tham số bộ lọc trên URL. Trùng tên tham số của `GET /api/admin/staff`.
+const FILTER_NAMES = ['search', 'status', 'role'] as const;
+
+// Nhãn và màu badge theo trường `status` của API. Nhân viên đã mời chưa đặt mật khẩu nên không phải "Hoạt động".
+const STATUS_BADGES: Record<string, { label: string; className: string }> = {
+  active: { label: 'Hoạt động', className: 'badge badge-ok' },
+  invited: { label: 'Đã mời', className: 'badge' },
+  locked: { label: 'Đã khóa', className: 'badge badge-bad' },
+};
+
+// Mã role của khách hàng không dùng cho nhân viên, nên không đưa vào danh sách chọn.
+const CUSTOMER_ROLE_CODE = 'customer';
 
 // Trang quản lý nhân viên: xem danh sách, mời, đổi role, khóa và mở khóa.
 export function StaffPage() {
@@ -32,26 +44,37 @@ export function StaffPage() {
   const [selectedStaff, setSelectedStaff] = useState<StaffRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
+  // Bộ lọc và trang nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
+  const { values, page, setFilter, setPage } = useListFilters(FILTER_NAMES);
+  const hasFilters = FILTER_NAMES.some((name) => values[name] !== '');
+
   // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại. Nếu bỏ qua, lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
   const {
-    data: staffList = [],
+    data: staffPage,
     isLoading: staffLoading,
     isError: staffIsError,
     error: staffError,
-  } = useQuery<StaffRow[]>({
-    queryKey: ['admin-staff'],
-    // Lấy `items` từ response phân trang để phần còn lại của màn vẫn làm việc với mảng nhân viên.
-    queryFn: async () => {
-      const page = await apiRequest<StaffListResponse>(
-        `/api/admin/staff?limit=${STAFF_PAGE_LIMIT}`,
+  } = useQuery<StaffListResponse>({
+    // Mọi bộ lọc và số trang nằm trong khóa truy vấn. Mỗi tổ hợp có cache riêng và đổi giá trị thì tự gọi lại.
+    queryKey: ['admin-staff', values, page],
+    queryFn: () => {
+      // `URLSearchParams` mã hóa ký tự đặc biệt trong từ khóa để URL không sai.
+      const params = new URLSearchParams();
+      for (const name of FILTER_NAMES) {
+        if (values[name] !== '') params.set(name, values[name]);
+      }
+      // Trang 1 là mặc định của API nên không gửi.
+      if (page > 1) params.set('page', String(page));
+      const queryString = params.toString();
+      return apiRequest<StaffListResponse>(
+        queryString ? `/api/admin/staff?${queryString}` : '/api/admin/staff',
       );
-      return page.items;
     },
     // Không gọi API khi không có quyền, vì chắc chắn bị từ chối với 403.
     enabled: canReadStaff,
   });
 
-  // Danh sách role cho hộp thoại mời và đổi role; chỉ người có quyền quản lý nhân viên mới cần.
+  // Danh sách role cho bộ lọc, hộp thoại mời và đổi role. API cho mọi nhân viên đọc, nên người chỉ có `staff:read` cũng cần để lọc.
   const {
     data: roles = [],
     isError: rolesIsError,
@@ -59,8 +82,11 @@ export function StaffPage() {
   } = useQuery<RoleData[]>({
     queryKey: ['admin-roles'],
     queryFn: () => apiRequest<RoleData[]>('/api/admin/roles'),
-    enabled: canManageStaff,
+    enabled: canReadStaff,
   });
+
+  const staffList = staffPage?.items ?? [];
+  const filterableRoles = roles.filter((role) => role.code !== CUSTOMER_ROLE_CODE);
 
   // Hook ở trên phải chạy hết trước lệnh return sớm này; backend vẫn chặn mọi request thật sự.
   if (!canReadStaff) {
@@ -124,18 +150,66 @@ export function StaffPage() {
         />
       )}
 
-      {staffLoading ? (
-        <p role="status" className="empty-state">
-          Đang nạp danh sách nhân viên...
-        </p>
-      ) : staffIsError ? (
-        <ErrorAlert
-          message={
-            staffError instanceof Error ? staffError.message : 'Tải danh sách nhân viên thất bại.'
-          }
-        />
-      ) : (
-        <section className="card card-flush">
+      <section className="card card-flush">
+        <div className="filters-row">
+          <SearchInput
+            label="Tìm theo tên hoặc email"
+            value={values.search}
+            onSearch={(text) => setFilter('search', text)}
+          />
+          <div className="field">
+            <label htmlFor="staff-status">Trạng thái</label>
+            <select
+              id="staff-status"
+              value={values.status}
+              onChange={(event) => setFilter('status', event.target.value)}
+            >
+              <option value="">Tất cả</option>
+              <option value="active">Hoạt động</option>
+              <option value="invited">Đã mời</option>
+              <option value="locked">Đã khóa</option>
+            </select>
+          </div>
+          <div className="field">
+            <label htmlFor="staff-role">Vai trò</label>
+            <select
+              id="staff-role"
+              value={values.role}
+              onChange={(event) => setFilter('role', event.target.value)}
+            >
+              <option value="">Tất cả</option>
+              {filterableRoles.map((role) => (
+                <option key={role.code} value={role.code}>
+                  {role.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {staffLoading ? (
+          <p role="status" className="empty-state">
+            Đang nạp danh sách nhân viên...
+          </p>
+        ) : staffIsError ? (
+          <ErrorAlert
+            message={
+              staffError instanceof Error ? staffError.message : 'Tải danh sách nhân viên thất bại.'
+            }
+            className="identity-table-alert"
+          />
+        ) : staffList.length === 0 && (hasFilters || page > 1) ? (
+          // Có bộ lọc hoặc đang ở trang sau mà không có dòng nào. Nói rõ nguyên nhân là bộ lọc, không phải hệ thống chưa có nhân viên.
+          <div className="empty-state">
+            <p role="status">Không có kết quả phù hợp với bộ lọc.</p>
+            {/* Link `page=99` vượt quá số trang. Nút đưa người dùng về trang có dữ liệu. */}
+            {page > 1 && (
+              <button type="button" className="btn btn-sm" onClick={() => setPage(1)}>
+                Về trang 1
+              </button>
+            )}
+          </div>
+        ) : (
           <div className="table-wrap">
             <table className="tbl identity-table">
               <thead>
@@ -172,11 +246,10 @@ export function StaffPage() {
                         </div>
                       </td>
                       <td>
-                        {staff.lockedAt ? (
-                          <span className="badge badge-bad">Đã khóa</span>
-                        ) : (
-                          <span className="badge badge-ok">Hoạt động</span>
-                        )}
+                        {/* Đọc trường `status` của API. Trạng thái lạ hiện nguyên mã với badge trung tính. */}
+                        <span className={STATUS_BADGES[staff.status]?.className ?? 'badge'}>
+                          {STATUS_BADGES[staff.status]?.label ?? staff.status}
+                        </span>
                       </td>
                       {canManageStaff && (
                         <td className="num">
@@ -211,8 +284,17 @@ export function StaffPage() {
               </tbody>
             </table>
           </div>
-        </section>
-      )}
+        )}
+        {staffPage && !staffIsError && (
+          <Pager
+            page={page}
+            total={staffPage.total}
+            limit={staffPage.limit}
+            onPageChange={setPage}
+            label="Phân trang nhân viên"
+          />
+        )}
+      </section>
 
       {inviteOpen && (
         <InviteDialog

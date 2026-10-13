@@ -86,12 +86,12 @@ Quy ước:
 ### FLT-UI2: Màn khách hàng và nhân viên
 **Mô tả:** Màn `/admin/customers` thêm lọc trạng thái, lọc xác minh email và phân trang. Màn `/admin/staff` thêm tìm kiếm, lọc trạng thái, lọc vai trò và phân trang.
 **Tiêu chí nghiệm thu:**
-- [ ] Hai màn dùng hook và component của FLT-UI1
-- [ ] Mở lại link có bộ lọc cho cùng danh sách
-- [ ] Danh sách rỗng hiện thông báo không có kết quả phù hợp
-- [ ] Màn nhân viên đọc response `PagedResponse` mới
-- [ ] Cột trạng thái của màn nhân viên hiện nhãn riêng cho nhân viên `invited`, đọc từ trường `status`
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Hai màn dùng hook và component của FLT-UI1
+- [x] Mở lại link có bộ lọc cho cùng danh sách
+- [x] Danh sách rỗng hiện thông báo không có kết quả phù hợp
+- [x] Màn nhân viên đọc response `PagedResponse` mới
+- [x] Cột trạng thái của màn nhân viên hiện nhãn riêng cho nhân viên `invited`, đọc từ trường `status`
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI1, FLT-02, FLT-03 · **Quy mô:** M
 

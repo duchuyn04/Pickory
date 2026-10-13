@@ -8,8 +8,12 @@ async function openCustomerAsAdmin(page: Page, customerEmail: string) {
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
   await page.getByRole('link', { name: 'Khách hàng', exact: true }).click();
-  await page.getByLabel('Tìm khách hàng', { exact: true }).fill(customerEmail);
-  await page.getByRole('button', { name: 'Tìm kiếm', exact: true }).click();
+  await page
+    .getByLabel('Tìm theo tên, email hoặc số điện thoại', { exact: true })
+    .fill(customerEmail);
+  // Ô tìm kiếm tự lọc sau 300 ms kể từ lần gõ cuối, không còn nút Tìm. Chờ từ khóa lên URL và danh sách nạp xong.
+  await expect(page).toHaveURL(/[?&]search=/);
+  await expect(page.getByText(/^Đang nạp danh sách/)).toHaveCount(0);
   return page.getByRole('row').filter({ hasText: customerEmail });
 }
 
