@@ -1,9 +1,13 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
+import { SearchInput } from '../../../shared/search-input';
+import { useListFilters } from '../../../shared/use-list-filters';
 import { useCan } from '../../identity/hooks/use-actor';
 import { AdminFormDialog } from './admin-form-dialog';
 import { toCatalogErrorMessage } from './catalog-errors';
+import { filterBrands } from './catalog-filters';
 import { ErrorAlert } from '../../../shared/error-alert';
 import './catalog-admin.css';
 
@@ -17,10 +21,16 @@ export interface BrandItem {
   updatedAt: string;
 }
 
+// Tên tham số bộ lọc trên URL. Màn này lọc ở trình duyệt, nên API không nhận tham số này.
+const FILTER_NAMES = ['search'] as const;
+
 // Màn hình quản lý danh sách và thông tin thương hiệu sản phẩm.
 export function BrandsPage() {
   const canWrite = useCan('products:write');
   const queryClient = useQueryClient();
+  // Từ khóa nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
+  const { values, setFilter } = useListFilters(FILTER_NAMES);
+  const keyword = values.search;
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<BrandItem | null>(null);
@@ -41,6 +51,9 @@ export function BrandsPage() {
     queryKey: ['brands'],
     queryFn: () => apiRequest<BrandItem[]>('/api/brands'),
   });
+
+  // Lọc trên danh sách đã tải. Sau khi tạo, sửa hoặc xóa, danh sách tải lại vẫn áp từ khóa hiện tại.
+  const visibleBrands = filterBrands(brands, keyword);
 
   // Mở hộp thoại để tạo mới thương hiệu.
   function handleOpenCreate() {
@@ -160,8 +173,18 @@ export function BrandsPage() {
 
       {!isLoading && !isError && (
         <div className="card card-flush">
+          <div className="filters-row">
+            <SearchInput
+              label="Tìm theo tên hoặc slug thương hiệu"
+              value={keyword}
+              onSearch={(text) => setFilter('search', text)}
+            />
+          </div>
           {brands.length === 0 ? (
             <p className="empty-state">Chưa có thương hiệu nào. Hãy tạo thương hiệu đầu tiên.</p>
+          ) : visibleBrands.length === 0 ? (
+            // Danh sách không phân trang nên nút Về trang 1 không hiện. Prop bắt buộc nên truyền hàm rỗng.
+            <FilteredEmptyState page={1} onFirstPage={() => undefined} />
           ) : (
             <div className="table-wrap">
               <table className="tbl">
@@ -176,7 +199,7 @@ export function BrandsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {brands.map((brand) => (
+                  {visibleBrands.map((brand) => (
                     <tr key={brand.id}>
                       <td>
                         <strong>{brand.name}</strong>

@@ -77,9 +77,9 @@ Chi tiết từng task ở `tasks/admin-search/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 2: Frontend
-- [x] FLT-UI1 · [x] FLT-UI2 · [x] FLT-UI3 · [ ] FLT-UI4
+- [x] FLT-UI1 · [x] FLT-UI2 · [x] FLT-UI3 · [x] FLT-UI4
 
 ### Checkpoint S2
-- [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test`) sạch
-- [ ] Mở lại link có bộ lọc cho cùng danh sách
+- [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test`) sạch
+- [x] Mở lại link có bộ lọc cho cùng danh sách
 - [ ] Review với người dùng

@@ -108,9 +108,9 @@ Quy ước:
 ### FLT-UI4: Màn danh mục, thương hiệu và vai trò
 **Mô tả:** Ba màn thêm ô tìm kiếm. Màn lọc trên dữ liệu đã tải bằng `normalizeForSearch`, theo quyết định 12 của plan.
 **Tiêu chí nghiệm thu:**
-- [ ] Gõ `dien thoai` tìm được danh mục `Điện thoại`
-- [ ] Màn danh mục giữ danh mục cha khi danh mục con khớp từ khóa
-- [ ] Danh sách rỗng hiện thông báo không có kết quả phù hợp
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Gõ `dien thoai` tìm được danh mục `Điện thoại`
+- [x] Màn danh mục giữ danh mục cha khi danh mục con khớp từ khóa
+- [x] Danh sách rỗng hiện thông báo không có kết quả phù hợp
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI1 · **Quy mô:** M

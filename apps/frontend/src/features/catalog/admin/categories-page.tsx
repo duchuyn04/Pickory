@@ -1,6 +1,9 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
+import { SearchInput } from '../../../shared/search-input';
+import { useListFilters } from '../../../shared/use-list-filters';
 import {
   validateAttributeDefinitions,
   type AttributeDefinition,
@@ -10,6 +13,7 @@ import { useCan } from '../../identity/hooks/use-actor';
 import { AdminFormDialog } from './admin-form-dialog';
 import { AttributeEditor } from './attribute-editor';
 import { toCatalogErrorMessage } from './catalog-errors';
+import { buildCategoryTree, filterCategoryTree } from './catalog-filters';
 import { ErrorAlert } from '../../../shared/error-alert';
 import './catalog-admin.css';
 
@@ -25,10 +29,16 @@ export interface CategoryItem {
   updatedAt: string;
 }
 
+// Tên tham số bộ lọc trên URL. Màn này lọc ở trình duyệt, nên API không nhận tham số này.
+const FILTER_NAMES = ['search'] as const;
+
 // Màn hình quản lý cây danh mục sản phẩm và định nghĩa bộ thuộc tính kỹ thuật.
 export function CategoriesPage() {
   const canWrite = useCan('products:write');
   const queryClient = useQueryClient();
+  // Từ khóa nằm trên URL. Mở lại link cho đúng cây đã lọc.
+  const { values, setFilter } = useListFilters(FILTER_NAMES);
+  const keyword = values.search;
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
@@ -53,26 +63,12 @@ export function CategoriesPage() {
     queryFn: () => apiRequest<CategoryItem[]>('/api/admin/categories'),
   });
 
-  // Danh mục gốc không có parentId, sắp xếp theo vị trí và tên hiển thị.
-  const roots = categories
-    .filter((category) => !category.parentId)
-    .sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
+  // Cây đầy đủ dùng cho hộp thoại: chọn danh mục cha và khóa chuyển cấp khi danh mục có con.
+  const { roots, childrenByParent } = buildCategoryTree(categories);
 
-  // Gom các danh mục con theo parentId tương ứng để dựng cây phân cấp 2 cấp.
-  const childrenByParent: Record<string, CategoryItem[]> = {};
-  for (const category of categories) {
-    if (category.parentId) {
-      const parentKey = category.parentId;
-      const list = childrenByParent[parentKey] ?? [];
-      list.push(category);
-      childrenByParent[parentKey] = list;
-    }
-  }
-
-  // Sắp xếp các danh mục con trong từng nhánh theo vị trí và tên.
-  for (const list of Object.values(childrenByParent)) {
-    list.sort((a, b) => a.position - b.position || a.name.localeCompare(b.name));
-  }
+  // Cây đã lọc theo từ khóa chỉ dùng để hiển thị. Hộp thoại không được thiếu danh mục vì từ khóa.
+  const visibleTree = buildCategoryTree(filterCategoryTree(categories, keyword));
+  const hasKeyword = keyword !== '';
 
   // Mở hộp thoại để tạo danh mục gốc mới.
   function handleOpenCreateRoot() {
@@ -249,14 +245,27 @@ export function CategoriesPage() {
         />
       )}
 
+      <section className="card card-flush">
+        <div className="filters-row">
+          <SearchInput
+            label="Tìm theo tên hoặc slug danh mục"
+            value={keyword}
+            onSearch={(text) => setFilter('search', text)}
+          />
+        </div>
+      </section>
+
       {/* Cây danh mục hai cấp */}
       {!isLoading && !isError && (
         <div className="catalog-admin-list category-tree">
-          {roots.length === 0 ? (
+          {categories.length === 0 ? (
             <p className="empty-state">Chưa có danh mục nào. Hãy tạo danh mục gốc đầu tiên.</p>
+          ) : hasKeyword && visibleTree.roots.length === 0 ? (
+            // Danh sách không phân trang nên nút Về trang 1 không hiện. Prop bắt buộc nên truyền hàm rỗng.
+            <FilteredEmptyState page={1} onFirstPage={() => undefined} />
           ) : (
-            roots.map((root) => {
-              const children = childrenByParent[root.id] || [];
+            visibleTree.roots.map((root) => {
+              const children = visibleTree.childrenByParent[root.id] || [];
 
               return (
                 <div key={root.id} className="category-node">

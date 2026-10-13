@@ -1,10 +1,14 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
+import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
+import { SearchInput } from '../../../shared/search-input';
+import { useListFilters } from '../../../shared/use-list-filters';
 import { useCan } from '../hooks/use-actor';
 import type { PermissionItem } from '../components/permission-grid';
 import { RoleForm, type RoleData } from '../components/role-form';
+import { filterRoles } from './role-filters';
 import { ErrorAlert } from '../../../shared/error-alert';
 import './identity-admin.css';
 
@@ -14,17 +18,23 @@ interface RoleRow extends RoleData {
   userCount: number;
 }
 
+// Tên tham số bộ lọc trên URL. Màn này lọc ở trình duyệt, nên API không nhận tham số này.
+const FILTER_NAMES = ['search'] as const;
+
 // Trang quản lý role: danh sách, tạo, sửa, xóa.
 export function RolesPage() {
   const canManageRoles = useCan('roles:manage');
   const queryClient = useQueryClient();
+  // Từ khóa nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
+  const { values, setFilter } = useListFilters(FILTER_NAMES);
+  const keyword = values.search;
 
   // formOpen mở hộp thoại; editingRole là null khi tạo mới, có giá trị khi sửa.
   const [formOpen, setFormOpen] = useState(false);
   const [editingRole, setEditingRole] = useState<RoleRow | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại; nếu bỏ qua thì lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
+  // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại. Nếu bỏ qua, lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
   const {
     data: roles = [],
     isLoading: rolesLoading,
@@ -52,6 +62,9 @@ export function RolesPage() {
   if (!canManageRoles) {
     return <ForbiddenNotice permission="roles:manage" subject="vai trò và phân quyền" />;
   }
+
+  // Lọc trên danh sách đã tải. Sau khi tạo, sửa hoặc xóa, danh sách tải lại vẫn áp từ khóa hiện tại.
+  const visibleRoles = filterRoles(roles, keyword);
 
   // Không bắt lỗi ở đây: RoleForm bắt và hiện lỗi trong hộp thoại, để người dùng sửa rồi lưu lại.
   async function handleSaveRole(data: { code: string; name: string; permissions: string[] }) {
@@ -140,84 +153,96 @@ export function RolesPage() {
         />
       ) : (
         <section className="card card-flush">
-          <div className="table-wrap">
-            <table className="tbl identity-table">
-              <thead>
-                <tr>
-                  <th scope="col">Role</th>
-                  <th scope="col">Loại</th>
-                  <th scope="col" className="num">
-                    Số quyền
-                  </th>
-                  <th scope="col" className="num">
-                    Số người giữ
-                  </th>
-                  <th scope="col" className="num">
-                    Thao tác
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {roles.length > 0 ? (
-                  roles.map((role) => (
-                    <tr key={role.id}>
-                      <th scope="row">
-                        {role.name}
-                        <span className="cell-sub mono">{role.code}</span>
-                      </th>
-                      <td>
-                        {role.isSystem ? (
-                          <span className="badge badge-info">Hệ thống (Khóa)</span>
-                        ) : (
-                          <span className="badge">Tùy chỉnh</span>
-                        )}
-                      </td>
-                      <td className="num">
-                        {role.code === 'admin'
-                          ? 'Tất cả (ngầm định)'
-                          : `${role.permissions.length} quyền`}
-                      </td>
-                      <td className="num">{role.userCount} người</td>
-                      <td className="num">
-                        {/* Role hệ thống không sửa hay xóa được, nên chỉ hiện chữ thay cho nút. */}
-                        {role.isSystem ? (
-                          <span className="muted small">Cố định (hệ thống)</span>
-                        ) : (
-                          <div className="row-actions identity-row-actions">
-                            <button
-                              type="button"
-                              className="btn btn-sm"
-                              aria-label={`Sửa role ${role.name}`}
-                              onClick={() => {
-                                setEditingRole(role);
-                                setFormOpen(true);
-                              }}
-                            >
-                              Sửa
-                            </button>
-                            <button
-                              type="button"
-                              className="btn btn-sm btn-danger"
-                              aria-label={`Xóa role ${role.name}`}
-                              onClick={() => handleDeleteRole(role)}
-                            >
-                              Xóa
-                            </button>
-                          </div>
-                        )}
+          <div className="filters-row">
+            <SearchInput
+              label="Tìm theo tên hoặc mã role"
+              value={keyword}
+              onSearch={(text) => setFilter('search', text)}
+            />
+          </div>
+          {roles.length > 0 && visibleRoles.length === 0 ? (
+            // Danh sách không phân trang nên nút Về trang 1 không hiện. Prop bắt buộc nên truyền hàm rỗng.
+            <FilteredEmptyState page={1} onFirstPage={() => undefined} />
+          ) : (
+            <div className="table-wrap">
+              <table className="tbl identity-table">
+                <thead>
+                  <tr>
+                    <th scope="col">Role</th>
+                    <th scope="col">Loại</th>
+                    <th scope="col" className="num">
+                      Số quyền
+                    </th>
+                    <th scope="col" className="num">
+                      Số người giữ
+                    </th>
+                    <th scope="col" className="num">
+                      Thao tác
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {roles.length > 0 ? (
+                    visibleRoles.map((role) => (
+                      <tr key={role.id}>
+                        <th scope="row">
+                          {role.name}
+                          <span className="cell-sub mono">{role.code}</span>
+                        </th>
+                        <td>
+                          {role.isSystem ? (
+                            <span className="badge badge-info">Hệ thống (Khóa)</span>
+                          ) : (
+                            <span className="badge">Tùy chỉnh</span>
+                          )}
+                        </td>
+                        <td className="num">
+                          {role.code === 'admin'
+                            ? 'Tất cả (ngầm định)'
+                            : `${role.permissions.length} quyền`}
+                        </td>
+                        <td className="num">{role.userCount} người</td>
+                        <td className="num">
+                          {/* Role hệ thống không sửa hay xóa được, nên chỉ hiện chữ thay cho nút. */}
+                          {role.isSystem ? (
+                            <span className="muted small">Cố định (hệ thống)</span>
+                          ) : (
+                            <div className="row-actions identity-row-actions">
+                              <button
+                                type="button"
+                                className="btn btn-sm"
+                                aria-label={`Sửa role ${role.name}`}
+                                onClick={() => {
+                                  setEditingRole(role);
+                                  setFormOpen(true);
+                                }}
+                              >
+                                Sửa
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-danger"
+                                aria-label={`Xóa role ${role.name}`}
+                                onClick={() => handleDeleteRole(role)}
+                              >
+                                Xóa
+                              </button>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="empty-state">
+                        Chưa có vai trò nào trong hệ thống.
                       </td>
                     </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={5} className="empty-state">
-                      Chưa có vai trò nào trong hệ thống.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
       )}
 

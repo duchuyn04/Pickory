@@ -2,6 +2,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React, { act, StrictMode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   validateAttributeDefinitions,
@@ -186,7 +187,9 @@ describe('Trình soạn thảo thuộc tính và trang danh mục (UI-C4)', () =
       root.render(
         <StrictMode>
           <QueryClientProvider client={queryClient}>
-            <CategoriesPage />
+            <MemoryRouter>
+              <CategoriesPage />
+            </MemoryRouter>
           </QueryClientProvider>
         </StrictMode>,
       );
@@ -303,7 +306,9 @@ describe('Trình soạn thảo thuộc tính và trang danh mục (UI-C4)', () =
       root.render(
         <StrictMode>
           <QueryClientProvider client={queryClient}>
-            <CategoriesPage />
+            <MemoryRouter>
+              <CategoriesPage />
+            </MemoryRouter>
           </QueryClientProvider>
         </StrictMode>,
       );
@@ -427,7 +432,9 @@ describe('Trình soạn thảo thuộc tính và trang danh mục (UI-C4)', () =
       root.render(
         <StrictMode>
           <QueryClientProvider client={queryClient}>
-            <CategoriesPage />
+            <MemoryRouter>
+              <CategoriesPage />
+            </MemoryRouter>
           </QueryClientProvider>
         </StrictMode>,
       );
@@ -515,7 +522,9 @@ describe('Trình soạn thảo thuộc tính và trang danh mục (UI-C4)', () =
       root.render(
         <StrictMode>
           <QueryClientProvider client={queryClient}>
-            <CategoriesPage />
+            <MemoryRouter>
+              <CategoriesPage />
+            </MemoryRouter>
           </QueryClientProvider>
         </StrictMode>,
       );
