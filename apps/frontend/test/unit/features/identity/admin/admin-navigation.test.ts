@@ -59,3 +59,35 @@ describe('mục menu Cấu hình bán hàng', () => {
     expect(isNavItemActive(item, '/admin/shipping/settings')).toBe(false);
   });
 });
+
+describe('mục menu Đối soát', () => {
+  it('hiện với người có quyền payments:read', () => {
+    const reader = { ...baseActor, permissions: ['payments:read'] };
+
+    expect(visibleItems(reader).map((item) => item.label)).toContain('Đối soát');
+  });
+
+  it('ẩn với người chỉ có payments:reconcile hoặc orders:read', () => {
+    const other = { ...baseActor, permissions: ['payments:reconcile', 'orders:read'] };
+
+    expect(visibleItems(other).map((item) => item.label)).not.toContain('Đối soát');
+  });
+
+  it('trỏ tới /admin/payments và nằm ngay sau mục Đơn hàng trong nhóm Bán hàng', () => {
+    const salesGroup = ADMIN_NAV_GROUPS.find((group) => group.label === 'Bán hàng');
+    const labels = salesGroup?.items.map((item) => item.label) ?? [];
+    const item = salesGroup?.items.find((entry) => entry.label === 'Đối soát');
+
+    expect(item?.path).toBe('/admin/payments');
+    expect(item?.requiredPermission).toBe('payments:read');
+    expect(labels.indexOf('Đối soát')).toBe(labels.indexOf('Đơn hàng') + 1);
+  });
+
+  it('mục Đối soát đang mở ở /admin/payments và không mở ở /admin/orders', () => {
+    const salesGroup = ADMIN_NAV_GROUPS.find((group) => group.label === 'Bán hàng')!;
+    const item = salesGroup.items.find((entry) => entry.label === 'Đối soát')!;
+
+    expect(isNavItemActive(item, '/admin/payments')).toBe(true);
+    expect(isNavItemActive(item, '/admin/orders')).toBe(false);
+  });
+});

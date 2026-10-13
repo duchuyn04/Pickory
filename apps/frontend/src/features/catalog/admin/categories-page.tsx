@@ -10,7 +10,7 @@ import {
   type AttributeDefinitionError,
 } from '../../../shared/catalog/attributes';
 import { useCan } from '../../identity/hooks/use-actor';
-import { AdminFormDialog } from './admin-form-dialog';
+import { AdminFormDialog } from '../../../shared/admin-form-dialog';
 import { AttributeEditor } from './attribute-editor';
 import { toCatalogErrorMessage } from './catalog-errors';
 import { buildCategoryTree, filterCategoryTree } from './catalog-filters';

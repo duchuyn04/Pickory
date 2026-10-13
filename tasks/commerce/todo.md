@@ -287,10 +287,10 @@ Quy ước:
 ### COM-UI6: Màn đối soát SePay và COD
 **Mô tả:** Màn `/admin/payments` có hai tab. Tab SePay liệt kê giao dịch chưa khớp và đơn gắn cờ. Tab COD liệt kê đơn COD đã giao chưa nhận tiền, dùng COM-17.
 **Tiêu chí nghiệm thu:**
-- [ ] Gắn tay một giao dịch vào đơn bằng ô tìm mã đơn
-- [ ] Nút thao tác chỉ hiện khi người dùng có `payments:reconcile`
-- [ ] Mọi thao tác cần xác nhận và hiện kết quả
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Gắn tay một giao dịch vào đơn bằng ô tìm mã đơn
+- [x] Nút thao tác chỉ hiện khi người dùng có `payments:reconcile`
+- [x] Mọi thao tác cần xác nhận và hiện kết quả
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** COM-13, COM-17 · **Quy mô:** M
 

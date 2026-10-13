@@ -5,7 +5,7 @@ import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
 import { SearchInput } from '../../../shared/search-input';
 import { useListFilters } from '../../../shared/use-list-filters';
 import { useCan } from '../../identity/hooks/use-actor';
-import { AdminFormDialog } from './admin-form-dialog';
+import { AdminFormDialog } from '../../../shared/admin-form-dialog';
 import { toCatalogErrorMessage } from './catalog-errors';
 import { filterBrands } from './catalog-filters';
 import { ErrorAlert } from '../../../shared/error-alert';

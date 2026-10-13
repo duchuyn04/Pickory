@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { FieldError, fieldErrorProps } from '../../../shared/field-error';
-import { AdminFormDialog } from './admin-form-dialog';
+import { AdminFormDialog } from '../../../shared/admin-form-dialog';
 import { toCatalogErrorMessage } from './catalog-errors';
 import {
   MAX_REASON_LENGTH,

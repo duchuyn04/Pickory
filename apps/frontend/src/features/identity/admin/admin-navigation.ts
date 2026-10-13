@@ -38,6 +38,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         requiredPermission: 'orders:read',
       },
       {
+        label: 'Đối soát',
+        path: '/admin/payments',
+        icon: 'receipt',
+        requiredPermission: 'payments:read',
+      },
+      {
         label: 'Khách hàng',
         path: '/admin/customers',
         icon: 'users',

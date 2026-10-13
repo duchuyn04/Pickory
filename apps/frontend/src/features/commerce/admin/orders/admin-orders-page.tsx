@@ -1,11 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
-import { useRef, type KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ErrorAlert } from '../../../../shared/error-alert';
 import { FilteredEmptyState } from '../../../../shared/filtered-empty-state';
 import { ForbiddenNotice } from '../../../../shared/forbidden-notice';
 import { Pager } from '../../../../shared/pager';
 import { SearchInput } from '../../../../shared/search-input';
+import { TabList, tabId } from '../../../../shared/tab-list';
 import { useListFilters } from '../../../../shared/use-list-filters';
 import { formatVietnamDateTime } from '../../../../shared/vietnam-time';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
@@ -36,7 +36,6 @@ export function AdminOrdersPage() {
   // Bộ lọc và trang nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
   const { values, page, setFilter, setPage } = useListFilters(ORDER_FILTER_NAMES);
   const hasFilters = ORDER_FILTER_NAMES.some((name) => values[name] !== '');
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   // Mọi bộ lọc và số trang nằm trong khóa truy vấn. Mỗi tổ hợp có cache riêng và đổi giá trị thì tự gọi lại.
   const { data, isLoading, isError, error } = useQuery<AdminOrderList>({
@@ -57,21 +56,6 @@ export function AdminOrdersPage() {
     ...ORDER_STATUS_CODES.map((code) => ({ code, label: formatOrderStatus(code) })),
   ];
 
-  // Mũi tên di chuyển focus giữa các tab theo mẫu `tablist`. Enter hoặc Space của nút mới chọn tab.
-  function handleTabKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const currentIndex = tabRefs.current.findIndex((element) => element === event.target);
-    if (currentIndex === -1) return;
-    let nextIndex: number | null = null;
-    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
-    if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
-    if (event.key === 'Home') nextIndex = 0;
-    if (event.key === 'End') nextIndex = tabs.length - 1;
-    if (nextIndex === null) return;
-    // Chặn cuộn trang của phím mũi tên khi focus đang ở dải tab.
-    event.preventDefault();
-    tabRefs.current[nextIndex]?.focus();
-  }
-
   const items = data?.items ?? [];
   const showFilteredEmpty = data !== undefined && items.length === 0 && (hasFilters || page > 1);
   const showPlainEmpty = data !== undefined && items.length === 0 && !hasFilters && page === 1;
@@ -86,35 +70,14 @@ export function AdminOrdersPage() {
       </div>
 
       <section className="card card-flush">
-        {/* Dải tab theo trạng thái đơn. Chỉ tab đang chọn nằm trong thứ tự Tab, các tab khác đi bằng mũi tên. */}
-        <div
-          className="order-tabs"
-          role="tablist"
-          aria-label="Lọc theo trạng thái đơn"
-          onKeyDown={handleTabKeyDown}
-        >
-          {tabs.map((tab, index) => {
-            const isSelected = values.status === tab.code;
-            return (
-              <button
-                key={tab.code || 'all'}
-                ref={(element) => {
-                  tabRefs.current[index] = element;
-                }}
-                id={`order-tab-${tab.code || 'all'}`}
-                type="button"
-                role="tab"
-                className="order-tab"
-                aria-selected={isSelected}
-                aria-controls="order-list-panel"
-                tabIndex={isSelected ? 0 : -1}
-                onClick={() => setFilter('status', tab.code)}
-              >
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
+        <TabList
+          label="Lọc theo trạng thái đơn"
+          idPrefix="order"
+          panelId="order-list-panel"
+          tabs={tabs}
+          selected={values.status}
+          onSelect={(code) => setFilter('status', code)}
+        />
 
         <div className="filters-row order-filters">
           <SearchInput
@@ -187,11 +150,7 @@ export function AdminOrdersPage() {
           </div>
         </div>
 
-        <div
-          id="order-list-panel"
-          role="tabpanel"
-          aria-labelledby={`order-tab-${values.status || 'all'}`}
-        >
+        <div id="order-list-panel" role="tabpanel" aria-labelledby={tabId('order', values.status)}>
           {isLoading ? (
             <p role="status" className="empty-state">
               Đang nạp danh sách đơn hàng...

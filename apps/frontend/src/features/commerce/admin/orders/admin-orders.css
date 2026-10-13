@@ -1,40 +1,5 @@
 /* Kiểu riêng của màn đơn hàng back-office. Thẻ, bảng, nút và badge dùng lớp chung trong `components.css`. */
 
-/* Dải tab trạng thái cuộn ngang trong khung riêng ở màn hẹp, để trang không bị đẩy rộng. */
-.order-tabs {
-  display: flex;
-  gap: var(--space-2);
-  padding: var(--space-3) 14px;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.order-tab {
-  flex: 0 0 auto;
-  padding: 6px 12px;
-  border: 1px solid var(--color-border-strong);
-  border-radius: var(--radius-pill);
-  background: var(--color-surface);
-  color: var(--color-ink-secondary);
-  font: inherit;
-  font-size: var(--text-label);
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.order-tab:hover {
-  background: var(--color-surface-hover);
-}
-
-/* Tab đang chọn dùng nền thương hiệu nhạt và chữ đậm, không chỉ dựa vào màu. */
-.order-tab[aria-selected='true'] {
-  border-color: var(--color-brand);
-  background: var(--color-brand-soft);
-  color: var(--color-brand);
-  font-weight: 700;
-}
-
 /* Ô tìm kiếm chiếm một hàng riêng để nhãn dài nằm trên một dòng. Năm ô lọc còn lại chia đều hàng dưới. */
 .filters-row.order-filters .field {
   flex: 1 1 130px;

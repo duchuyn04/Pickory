@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { FieldError, fieldErrorProps } from '../../../../shared/field-error';
-import { AdminFormDialog } from '../../../catalog/admin/admin-form-dialog';
+import { AdminFormDialog } from '../../../../shared/admin-form-dialog';
 import { checkPermission, useActor } from '../../../identity/hooks/use-actor';
 import { runOrderMutation, type AdminOrderDetail, type OrderMutation } from './admin-orders-api';
 import {

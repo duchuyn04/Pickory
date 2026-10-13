@@ -97,6 +97,7 @@ describe('AdminLayout', () => {
     expect(navLabels()).toEqual([
       'Tổng quan',
       'Đơn hàng',
+      'Đối soát',
       'Khách hàng',
       'CSKH',
       'Sản phẩm',

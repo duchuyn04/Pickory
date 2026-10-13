@@ -1,7 +1,7 @@
 import React from 'react';
-import { Icon } from '../../../shared/icons';
-import { useDialogFocus } from '../../../shared/use-dialog-focus';
-import { ErrorAlert } from '../../../shared/error-alert';
+import { Icon } from './icons';
+import { useDialogFocus } from './use-dialog-focus';
+import { ErrorAlert } from './error-alert';
 
 // Thuộc tính đầu vào cho khung hộp thoại biểu mẫu quản trị dùng chung.
 export interface AdminFormDialogProps {
@@ -11,6 +11,8 @@ export interface AdminFormDialogProps {
   formId: string;
   onSubmit: (event: React.FormEvent) => void;
   isSubmitting?: boolean;
+  // Tắt nút gửi khi form chưa đủ điều kiện, ví dụ chưa tra được đơn cần gắn.
+  submitDisabled?: boolean;
   submitText?: string;
   cancelText?: string;
   error?: string | null;
@@ -27,6 +29,7 @@ export function AdminFormDialog({
   formId,
   onSubmit,
   isSubmitting = false,
+  submitDisabled = false,
   submitText = 'Lưu',
   cancelText = 'Hủy',
   error,
@@ -75,7 +78,12 @@ export function AdminFormDialog({
             {cancelText}
           </button>
           {/* Khóa nút gửi khi đang lưu để một lần bấm không tạo hai bản ghi. */}
-          <button type="submit" className="btn btn-primary" form={formId} disabled={isSubmitting}>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            form={formId}
+            disabled={isSubmitting || submitDisabled}
+          >
             {isSubmitting ? 'Đang lưu...' : submitText}
           </button>
         </div>

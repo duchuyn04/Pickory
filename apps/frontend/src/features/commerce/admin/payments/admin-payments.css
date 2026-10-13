@@ -1,0 +1,60 @@
+/* Kiểu riêng của màn đối soát. Thẻ, bảng, nút và badge dùng lớp chung trong `components.css`. */
+
+/* Lỗi tải nằm trong thẻ bảng, nên cần lề để không dính vào viền thẻ. */
+.payment-list-alert {
+  margin: var(--space-3) 14px;
+}
+
+/* Ngày giờ giữ trên một dòng để các dòng so được theo cột. */
+.payment-time {
+  white-space: nowrap;
+}
+
+/* Bảng giữ bề rộng tối thiểu và cuộn ngang trên điện thoại, để cột không bị ép xuống dòng từng chữ. */
+.payment-table {
+  min-width: 860px;
+}
+
+.cod-table {
+  min-width: 600px;
+}
+
+/* Nội dung chuyển khoản có thể là chuỗi liền, nên cho ngắt dòng tại mọi vị trí. */
+.payment-content {
+  max-width: 260px;
+}
+
+/* Ô mã đơn và nút Tìm nằm cùng một hàng trong hộp thoại gắn đơn. */
+.payment-lookup {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.payment-lookup input {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Tóm tắt đơn đã tra: bốn cặp nhãn và giá trị, xuống một cột ở hộp thoại hẹp. */
+.payment-order-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+}
+
+.payment-order-summary dt {
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}
+
+.payment-order-summary dd {
+  margin: var(--space-1) 0 0;
+  min-width: 0;
+  font-weight: 600;
+}
