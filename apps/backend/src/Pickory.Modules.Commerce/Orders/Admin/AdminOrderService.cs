@@ -177,7 +177,8 @@ public sealed class AdminOrderService(
             suggestedParcel is null
                 ? null
                 : new AdminOrderParcelResponse(
-                    suggestedParcel.WeightGrams, suggestedParcel.LengthCm, suggestedParcel.WidthCm, suggestedParcel.HeightCm));
+                    suggestedParcel.WeightGrams, suggestedParcel.LengthCm, suggestedParcel.WidthCm, suggestedParcel.HeightCm),
+            order.RefundTransactionRef);
     }
 
     // Tên và số điện thoại nằm trong bản chụp liên hệ. Bản chụp thiếu trường thì trả `null` thay vì ném lỗi.

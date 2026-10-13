@@ -9,7 +9,7 @@ using Pickory.Shared.Exceptions;
 
 namespace Pickory.Modules.Commerce.Orders.Admin;
 
-// Thao tác ghi của nhân viên lên đơn: xác nhận, hủy và đánh dấu đã xuất hóa đơn.
+// Thao tác ghi của nhân viên lên đơn: xác nhận, hủy, xuất hóa đơn, nhận tiền COD và hoàn tiền.
 // Mỗi thao tác chạy trong một transaction, khóa dòng đơn, ghi lịch sử và audit cùng commit.
 public sealed class AdminOrderActionService(
     CommerceDbContext database,
@@ -22,6 +22,8 @@ public sealed class AdminOrderActionService(
     public const string ConfirmAuditAction = "commerce.order.confirm";
     public const string InvoiceIssueAuditAction = "commerce.order.invoice_issue";
     public const string InvoiceIssuedFlag = "invoice_issued";
+    public const string CodReceiptAuditAction = "commerce.order.cod_receipt";
+    public const string RefundAuditAction = "commerce.order.refund";
 
     private const string OrderNotFoundMessage = "Không tìm thấy đơn hàng.";
     private const string InvalidTransitionCode = "INVALID_ORDER_TRANSITION";
@@ -29,6 +31,12 @@ public sealed class AdminOrderActionService(
     private const string InvoiceNotRequestedMessage = "Đơn này không có thông tin hóa đơn VAT để đánh dấu.";
     private const string InvoiceOrderEndedMessage = "Đơn đã hủy hoặc đã hoàn nên không đánh dấu xuất hóa đơn.";
     private const string InvoiceIssuedReason = "Đã xuất hóa đơn VAT.";
+    private const string CodReceivedReason = "Đã nhận tiền COD từ GHN.";
+    private const string CodReceiptNotCodMessage = "Chỉ đơn COD mới nhận tiền COD từ GHN.";
+    private const string CodReceiptNotDeliveredMessage = "Chỉ nhận tiền COD của đơn đã giao.";
+    private const string CodReceiptPaymentStateMessage = "Thanh toán của đơn không còn ở trạng thái chưa trả.";
+    private const string RefundRejectedMessage = "Chỉ đánh dấu hoàn tiền cho đơn đang chờ hoàn tiền.";
+    private const string RefundDifferentRefMessage = "Đơn đã hoàn tiền với một mã giao dịch khác.";
 
     public async Task<AdminOrderDetailResponse> ConfirmAsync(
         string code, string actorId, CancellationToken cancellationToken)
@@ -138,6 +146,132 @@ public sealed class AdminOrderActionService(
             order.Code,
             new { invoiceIssued = false },
             new { invoiceIssued = true });
+        await auditLogWriter.WriteAsync(entry, transaction.GetDbTransaction(), cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+        return await orders.GetDetailAsync(code, cancellationToken);
+    }
+
+    public async Task<AdminOrderDetailResponse> ReceiveCodAsync(
+        string code, string actorId, CancellationToken cancellationToken)
+    {
+        var orderId = await FindOrderIdAsync(code, cancellationToken);
+
+        // Transaction giữ thay đổi đơn, lịch sử và audit cùng thành công hoặc cùng quay lui.
+        await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
+        var order = await OrderRowLock.LoadForUpdateAsync(database, orderId, cancellationToken);
+
+        // Chỉ đơn COD mới có tiền do GHN thu hộ. Đơn SePay nhận tiền qua webhook hoặc khớp tay.
+        if (order.PaymentMethod != PaymentMethod.Cod)
+        {
+            throw new AppException(InvalidTransitionCode, 409, CodReceiptNotCodMessage);
+        }
+
+        // Tiền COD chỉ về sau khi giao xong. Đơn chưa giao, đã hủy hoặc đã hoàn chưa có tiền để nhận.
+        if (order.Status != OrderStatus.Delivered)
+        {
+            throw new AppException(InvalidTransitionCode, 409, CodReceiptNotDeliveredMessage);
+        }
+
+        // PUT có tính lặp lại an toàn: đơn đã `paid` trả 200 và không ghi thêm lịch sử, audit hay sự kiện.
+        if (order.PaymentStatus == PaymentStatus.Paid)
+        {
+            return await orders.GetDetailAsync(code, cancellationToken);
+        }
+
+        // Máy trạng thái thanh toán là nguồn luật duy nhất. Nó chặn đơn đang chờ hoàn hoặc đã hoàn.
+        var decision = PaymentTransitions.Evaluate(order.PaymentStatus, PaymentStatus.Paid, TransitionActor.Staff);
+        if (!decision.IsAllowed)
+        {
+            throw new AppException(InvalidTransitionCode, 409, CodReceiptPaymentStateMessage);
+        }
+
+        var events = new DomainEventCollector(dispatcher);
+        try
+        {
+            var previousPaymentStatus = order.PaymentStatus;
+            order.PaymentStatus = PaymentStatus.Paid;
+
+            // Trạng thái đơn không đổi nên `fromStatus` bằng `toStatus`, và không phát `OrderStatusChangedEvent`.
+            var now = OrderHistoryEntries.TruncateToMicroseconds(clock.GetUtcNow().UtcDateTime);
+            OrderHistoryEntries.Add(database, order, order.Status, order.Status, actorId, CodReceivedReason, now);
+
+            // Gom sự kiện để phát sau commit. `Amount` là tổng tiền đơn, vì GHN thu đủ khi giao.
+            events.Emit(new OrderPaidEvent(order.Id, order.Code, order.UserId, order.AnonymousId, order.Total));
+
+            await database.SaveChangesAsync(cancellationToken);
+
+            // Mỗi lần nhận tiền đầu tiên ghi một dòng audit trong cùng transaction.
+            var entry = new AuditLogEntry(
+                actorId,
+                CodReceiptAuditAction,
+                OrderCancellationService.AuditTargetType,
+                order.Code,
+                new { paymentStatus = OrderLabels.ToLabel(previousPaymentStatus) },
+                new { paymentStatus = OrderLabels.ToLabel(order.PaymentStatus) });
+            await auditLogWriter.WriteAsync(entry, transaction.GetDbTransaction(), cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            // Giao dịch quay lui thì không phát sự kiện của thay đổi đã hủy.
+            events.Discard();
+            throw;
+        }
+
+        // Handler chỉ thấy dữ liệu đã commit.
+        await events.FlushAsync(cancellationToken);
+        return await orders.GetDetailAsync(code, cancellationToken);
+    }
+
+    public async Task<AdminOrderDetailResponse> MarkRefundedAsync(
+        string code, string actorId, string transactionRef, CancellationToken cancellationToken)
+    {
+        var orderId = await FindOrderIdAsync(code, cancellationToken);
+
+        // Transaction giữ thay đổi đơn, lịch sử và audit cùng thành công hoặc cùng quay lui.
+        await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
+        var order = await OrderRowLock.LoadForUpdateAsync(database, orderId, cancellationToken);
+
+        if (order.PaymentStatus == PaymentStatus.Refunded)
+        {
+            // PUT có tính lặp lại an toàn: cùng mã giao dịch trả 200 và không ghi thêm gì.
+            if (string.Equals(order.RefundTransactionRef, transactionRef, StringComparison.Ordinal))
+            {
+                return await orders.GetDetailAsync(code, cancellationToken);
+            }
+
+            // Mã khác nghĩa là hai nhân viên ghi hai khoản hoàn khác nhau cho một đơn. Giữ mã đã lưu và báo xung đột.
+            throw new AppException(InvalidTransitionCode, 409, RefundDifferentRefMessage);
+        }
+
+        // Máy trạng thái thanh toán là nguồn luật duy nhất. Chỉ `refund_pending` đi tiếp được sang `refunded`.
+        var decision = PaymentTransitions.Evaluate(order.PaymentStatus, PaymentStatus.Refunded, TransitionActor.Staff);
+        if (!decision.IsAllowed)
+        {
+            throw new AppException(InvalidTransitionCode, 409, RefundRejectedMessage);
+        }
+
+        var previousPaymentStatus = order.PaymentStatus;
+        order.PaymentStatus = PaymentStatus.Refunded;
+        order.RefundTransactionRef = transactionRef;
+
+        // Trạng thái đơn không đổi nên `fromStatus` bằng `toStatus`. Lý do ghi mã giao dịch để người xem lịch sử đối chiếu sao kê.
+        var now = OrderHistoryEntries.TruncateToMicroseconds(clock.GetUtcNow().UtcDateTime);
+        OrderHistoryEntries.Add(
+            database, order, order.Status, order.Status, actorId, $"Đã hoàn tiền, mã giao dịch {transactionRef}.", now);
+
+        await database.SaveChangesAsync(cancellationToken);
+
+        // Mỗi lần hoàn tiền đầu tiên ghi một dòng audit trong cùng transaction. Audit giữ mã giao dịch.
+        var entry = new AuditLogEntry(
+            actorId,
+            RefundAuditAction,
+            OrderCancellationService.AuditTargetType,
+            order.Code,
+            new { paymentStatus = OrderLabels.ToLabel(previousPaymentStatus) },
+            new { paymentStatus = OrderLabels.ToLabel(order.PaymentStatus), transactionRef });
         await auditLogWriter.WriteAsync(entry, transaction.GetDbTransaction(), cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);

@@ -174,6 +174,12 @@ public sealed class AdminOrderActionTests : IClassFixture<CheckoutWebApplication
     private Task<HttpResponseMessage> IssueInvoiceAsync(string code, string? session) =>
         SendAsync(HttpMethod.Put, $"{AdminOrdersPath}/{code}/invoice-issuance", session);
 
+    private Task<HttpResponseMessage> ReceiveCodAsync(string code, string? session) =>
+        SendAsync(HttpMethod.Put, $"{AdminOrdersPath}/{code}/cod-receipt", session);
+
+    private Task<HttpResponseMessage> RefundAsync(string code, string? session, object? body) =>
+        SendAsync(HttpMethod.Put, $"{AdminOrdersPath}/{code}/refund", session, body);
+
     private static async Task<JsonElement> ReadDataAsync(HttpResponseMessage response)
     {
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -212,6 +218,31 @@ public sealed class AdminOrderActionTests : IClassFixture<CheckoutWebApplication
 
     private int StatusEventCount(string code) =>
         _factory.DomainEvents.OfType<OrderStatusChangedEvent>().Count(e => e.Code == code);
+
+    private int PaidEventCount(string code) =>
+        _factory.DomainEvents.OfType<OrderPaidEvent>().Count(e => e.Code == code);
+
+    private async Task<string?> RefundTransactionRefOfAsync(string code)
+    {
+        await using var commerce = _database.CreateCommerceContext();
+        return await commerce.Orders.AsNoTracking().Where(row => row.Code == code)
+            .Select(row => row.RefundTransactionRef).SingleAsync();
+    }
+
+    // Đơn chờ hoàn tiền thường là đơn đã hủy sau khi trả, nên test đặt cả hai trạng thái.
+    private async Task<PlacedOrder> PlaceRefundPendingOrderAsync()
+    {
+        var order = await PlaceOrderAsync("sepay");
+        await SetOrderStateAsync(order.Code, OrderStatus.Cancelled, PaymentStatus.RefundPending);
+        return order;
+    }
+
+    private async Task<PaymentStatus> PaymentStatusOfAsync(string code)
+    {
+        await using var commerce = _database.CreateCommerceContext();
+        return await commerce.Orders.AsNoTracking().Where(row => row.Code == code)
+            .Select(row => row.PaymentStatus).SingleAsync();
+    }
 
     // ---------- Xác nhận ----------
 
@@ -596,5 +627,285 @@ public sealed class AdminOrderActionTests : IClassFixture<CheckoutWebApplication
         var codes = data.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("code").GetString()).ToList();
         Assert.Contains(issued.Code, codes);
         Assert.DoesNotContain(notIssued.Code, codes);
+    }
+
+    // ---------- Nhận tiền COD ----------
+
+    [Fact]
+    // Đơn COD đã giao và chưa trả chuyển sang `paid`. Test kiểm một lịch sử cùng trạng thái, một audit và một sự kiện đúng số tiền.
+    public async Task CodReceipt_DeliveredUnpaidCodOrder_MarksPaidAndRecordsOnce()
+    {
+        var order = await PlaceOrderAsync("cod");
+        await SetOrderStateAsync(order.Code, OrderStatus.Delivered);
+        var (staffId, session) = await StaffAsync("sales");
+        var statusEventsBefore = StatusEventCount(order.Code);
+
+        var data = await ReadDataAsync(await ReceiveCodAsync(order.Code, session));
+
+        Assert.Equal("paid", data.GetProperty("paymentStatus").GetString());
+        Assert.Equal("delivered", data.GetProperty("status").GetString());
+        var total = data.GetProperty("total").GetInt32();
+
+        var history = (await HistoryOfAsync(order.Code)).Single(row => row.Reason == "Đã nhận tiền COD từ GHN.");
+        Assert.Equal(OrderStatus.Delivered, history.From);
+        Assert.Equal(OrderStatus.Delivered, history.To);
+        Assert.Equal(staffId, history.ActorId);
+
+        var audit = Assert.Single(await AuditOfAsync(order.Code, "commerce.order.cod_receipt"));
+        Assert.Equal(staffId, audit.ActorId);
+        Assert.Equal("unpaid", audit.Before!.RootElement.GetProperty("paymentStatus").GetString());
+        Assert.Equal("paid", audit.After!.RootElement.GetProperty("paymentStatus").GetString());
+
+        var paidEvent = Assert.Single(_factory.DomainEvents.OfType<OrderPaidEvent>(), e => e.Code == order.Code);
+        Assert.Equal(total, paidEvent.Amount);
+        Assert.Equal(statusEventsBefore, StatusEventCount(order.Code));
+        Assert.Equal(PaymentStatus.Paid, await PaymentStatusOfAsync(order.Code));
+    }
+
+    [Fact]
+    // PUT có tính lặp lại an toàn: lần hai trả 200 và không ghi thêm lịch sử, audit hay sự kiện.
+    public async Task CodReceipt_Repeated_IsIdempotent()
+    {
+        var order = await PlaceOrderAsync("cod");
+        await SetOrderStateAsync(order.Code, OrderStatus.Delivered);
+        var (_, session) = await StaffAsync("sales");
+
+        await ReadDataAsync(await ReceiveCodAsync(order.Code, session));
+        var second = await ReadDataAsync(await ReceiveCodAsync(order.Code, session));
+
+        Assert.Equal("paid", second.GetProperty("paymentStatus").GetString());
+        Assert.Single(await HistoryOfAsync(order.Code), row => row.Reason == "Đã nhận tiền COD từ GHN.");
+        Assert.Single(await AuditOfAsync(order.Code, "commerce.order.cod_receipt"));
+        Assert.Equal(1, PaidEventCount(order.Code));
+    }
+
+    [Theory]
+    [InlineData("sepay", OrderStatus.Delivered, PaymentStatus.Unpaid)]
+    [InlineData("cod", OrderStatus.Shipping, PaymentStatus.Unpaid)]
+    [InlineData("cod", OrderStatus.Delivered, PaymentStatus.RefundPending)]
+    [InlineData("cod", OrderStatus.Delivered, PaymentStatus.Refunded)]
+    // Đơn SePay, đơn COD chưa giao và đơn COD đang chờ hoàn hoặc đã hoàn đều bị từ chối. Đơn không đổi.
+    public async Task CodReceipt_OutsideAllowedState_Returns409AndWritesNothing(
+        string paymentMethod, OrderStatus status, PaymentStatus paymentStatus)
+    {
+        var order = await PlaceOrderAsync(paymentMethod);
+        await SetOrderStateAsync(order.Code, status, paymentStatus);
+        var (_, session) = await StaffAsync("sales");
+        var historyBefore = (await HistoryOfAsync(order.Code)).Count;
+
+        var response = await ReceiveCodAsync(order.Code, session);
+
+        await AssertErrorAsync(response, HttpStatusCode.Conflict, "INVALID_ORDER_TRANSITION");
+        Assert.Equal(paymentStatus, await PaymentStatusOfAsync(order.Code));
+        Assert.Equal(historyBefore, (await HistoryOfAsync(order.Code)).Count);
+        Assert.Empty(await AuditOfAsync(order.Code, "commerce.order.cod_receipt"));
+        Assert.Equal(0, PaidEventCount(order.Code));
+    }
+
+    [Fact]
+    public async Task CodReceipt_UnknownCode_Returns404()
+    {
+        var (_, session) = await StaffAsync("sales");
+
+        var response = await ReceiveCodAsync("PK00000000", session);
+
+        await AssertErrorAsync(response, HttpStatusCode.NotFound, "ORDER_NOT_FOUND");
+    }
+
+    [Fact]
+    // `support` không có `payments:reconcile` nên nhận 403, khách vãng lai nhận 401. Đơn không đổi.
+    public async Task CodReceipt_WithoutPermission_IsRejectedAndOrderUnchanged()
+    {
+        var order = await PlaceOrderAsync("cod");
+        await SetOrderStateAsync(order.Code, OrderStatus.Delivered);
+        var (_, supportSession) = await StaffAsync("support");
+
+        await AssertErrorAsync(await ReceiveCodAsync(order.Code, supportSession), HttpStatusCode.Forbidden, "FORBIDDEN");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await ReceiveCodAsync(order.Code, null)).StatusCode);
+        Assert.Equal(PaymentStatus.Unpaid, await PaymentStatusOfAsync(order.Code));
+        Assert.Empty(await AuditOfAsync(order.Code, "commerce.order.cod_receipt"));
+    }
+
+    [Fact]
+    // Test giữ khóa dòng đơn bằng transaction riêng rồi gửi hai request, nên có khóa dòng thì chưa request nào xong.
+    // Sau khi nhả khóa chỉ một request ghi, nên có đúng một audit và một sự kiện.
+    public async Task CodReceipt_ConcurrentRequests_AreSerializedByRowLock()
+    {
+        var order = await PlaceOrderAsync("cod");
+        await SetOrderStateAsync(order.Code, OrderStatus.Delivered);
+        var (_, firstSession) = await StaffAsync("sales");
+        var (_, secondSession) = await StaffAsync("sales");
+
+        await using var holder = _database.CreateCommerceContext();
+        await using var holderTransaction = await holder.Database.BeginTransactionAsync();
+        await holder.Database.ExecuteSqlInterpolatedAsync(
+            $"""SELECT "id" FROM orders WHERE "code" = {order.Code} FOR UPDATE""");
+
+        var pending = Task.WhenAll(
+            ReceiveCodAsync(order.Code, firstSession),
+            ReceiveCodAsync(order.Code, secondSession));
+        var finishedWhileLocked = await Task.WhenAny(pending, Task.Delay(TimeSpan.FromSeconds(2))) == pending;
+
+        await holderTransaction.CommitAsync();
+        var responses = await pending;
+
+        Assert.False(finishedWhileLocked, "Request nhận tiền COD phải chờ khóa dòng đơn.");
+        Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
+        Assert.Single(await AuditOfAsync(order.Code, "commerce.order.cod_receipt"));
+        Assert.Equal(1, PaidEventCount(order.Code));
+        Assert.Single(await HistoryOfAsync(order.Code), row => row.Reason == "Đã nhận tiền COD từ GHN.");
+    }
+
+    // ---------- Đánh dấu đã hoàn tiền ----------
+
+    [Fact]
+    // Đơn `refund_pending` chuyển sang `refunded`. Mã giao dịch được cắt khoảng trắng và lưu vào cột, audit và lịch sử.
+    public async Task Refund_RefundPendingOrder_MarksRefundedAndRecordsOnce()
+    {
+        var order = await PlaceRefundPendingOrderAsync();
+        var (adminId, adminSession) = await StaffAsync("admin");
+        var historyBefore = (await HistoryOfAsync(order.Code)).Count;
+
+        var data = await ReadDataAsync(await RefundAsync(order.Code, adminSession, new { transactionRef = "  RF-001  " }));
+
+        Assert.Equal("refunded", data.GetProperty("paymentStatus").GetString());
+        Assert.Equal("cancelled", data.GetProperty("status").GetString());
+        Assert.Equal("RF-001", data.GetProperty("refundTransactionRef").GetString());
+        Assert.Equal("RF-001", await RefundTransactionRefOfAsync(order.Code));
+
+        var history = await HistoryOfAsync(order.Code);
+        Assert.Equal(historyBefore + 1, history.Count);
+        var refundRow = Assert.Single(history, row => row.Reason is not null && row.Reason.Contains("RF-001"));
+        Assert.Equal(OrderStatus.Cancelled, refundRow.From);
+        Assert.Equal(OrderStatus.Cancelled, refundRow.To);
+        Assert.Equal(adminId, refundRow.ActorId);
+
+        var audit = Assert.Single(await AuditOfAsync(order.Code, "commerce.order.refund"));
+        Assert.Equal(adminId, audit.ActorId);
+        Assert.Equal("refund_pending", audit.Before!.RootElement.GetProperty("paymentStatus").GetString());
+        Assert.Equal("refunded", audit.After!.RootElement.GetProperty("paymentStatus").GetString());
+        Assert.Equal("RF-001", audit.After.RootElement.GetProperty("transactionRef").GetString());
+    }
+
+    [Fact]
+    // Mã giao dịch dài đúng 100 ký tự được nhận.
+    public async Task Refund_TransactionRefOfExactly100Characters_IsAccepted()
+    {
+        var order = await PlaceRefundPendingOrderAsync();
+        var (_, session) = await StaffAsync("admin");
+        var reference = new string('a', 100);
+
+        var data = await ReadDataAsync(await RefundAsync(order.Code, session, new { transactionRef = reference }));
+
+        Assert.Equal(reference, data.GetProperty("refundTransactionRef").GetString());
+    }
+
+    [Fact]
+    // Thiếu body, thiếu mã, mã rỗng, chỉ có khoảng trắng, sai kiểu, trường lạ hoặc dài 101 ký tự đều bị từ chối.
+    // Đơn không đổi và không có audit.
+    public async Task Refund_InvalidBody_Returns400AndChangesNothing()
+    {
+        var order = await PlaceRefundPendingOrderAsync();
+        var (_, session) = await StaffAsync("admin");
+
+        foreach (var body in new object?[]
+                 {
+                     null,
+                     new { },
+                     new { transactionRef = "" },
+                     new { transactionRef = "   " },
+                     new { transactionRef = 123 },
+                     new { transactionRef = new string('a', 101) },
+                     new { transactionRef = "RF-1", extra = "x" },
+                 })
+        {
+            await AssertErrorAsync(
+                await RefundAsync(order.Code, session, body), HttpStatusCode.BadRequest, "VALIDATION_ERROR");
+        }
+
+        Assert.Equal(PaymentStatus.RefundPending, await PaymentStatusOfAsync(order.Code));
+        Assert.Null(await RefundTransactionRefOfAsync(order.Code));
+        Assert.Empty(await AuditOfAsync(order.Code, "commerce.order.refund"));
+    }
+
+    [Theory]
+    [InlineData(PaymentStatus.Paid)]
+    [InlineData(PaymentStatus.Unpaid)]
+    // Chỉ `refund_pending` mới đánh dấu hoàn tiền được. Đơn `paid` hoặc `unpaid` trả 409 và cột mã vẫn `null`.
+    public async Task Refund_FromOtherPaymentStatus_Returns409AndWritesNothing(PaymentStatus paymentStatus)
+    {
+        var order = await PlaceOrderAsync("sepay");
+        await SetOrderStateAsync(order.Code, OrderStatus.Confirmed, paymentStatus);
+        var (_, session) = await StaffAsync("admin");
+        var historyBefore = (await HistoryOfAsync(order.Code)).Count;
+
+        var response = await RefundAsync(order.Code, session, new { transactionRef = "RF-009" });
+
+        await AssertErrorAsync(response, HttpStatusCode.Conflict, "INVALID_ORDER_TRANSITION");
+        Assert.Equal(paymentStatus, await PaymentStatusOfAsync(order.Code));
+        Assert.Null(await RefundTransactionRefOfAsync(order.Code));
+        Assert.Equal(historyBefore, (await HistoryOfAsync(order.Code)).Count);
+        Assert.Empty(await AuditOfAsync(order.Code, "commerce.order.refund"));
+    }
+
+    [Fact]
+    // PUT lặp lại với cùng mã giao dịch trả 200 và không ghi thêm. Mã khác trả 409 và giữ mã đã lưu.
+    public async Task Refund_Repeated_SameRefIsIdempotentAndDifferentRefConflicts()
+    {
+        var order = await PlaceRefundPendingOrderAsync();
+        var (_, session) = await StaffAsync("admin");
+        await ReadDataAsync(await RefundAsync(order.Code, session, new { transactionRef = "RF-100" }));
+        var historyAfterFirst = (await HistoryOfAsync(order.Code)).Count;
+
+        var same = await ReadDataAsync(await RefundAsync(order.Code, session, new { transactionRef = " RF-100 " }));
+        var different = await RefundAsync(order.Code, session, new { transactionRef = "RF-200" });
+
+        Assert.Equal("refunded", same.GetProperty("paymentStatus").GetString());
+        await AssertErrorAsync(different, HttpStatusCode.Conflict, "INVALID_ORDER_TRANSITION");
+        Assert.Equal("RF-100", await RefundTransactionRefOfAsync(order.Code));
+        Assert.Equal(historyAfterFirst, (await HistoryOfAsync(order.Code)).Count);
+        Assert.Single(await AuditOfAsync(order.Code, "commerce.order.refund"));
+    }
+
+    [Fact]
+    // Chi tiết đơn trả `refundTransactionRef` là `null` trước khi hoàn tiền và trả mã sau khi hoàn tiền.
+    public async Task OrderDetail_ExposesRefundTransactionRefOnlyAfterRefund()
+    {
+        var order = await PlaceRefundPendingOrderAsync();
+        var (_, adminSession) = await StaffAsync("admin");
+        var (_, supportSession) = await StaffAsync("support");
+
+        var before = await ReadDataAsync(await SendAsync(HttpMethod.Get, $"{AdminOrdersPath}/{order.Code}", supportSession));
+        await ReadDataAsync(await RefundAsync(order.Code, adminSession, new { transactionRef = "RF-300" }));
+        var after = await ReadDataAsync(await SendAsync(HttpMethod.Get, $"{AdminOrdersPath}/{order.Code}", supportSession));
+
+        Assert.Equal(JsonValueKind.Null, before.GetProperty("refundTransactionRef").ValueKind);
+        Assert.Equal("RF-300", after.GetProperty("refundTransactionRef").GetString());
+    }
+
+    [Fact]
+    public async Task Refund_UnknownCode_Returns404()
+    {
+        var (_, session) = await StaffAsync("admin");
+
+        var response = await RefundAsync("PK00000000", session, new { transactionRef = "RF-1" });
+
+        await AssertErrorAsync(response, HttpStatusCode.NotFound, "ORDER_NOT_FOUND");
+    }
+
+    [Fact]
+    // `sales` và `support` không có `refunds:manage` nên nhận 403, khách vãng lai nhận 401. Đơn không đổi.
+    public async Task Refund_WithoutPermission_IsRejectedAndOrderUnchanged()
+    {
+        var order = await PlaceRefundPendingOrderAsync();
+        var (_, salesSession) = await StaffAsync("sales");
+        var (_, supportSession) = await StaffAsync("support");
+        var body = new { transactionRef = "RF-1" };
+
+        await AssertErrorAsync(await RefundAsync(order.Code, salesSession, body), HttpStatusCode.Forbidden, "FORBIDDEN");
+        await AssertErrorAsync(await RefundAsync(order.Code, supportSession, body), HttpStatusCode.Forbidden, "FORBIDDEN");
+        Assert.Equal(HttpStatusCode.Unauthorized, (await RefundAsync(order.Code, null, body)).StatusCode);
+        Assert.Equal(PaymentStatus.RefundPending, await PaymentStatusOfAsync(order.Code));
+        Assert.Empty(await AuditOfAsync(order.Code, "commerce.order.refund"));
     }
 }

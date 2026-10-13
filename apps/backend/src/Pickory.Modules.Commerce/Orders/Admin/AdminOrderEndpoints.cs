@@ -29,6 +29,14 @@ internal static class AdminOrderEndpoints
         endpoints.MapPut($"{OrdersPath}/{{code}}/invoice-issuance", IssueInvoiceAsync)
             .RequirePermission(Permissions.OrdersUpdateStatus);
 
+        // Nhận tiền COD đặt trạng thái thanh toán bằng PUT, không có body. Quyền thuộc nhóm đối soát thanh toán.
+        endpoints.MapPut($"{OrdersPath}/{{code}}/cod-receipt", ReceiveCodAsync)
+            .RequirePermission(Permissions.PaymentsReconcile);
+
+        // Hoàn tiền cần mã giao dịch trong body và quyền riêng `refunds:manage`, nên `sales` không gọi được.
+        endpoints.MapPut($"{OrdersPath}/{{code}}/refund", MarkRefundedAsync)
+            .RequirePermission(Permissions.RefundsManage);
+
         // Vận đơn là tài nguyên con của đơn: tạo bằng POST và hủy bằng DELETE, cùng quyền `orders:fulfill`.
         endpoints.MapPost($"{OrdersPath}/{{code}}/shipment", CreateShipmentAsync)
             .RequirePermission(Permissions.OrdersFulfill);
@@ -70,6 +78,33 @@ internal static class AdminOrderEndpoints
 
         var actorId = context.GetActor().UserId!;
         var result = await service.IssueInvoiceAsync(code, actorId, context.RequestAborted);
+        return Results.Ok(new ApiResponse<AdminOrderDetailResponse>(result));
+    }
+
+    private static async Task<IResult> ReceiveCodAsync(string code, HttpContext context, AdminOrderActionService service)
+    {
+        SetNoStore(context);
+
+        var actorId = context.GetActor().UserId!;
+        var result = await service.ReceiveCodAsync(code, actorId, context.RequestAborted);
+        return Results.Ok(new ApiResponse<AdminOrderDetailResponse>(result));
+    }
+
+    private static async Task<IResult> MarkRefundedAsync(
+        string code, HttpContext context, JsonElement? body, AdminOrderActionService service)
+    {
+        SetNoStore(context);
+
+        // Kiểm body trước khi mở transaction. Body sai không khóa đơn và không ghi audit.
+        var failures = new List<ValidationFailure>();
+        var transactionRef = RefundOrderRequest.Read(body, failures);
+        if (failures.Count > 0)
+        {
+            throw new ValidationException(failures);
+        }
+
+        var actorId = context.GetActor().UserId!;
+        var result = await service.MarkRefundedAsync(code, actorId, transactionRef, context.RequestAborted);
         return Results.Ok(new ApiResponse<AdminOrderDetailResponse>(result));
     }
 

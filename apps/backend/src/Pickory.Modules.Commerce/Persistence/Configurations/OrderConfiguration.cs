@@ -30,6 +30,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         entity.Property(value => value.ShippingDiscount).IsRequired();
         entity.Property(value => value.Total).IsRequired();
         entity.Property(value => value.PaymentDeadline).IsRequired(false);
+        // Mã giao dịch hoàn tiền dài tối đa 100 ký tự, bằng giới hạn mà route hoàn tiền kiểm.
+        entity.Property(value => value.RefundTransactionRef).HasMaxLength(100).IsRequired(false);
         entity.Property(value => value.AccessTokenHash).IsRequired();
         entity.Property(value => value.IdempotencyKey).IsRequired();
         entity.Property(value => value.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
