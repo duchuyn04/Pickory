@@ -10,6 +10,7 @@ using Pickory.Modules.Commerce.Configuration;
 using Pickory.Modules.Commerce.Orders;
 using Pickory.Modules.Commerce.Orders.Admin;
 using Pickory.Modules.Commerce.Payments;
+using Pickory.Modules.Commerce.Payments.Admin;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Commerce.Settings;
 using Pickory.Modules.Identity.Contracts.Events;
@@ -66,6 +67,12 @@ public static class CommerceModule
         services.AddScoped<SepayPaymentService>();
         // Luật tiền về muộn giữ kho trong cùng context và transaction khớp webhook.
         services.AddScoped<SepayLatePaymentMatcher>();
+        // Luật khớp một giao dịch vào một đơn dùng chung cho webhook và route gắn tay của nhân viên.
+        services.AddScoped<SepayOrderMatcher>();
+        // Danh sách giao dịch cho nhân viên đối soát đọc riêng, không đi qua dịch vụ webhook.
+        services.AddScoped<AdminPaymentTransactionService>();
+        // Gắn tay và bỏ qua giao dịch ghi audit và khóa dòng, nên tách khỏi dịch vụ đọc danh sách.
+        services.AddScoped<AdminPaymentReconciliationService>();
         // Processor dùng scope riêng để từng vòng đọc lại đơn và trả kho trong transaction của Commerce.
         services.AddScoped<ExpiredPaymentProcessor>();
         // Worker kiểm hạn mỗi phút ngay cả khi không có request từ khách.
@@ -95,6 +102,7 @@ public static class CommerceModule
         CheckoutEndpoints.Map(moduleRoutes);
         OrderEndpoints.Map(moduleRoutes);
         AdminOrderEndpoints.Map(moduleRoutes);
+        AdminPaymentEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);
         // Route SePay có hợp đồng xác thực và phản hồi riêng, không yêu cầu phiên web.
         SepayWebhookEndpoint.Map(moduleRoutes);
