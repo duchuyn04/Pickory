@@ -21,7 +21,8 @@ public sealed class CheckoutPreviewService(
     IShippingService shipping,
     ILogger<CheckoutPreviewService> logger)
 {
-    private const string AddressNotFoundMessage = "Địa chỉ nhận hàng không còn trong danh mục. Vui lòng chọn lại.";
+    // Sổ địa chỉ dùng lại thông báo này, để khách thấy cùng một câu khi mã địa chỉ không còn trong danh mục.
+    internal const string AddressNotFoundMessage = "Địa chỉ nhận hàng không còn trong danh mục. Vui lòng chọn lại.";
     private const string EmptyCartMessage = "Giỏ hàng đang trống.";
     private const string LineUnavailableMessage = "Giỏ hàng có sản phẩm không thể mua. Hãy xóa sản phẩm đó rồi thử lại.";
     private const string MissingDimensionsMessage = "Sản phẩm trong giỏ chưa thể đặt hàng lúc này. Vui lòng liên hệ cửa hàng.";
