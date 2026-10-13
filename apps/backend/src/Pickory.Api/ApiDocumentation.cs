@@ -22,8 +22,8 @@ public static class ApiDocumentation
     public const string DocumentPath = "/api/openapi/v1.json";
     public const string UiRoutePrefix = "api/docs";
 
-    // Trả null khi không gắn tài liệu. Môi trường khác Development chỉ có tài liệu khi người triển khai bật `API_DOCS_ENABLED`.
-    // Nút "Try it out" ở môi trường khác Development cần thêm `API_DOCS_INTERACTIVE`, và cờ này không có tác dụng khi tài liệu tắt.
+    // Trả null khi không gắn tài liệu, tức môi trường khác Development chưa bật `API_DOCS_ENABLED`.
+    // Nút "Try it out" ngoài Development cần thêm `API_DOCS_INTERACTIVE`, và cờ này vô hiệu khi tài liệu tắt.
     public static ApiDocumentationMode? SelectMode(bool isDevelopment, bool apiDocsEnabled, bool apiDocsInteractive = false)
     {
         if (isDevelopment)
