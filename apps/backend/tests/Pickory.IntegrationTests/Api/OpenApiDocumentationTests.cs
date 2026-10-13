@@ -193,8 +193,19 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
         Assert.DoesNotContain(EmptySubmitMethods, configuration);
     }
 
-    // Tạo API ở môi trường Production. `apiDocsFlag` bằng null nghĩa là không đặt `API_DOCS_ENABLED`.
-    private WebApplicationFactory<Program> CreateProductionFactory(string? apiDocsFlag)
+    [Fact]
+    // Production bật thêm `API_DOCS_INTERACTIVE` thì giữ nút "Try it out".
+    public async Task Docs_InProductionWithInteractiveFlag_KeepsTryItOut()
+    {
+        await using var productionFactory = CreateProductionFactory(apiDocsFlag: "1", interactiveFlag: "1");
+
+        var configuration = await productionFactory.CreateClient().GetStringAsync($"{DocsPath}/index.js");
+
+        Assert.DoesNotContain(EmptySubmitMethods, configuration);
+    }
+
+    // Tạo API ở môi trường Production. Giá trị null nghĩa là không đặt biến `API_DOCS_ENABLED` hoặc `API_DOCS_INTERACTIVE`.
+    private WebApplicationFactory<Program> CreateProductionFactory(string? apiDocsFlag, string? interactiveFlag = null)
     {
         return factory.WithWebHostBuilder(builder =>
         {
@@ -212,6 +223,11 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
             if (apiDocsFlag is not null)
             {
                 builder.UseSetting("API_DOCS_ENABLED", apiDocsFlag);
+            }
+
+            if (interactiveFlag is not null)
+            {
+                builder.UseSetting("API_DOCS_INTERACTIVE", interactiveFlag);
             }
         });
     }

@@ -95,7 +95,8 @@ builder.Services.AddShippingModule(databaseConnectionString, config, builder.Env
 builder.Services.AddCommerceModule(databaseConnectionString, config, builder.Environment.IsProduction());
 
 // Development luôn có tài liệu. Môi trường khác chỉ sinh tài liệu khi `API_DOCS_ENABLED` bật, vì tài liệu liệt kê cả route admin.
-var apiDocumentationMode = ApiDocumentation.SelectMode(builder.Environment.IsDevelopment(), config.ApiDocsEnabled);
+var apiDocumentationMode = ApiDocumentation.SelectMode(
+    builder.Environment.IsDevelopment(), config.ApiDocsEnabled, config.ApiDocsInteractive);
 if (apiDocumentationMode is not null)
 {
     builder.Services.AddOpenApi(ApiDocumentation.DocumentName, options =>

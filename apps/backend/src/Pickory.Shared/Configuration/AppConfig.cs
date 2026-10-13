@@ -79,6 +79,9 @@ public record AppConfig
     // Bật tài liệu API chỉ xem ở môi trường khác Development. Mặc định tắt, vì tài liệu liệt kê cả route admin.
     public bool ApiDocsEnabled { get; init; }
 
+    // Cho gọi thử API từ trang tài liệu ở môi trường khác Development. Mặc định tắt, và chỉ có tác dụng khi `ApiDocsEnabled` bật.
+    public bool ApiDocsInteractive { get; init; }
+
     // Khóa SePay gửi kèm webhook tiền về. Chuỗi rỗng nghĩa là chưa cấu hình, và production thiếu khóa thì API dừng.
     public string SepayWebhookApiKey { get; init; } = string.Empty;
 
@@ -243,6 +246,7 @@ public record AppConfig
             GhnWebhookSecret = (configuration["GHN_WEBHOOK_SECRET"] ?? string.Empty).Trim(),
             GhnLiveTests = ReadZeroOrOneFlag(configuration, "GHN_LIVE_TESTS"),
             ApiDocsEnabled = ReadZeroOrOneFlag(configuration, "API_DOCS_ENABLED"),
+            ApiDocsInteractive = ReadZeroOrOneFlag(configuration, "API_DOCS_INTERACTIVE"),
             SepayWebhookApiKey = (configuration["SEPAY_WEBHOOK_API_KEY"] ?? string.Empty).Trim(),
         };
     }

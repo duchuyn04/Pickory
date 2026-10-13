@@ -23,6 +23,22 @@ public sealed class ApiDocumentationTests
     }
 
     [Fact]
+    // Cờ tương tác bật cùng cờ tài liệu thì production có "Try it out".
+    public void SelectMode_OutsideDevelopmentWithInteractiveFlag_ReturnsInteractive()
+    {
+        Assert.Equal(
+            ApiDocumentationMode.Interactive,
+            ApiDocumentation.SelectMode(isDevelopment: false, apiDocsEnabled: true, apiDocsInteractive: true));
+    }
+
+    [Fact]
+    // Cờ tương tác không tự bật tài liệu. Danh sách route admin vẫn ẩn khi `API_DOCS_ENABLED` tắt.
+    public void SelectMode_OutsideDevelopmentInteractiveWithoutDocsFlag_ReturnsNull()
+    {
+        Assert.Null(ApiDocumentation.SelectMode(isDevelopment: false, apiDocsEnabled: false, apiDocsInteractive: true));
+    }
+
+    [Fact]
     // Không bật cờ thì môi trường khác không gắn tài liệu. Danh sách route admin không bị lộ.
     public void SelectMode_OutsideDevelopmentWithoutFlag_ReturnsNull()
     {

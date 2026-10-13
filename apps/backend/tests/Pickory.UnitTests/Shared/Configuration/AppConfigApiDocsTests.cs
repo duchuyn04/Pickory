@@ -37,6 +37,22 @@ public sealed class AppConfigApiDocsTests
         Assert.Equal(expected, Load(("API_DOCS_ENABLED", rawValue)).ApiDocsEnabled);
     }
 
+    [Fact]
+    // Không đặt biến thì tài liệu production chỉ xem. Bản triển khai cũ không tự mở nút gọi thử.
+    public void Load_WithoutInteractiveVariable_DisablesInteractive()
+    {
+        Assert.False(Load().ApiDocsInteractive);
+    }
+
+    [Theory]
+    [InlineData("0", false)]
+    [InlineData("1", true)]
+    [InlineData("", false)]
+    public void Load_ReadsApiDocsInteractiveFlag(string rawValue, bool expected)
+    {
+        Assert.Equal(expected, Load(("API_DOCS_INTERACTIVE", rawValue)).ApiDocsInteractive);
+    }
+
     [Theory]
     [InlineData("true")]
     [InlineData("yes")]
