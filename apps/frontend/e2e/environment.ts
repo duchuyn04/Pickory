@@ -41,6 +41,11 @@ export const e2eEnvironment = {
   adminEmail: 'e2e-identity-admin@pickory.local',
   adminPassword: process.env.E2E_ADMIN_PASSWORD,
   customerEmail: 'e2e-identity-customer@pickory.local',
+  // Mỗi spec dùng một khách riêng, nên khóa khách không ảnh hưởng đơn hàng hay màn hình khác.
+  lockCustomerEmail: 'e2e-lock-customer@pickory.local',
+  screensCustomerEmail: 'e2e-screens-customer@pickory.local',
+  ordersCustomerEmail: 'e2e-orders-customer@pickory.local',
+  seedVerificationEmail: 'e2e-seed-verification@pickory.local',
   salesEmail: 'e2e-identity-sales@pickory.local',
   catalogSalesEmail: 'e2e-catalog-sales@pickory.local',
   inventorySalesEmail: 'e2e-inventory-sales@pickory.local',

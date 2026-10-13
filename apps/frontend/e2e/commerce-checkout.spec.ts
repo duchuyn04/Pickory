@@ -25,6 +25,15 @@ const baselineCommerceSettings = {
   sepayBankCode: null,
 };
 
+interface CommerceSettings {
+  freeShippingThreshold: number;
+  codMaxAmount: number;
+  maxQuantityPerSku: number;
+  maxCartLines: number;
+  sepayAccountNumber: string | null;
+  sepayBankCode: string | null;
+}
+
 interface SeededProduct {
   name: string;
   slug: string;
@@ -305,6 +314,7 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
   let address: AddressChoice;
   let adminContext: BrowserContext;
   let adminPage: Page;
+  let previousCommerceSettings: CommerceSettings;
 
   test.beforeAll(async ({ browser }) => {
     // Mỗi sản phẩm cần nhiều lệnh API, nên tạo một lần cho cả nhóm.
@@ -312,6 +322,10 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
     adminContext = await browser.newContext({ baseURL: e2eEnvironment.webOrigin });
     adminPage = await adminContext.newPage();
     await loginAdmin(adminPage);
+    // Giữ cấu hình trước khi test ghi đè để các spec khác không nhận giá trị thử nghiệm.
+    const settingsResponse = await adminPage.request.get('/api/admin/commerce/settings');
+    expect(settingsResponse.status(), await settingsResponse.text()).toBe(200);
+    previousCommerceSettings = (await settingsResponse.json()).data as CommerceSettings;
     catalog = await seedCatalog(adminPage);
 
     const picked = await pickAddress(adminPage);
@@ -320,9 +334,25 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
   });
 
   test.afterAll(async () => {
-    // Trả cấu hình bán hàng về mặc định để spec khác không thấy ngưỡng và hạn mức của spec này.
-    await applyCommerceSettings(adminPage, {});
-    await adminContext.close();
+    try {
+      // Trả đúng cấu hình ban đầu kể cả khi một test dừng sớm, không thay bằng ngưỡng riêng của checkout.
+      if (previousCommerceSettings) {
+        const restored = await adminPage.request.put('/api/admin/commerce/settings', {
+          headers: adminHeaders,
+          data: {
+            freeShippingThreshold: previousCommerceSettings.freeShippingThreshold,
+            codMaxAmount: previousCommerceSettings.codMaxAmount,
+            maxQuantityPerSku: previousCommerceSettings.maxQuantityPerSku,
+            maxCartLines: previousCommerceSettings.maxCartLines,
+            sepayAccountNumber: previousCommerceSettings.sepayAccountNumber,
+            sepayBankCode: previousCommerceSettings.sepayBankCode,
+          },
+        });
+        expect(restored.status(), await restored.text()).toBe(200);
+      }
+    } finally {
+      await adminContext?.close();
+    }
   });
 
   test.beforeEach(async () => {

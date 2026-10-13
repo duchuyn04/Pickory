@@ -100,6 +100,23 @@ public static class IdentityModule
         return IdentityCommandLine.RunAsync(args, services);
     }
 
+    // Nạp sẵn tài khoản khách hàng phục vụ kiểm thử E2E.
+    // Hàm chỉ được gọi từ tiến trình chuẩn bị DB E2E để tránh tạo tài khoản thử trong môi trường khác.
+    public static async Task SeedE2eCustomersAsync(
+        IServiceProvider services,
+        IReadOnlyList<(string Email, string Name, string Phone)> customers,
+        string password,
+        CancellationToken cancellationToken)
+    {
+        await using var scope = services.CreateAsyncScope();
+        var database = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
+        foreach (var (email, name, phone) in customers)
+        {
+            // Tạo từng tài khoản khách kèm vai trò và mật khẩu đã băm.
+            await CustomerAccountCreator.CreateAsync(database, email, password, name, phone, cancellationToken);
+        }
+    }
+
     public static IApplicationBuilder UseIdentityActor(this IApplicationBuilder app)
     {
         // Mọi route cần actor, trừ route webhook. Middleware này phải đứng trước mọi route khác.

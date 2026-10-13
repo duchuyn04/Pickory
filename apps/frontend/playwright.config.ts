@@ -35,6 +35,8 @@ export default defineConfig({
         E2E_DATABASE_URL: e2eEnvironment.databaseUrl,
         E2E_ADMIN_EMAIL: e2eEnvironment.adminEmail,
         E2E_ADMIN_PASSWORD: e2eEnvironment.adminPassword,
+        // Seed khách E2E cần cùng mật khẩu với các spec đăng nhập, không dùng mật khẩu admin.
+        E2E_ACCOUNT_PASSWORD: e2eEnvironment.accountPassword,
         // Tách thư của suite khỏi outbox dev. Spec đọc link mời từ thư mục này.
         DEV_OUTBOX_DIR: e2eEnvironment.outboxDirectory,
         // Xóa token GHN để API dùng `FakeGhnClient`. Spec đặt hàng cần phí vận chuyển cố định và không gọi mạng.

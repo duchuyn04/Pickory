@@ -43,7 +43,8 @@ public static class E2eStartup
         // Lỗi ở đây dừng lệnh thay vì mở API với danh mục rỗng.
         await ShippingModule.SyncAddressesAsync(services, cancellationToken);
 
-        // Chỉ tạo admin. Test phải tạo khách và nhân viên sales qua giao diện thật.
+        // Tạo tài khoản quản trị và các tài khoản khách hàng cố định cho E2E.
+        // Đăng ký qua giao diện có giới hạn theo IP nên kịch bản không kiểm tra đăng ký dùng tài khoản nạp sẵn.
         var exitCode = await IdentityModule.RunIdentityCommandAsync(
             ["identity:create-admin", "--email", target.AdminEmail, "--password", target.AdminPassword, "--name", "Quản trị E2E"],
             services);
@@ -51,6 +52,19 @@ public static class E2eStartup
         {
             throw new InvalidOperationException("Không tạo được admin fixture E2E.");
         }
+
+        var seedCustomers = new (string Email, string Name, string Phone)[]
+        {
+            ("e2e-lock-customer@pickory.local", "Khách Khóa E2E", "0987654321"),
+            ("e2e-screens-customer@pickory.local", "Khách Giao Diện E2E", "0987654321"),
+            ("e2e-orders-customer@pickory.local", "Khách Đơn Hàng E2E", "0987654321"),
+            ("e2e-seed-verification@pickory.local", "Khách Xác Thực Seed E2E", "0987654321"),
+        };
+        var accountPassword = configuration["E2E_ACCOUNT_PASSWORD"]
+            ?? throw new InvalidOperationException("E2E cần E2E_ACCOUNT_PASSWORD để tạo tài khoản khách fixture.");
+
+        // Tạo tài khoản khách đã xác thực email để kịch bản không chạm trần giới hạn đăng ký.
+        await IdentityModule.SeedE2eCustomersAsync(services, seedCustomers, accountPassword, cancellationToken);
 
         // Xóa thư cũ của suite. Test đọc link mời mới nhất mà không nhầm với thư của lần chạy trước.
         E2eOutbox.ClearOwnedMessages(outboxDirectory);

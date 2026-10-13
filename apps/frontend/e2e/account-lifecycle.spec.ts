@@ -25,9 +25,15 @@ test('khách đăng ký, xác thực email, quên mật khẩu, đặt lại và
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel(/^Mật khẩu/).fill(e2eEnvironment.accountPassword);
     await page.getByLabel(/^Họ và tên/).fill('Khách vòng đời');
+    // Chờ trang chủ tra slug xong để lỗi tải chi tiết không xuất hiện sau khi test rời trang.
+    const homeDetails = page.waitForResponse((response) =>
+      response.url().includes('/api/product-details?'),
+    );
     await page.getByRole('button', { name: 'Tạo tài khoản', exact: true }).click();
     // Link Tài khoản chứng minh API đăng ký đã trả phiên của khách.
     await expect(page.getByRole('link', { name: 'Tài khoản', exact: true })).toBeVisible();
+    expect((await homeDetails).status()).toBe(200);
+    await page.waitForLoadState('networkidle');
   });
 
   await test.step('Mở link xác thực email trong thư', async () => {

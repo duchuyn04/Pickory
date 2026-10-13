@@ -179,6 +179,7 @@ Admin soạn mô tả chi tiết bằng trình soạn thảo trực quan. Backen
 | GET | `/api/brands` | Danh sách thương hiệu |
 | GET | `/api/products` | Danh sách có lọc, sắp xếp, phân trang |
 | GET | `/api/products/:slug` | Chi tiết sản phẩm; slug cũ trả 301 |
+| GET | `/api/product-details?slug=a&slug=b` | Tối đa 20 slug; trả chi tiết sản phẩm công khai theo thứ tự yêu cầu, bỏ slug thiếu hoặc trùng |
 | GET | `/api/products/compare?ids=a,b,c` | So sánh tối đa 4 sản phẩm cùng danh mục |
 
 Tham số `GET /api/products`:

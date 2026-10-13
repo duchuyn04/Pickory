@@ -184,7 +184,7 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 7: E2E và nghiệm thu
-- [ ] COM-E2E1 · [ ] COM-E2E2 · [ ] COM-E2E3 · [ ] COM-E2E4 · [ ] COM-E2E5 · [ ] COM-24
+- [x] COM-E2E0 · [ ] COM-E2E1 · [ ] COM-E2E2 · [ ] COM-E2E3 · [ ] COM-E2E4 · [ ] COM-E2E5 · [ ] COM-24
 
 ### Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt, trừ dòng ghi chờ khóa

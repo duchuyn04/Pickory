@@ -363,19 +363,15 @@ test.describe('COM-UI3: theo dõi đơn hàng và khách tự hủy', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     test.setTimeout(120000);
 
-    // Đăng ký tài khoản khách mới để có tài khoản sạch cho test.
-    const suffix = Date.now().toString(36);
-    const email = `customer-${suffix}@example.com`;
-    const registered = await page.request.post('/api/auth/registrations', {
+    // Dùng khách đã seed riêng cho đơn hàng, không tiêu hao hạn mức đăng ký của identity.
+    const session = await page.request.post('/api/auth/sessions', {
       headers: { Origin: e2eEnvironment.webOrigin },
       data: {
-        email,
-        password: 'Password@123',
-        name: 'Khách Đăng Nhập',
-        phone: '0987654321',
+        email: e2eEnvironment.ordersCustomerEmail,
+        password: e2eEnvironment.accountPassword,
       },
     });
-    expect(registered.status()).toBe(201);
+    expect(session.status()).toBe(201);
 
     // Thêm sản phẩm vào giỏ và đặt hàng.
     await page.goto(`/p/${product.slug}`);

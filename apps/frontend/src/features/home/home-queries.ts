@@ -8,6 +8,8 @@ import type {
   ProductListResponse,
 } from '../catalog/customer/catalog-api';
 import type { ProductSort } from '../catalog/customer/category-query';
+import { HOME_BANNERS } from './home-banners';
+import { PRODUCT_DUEL } from './home-content';
 
 // Số thẻ của một lưới sản phẩm: hai hàng sáu thẻ ở màn rộng 1200px, giống lưới của thegioididong.com.
 export const RAIL_PRODUCT_LIMIT = 12;
@@ -128,14 +130,32 @@ export function useCatalogPages(sort: ProductSort) {
   });
 }
 
-// Dùng chung khóa với trang chi tiết. Khách bấm vào sản phẩm từ banner thì trang chi tiết có dữ liệu ngay.
-export function productDetailQueryOptions(productSlug: string) {
-  return {
-    queryKey: ['product', productSlug],
-    queryFn: () => apiRequest<ProductDetail>(`/api/products/${encodeURIComponent(productSlug)}`),
-  };
-}
+// Cùng một khóa cho banner và banner so sánh, nên trang chủ chỉ gửi một request cho slug cố định.
+const requestedHomeSlugs = [
+  ...HOME_BANNERS.flatMap((banner) => (banner.productSlug ? [banner.productSlug] : [])),
+  PRODUCT_DUEL.leftSlug,
+  PRODUCT_DUEL.rightSlug,
+];
+const homeProductSlugs = requestedHomeSlugs.filter(
+  (slug, index) => requestedHomeSlugs.indexOf(slug) === index,
+);
 
-export function useProductDetail(productSlug: string) {
-  return useQuery(productDetailQueryOptions(productSlug));
+export function useHomeProductDetails() {
+  return useQuery({
+    queryKey: ['home', 'product-details'],
+    queryFn: async ({ signal }) => {
+      const params = new URLSearchParams();
+      // Tham số lặp giữ đúng thứ tự, còn endpoint bỏ slug trùng và sản phẩm không hiển thị.
+      for (const slug of homeProductSlugs) params.append('slug', slug);
+      // Một phản hồi chung cho banner và so sánh tránh 404 riêng lẻ khi sản phẩm bị xóa.
+      const details = await apiRequest<ProductDetail[]>(`/api/product-details?${params}`, {
+        signal,
+      });
+      // Tra theo slug để banner thiếu bị bỏ và cặp so sánh thiếu dùng dải dự phòng.
+      return Object.fromEntries(details.map((detail) => [detail.slug, detail])) as Record<
+        string,
+        ProductDetail
+      >;
+    },
+  });
 }

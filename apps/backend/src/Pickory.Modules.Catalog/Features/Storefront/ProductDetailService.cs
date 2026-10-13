@@ -24,6 +24,25 @@ public sealed class ProductDetailService(CatalogDbContext database, CloudinaryCr
     public Task<ProductDetail?> FindByIdOrSlugAsync(string idOrSlug, CancellationToken cancellationToken) =>
         FindVisibleAsync(product => product.Id == idOrSlug || product.Slug == idOrSlug, cancellationToken);
 
+    public async Task<IReadOnlyList<ProductDetail>> FindBySlugsAsync(
+        IReadOnlyList<string> slugs, CancellationToken cancellationToken)
+    {
+        // Cùng bộ lọc và quan hệ của chi tiết đơn, nên sản phẩm nháp hoặc ẩn không lọt vào danh sách.
+        var products = await VisibleProductsWithDetail()
+            .Where(product => slugs.Contains(product.Slug))
+            .ToListAsync(cancellationToken);
+        // Tập rỗng không cần nạp danh mục, tránh một truy vấn không có sản phẩm để dựng.
+        if (products.Count == 0)
+        {
+            return [];
+        }
+
+        // Nạp danh mục một lần cho cả tập, rồi dựng cùng dữ liệu giá, ảnh và bảo hành như route đơn.
+        var categories = await CategoryAttributeIndex.LoadAsync(database, cancellationToken);
+        var details = products.Select(product => ProductDetailAssembler.Build(product, categories, credentials));
+        return RequestedIdOrder.Arrange(slugs, details, detail => detail.Slug);
+    }
+
     public async Task<ProductSlugLookup> LookupBySlugAsync(string slug, CancellationToken cancellationToken)
     {
         // Slug hiện tại thắng slug cũ. Sản phẩm khách không thấy được dừng ở đây và trả 404, không đi tiếp sang lịch sử.

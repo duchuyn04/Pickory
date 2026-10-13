@@ -17,7 +17,7 @@ import {
   type CategoryPromoContent,
   type PromoEffect,
 } from './home-content';
-import { useCategorySummary, useProductDetail, useRailProducts } from './home-queries';
+import { useCategorySummary, useHomeProductDetails, useRailProducts } from './home-queries';
 import { prefersReducedMotion, useRevealOnScroll } from './motion';
 import { pickProductWithImage } from './pick-product';
 
@@ -186,15 +186,16 @@ function formatSpecValue(spec: ProductSpecEntry): string {
 }
 
 export function ProductDuel({ fallback }: { fallback: ReactNode }) {
-  const left = useProductDetail(PRODUCT_DUEL.leftSlug);
-  const right = useProductDetail(PRODUCT_DUEL.rightSlug);
+  const products = useHomeProductDetails();
 
-  // Một trong hai máy không còn, hoặc hai máy khác danh mục: thay banner bằng dải mời so sánh chung.
-  if (left.isError || right.isError) return <>{fallback}</>;
-  if (!left.data || !right.data) return <div className="duel-skeleton" aria-hidden="true" />;
-  if (left.data.category.id !== right.data.category.id) return <>{fallback}</>;
+  // Một máy không còn, hoặc hai máy khác danh mục: thay banner bằng dải mời so sánh chung.
+  if (products.isError) return <>{fallback}</>;
+  if (!products.data) return <div className="duel-skeleton" aria-hidden="true" />;
+  const left = products.data[PRODUCT_DUEL.leftSlug];
+  const right = products.data[PRODUCT_DUEL.rightSlug];
+  if (!left || !right || left.category.id !== right.category.id) return <>{fallback}</>;
 
-  return <ProductDuelBanner left={left.data} right={right.data} />;
+  return <ProductDuelBanner left={left} right={right} />;
 }
 
 function ProductDuelBanner({ left, right }: { left: ProductDetail; right: ProductDetail }) {

@@ -113,6 +113,51 @@ public sealed class IdentitySetupTests(IntegrationDatabaseFixture database)
         Assert.Contains(expectedMessagePart, exception.Message);
     }
 
+    [Fact]
+    // Tạo tài khoản khách đã xác thực và đăng nhập được bằng mật khẩu đã hash.
+    public async Task CustomerAccountCreator_CreatesVerifiedCustomer()
+    {
+        var email = IdentityTestData.NewEmail("first-customer");
+
+        await using (var identity = database.CreateIdentityContext())
+        {
+            await CustomerAccountCreator.CreateAsync(identity, email.ToUpperInvariant(), "Customer@123456", "Khách Hàng Mới", CancellationToken.None);
+        }
+
+        await using var verify = database.CreateIdentityContext();
+        var customer = await verify.Users.Include(user => user.Roles).ThenInclude(userRole => userRole.Role).SingleAsync(user => user.Email == email);
+        Assert.Equal(UserKind.Customer, customer.Kind);
+        Assert.True(customer.EmailVerified);
+        Assert.Equal(["customer"], customer.Roles.Select(userRole => userRole.Role!.Code));
+        Assert.True(PasswordHasher.Verify(customer.PasswordHash!, "Customer@123456"));
+    }
+
+    [Fact]
+    // Chạy lại với email đã có thì không tạo trùng và không ghi đè dữ liệu.
+    public async Task CustomerAccountCreator_ExistingCustomerIsLeftUnchanged()
+    {
+        var customer = await IdentityTestData.CreateUserAsync(database, IdentityTestData.NewEmail("existing-customer"), UserKind.Customer, "customer");
+
+        await using var identity = database.CreateIdentityContext();
+        await CustomerAccountCreator.CreateAsync(identity, customer.Email, "NewPassword123!", "Tên khác", CancellationToken.None);
+
+        var stored = await identity.Users.AsNoTracking().SingleAsync(user => user.Id == customer.Id);
+        Assert.True(PasswordHasher.Verify(stored.PasswordHash!, IdentityTestData.DefaultPassword));
+    }
+
+    [Fact]
+    // Mật khẩu dưới 8 ký tự bị từ chối trước khi lưu vào cơ sở dữ liệu.
+    public async Task CustomerAccountCreator_RejectsShortPassword()
+    {
+        var email = IdentityTestData.NewEmail("short-pwd-customer");
+
+        await using var identity = database.CreateIdentityContext();
+        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() =>
+            CustomerAccountCreator.CreateAsync(identity, email, "123", "Khách Ngắn", CancellationToken.None));
+
+        Assert.Contains("tối thiểu 8 ký tự", exception.Message);
+    }
+
     // Logger giả ghi lại cảnh báo. Test đọc nội dung cảnh báo mà không cấu hình nhà cung cấp log.
     private sealed class RecordingLogger : ILogger
     {

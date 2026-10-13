@@ -6,6 +6,47 @@ const SETTINGS_PATH = '/admin/commerce/settings';
 const SETTINGS_API = '**/api/admin/commerce/settings';
 const PAGE_TITLE = 'Cấu hình bán hàng';
 
+interface CommerceSettings {
+  freeShippingThreshold: number;
+  codMaxAmount: number;
+  maxQuantityPerSku: number;
+  maxCartLines: number;
+  sepayAccountNumber: string | null;
+  sepayBankCode: string | null;
+}
+
+let previousCommerceSettings: CommerceSettings | undefined;
+
+test.beforeEach(() => {
+  previousCommerceSettings = undefined;
+});
+
+test.afterEach(async ({ browser }) => {
+  if (!previousCommerceSettings) return;
+
+  // Dùng phiên admin riêng vì test đã đổi sang sales để kiểm quyền trước khi kết thúc.
+  const adminContext = await browser.newContext({ baseURL: e2eEnvironment.webOrigin });
+  try {
+    const adminPage = await adminContext.newPage();
+    await loginAdmin(adminPage);
+    // Hoàn nguyên cả sáu trường để lần chạy sau không thấy cấu hình thử nghiệm.
+    const restored = await adminPage.request.put('/api/admin/commerce/settings', {
+      headers: { Origin: e2eEnvironment.webOrigin },
+      data: {
+        freeShippingThreshold: previousCommerceSettings.freeShippingThreshold,
+        codMaxAmount: previousCommerceSettings.codMaxAmount,
+        maxQuantityPerSku: previousCommerceSettings.maxQuantityPerSku,
+        maxCartLines: previousCommerceSettings.maxCartLines,
+        sepayAccountNumber: previousCommerceSettings.sepayAccountNumber,
+        sepayBankCode: previousCommerceSettings.sepayBankCode,
+      },
+    });
+    expect(restored.status(), await restored.text()).toBe(200);
+  } finally {
+    await adminContext.close();
+  }
+});
+
 // Thư mục ảnh chụp để người duyệt xem lại. Ngoài repo nên không lẫn vào Git.
 const SCREENSHOT_DIRECTORY =
   'C:/Users/juven/AppData/Local/Temp/claude/C--Users-juven-Desktop-pickory/c0628d6e-6470-493e-8673-a94b5488add7/scratchpad/com-ui7-shots';
@@ -81,6 +122,11 @@ test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên
       page.getByRole('heading', { level: 1, name: PAGE_TITLE, exact: true }),
     ).toBeVisible();
   });
+
+  // Lưu giá trị trước thao tác thử nghiệm, kể cả khi test thất bại ở bước sau.
+  const previousSettingsResponse = await page.request.get('/api/admin/commerce/settings');
+  expect(previousSettingsResponse.status(), await previousSettingsResponse.text()).toBe(200);
+  previousCommerceSettings = (await previousSettingsResponse.json()).data as CommerceSettings;
 
   await test.step('Chưa lưu lần nào: form hiện giá trị mặc định và gợi ý định dạng VND', async () => {
     for (const width of [1280, 375]) {

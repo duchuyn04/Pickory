@@ -1,4 +1,4 @@
-import { useQueries, useQuery } from '@tanstack/react-query';
+import type { ProductDetail } from '../catalog/customer/catalog-api';
 import {
   useEffect,
   useRef,
@@ -8,14 +8,13 @@ import {
   type PointerEvent,
 } from 'react';
 import { Link } from 'react-router-dom';
-import { ApiError } from '../../shared/api';
 import { Icon } from '../../shared/icons';
 import { formatProductPrice } from '../catalog/customer/product-display';
 import { withCloudinaryTransform } from '../catalog/shared/image-url';
 import { BannerIcon } from './banner-icons';
 import { AUTOPLAY_INTERVAL_MS, getTabIndexForKey, wrapSlideIndex } from './carousel-index';
 import type { BannerContent, BannerTheme } from './home-banners';
-import { productDetailQueryOptions } from './home-queries';
+import { useHomeProductDetails } from './home-queries';
 import { prefersReducedMotion } from './motion';
 
 // Ảnh máy chiếm khoảng nửa banner rộng 1200px. Ảnh rộng hơn khung để nét trên màn mật độ cao.
@@ -31,23 +30,12 @@ function slideElementId(bannerId: string): string {
   return `banner-slide-${bannerId}`;
 }
 
-// Admin xóa sản phẩm thì API trả 404. Banner đó bị bỏ, để nút không dẫn tới trang "Không tìm thấy".
-function isMissingProduct(error: Error | null): boolean {
-  return error instanceof ApiError && error.status === 404;
-}
-
 export function BannerCarousel({ banners }: { banners: BannerContent[] }) {
-  // Máy chưa có trong catalog không có slug để hỏi giá, nên chỉ hỏi các máy đang bán.
-  const catalogSlugs = banners.flatMap((banner) =>
-    banner.productSlug ? [banner.productSlug] : [],
-  );
-  const productQueries = useQueries({ queries: catalogSlugs.map(productDetailQueryOptions) });
-  const missingSlugs = new Set(
-    catalogSlugs.filter((_, index) => isMissingProduct(productQueries[index]?.error ?? null)),
-  );
-  const visibleBanners = banners.filter(
-    (banner) => banner.productSlug === null || !missingSlugs.has(banner.productSlug),
-  );
+  const products = useHomeProductDetails();
+  // Bỏ banner chỉ khi danh sách tải xong: slug thiếu không được dẫn tới trang không tồn tại.
+  const visibleBanners = products.isSuccess
+    ? banners.filter((banner) => !banner.productSlug || products.data[banner.productSlug])
+    : banners;
 
   const [activeIndex, setActiveIndex] = useState(0);
   // Khách bật giảm chuyển động thì banner đứng yên từ đầu. Nút phát vẫn cho khách tự bật lại.
@@ -162,6 +150,7 @@ export function BannerCarousel({ banners }: { banners: BannerContent[] }) {
             <BannerSlide
               key={banner.id}
               banner={banner}
+              product={banner.productSlug ? products.data?.[banner.productSlug] : undefined}
               index={index}
               slideCount={slideCount}
               isActive={index === visibleIndex}
@@ -258,9 +247,10 @@ interface BannerSlideProps {
   index: number;
   slideCount: number;
   isActive: boolean;
+  product?: ProductDetail;
 }
 
-function BannerSlide({ banner, index, slideCount, isActive }: BannerSlideProps) {
+function BannerSlide({ banner, index, slideCount, isActive, product }: BannerSlideProps) {
   const themeClass = `banner-${banner.theme}`;
   const className = [
     'banner-slide',
@@ -334,7 +324,7 @@ function BannerSlide({ banner, index, slideCount, isActive }: BannerSlideProps) 
           </p>
         )}
         {banner.productSlug ? (
-          <CatalogBuyRow banner={banner} productSlug={banner.productSlug} />
+          <CatalogBuyRow banner={banner} productSlug={banner.productSlug} product={product} />
         ) : (
           <UpcomingBuyRow banner={banner} />
         )}
@@ -355,9 +345,15 @@ function BannerSlide({ banner, index, slideCount, isActive }: BannerSlideProps) 
 }
 
 // Máy đã bán tại Pickory: giá và bảo hành lấy từ catalog, nút mở trang chi tiết.
-function CatalogBuyRow({ banner, productSlug }: { banner: BannerContent; productSlug: string }) {
-  const product = useQuery(productDetailQueryOptions(productSlug));
-
+function CatalogBuyRow({
+  banner,
+  productSlug,
+  product,
+}: {
+  banner: BannerContent;
+  productSlug: string;
+  product?: ProductDetail;
+}) {
   return (
     <div className="banner-buy">
       <Link to={`/p/${productSlug}`} className="banner-cta">
@@ -369,11 +365,9 @@ function CatalogBuyRow({ banner, productSlug }: { banner: BannerContent; product
         <small>
           {banner.priceLabel}
           {/* Bảo hành đi cùng dòng giá, để banner tên dài hai dòng vẫn không tràn khung. */}
-          {product.data && product.data.warrantyMonths > 0 && (
-            <> · Bảo hành {product.data.warrantyMonths} tháng</>
-          )}
+          {product && product.warrantyMonths > 0 && <> · Bảo hành {product.warrantyMonths} tháng</>}
         </small>
-        <b>{product.data ? formatProductPrice(product.data.minPrice) : ' '}</b>
+        <b>{product ? formatProductPrice(product.minPrice) : ' '}</b>
       </p>
     </div>
   );

@@ -86,6 +86,37 @@ interface FakeApi {
   missingProductSlugs?: string[];
 }
 
+function detailForSlug(detailSlug: string) {
+  return {
+    id: `id-${detailSlug}`,
+    slug: detailSlug,
+    name: `Máy ${detailSlug}`,
+    minPrice: 25_990_000,
+    warrantyMonths: 12,
+    brand: { id: 'b-apple', name: 'Apple', slug: 'apple' },
+    category: { id: 'cat-phone', name: 'Điện thoại', slug: 'dien-thoai' },
+    images: [],
+    specs: [
+      {
+        key: 'ram_gb',
+        label: 'RAM',
+        group: 'Cấu hình',
+        type: 'number',
+        unit: 'GB',
+        value: 8,
+      },
+      {
+        key: 'screen_inch',
+        label: 'Kích thước màn hình',
+        group: 'Màn hình',
+        type: 'number',
+        unit: 'inch',
+        value: 6.3,
+      },
+    ],
+  };
+}
+
 // Trả response theo đường dẫn, để mỗi test chỉ khai báo phần dữ liệu nó kiểm.
 function stubApi({
   categories = allCategories,
@@ -104,39 +135,13 @@ function stubApi({
       return Response.json({ data: categories });
     }
 
-    // Chi tiết sản phẩm của banner: giá 25.990.000 đ, bảo hành 12 tháng.
-    const detailSlug = url.pathname.match(/^\/api\/products\/(.+)$/)?.[1];
-    if (detailSlug) {
-      if (missingProductSlugs.includes(detailSlug)) return errorResponse(404);
+    // Danh sách cố định bỏ slug không còn bán, không biến thiếu sản phẩm thành lỗi 404.
+    if (url.pathname === '/api/product-details') {
       return Response.json({
-        data: {
-          id: `id-${detailSlug}`,
-          slug: detailSlug,
-          name: `Máy ${detailSlug}`,
-          minPrice: 25_990_000,
-          warrantyMonths: 12,
-          brand: { id: 'b-apple', name: 'Apple', slug: 'apple' },
-          category: { id: 'cat-phone', name: 'Điện thoại', slug: 'dien-thoai' },
-          images: [],
-          specs: [
-            {
-              key: 'ram_gb',
-              label: 'RAM',
-              group: 'Cấu hình',
-              type: 'number',
-              unit: 'GB',
-              value: 8,
-            },
-            {
-              key: 'screen_inch',
-              label: 'Kích thước màn hình',
-              group: 'Màn hình',
-              type: 'number',
-              unit: 'inch',
-              value: 6.3,
-            },
-          ],
-        },
+        data: params
+          .getAll('slug')
+          .filter((slug) => !missingProductSlugs.includes(slug))
+          .map(detailForSlug),
       });
     }
 
@@ -274,6 +279,21 @@ describe('HomePage: các khối nội dung', () => {
     expect(tiles[0]?.querySelector('.category-tile-count')?.textContent).toBe(
       '2 sản phẩm, từ 3.490.000 đ',
     );
+  });
+
+  it('ô danh mục dùng máy có ảnh mới nhất khi slug cấu hình không còn', async () => {
+    const replacement = product('may-thay-the', 4_000_000);
+    replacement.image = {
+      publicId: 'pickory/products/may-thay-the',
+      alt: 'Máy thay thế',
+      url: 'https://res.cloudinary.com/pickory/image/upload/pickory/products/may-thay-the.jpg',
+    };
+    stubApi({ categoryItems: { 'dien-thoai': [replacement] } });
+    await renderPage();
+
+    const tile = container.querySelector('a.category-tile[href="/c/dien-thoai"]');
+    expect(tile?.querySelector('img')?.getAttribute('src')).toContain('may-thay-the.jpg');
+    expect(tile?.querySelector('.category-tile-count')?.textContent).toContain('4.000.000 đ');
   });
 
   it('hiện khung chờ của ô danh mục khi cây danh mục còn đang tải', async () => {
@@ -418,6 +438,21 @@ describe('HomePage: banner sản phẩm', () => {
     expect(slide?.querySelector('.banner-cta')?.getAttribute('href')).toBe(
       `/p/${firstCatalogBanner?.productSlug}`,
     );
+  });
+
+  it('nạp các slug cố định bằng một request mà không hỏi chi tiết từng slug', async () => {
+    const fetchMock = stubApi({});
+    await renderPage();
+
+    const paths = fetchMock.mock.calls.map(([url]) => String(url));
+    const batchPaths = paths.filter((path) => path.startsWith('/api/product-details?'));
+    expect(batchPaths).toHaveLength(1);
+    expect(batchPaths[0]).toContain(`slug=${firstCatalogBanner?.productSlug}`);
+    expect(paths.filter((path) => /^\/api\/products\/[^?]+/.test(path))).toEqual([]);
+    expect(
+      container.querySelector(`#banner-slide-${firstCatalogBanner?.id} .banner-price`)?.textContent,
+    ).toContain('25.990.000 đ');
+    expect(container.querySelector('.duel-table')).not.toBeNull();
   });
 
   it('máy chưa có trong catalog ghi "Sắp có" và không có nút mua', async () => {

@@ -83,10 +83,34 @@ test('UI-S2: admin cấu hình vận chuyển, lỗi hiện đúng ô, nhân vi�
     ).toBeVisible();
   });
 
-  await test.step('Form trống: bấm Lưu thì lỗi hiện dưới đúng ô và không gửi PUT', async () => {
+  await test.step('Ô bắt buộc rỗng: lỗi hiện dưới đúng ô và không gửi PUT', async () => {
+    // Tỉnh đã chọn không thể bỏ chọn qua AddressCombobox, nên GET chỉ cấp form rỗng cho bước kiểm lỗi.
+    await page.route(SETTINGS_API, async (route) => {
+      if (route.request().method() !== 'GET') {
+        await route.continue();
+        return;
+      }
+      const response = await route.fetch();
+      const body = (await response.json()) as {
+        data: { settings: unknown; ghnShopId: string | null };
+      };
+      await route.fulfill({
+        response,
+        json: { ...body, data: { ...body.data, settings: null } },
+      });
+    });
     for (const width of [1280, 375]) {
       await page.setViewportSize({ width, height: width === 375 ? 812 : 800 });
       await openSettingsPage(page);
+      // Điền rỗng từng ô bắt buộc để kiểm lỗi phía trình duyệt với cùng đầu vào ở hai khung nhìn.
+      await page.getByLabel('Tên người gửi', { exact: true }).fill('');
+      await page.getByLabel('Số điện thoại người gửi', { exact: true }).fill('');
+      await page.locator('#shipping-address-province').fill('');
+      await page.getByLabel('Số nhà, tên đường', { exact: true }).fill('');
+      await expect(page.getByLabel('Tên người gửi', { exact: true })).toHaveValue('');
+      await expect(page.getByLabel('Số điện thoại người gửi', { exact: true })).toHaveValue('');
+      await expect(page.locator('#shipping-address-province')).toHaveValue('');
+      await expect(page.getByLabel('Số nhà, tên đường', { exact: true })).toHaveValue('');
       await expectNoHorizontalOverflow(page);
       await page.screenshot({
         path: testInfo.outputPath(`shipping-empty-${width}.png`),
@@ -112,6 +136,8 @@ test('UI-S2: admin cấu hình vận chuyển, lỗi hiện đúng ô, nhân vi�
         fullPage: true,
       });
     }
+    // Bước lưu tiếp theo phải đọc cấu hình thật, không dùng form rỗng chỉ dành cho kiểm lỗi.
+    await page.unroute(SETTINGS_API);
     expect(countRequests('PUT')).toBe(0);
   });
 

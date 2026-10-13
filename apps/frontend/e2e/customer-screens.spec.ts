@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import { e2eEnvironment } from './environment';
 
@@ -84,14 +83,13 @@ test('DS-05: header đỏ và màn tài khoản khách không tràn ở 1280px v
     await page.screenshot({ path: testInfo.outputPath('login-errors-375.png'), fullPage: true });
   });
 
-  await test.step('Màn tài khoản sau khi đăng ký ở 1280px và 375px', async () => {
-    // Email riêng cho mỗi lần chạy để spec không trùng tài khoản với `auth.spec.ts`.
-    const email = `e2e-customer-screens-${randomBytes(4).toString('hex')}@pickory.local`;
+  await test.step('Màn tài khoản sau khi đăng nhập ở 1280px và 375px', async () => {
+    // Khách đã seed có phiên riêng, nên màn tài khoản không tiêu hao hạn mức đăng ký.
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.goto('/register');
-    await page.getByLabel(/^Email/).fill(email);
-    await page.getByLabel(/^Mật khẩu/).fill(e2eEnvironment.accountPassword);
-    await page.getByRole('button', { name: 'Tạo tài khoản', exact: true }).click();
+    await page.goto('/login');
+    await page.getByLabel(/^Email/).fill(e2eEnvironment.screensCustomerEmail);
+    await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.accountPassword);
+    await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Tài khoản', exact: true })).toBeVisible();
     await page.getByRole('link', { name: 'Tài khoản', exact: true }).click();
     await expect(page.getByRole('heading', { name: 'Tài khoản của tôi' })).toBeVisible();

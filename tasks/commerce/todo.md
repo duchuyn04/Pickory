@@ -487,6 +487,18 @@ Quy ước:
 
 ## Phase 7: E2E và nghiệm thu
 
+### COM-E2E0: Sửa 6 spec E2E đỏ có sẵn
+**Mô tả:** Bộ `pnpm test:e2e` có 6 spec đỏ từ trước COM-UI4. Ba spec nhận lỗi console 404 vì trang chủ tải sản phẩm theo slug ghi cứng. Hai spec nhận dữ liệu cấu hình mà spec khác để lại. Một spec không thấy liên kết `Tài khoản` sau đăng ký. Task sửa nguyên nhân, không làm yếu test.
+**Tiêu chí nghiệm thu:**
+- [x] Trang chủ không gây lỗi console khi sản phẩm ghi cứng không tồn tại. Ô dùng sản phẩm dự phòng
+- [x] Spec đổi cấu hình commerce hoặc shipping khôi phục giá trị cũ. Spec khác không phụ thuộc thứ tự chạy
+- [x] `profile-validation` kiểm đúng liên kết tài khoản theo header hiện tại
+- [x] `pnpm test:e2e` xanh toàn bộ ở chế độ ẩn hai lần liên tiếp và ở chế độ `--headed`
+- [x] Không thêm bộ lọc console, `skip`, `retries` hoặc sửa `playwright.config.ts`
+  - Ngoại lệ đã duyệt: thêm biến `E2E_ACCOUNT_PASSWORD` vào khối `env` của API để seed khách. Cách chạy test không đổi.
+**Kiểm tra:** `pnpm test:e2e`, chạy ở chế độ ẩn và `--headed`
+**Phụ thuộc:** COM-UI4 · **Quy mô:** M
+
 ### COM-E2E1: Khách vãng lai mua COD
 **Mô tả:** `apps/frontend/e2e/commerce-cod.spec.ts`. Khách thêm giỏ, chọn tỉnh/thành và phường/xã bằng `AddressPicker`, đặt đơn COD, đọc email trong outbox, mở link xem đơn.
 **Tiêu chí nghiệm thu:**

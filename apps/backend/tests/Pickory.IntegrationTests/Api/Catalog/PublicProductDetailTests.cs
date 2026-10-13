@@ -8,7 +8,7 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Api.Catalog;
 
-// CAT-10: `GET /api/products/{slug}` (kèm slug cũ) và `GET /api/products/compare`, trên bộ dữ liệu cố định.
+// CAT-10: Kiểm tra chi tiết đơn, chi tiết nhiều slug và so sánh trên dữ liệu cố định.
 [Collection(IntegrationDatabaseCollection.Name)]
 public sealed class PublicProductDetailTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
 {
@@ -115,6 +115,63 @@ public sealed class PublicProductDetailTests : IClassFixture<PickoryWebApplicati
         Assert.Equal("Cấu hình", specs[0].GetProperty("group").GetString());
         Assert.Equal("kg", specs[1].GetProperty("unit").GetString());
         Assert.Equal(JsonValueKind.Null, specs[1].GetProperty("value").ValueKind);
+    }
+
+    [Fact]
+    public async Task ProductDetails_ReturnsVisibleProductsInRequestedOrderAndMatchesSingleDetail()
+    {
+        var first = await AddProductAsync(1, _childCategory);
+        var second = await AddProductAsync(2, _childCategory,
+            skus: [new(20_000_000, 5)], images: [new("pickory/products/batch", 0)]);
+        var requestedPath = $"/api/product-details?slug={second.Slug}&slug=khong-ton-tai-{_suffix}&slug={first.Slug}";
+
+        var (response, root) = await GetJsonAsync(requestedPath);
+        var (_, singleRoot) = await GetJsonAsync($"/api/products/{second.Slug}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var products = root.GetProperty("data").EnumerateArray().ToArray();
+        Assert.Equal([second.Slug, first.Slug], products.Select(product => product.GetProperty("slug").GetString()));
+        // Hai route phải dùng cùng hợp đồng chi tiết, gồm cả giá, ảnh và thời hạn bảo hành.
+        Assert.Equal(singleRoot.GetProperty("data").GetRawText(), products[0].GetRawText());
+    }
+
+    [Theory]
+    [InlineData(ProductStatus.Draft)]
+    [InlineData(ProductStatus.Hidden)]
+    public async Task ProductDetails_DoesNotExposeInvisibleProducts(ProductStatus status)
+    {
+        var visible = await AddProductAsync(1, _childCategory);
+        var invisible = await AddProductAsync(2, _childCategory, status);
+
+        var (response, root) = await GetJsonAsync(
+            $"/api/product-details?slug={invisible.Slug}&slug={visible.Slug}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var products = root.GetProperty("data").EnumerateArray().ToArray();
+        Assert.Equal([visible.Slug], products.Select(product => product.GetProperty("slug").GetString()));
+    }
+
+    [Fact]
+    public async Task ProductDetails_DuplicateSlugAppearsOnlyOnce()
+    {
+        var first = await AddProductAsync(1, _childCategory);
+        var second = await AddProductAsync(2, _childCategory);
+
+        var (response, root) = await GetJsonAsync(
+            $"/api/product-details?slug={second.Slug}&slug={first.Slug}&slug={second.Slug}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal([second.Slug, first.Slug],
+            root.GetProperty("data").EnumerateArray().Select(product => product.GetProperty("slug").GetString()));
+    }
+
+    [Fact]
+    public async Task ProductDetails_EmptyOrTooManySlugs_ReturnsValidationError()
+    {
+        await AssertErrorAsync("/api/product-details", HttpStatusCode.BadRequest, "VALIDATION_ERROR");
+        var tooManySlugs = string.Join("&", Enumerable.Range(1, 21).Select(index => $"slug=item-{index}"));
+        await AssertErrorAsync(
+            $"/api/product-details?{tooManySlugs}", HttpStatusCode.BadRequest, "VALIDATION_ERROR");
     }
 
     [Fact]

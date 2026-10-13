@@ -1,4 +1,3 @@
-import { randomBytes } from 'node:crypto';
 import { expect, test, type Page } from '@playwright/test';
 import { e2eEnvironment } from './environment';
 
@@ -32,15 +31,15 @@ test('nhân viên khóa khách rồi mở khóa qua giao diện quản trị', a
   // Hộp thoại hỏi lại trước khi khóa hoặc mở khóa. Test chấp nhận để chạy tiếp.
   page.on('dialog', (dialog) => void dialog.accept());
 
-  // Email riêng cho test này để không phụ thuộc spec khác.
-  const email = `e2e-account-lock-${randomBytes(4).toString('hex')}@pickory.local`;
+  // Khách này chỉ bị khóa trong spec này, nên phiên của các spec khác không thay đổi.
+  const email = e2eEnvironment.lockCustomerEmail;
 
-  await test.step('Khách đăng ký rồi đăng xuất', async () => {
-    await page.goto('/register');
+  await test.step('Khách đã seed đăng nhập rồi đăng xuất', async () => {
+    await page.goto('/login');
     await page.getByRole('button', { name: 'Chỉ cần thiết', exact: true }).click();
     await page.getByLabel(/^Email/).fill(email);
-    await page.getByLabel(/^Mật khẩu/).fill(e2eEnvironment.accountPassword);
-    await page.getByRole('button', { name: 'Tạo tài khoản', exact: true }).click();
+    await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.accountPassword);
+    await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Tài khoản', exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Đăng xuất', exact: true }).click();
     await expect(page.getByRole('link', { name: 'Đăng nhập', exact: true })).toBeVisible();

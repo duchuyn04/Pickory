@@ -1,3 +1,5 @@
+using FluentValidation;
+using FluentValidation.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
@@ -14,6 +16,8 @@ public static class PublicProductDetailEndpoints
         // Route chữ `compare` thắng route `{slug}` theo thứ tự ưu tiên của ASP.NET Core, nên không bị coi là một slug.
         endpoints.MapGet("/api/products/compare", CompareAsync);
         endpoints.MapGet("/api/products/{slug}", GetProductAsync);
+        // Đặt route số nhiều tách khỏi `{slug}` để sản phẩm tên `product-details` không bị che.
+        endpoints.MapGet("/api/product-details", GetProductsBySlugsAsync);
     }
 
     private static async Task<IResult> GetProductAsync(
@@ -34,6 +38,40 @@ public static class PublicProductDetailEndpoints
                 // Cùng một lỗi cho slug lạ, `draft` và `hidden`. Khách không biết sản phẩm có tồn tại hay không.
                 throw new AppException("PRODUCT_NOT_FOUND", 404, "Không tìm thấy sản phẩm.");
         }
+    }
+
+    private static async Task<IResult> GetProductsBySlugsAsync(
+        HttpContext context, ProductDetailService detailService)
+    {
+        // Giới hạn số tham số trước khi truy vấn, để một request không nạp quá nhiều chi tiết.
+        var rawSlugs = context.Request.Query["slug"];
+        if (rawSlugs.Count > 20)
+        {
+            throw new ValidationException(
+                [new ValidationFailure("slug", "Chỉ tra được tối đa 20 sản phẩm.")]);
+        }
+
+        // Bỏ slug trống và trùng, giữ thứ tự đầu tiên vì thứ tự DB không theo thứ tự URL.
+        var slugs = new List<string>(rawSlugs.Count);
+        var seenSlugs = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var slug in rawSlugs)
+        {
+            if (string.IsNullOrWhiteSpace(slug) || !seenSlugs.Add(slug))
+            {
+                continue;
+            }
+
+            slugs.Add(slug);
+        }
+        if (slugs.Count == 0)
+        {
+            throw new ValidationException(
+                [new ValidationFailure("slug", "Cần ít nhất một slug sản phẩm.")]);
+        }
+
+        // Bộ đọc chung dựng đúng hợp đồng chi tiết đơn và bỏ slug không còn công khai.
+        var details = await detailService.FindBySlugsAsync(slugs, context.RequestAborted);
+        return Results.Ok(new ApiResponse<IReadOnlyList<Contracts.Reading.ProductDetail>>(details));
     }
 
     private static async Task<IResult> CompareAsync(
