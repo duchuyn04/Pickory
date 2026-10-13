@@ -45,9 +45,13 @@ public static class CommerceModule
         // Đặt đơn dùng lại phần tính tiền của preview, rồi giữ hàng và ghi đơn trong một transaction.
         services.AddScoped<PlaceOrderService>();
         // Dịch vụ theo dõi và tự hủy đơn hàng phục vụ các route phía khách hàng.
+        // Khách tự hủy và nhân viên hủy dùng chung một lớp, nên hai bên trả kho và ghi lịch sử giống nhau.
+        services.AddScoped<OrderCancellationService>();
         services.AddScoped<OrderTrackingService>();
         // Danh sách và chi tiết đơn của nhân viên đọc mọi đơn, nên tách khỏi dịch vụ theo dõi của khách.
         services.AddScoped<AdminOrderService>();
+        // Thao tác ghi của nhân viên (xác nhận, hủy, đánh dấu hóa đơn) tách khỏi dịch vụ đọc để phạm vi quyền rõ ràng.
+        services.AddScoped<AdminOrderActionService>();
         // Nguồn mã đơn là singleton không giữ trạng thái. Test thay bằng nguồn có kịch bản để ép tình huống trùng mã.
         services.AddSingleton<IOrderCodeSource, RandomOrderCodeSource>();
 

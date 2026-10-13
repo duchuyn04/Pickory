@@ -1,12 +1,8 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Storage;
 using Pickory.Modules.Catalog.Contracts.Reading;
-using Pickory.Modules.Catalog.Contracts.Stock;
-using Pickory.Modules.Commerce.Contracts.Events;
 using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Entities;
 using Pickory.Modules.Commerce.Persistence;
-using Pickory.Shared.Events;
 using Pickory.Shared.Exceptions;
 using Pickory.Shared.Http;
 
@@ -16,12 +12,10 @@ namespace Pickory.Modules.Commerce.Orders;
 public sealed class OrderTrackingService(
     CommerceDbContext database,
     ICatalogReader catalogReader,
-    IStockService stock,
-    IEventDispatcher dispatcher,
-    TimeProvider clock)
+    OrderCancellationService cancellation)
 {
     private const string OrderNotFoundMessage = "Không tìm thấy đơn hàng.";
-    private const string InvalidTransitionMessage = "Không thể hủy đơn ở trạng thái này.";
+    private const string CustomerCancellationReason = "Khách tự hủy.";
 
     public async Task<PagedResponse<OrderListItemResponse>> GetListAsync(
         string userId,
@@ -143,73 +137,11 @@ public sealed class OrderTrackingService(
             throw new AppException("ORDER_NOT_FOUND", 404, OrderNotFoundMessage);
         }
 
-        // Mở transaction để đảm bảo hoàn trả tồn kho và đổi trạng thái cùng thành công.
-        await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
-
-        // Khóa dòng đơn bằng SELECT FOR UPDATE để tuần tự hóa hai yêu cầu hủy cùng lúc.
-        await database.Database.ExecuteSqlInterpolatedAsync(
-            $"""SELECT "id" FROM orders WHERE "id" = {initial.Id} FOR UPDATE""", cancellationToken);
-
-        // Đọc lại đơn sau khi đã giữ khóa dòng để có trạng thái mới nhất.
-        var order = await database.Orders
-            .Include(o => o.Items)
-            .Include(o => o.StatusHistory)
-            .SingleAsync(o => o.Id == initial.Id, cancellationToken);
-
-        // Đánh giá quyền tự hủy của khách theo máy trạng thái đơn hàng.
-        var decision = OrderTransitions.Evaluate(order.Status, OrderStatus.Cancelled, TransitionActor.Customer, hasActiveShipment: false);
-        if (!decision.IsAllowed)
-        {
-            throw new AppException("INVALID_ORDER_TRANSITION", 409, InvalidTransitionMessage);
-        }
-
-        var events = new DomainEventCollector(dispatcher);
-        try
-        {
-            // Trả lại hàng đã giữ cho kho trong cùng transaction của đơn.
-            await stock.ReleaseAsync(
-                order.Id,
-                new StockCallerTransaction(transaction.GetDbTransaction(), events),
-                cancellationToken);
-
-            var previousStatus = order.Status;
-
-            // Đổi trạng thái đơn sang đã hủy và cập nhật trạng thái thanh toán tương ứng.
-            order.Status = OrderStatus.Cancelled;
-            order.PaymentStatus = OrderTransitions.PaymentStatusAfterOrderChange(OrderStatus.Cancelled, order.PaymentStatus);
-
-            // Cắt về microsecond để thời điểm trong phản hồi khớp chính xác với giá trị đã lưu.
-            var now = TruncateToMicroseconds(clock.GetUtcNow().UtcDateTime);
-
-            // Ghi nhận một dòng lịch sử với lý do khách tự hủy.
-            var history = new OrderStatusHistory
-            {
-                Id = Guid.NewGuid().ToString(),
-                OrderId = order.Id,
-                FromStatus = previousStatus,
-                ToStatus = OrderStatus.Cancelled,
-                ActorId = callerUserId,
-                Reason = "Khách tự hủy.",
-                CreatedAt = now,
-            };
-            order.StatusHistory.Add(history);
-            database.OrderStatusHistory.Add(history);
-
-            // Gom sự kiện thay đổi trạng thái đơn để phát sau khi commit.
-            events.Emit(new OrderStatusChangedEvent(order.Id, order.Code, previousStatus, OrderStatus.Cancelled));
-
-            await database.SaveChangesAsync(cancellationToken);
-            await transaction.CommitAsync(cancellationToken);
-        }
-        catch
-        {
-            // Hủy toàn bộ sự kiện đã gom khi transaction gặp lỗi.
-            events.Discard();
-            throw;
-        }
-
-        // Phát các sự kiện miền ra bên ngoài sau khi transaction đã commit thành công.
-        await events.FlushAsync(cancellationToken);
+        // Phần hủy dùng chung với nhân viên: khóa đơn, trả kho, đổi trạng thái, ghi lịch sử và phát sự kiện.
+        var order = await cancellation.CancelAsync(
+            initial.Id,
+            new OrderCancellationRequest(TransitionActor.Customer, callerUserId, CustomerCancellationReason),
+            cancellationToken);
 
         return ToDetailResponse(order);
     }
@@ -251,9 +183,6 @@ public sealed class OrderTrackingService(
             canCancel,
             TrackingCode: null);
     }
-
-    private static DateTime TruncateToMicroseconds(DateTime value) =>
-        new(value.Ticks - (value.Ticks % 10), DateTimeKind.Utc);
 
     // Dựng URL ảnh sản phẩm qua catalog khi có mã ảnh trong bản chụp.
     private string? ResolveImageUrl(string? publicId) =>

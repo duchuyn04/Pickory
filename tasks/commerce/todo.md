@@ -316,12 +316,12 @@ Quy ước:
 ### COM-15: Xác nhận, hủy và đánh dấu đã xuất hóa đơn
 **Mô tả:** `POST /api/admin/orders/{code}/confirmation` (`orders:update-status`). `POST /api/admin/orders/{code}/cancellation` (`orders:cancel`) bắt buộc lý do. `PUT /api/admin/orders/{code}/invoice-issuance` (`orders:update-status`).
 **Tiêu chí nghiệm thu:**
-- [ ] Xác nhận chỉ được từ `pending_confirmation`, nếu không trả 409 `INVALID_ORDER_TRANSITION`
-- [ ] Hủy thiếu lý do trả 400. Hủy đơn đang `shipping` khi vận đơn còn hiệu lực trả 409
-- [ ] Hủy gọi `ReleaseAsync`. Đơn đã `paid` chuyển thanh toán sang `refund_pending`
-- [ ] Đánh dấu hóa đơn chỉ được khi đơn có thông tin hóa đơn, nếu không trả 409
-- [ ] Mỗi thao tác ghi 1 dòng `order_status_history` và 1 dòng audit, phát `OrderStatusChangedEvent` khi trạng thái đổi
-- [ ] `support` nhận 403. Endpoint mới có trong ma trận quyền
+- [x] Xác nhận chỉ được từ `pending_confirmation`, nếu không trả 409 `INVALID_ORDER_TRANSITION`
+- [x] Hủy thiếu lý do trả 400. Hủy đơn đang `shipping` khi vận đơn còn hiệu lực trả 409
+- [x] Hủy gọi `ReleaseAsync`. Đơn đã `paid` chuyển thanh toán sang `refund_pending`
+- [x] Đánh dấu hóa đơn chỉ được khi đơn có thông tin hóa đơn, nếu không trả 409
+- [x] Mỗi thao tác ghi 1 dòng `order_status_history` và 1 dòng audit, phát `OrderStatusChangedEvent` khi trạng thái đổi
+- [x] `support` nhận 403. Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-14 · **Quy mô:** M
 

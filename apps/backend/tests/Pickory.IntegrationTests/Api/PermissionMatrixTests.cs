@@ -77,6 +77,9 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "PUT", "/api/admin/commerce/settings", [Permissions.CommerceSettingsManage] },
         { "GET", "/api/admin/orders", [Permissions.OrdersRead] },
         { "GET", "/api/admin/orders/dummy-id", [Permissions.OrdersRead] },
+        { "POST", "/api/admin/orders/dummy-id/confirmation", [Permissions.OrdersUpdateStatus] },
+        { "POST", "/api/admin/orders/dummy-id/cancellation", [Permissions.OrdersCancel] },
+        { "PUT", "/api/admin/orders/dummy-id/invoice-issuance", [Permissions.OrdersUpdateStatus] },
         { "GET", "/api/admin/categories", [Permissions.ProductsRead] },
         { "POST", "/api/admin/categories", [Permissions.ProductsWrite] },
         { "PATCH", "/api/admin/categories/dummy-id", [Permissions.ProductsWrite] },
@@ -230,12 +233,18 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     // COM-06: route back-office của commerce phải có trong ma trận, kể cả route thêm sau này.
     public void BackofficeEndpoints_CoversAllCommerceAdminEndpoints()
     {
-        // Commerce có hai quyền back-office: cấu hình bán hàng và xem đơn. Cả hai nằm trong danh sách chung của identity.
+        // Commerce có các quyền back-office: cấu hình bán hàng, xem đơn, đổi trạng thái đơn và hủy đơn.
+        // Các quyền này nằm trong danh sách chung của identity.
         AssertMatrixMatchesModuleAdminEndpoints(
             "commerce",
             typeof(CommerceModule).Assembly,
             "Pickory.Modules.Commerce",
-            [Permissions.CommerceSettingsManage, Permissions.OrdersRead]);
+            [
+                Permissions.CommerceSettingsManage,
+                Permissions.OrdersRead,
+                Permissions.OrdersUpdateStatus,
+                Permissions.OrdersCancel,
+            ]);
     }
 
     // Đối chiếu hai chiều giữa route `/api/admin/` của một module và các dòng ma trận dùng quyền của module đó.
