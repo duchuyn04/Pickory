@@ -86,3 +86,6 @@ services:
       # Mở tài liệu API chỉ xem tại `/api/docs`. Người xem đọc được route và schema, nhưng không gửi request từ trang docs.
       - key: API_DOCS_ENABLED
         value: "1"
+      # Cho gọi thử API từ trang docs bằng nút "Try it out". Request vẫn qua kiểm quyền như mọi request khác.
+      - key: API_DOCS_INTERACTIVE
+        value: "1"
