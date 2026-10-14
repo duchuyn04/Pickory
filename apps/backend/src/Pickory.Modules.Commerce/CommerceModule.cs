@@ -13,6 +13,7 @@ using Pickory.Modules.Commerce.Orders.Admin;
 using Pickory.Modules.Commerce.Payments;
 using Pickory.Modules.Commerce.Payments.Admin;
 using Pickory.Modules.Commerce.Persistence;
+using Pickory.Modules.Commerce.Reviews;
 using Pickory.Modules.Commerce.Settings;
 using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Shipping.Contracts.Events;
@@ -45,6 +46,9 @@ public static class CommerceModule
         services.AddScoped<CartMergeService>();
         // Sổ địa chỉ giữ khóa theo khách cho mỗi thao tác ghi, nên dịch vụ có vòng đời theo request.
         services.AddScoped<SavedAddressService>();
+        // Đánh giá đọc catalog để kiểm sản phẩm và đọc đơn hàng để kiểm điều kiện viết, nên dịch vụ có vòng đời theo request.
+        services.AddScoped<ReviewService>();
+        services.AddScoped<ReviewReportService>();
         // Preview đọc giỏ, catalog và shipping, rồi tính tiền mà không ghi DB.
         services.AddScoped<CheckoutPreviewService>();
         // Đặt đơn dùng lại phần tính tiền của preview, rồi giữ hàng và ghi đơn trong một transaction.
@@ -105,6 +109,7 @@ public static class CommerceModule
         CheckoutEndpoints.Map(moduleRoutes);
         OrderEndpoints.Map(moduleRoutes);
         SavedAddressEndpoints.Map(moduleRoutes);
+        ReviewEndpoints.Map(moduleRoutes);
         AdminOrderEndpoints.Map(moduleRoutes);
         AdminPaymentEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);

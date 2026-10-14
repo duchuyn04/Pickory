@@ -396,14 +396,14 @@ Quy ước:
 ### COM-19: Đánh giá sản phẩm
 **Mô tả:** `GET /api/products/{id}/reviews` công khai, trả điểm trung bình, phân bố số sao, trang đánh giá đang hiện. `POST /api/products/{id}/reviews` và `PATCH /api/products/{id}/reviews/mine` cho người đã nhận hàng. `POST /api/reviews/{id}/reports` cho khách đã đăng nhập. Migration của task này tạo bảng `review_reports` theo Câu hỏi mở 9.
 **Tiêu chí nghiệm thu:**
-- [ ] Người chưa có đơn `delivered` chứa sản phẩm nhận 403 `REVIEW_NOT_ALLOWED`
-- [ ] Đánh giá thứ hai của cùng người cho cùng sản phẩm trả 409
-- [ ] Số sao ngoài 1 đến 5, hoặc nhận xét trên 2.000 ký tự trả 400
-- [ ] Sửa sau 30 ngày trả 409 `REVIEW_EDIT_EXPIRED`
-- [ ] Đánh giá mới hiện ngay. Điểm trung bình và phân bố số sao tính lại
-- [ ] Danh sách phân trang theo cursor
-- [ ] Một khách báo cáo một đánh giá tối đa 1 lần (sau khi Câu hỏi mở 9 được chốt)
-- [ ] Phát `ReviewChangedEvent` sau commit, nếu Câu hỏi mở 7 được duyệt
+- [x] Người chưa có đơn `delivered` chứa sản phẩm nhận 403 `REVIEW_NOT_ALLOWED`
+- [x] Đánh giá thứ hai của cùng người cho cùng sản phẩm trả 409
+- [x] Số sao ngoài 1 đến 5, hoặc nhận xét trên 2.000 ký tự trả 400
+- [x] Sửa sau 30 ngày trả 409 `REVIEW_EDIT_EXPIRED`
+- [x] Đánh giá mới hiện ngay. Điểm trung bình và phân bố số sao tính lại
+- [x] Danh sách phân trang theo cursor
+- [x] Một khách báo cáo một đánh giá tối đa 1 lần (sau khi Câu hỏi mở 9 được chốt)
+- [x] Phát `ReviewChangedEvent` sau commit, nếu Câu hỏi mở 7 được duyệt
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-16 (cần đơn `delivered`) · **Quy mô:** M
 

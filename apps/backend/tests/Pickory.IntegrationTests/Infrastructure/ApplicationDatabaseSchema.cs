@@ -38,7 +38,7 @@ internal static class ApplicationDatabaseSchema
     internal static readonly string[] CommerceTables =
     [
         "cart_items", "carts", "commerce_settings", "order_items", "order_status_history", "orders",
-        "payment_transactions", "reviews", "saved_addresses"
+        "payment_transactions", "review_reports", "reviews", "saved_addresses"
     ];
 
     internal static readonly string[] CommerceEnums = ["OrderStatus", "PaymentStatus", "PaymentMethod"];

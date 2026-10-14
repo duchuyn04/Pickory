@@ -456,6 +456,40 @@ namespace Pickory.Modules.Commerce.Persistence.Migrations
                     b.ToTable("reviews", (string)null);
                 });
 
+            modelBuilder.Entity("Pickory.Modules.Commerce.Entities.ReviewReport", b =>
+                {
+                    b.Property<string>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("createdAt")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<string>("ReviewId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("reviewId");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("userId");
+
+                    b.HasKey("Id")
+                        .HasName("review_reports_pkey");
+
+                    b.HasIndex("ReviewId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("review_reports_reviewId_userId_key");
+
+                    b.ToTable("review_reports", (string)null);
+                });
+
             modelBuilder.Entity("Pickory.Modules.Commerce.Entities.SavedAddress", b =>
                 {
                     b.Property<string>("Id")
@@ -557,6 +591,18 @@ namespace Pickory.Modules.Commerce.Persistence.Migrations
                         .HasConstraintName("reviews_orderId_fkey");
 
                     b.Navigation("Order");
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Commerce.Entities.ReviewReport", b =>
+                {
+                    b.HasOne("Pickory.Modules.Commerce.Entities.Review", "Review")
+                        .WithMany()
+                        .HasForeignKey("ReviewId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("review_reports_reviewId_fkey");
+
+                    b.Navigation("Review");
                 });
 
             modelBuilder.Entity("Pickory.Modules.Commerce.Entities.Cart", b =>

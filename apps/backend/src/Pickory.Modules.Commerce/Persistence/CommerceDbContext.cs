@@ -15,6 +15,7 @@ public sealed class CommerceDbContext(DbContextOptions<CommerceDbContext> option
     public DbSet<PaymentTransaction> PaymentTransactions => Set<PaymentTransaction>();
     public DbSet<SavedAddress> SavedAddresses => Set<SavedAddress>();
     public DbSet<Review> Reviews => Set<Review>();
+    public DbSet<ReviewReport> ReviewReports => Set<ReviewReport>();
     public DbSet<CommerceSettings> Settings => Set<CommerceSettings>();
 
     public static void ConfigureOptions(DbContextOptionsBuilder options, string connectionString)

@@ -134,6 +134,7 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             services.AddSingleton<IDomainEventHandler<OrderPlacedEvent>, RecordingDomainEventHandler<OrderPlacedEvent>>();
             services.AddSingleton<IDomainEventHandler<OrderStatusChangedEvent>, RecordingDomainEventHandler<OrderStatusChangedEvent>>();
             services.AddSingleton<IDomainEventHandler<OrderPaidEvent>, RecordingDomainEventHandler<OrderPaidEvent>>();
+            services.AddSingleton<IDomainEventHandler<ReviewChangedEvent>, RecordingDomainEventHandler<ReviewChangedEvent>>();
 
             // Test không gọi GHN thật, kể cả khi máy chạy test có đặt biến `GHN_*`. Biến môi trường thắng cấu hình trong bộ nhớ, nên phải thay `AppConfig` đã nạp.
             var loadedConfig = (AppConfig)services.Single(descriptor => descriptor.ServiceType == typeof(AppConfig)).ImplementationInstance!;

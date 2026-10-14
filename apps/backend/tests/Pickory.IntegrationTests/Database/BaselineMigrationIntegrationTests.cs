@@ -24,7 +24,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
     [InlineData("ai_gateway", "ef_ai_gateway", "20261005125642_PrismaBaseline")]
     [InlineData("catalog", "ef_catalog", "20261013124840_EnableUnaccentExtension")]
     [InlineData("shipping", "ef_shipping", "20261010041544_InitialShipping")]
-    [InlineData("commerce", "ef_commerce", "20261013143319_AddOrderRefundTransactionRef")]
+    [InlineData("commerce", "ef_commerce", "20261013185852_AddReviewReports")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(
         string module, string historySchema, string migrationId)
     {
