@@ -84,6 +84,8 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "PUT", "/api/admin/orders/dummy-id/refund", [Permissions.RefundsManage] },
         { "GET", "/api/admin/payments/transactions", [Permissions.PaymentsRead] },
         { "PATCH", "/api/admin/payments/transactions/dummy-id", [Permissions.PaymentsReconcile] },
+        { "GET", "/api/admin/reviews", [Permissions.ReviewsModerate] },
+        { "PATCH", "/api/admin/reviews/dummy-id", [Permissions.ReviewsModerate] },
         { "POST", "/api/admin/orders/dummy-id/shipment", [Permissions.OrdersFulfill] },
         { "DELETE", "/api/admin/orders/dummy-id/shipment", [Permissions.OrdersFulfill] },
         { "GET", "/api/admin/categories", [Permissions.ProductsRead] },
@@ -239,7 +241,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     // COM-06: route back-office của commerce phải có trong ma trận, kể cả route thêm sau này.
     public void BackofficeEndpoints_CoversAllCommerceAdminEndpoints()
     {
-        // Commerce có các quyền back-office: cấu hình, xem đơn, đổi trạng thái, hủy, vận chuyển, nhận tiền COD, hoàn tiền và đối soát SePay.
+        // Commerce có quyền back-office cho cấu hình, đơn hàng, vận chuyển, tiền COD, hoàn tiền, đối soát SePay và kiểm duyệt đánh giá.
         // Các quyền này nằm trong danh sách chung của identity.
         AssertMatrixMatchesModuleAdminEndpoints(
             "commerce",
@@ -254,6 +256,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
                 Permissions.PaymentsRead,
                 Permissions.PaymentsReconcile,
                 Permissions.RefundsManage,
+                Permissions.ReviewsModerate,
             ]);
     }
 

@@ -14,6 +14,7 @@ using Pickory.Modules.Commerce.Payments;
 using Pickory.Modules.Commerce.Payments.Admin;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Commerce.Reviews;
+using Pickory.Modules.Commerce.Reviews.Admin;
 using Pickory.Modules.Commerce.Settings;
 using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Shipping.Contracts.Events;
@@ -49,6 +50,8 @@ public static class CommerceModule
         // Đánh giá đọc catalog để kiểm sản phẩm và đọc đơn hàng để kiểm điều kiện viết, nên dịch vụ có vòng đời theo request.
         services.AddScoped<ReviewService>();
         services.AddScoped<ReviewReportService>();
+        // Kiểm duyệt đọc catalog lấy tên sản phẩm và ghi audit cùng transaction, nên dịch vụ có vòng đời theo request.
+        services.AddScoped<AdminReviewModerationService>();
         // Preview đọc giỏ, catalog và shipping, rồi tính tiền mà không ghi DB.
         services.AddScoped<CheckoutPreviewService>();
         // Đặt đơn dùng lại phần tính tiền của preview, rồi giữ hàng và ghi đơn trong một transaction.
@@ -110,6 +113,7 @@ public static class CommerceModule
         OrderEndpoints.Map(moduleRoutes);
         SavedAddressEndpoints.Map(moduleRoutes);
         ReviewEndpoints.Map(moduleRoutes);
+        AdminReviewEndpoints.Map(moduleRoutes);
         AdminOrderEndpoints.Map(moduleRoutes);
         AdminPaymentEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);

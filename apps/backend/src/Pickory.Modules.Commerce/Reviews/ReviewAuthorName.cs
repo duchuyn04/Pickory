@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.Json;
 
 namespace Pickory.Modules.Commerce.Reviews;
 
@@ -26,5 +27,22 @@ internal static class ReviewAuthorName
         // Lấy trọn một ký tự người đọc thấy. Chữ có dấu dạng tổ hợp không bị cắt rời dấu.
         var firstInitial = new StringInfo(words[0]).SubstringByTextElements(0, 1).ToUpper(CultureInfo.InvariantCulture);
         return $"{words[^1]} {firstInitial}.";
+    }
+
+    // Tên hiện trên một đánh giá. Đánh giá đã ẩn danh hiện nhãn chung, dù đơn gắn với đánh giá vẫn giữ tên người nhận.
+    public static string ForReview(string? userId, JsonDocument orderContact)
+    {
+        if (userId is null)
+        {
+            return AnonymousLabel;
+        }
+
+        // Đơn cũ hoặc đơn nhập tay có thể thiếu tên. Khi đó hàm rút gọn trả nhãn chung.
+        var recipientName = orderContact.RootElement.ValueKind == JsonValueKind.Object
+            && orderContact.RootElement.TryGetProperty("name", out var name)
+            && name.ValueKind == JsonValueKind.String
+                ? name.GetString()
+                : null;
+        return Shorten(recipientName);
     }
 }

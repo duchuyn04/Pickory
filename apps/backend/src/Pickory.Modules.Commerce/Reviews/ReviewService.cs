@@ -89,8 +89,7 @@ internal sealed class ReviewService(
                 row.Id,
                 row.Rating,
                 row.Body,
-                // Đánh giá đã ẩn danh không còn gắn với người nào, nên hiện nhãn chung dù đơn vẫn giữ tên.
-                row.UserId is null ? ReviewAuthorName.AnonymousLabel : ReviewAuthorName.Shorten(ReadRecipientName(row.Contact)),
+                ReviewAuthorName.ForReview(row.UserId, row.Contact),
                 AsUtc(row.CreatedAt),
                 AsUtc(row.UpdatedAt)))
             .ToList();
@@ -232,7 +231,7 @@ internal sealed class ReviewService(
             .ToListAsync(cancellationToken);
 
         // Luôn đủ năm khóa, kể cả mức sao chưa có đánh giá, để UI vẽ biểu đồ không phải đoán khóa thiếu.
-        var distribution = Enumerable.Range(ReviewRequests.MinRating, ReviewRequests.MaxRating)
+        var distribution = Enumerable.Range(ReviewRequests.MinRating, ReviewRequests.MaxRating - ReviewRequests.MinRating + 1)
             .ToDictionary(
                 star => star.ToString(CultureInfo.InvariantCulture),
                 star => counts.Where(row => row.Rating == star).Sum(row => row.Count));
@@ -254,16 +253,6 @@ internal sealed class ReviewService(
         var events = new DomainEventCollector(dispatcher);
         events.Emit(new ReviewChangedEvent(review.ProductId, review.Id, change));
         await events.FlushAsync(cancellationToken);
-    }
-
-    private static string? ReadRecipientName(JsonDocument contact)
-    {
-        // Đơn cũ hoặc đơn nhập tay có thể thiếu tên. Khi đó hàm rút gọn trả nhãn chung.
-        return contact.RootElement.ValueKind == JsonValueKind.Object
-            && contact.RootElement.TryGetProperty("name", out var name)
-            && name.ValueKind == JsonValueKind.String
-                ? name.GetString()
-                : null;
     }
 
     private static OwnReviewResponse ToOwnResponse(Review review)

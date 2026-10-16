@@ -420,11 +420,11 @@ Quy ước:
 ### COM-20: Kiểm duyệt đánh giá
 **Mô tả:** `GET /api/admin/reviews` và `PATCH /api/admin/reviews/{id}` với quyền `reviews:moderate`. Ẩn hoặc hiện lại bắt buộc chọn lý do.
 **Tiêu chí nghiệm thu:**
-- [ ] Đánh giá có từ 3 báo cáo đứng đầu hàng chờ
-- [ ] Ẩn hoặc hiện thiếu lý do trả 400
-- [ ] Đánh giá bị ẩn biến mất khỏi `GET /api/products/{id}/reviews`. Điểm trung bình tính lại
-- [ ] Mỗi lần ẩn hoặc hiện ghi đúng 1 dòng audit
-- [ ] `sales` nhận 403. Endpoint mới có trong ma trận quyền
+- [x] Đánh giá có từ 3 báo cáo đứng đầu hàng chờ
+- [x] Ẩn hoặc hiện thiếu lý do trả 400
+- [x] Đánh giá bị ẩn biến mất khỏi `GET /api/products/{id}/reviews`. Điểm trung bình tính lại
+- [x] Mỗi lần ẩn hoặc hiện ghi đúng 1 dòng audit
+- [x] `sales` nhận 403. Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-19 · **Quy mô:** S
 
