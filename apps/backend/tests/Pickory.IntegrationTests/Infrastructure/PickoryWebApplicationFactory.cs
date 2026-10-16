@@ -126,6 +126,7 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             services.AddSingleton<RecordedDomainEvents>();
             services.AddSingleton<IDomainEventHandler<UserLinkedEvent>, RecordingDomainEventHandler<UserLinkedEvent>>();
             services.AddSingleton<IDomainEventHandler<UserDeletedEvent>, RecordingDomainEventHandler<UserDeletedEvent>>();
+            services.AddSingleton<IDomainEventHandler<EmailVerifiedEvent>, RecordingDomainEventHandler<EmailVerifiedEvent>>();
             services.AddSingleton<IDomainEventHandler<ProductChangedEvent>, RecordingDomainEventHandler<ProductChangedEvent>>();
             services.AddSingleton<IDomainEventHandler<StockChangedEvent>, RecordingDomainEventHandler<StockChangedEvent>>();
             services.AddSingleton<IDomainEventHandler<ShipmentStatusChangedEvent>, RecordingDomainEventHandler<ShipmentStatusChangedEvent>>();

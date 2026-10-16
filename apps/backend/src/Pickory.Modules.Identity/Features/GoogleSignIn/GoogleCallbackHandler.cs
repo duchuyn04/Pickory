@@ -45,7 +45,7 @@ public sealed class GoogleCallbackHandler(
         var existingUser = await database.Users.SingleOrDefaultAsync(user => user.Email == email, cancellationToken);
         EnsureExistingUserMayUseGoogle(existingUser, userInfo);
 
-        var targetUser = await ResolveTargetUserAsync(existingUser, userInfo, email, now, cancellationToken);
+        var (targetUser, emailBecameVerified) = await ResolveTargetUserAsync(existingUser, userInfo, email, now, cancellationToken);
 
         // Kiểm tra lần cuối ngay trước khi cấp phiên. Nhánh nào bỏ sót trạng thái khóa cũng không cấp được phiên.
         if (targetUser.LockedAt is not null || targetUser.DeletedAt is not null)
@@ -58,6 +58,12 @@ public sealed class GoogleCallbackHandler(
 
         // Gộp giỏ hàng của mã ẩn danh như đăng nhập thường. Handler lỗi chỉ bị ghi log.
         await eventDispatcher.PublishAsync(new UserLinkedEvent(anonymousId, targetUser.Id), cancellationToken);
+
+        // Email vừa được Google chứng minh. Module khác gắn đơn vãng lai cùng email vào tài khoản này.
+        if (emailBecameVerified)
+        {
+            await eventDispatcher.PublishAsync(new EmailVerifiedEvent(targetUser.Id, targetUser.Email), cancellationToken);
+        }
 
         return (new UserSummaryResponse(targetUser.Id, targetUser.Email, targetUser.Name, UserSummaryResponse.CustomerKind), session);
     }
@@ -88,7 +94,8 @@ public sealed class GoogleCallbackHandler(
         }
     }
 
-    private async Task<User> ResolveTargetUserAsync(
+    // Trả thêm cờ cho biết `EmailVerified` có vừa đổi từ sai sang đúng trong lần đăng nhập này hay không.
+    private async Task<(User User, bool EmailBecameVerified)> ResolveTargetUserAsync(
         User? existingUser,
         GoogleUserInfo userInfo,
         string email,
@@ -107,26 +114,30 @@ public sealed class GoogleCallbackHandler(
                 throw CreateUnavailableAccountException();
             }
 
-            return linkedUser;
+            // Tài khoản đã liên kết từ trước nên không có thay đổi nào về xác thực email.
+            return (linkedUser, false);
         }
 
         if (existingUser is not null)
         {
-            await LinkExistingUserAsync(existingUser, userInfo.Sub, now, cancellationToken);
-            return existingUser;
+            var linkedNow = await LinkExistingUserAsync(existingUser, userInfo.Sub, now, cancellationToken);
+            return (existingUser, linkedNow);
         }
 
-        return await CreateGoogleCustomerAsync(userInfo, email, now, cancellationToken);
+        var createdUser = await CreateGoogleCustomerAsync(userInfo, email, now, cancellationToken);
+        // Tài khoản mới chỉ có email đã xác thực khi Google xác nhận email đó.
+        return (createdUser, createdUser.EmailVerified);
     }
 
-    private async Task LinkExistingUserAsync(User existingUser, string googleSubject, DateTime now, CancellationToken cancellationToken)
+    // Trả `true` khi tài khoản đổi từ chưa xác thực sang đã xác thực nhờ lần liên kết này.
+    private async Task<bool> LinkExistingUserAsync(User existingUser, string googleSubject, DateTime now, CancellationToken cancellationToken)
     {
         // Email đã xác thực ở cả hai phía. Liên kết an toàn và mật khẩu hiện có được giữ nguyên.
         if (existingUser.EmailVerified)
         {
             database.OAuthAccounts.Add(new OAuthAccount { Provider = GoogleProvider, ProviderUserId = googleSubject, UserId = existingUser.Id });
             await database.SaveChangesAsync(cancellationToken);
-            return;
+            return false;
         }
 
         // Kẻ xấu có thể đã đăng ký trước bằng email của nạn nhân, nên API thu hồi quyền truy cập cũ.
@@ -148,6 +159,7 @@ public sealed class GoogleCallbackHandler(
             .ExecuteUpdateAsync(setters => setters.SetProperty(token => token.UsedAt, now), cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
+        return true;
     }
 
     private async Task<User> CreateGoogleCustomerAsync(GoogleUserInfo userInfo, string email, DateTime now, CancellationToken cancellationToken)

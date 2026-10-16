@@ -441,10 +441,10 @@ Quy ước:
 **Mô tả:** Handler `EmailVerifiedEvent` gắn đơn vãng lai cùng email vào tài khoản. Handler `UserDeletedEvent` ẩn danh đánh giá và bỏ liên kết đơn với tài khoản.
 **Trạng thái:** Câu hỏi mở 3 của plan đã chốt ngày 2026-10-11. Identity phát `EmailVerifiedEvent(UserId, Email)`.
 **Tiêu chí nghiệm thu:**
-- [ ] Xác thực email gắn mọi đơn có `UserId` rỗng và cùng email liên hệ, so không phân biệt hoa thường
-- [ ] Đơn đã gắn tài khoản khác không đổi
-- [ ] `UserDeletedEvent` giữ nội dung đánh giá, bỏ liên kết tới người viết
-- [ ] `UserDeletedEvent` giữ đơn hàng, đặt `UserId` của đơn thành rỗng
+- [x] Xác thực email gắn mọi đơn có `UserId` rỗng và cùng email liên hệ, so không phân biệt hoa thường
+- [x] Đơn đã gắn tài khoản khác không đổi
+- [x] `UserDeletedEvent` giữ nội dung đánh giá, bỏ liên kết tới người viết
+- [x] `UserDeletedEvent` giữ đơn hàng, đặt `UserId` của đơn thành rỗng
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-08, COM-19, Câu hỏi mở 3 · **Quy mô:** S
 

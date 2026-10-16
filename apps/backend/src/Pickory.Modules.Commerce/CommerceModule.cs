@@ -91,6 +91,8 @@ public static class CommerceModule
         // Gộp giỏ vãng lai khi khách đăng nhập, và xóa giỏ cùng sổ địa chỉ khi khách xóa tài khoản.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, CartLinkHandler>();
         services.AddScoped<IDomainEventHandler<UserDeletedEvent>, UserDeletedCommerceHandler>();
+        // Email khách được xác thực thì đơn vãng lai cùng email gắn vào tài khoản đó.
+        services.AddScoped<IDomainEventHandler<EmailVerifiedEvent>, GuestOrderLinkHandler>();
         // Vận đơn báo đã giao hoặc đã hoàn thì đơn đổi trạng thái tương ứng.
         services.AddScoped<IDomainEventHandler<ShipmentStatusChangedEvent>, ShipmentStatusChangedHandler>();
         return services;

@@ -176,7 +176,7 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 5: Sổ địa chỉ, đánh giá, liên kết tài khoản
-- [x] COM-18 · [x] COM-UI8 · [x] COM-19 · [x] COM-UI9 · [x] COM-20 · [x] COM-UI10 · [ ] COM-21 · [ ] COM-25 · [ ] COM-UI11
+- [x] COM-18 · [x] COM-UI8 · [x] COM-19 · [x] COM-UI9 · [x] COM-20 · [x] COM-UI10 · [x] COM-21 · [ ] COM-25 · [ ] COM-UI11
 
 ### Checkpoint M5
 - [ ] Chỉ người đã nhận hàng đánh giá được. Đánh giá bị ẩn biến mất và điểm trung bình đổi theo
