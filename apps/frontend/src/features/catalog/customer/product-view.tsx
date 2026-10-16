@@ -2,6 +2,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Icon } from '../../../shared/icons';
 import type { ProductDetail, ProductSkuInfo } from './catalog-api';
 import { AddToCartButton } from '../../commerce/customer/add-to-cart-button';
+import { ReviewsSection } from '../../commerce/customer/reviews/reviews-section';
 import { CompareControl } from './compare-control';
 import { DescriptionView } from './description-view';
 import { selectGalleryImages } from './gallery-images';
@@ -155,6 +156,8 @@ export function ProductView({ product }: { product: ProductDetail }) {
 
       <DescriptionView description={product.description} />
       <SpecTable specs={product.specs} />
+      {/* Khối đánh giá tự giữ trạng thái lỗi của nó, nên API đánh giá lỗi không làm hỏng phần mua hàng. */}
+      <ReviewsSection productId={product.id} />
 
       {/* Hai vùng cho module sau. Vùng rỗng không có kích thước, nên khách không thấy khung trống. */}
       <div className="product-slot" data-slot="recommendations" />

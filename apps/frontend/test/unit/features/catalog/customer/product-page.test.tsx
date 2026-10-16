@@ -30,7 +30,19 @@ function LocationProbe() {
 }
 
 function stubFetch(status: number, body: unknown) {
-  const fetchMock = vi.fn(async () => Response.json(body, { status }));
+  const emptyReviews = {
+    data: {
+      summary: { average: null, count: 0, distribution: {} },
+      items: [],
+      nextCursor: null,
+    },
+  };
+  // Khối đánh giá của trang gọi thêm route đánh giá. Test này chỉ kiểm sản phẩm, nên route đó trả danh sách rỗng.
+  const fetchMock = vi.fn(async (input: RequestInfo | URL) =>
+    String(input).includes('/reviews')
+      ? Response.json(emptyReviews)
+      : Response.json(body, { status }),
+  );
   vi.stubGlobal('fetch', fetchMock);
   return fetchMock;
 }

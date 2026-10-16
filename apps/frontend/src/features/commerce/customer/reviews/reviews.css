@@ -1,0 +1,224 @@
+/*
+ * Khối đánh giá trên trang sản phẩm. Khung thẻ và các lớp chung dùng lại `product-page.css` và `components.css`.
+ */
+
+.reviews h3 {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.review-empty {
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+/* Điểm trung bình bên trái, phân bố bên phải. Màn hẹp xếp thành một cột. */
+.review-summary {
+  display: grid;
+  grid-template-columns: minmax(140px, auto) minmax(0, 1fr);
+  gap: var(--space-5);
+  align-items: center;
+}
+
+.review-summary-score {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: flex-start;
+}
+
+.review-average {
+  font-size: var(--text-xl);
+  line-height: 1.1;
+}
+
+.review-distribution {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-distribution-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 32px;
+  gap: var(--space-3);
+  align-items: center;
+  font-size: var(--text-label);
+}
+
+.review-distribution-count {
+  color: var(--color-ink-muted);
+  text-align: right;
+}
+
+.review-distribution-bar {
+  display: block;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+}
+
+.review-distribution-fill {
+  fill: var(--color-star);
+}
+
+.star-rating {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+
+.star-glyph {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--color-border-strong);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+
+.star-glyph-filled {
+  fill: var(--color-star);
+  stroke: var(--color-star);
+}
+
+/* Khối viết đánh giá nằm giữa phần tóm tắt và danh sách, tách bằng đường kẻ mảnh. */
+.review-write,
+.review-write-note {
+  margin: var(--space-4) 0 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.review-write-note {
+  color: var(--color-ink-muted);
+}
+
+.review-hidden-note {
+  margin: 0;
+  color: var(--color-warning);
+  font-size: var(--text-label);
+}
+
+.review-form {
+  max-width: 560px;
+}
+
+.rating-picker {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.rating-picker legend {
+  padding: 0;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+
+.rating-picker-options {
+  display: flex;
+  gap: var(--space-1);
+}
+
+/* Radio thật phủ kín ô sao và trong suốt, nên chuột, bàn phím và trình đọc màn hình dùng radio gốc. */
+.rating-option {
+  position: relative;
+  display: inline-flex;
+  padding: var(--space-1);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+}
+
+.rating-option input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.rating-option .star-glyph {
+  width: 28px;
+  height: 28px;
+}
+
+/* Radio trong suốt không tự vẽ vòng focus, nên ô sao nhận vòng focus của design system. */
+.rating-option:has(input:focus-visible) {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.review-counter {
+  align-self: flex-end;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+.review-counter-over {
+  color: var(--color-danger);
+}
+
+.review-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.review-item {
+  padding: var(--space-4) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.review-item-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+/* Tên người viết dài không có khoảng trắng phải ngắt dòng, để không đẩy trang tràn ngang. */
+.review-author {
+  overflow-wrap: anywhere;
+}
+
+/* Nhận xét là văn bản thuần. `pre-line` giữ chỗ xuống dòng, `anywhere` ngắt chuỗi dài không có khoảng trắng. */
+.review-body {
+  max-width: 75ch;
+  margin: var(--space-2) 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.review-item-actions {
+  margin-top: var(--space-2);
+}
+
+.review-more {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: 767px) {
+  .review-summary {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+}

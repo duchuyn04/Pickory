@@ -410,10 +410,10 @@ Quy ước:
 ### COM-UI9: Khối đánh giá trên trang sản phẩm
 **Mô tả:** Khối đánh giá trên trang sản phẩm: điểm trung bình, phân bố số sao, danh sách, form viết và sửa, nút báo cáo.
 **Tiêu chí nghiệm thu:**
-- [ ] Form chỉ hiện với người đủ điều kiện. Người khác thấy lý do
-- [ ] Chọn số sao dùng được bằng bàn phím và có tên truy cập
-- [ ] Nội dung đánh giá hiện dạng văn bản thuần, không render HTML
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Form chỉ hiện với người đủ điều kiện. Người khác thấy lý do
+- [x] Chọn số sao dùng được bằng bàn phím và có tên truy cập
+- [x] Nội dung đánh giá hiện dạng văn bản thuần, không render HTML
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** COM-19 · **Quy mô:** M
 
