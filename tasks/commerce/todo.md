@@ -431,9 +431,9 @@ Quy ước:
 ### COM-UI10: Hàng chờ kiểm duyệt đánh giá
 **Mô tả:** Màn `/admin/reviews` cho người có `reviews:moderate`.
 **Tiêu chí nghiệm thu:**
-- [ ] Danh sách hiện số báo cáo và trạng thái ẩn hoặc hiện
-- [ ] Ẩn hoặc hiện mở hộp thoại chọn lý do
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Danh sách hiện số báo cáo và trạng thái ẩn hoặc hiện
+- [x] Ẩn hoặc hiện mở hộp thoại chọn lý do
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** COM-20 · **Quy mô:** S
 
@@ -447,6 +447,31 @@ Quy ước:
 - [ ] `UserDeletedEvent` giữ đơn hàng, đặt `UserId` của đơn thành rỗng
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** COM-08, COM-19, Câu hỏi mở 3 · **Quy mô:** S
+
+### COM-25: Tra cứu đơn bằng mã đơn và email
+**Mô tả:** `POST /api/order-lookups` công khai, body `{ orderCode, email }`. Mã đơn và email liên hệ khớp thì module tạo token xem đơn mới và gửi link xem đơn tới email liên hệ của đơn. Quyết định 21 của plan ghi lý do.
+**Tiêu chí nghiệm thu:**
+- [ ] Khớp và không khớp trả cùng mã 202 và cùng body. Response không có token, link hay dữ liệu của đơn
+- [ ] So email không phân biệt hoa thường và bỏ khoảng trắng hai đầu. So mã đơn không phân biệt hoa thường
+- [ ] Khớp thì email trong outbox dev có link `/orders/{code}?t=<token mới>`. Link mở được đơn qua `GET /api/orders/{code}`
+- [ ] Token mới thay token cũ. Link cũ trả 404 `ORDER_NOT_FOUND`
+- [ ] Không khớp thì không gửi email và không đổi token của đơn nào
+- [ ] Mã đơn sai định dạng hoặc email sai định dạng trả 400 `VALIDATION_ERROR` đúng trường
+- [ ] Quá 5 lần trong 15 phút cho cùng IP, hoặc cho cùng email, trả 429. Giới hạn dùng `RateLimiter` của `Pickory.Shared`
+- [ ] Gửi email lỗi vẫn trả 202. Log không chứa token
+**Kiểm tra:** test tích hợp; unit test cho chuẩn hóa mã đơn và email
+**Phụ thuộc:** COM-09, COM-10 · **Quy mô:** S
+
+### COM-UI11: Trang tra cứu đơn
+**Mô tả:** Trang `/order-lookup` cho khách vãng lai. Khách nhập mã đơn và email liên hệ để nhận lại link xem đơn qua email.
+**Tiêu chí nghiệm thu:**
+- [ ] Form có ô mã đơn và ô email, kiểm định dạng phía client theo luật của COM-25
+- [ ] Gửi xong luôn hiện cùng một câu: "Nếu thông tin đúng, link xem đơn đã được gửi tới email của đơn"
+- [ ] 429 hiện thông báo thử lại sau. Nút gửi bị khóa trong lúc chờ
+- [ ] Header hoặc footer có link tới trang. Trang "Đơn hàng của tôi" khi chưa đăng nhập có link tới trang
+- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+**Kiểm tra:** Vitest; Playwright `--headed` đọc email trong outbox dev rồi mở link
+**Phụ thuộc:** COM-25, COM-UI3 · **Quy mô:** S
 
 ### Checkpoint M5
 - [ ] Chỉ người đã nhận hàng đánh giá được. Đánh giá bị ẩn biến mất và điểm trung bình đổi theo

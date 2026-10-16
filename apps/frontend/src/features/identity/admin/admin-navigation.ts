@@ -55,6 +55,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         icon: 'message',
         requiredPermission: 'conversations:read',
       },
+      {
+        label: 'Đánh giá',
+        path: '/admin/reviews',
+        icon: 'star',
+        requiredPermission: 'reviews:moderate',
+      },
     ],
   },
   {

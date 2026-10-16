@@ -100,6 +100,7 @@ describe('AdminLayout', () => {
       'Đối soát',
       'Khách hàng',
       'CSKH',
+      'Đánh giá',
       'Sản phẩm',
       'Tồn kho',
       'Danh mục',

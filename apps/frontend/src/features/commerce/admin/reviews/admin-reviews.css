@@ -1,0 +1,128 @@
+/* Kiểu riêng của hàng chờ kiểm duyệt đánh giá. Thẻ, bảng, nút và badge dùng lớp chung trong `components.css`. */
+
+/* Lỗi tải nằm trong thẻ bảng, nên cần lề để không dính vào viền thẻ. */
+.review-list-alert {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: flex-start;
+  margin: var(--space-3) 14px;
+}
+
+.review-table {
+  min-width: 860px;
+}
+
+.review-cell-body {
+  max-width: 360px;
+}
+
+/* Nhận xét là văn bản thuần. `pre-line` giữ chỗ xuống dòng, `anywhere` ngắt chuỗi dài không có khoảng trắng. */
+.review-text {
+  margin: var(--space-1) 0 0;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+}
+
+.review-priority {
+  margin-left: var(--space-2);
+}
+
+/* Trích nhận xét trong hộp thoại. Chỉ hiện vài dòng đầu, để hộp thoại không dài theo nhận xét. */
+.review-excerpt {
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+}
+
+.review-excerpt-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-3);
+  align-items: center;
+}
+
+.review-excerpt-head .muted {
+  overflow-wrap: anywhere;
+}
+
+.review-excerpt-body {
+  display: -webkit-box;
+  margin: var(--space-2) 0 0;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: pre-line;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
+  line-clamp: 5;
+}
+
+.review-reason-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.review-reason-group legend {
+  margin-bottom: var(--space-2);
+  padding: 0;
+  font-size: var(--text-label);
+  font-weight: 500;
+}
+
+/* Điện thoại: mỗi đánh giá là một thẻ, mỗi ô có nhãn cột ở bên trái, nên không cần cuộn ngang. */
+@media (max-width: 767px) {
+  .review-table {
+    min-width: 0;
+  }
+
+  .review-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .review-table tbody tr {
+    display: block;
+    padding: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .review-table tbody th,
+  .review-table tbody td {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+    border: 0;
+    text-align: left;
+  }
+
+  .review-table tbody th::before,
+  .review-table tbody td::before {
+    content: attr(data-label);
+    color: var(--color-ink-muted);
+    font-size: var(--text-label);
+    font-weight: 500;
+  }
+
+  .review-cell-body {
+    max-width: none;
+  }
+
+  /* Ô số căn phải trên bảng. Dạng thẻ căn trái như các ô khác. */
+  .review-table tbody td.num {
+    text-align: left;
+  }
+
+  .review-cell {
+    min-width: 0;
+  }
+}

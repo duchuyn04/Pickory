@@ -58,6 +58,7 @@ COM-02 máy trạng thái đơn và trạng thái thanh toán
       │              ├── COM-19 đánh giá ──────────── COM-UI9 khối đánh giá
       │              │    └── COM-20 kiểm duyệt ────── COM-UI10 hàng chờ kiểm duyệt
       │              ├── COM-21 gắn đơn vãng lai, ẩn danh khi xóa tài khoản
+      │              ├── COM-25 tra cứu đơn bằng mã đơn và email ── COM-UI11 trang tra cứu đơn
       │              ├── COM-22 ICommerceReader
       │              └── COM-23 ICommerceReports
       └── COM-18 sổ địa chỉ ─────────────────── COM-UI8 sổ địa chỉ
@@ -127,6 +128,11 @@ COM-07 cần COM-06, vì ngưỡng miễn phí ship và hạn mức COD nằm tr
 
 19. **Điểm đánh giá không đi vào `catalog`.** `catalog` không được phụ thuộc `commerce`, vì `commerce` đã phụ thuộc `catalog`. Trang sản phẩm gọi `GET /api/products/{id}/reviews`. Response gồm điểm trung bình, phân bố số sao và trang đánh giá. Người dùng chốt cách này ở Câu hỏi mở 5.
 20. **Audit log.** Mọi thao tác nhân viên trên đơn, thanh toán, đánh giá và cấu hình ghi đúng 1 dòng qua `IAuditLogWriter` trong cùng transaction.
+21. **Tra cứu đơn gửi link qua email, không hiện đơn trên trang.** Người dùng thêm COM-25 và COM-UI11 ngày 2026-10-16. Spec chưa có phần này.
+    - Mã đơn có trong nội dung chuyển khoản và mã vận đơn, nên mã đơn không phải bí mật. Trang hiện đơn ngay khi khớp sẽ lộ địa chỉ của khách.
+    - Route luôn trả cùng một response. Người tra cứu không biết mã đơn có tồn tại hay email có khớp.
+    - DB chỉ lưu một hash token cho mỗi đơn (`AccessTokenHash`) và không giữ token gốc. Module tạo token mới và thay hash cũ, nên không cần đổi schema. Link trong email cũ hết hiệu lực.
+    - Giới hạn số lần theo IP và theo email chặn dò mã đơn hàng loạt.
 
 ## Task List
 
@@ -170,7 +176,7 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 5: Sổ địa chỉ, đánh giá, liên kết tài khoản
-- [x] COM-18 · [x] COM-UI8 · [x] COM-19 · [x] COM-UI9 · [x] COM-20 · [ ] COM-UI10 · [ ] COM-21
+- [x] COM-18 · [x] COM-UI8 · [x] COM-19 · [x] COM-UI9 · [x] COM-20 · [x] COM-UI10 · [ ] COM-21 · [ ] COM-25 · [ ] COM-UI11
 
 ### Checkpoint M5
 - [ ] Chỉ người đã nhận hàng đánh giá được. Đánh giá bị ẩn biến mất và điểm trung bình đổi theo

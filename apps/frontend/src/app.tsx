@@ -30,6 +30,7 @@ import { CheckoutPage } from './features/commerce/customer/checkout/checkout-pag
 import { OrderSuccessPage } from './features/commerce/customer/checkout/order-success-page';
 import { PaymentPage } from './features/commerce/customer/checkout/payment-page';
 import { AdminPaymentsPage } from './features/commerce/admin/payments/admin-payments-page';
+import { AdminReviewsPage } from './features/commerce/admin/reviews/admin-reviews-page';
 import { AdminOrderDetailPage } from './features/commerce/admin/orders/admin-order-detail-page';
 import { AdminOrdersPage } from './features/commerce/admin/orders/admin-orders-page';
 import { OrderDetailPage } from './features/commerce/customer/orders/order-detail-page';
@@ -101,6 +102,7 @@ export function App() {
           <Route path="orders" element={<AdminOrdersPage />} />
           <Route path="orders/:code" element={<AdminOrderDetailPage />} />
           <Route path="payments" element={<AdminPaymentsPage />} />
+          <Route path="reviews" element={<AdminReviewsPage />} />
           <Route
             path="products"
             element={
