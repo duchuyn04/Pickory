@@ -67,10 +67,25 @@ async function renderCustomerOrders(
 }
 
 describe('CustomerOrdersPage', () => {
-  it('chuyển hướng tới trang đăng nhập khi người dùng chưa đăng nhập', async () => {
-    // Khách vãng lai truy cập /me/orders bị chuyển hướng về /login.
-    stubOrdersListApi({ items: [], total: 0, page: 1, limit: 20 });
+  it('hiện thông báo đăng nhập kèm link tra cứu đơn khi người dùng chưa đăng nhập', async () => {
+    // Khách vãng lai không bị chuyển trang. Khối thông báo chỉ cho đăng nhập hoặc tra cứu bằng mã đơn.
+    const api = stubOrdersListApi({ items: [], total: 0, page: 1, limit: 20 });
     await renderCustomerOrders({ kind: 'guest' });
+
+    expect(container.textContent).toContain('Đăng nhập để xem các đơn hàng của bạn.');
+    expect(container.querySelector('a[href="/login"]')?.textContent).toBe('Đăng nhập');
+    expect(container.querySelector('a[href="/order-lookup"]')?.textContent).toBe(
+      'Tra cứu đơn bằng mã đơn',
+    );
+    expect(container.textContent).not.toContain('Trang đăng nhập');
+    // Khách chưa đăng nhập không được gọi API danh sách đơn.
+    expect(api.calls).toHaveLength(0);
+  });
+
+  it('giữ chuyển hướng về trang đăng nhập khi người dùng là nhân viên', async () => {
+    // Nhánh nhân viên giữ hành vi cũ: không có đơn của khách để hiện.
+    stubOrdersListApi({ items: [], total: 0, page: 1, limit: 20 });
+    await renderCustomerOrders({ kind: 'staff' });
 
     expect(container.textContent).toContain('Trang đăng nhập');
   });

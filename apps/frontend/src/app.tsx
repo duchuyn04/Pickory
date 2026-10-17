@@ -35,6 +35,7 @@ import { AdminOrderDetailPage } from './features/commerce/admin/orders/admin-ord
 import { AdminOrdersPage } from './features/commerce/admin/orders/admin-orders-page';
 import { OrderDetailPage } from './features/commerce/customer/orders/order-detail-page';
 import { CustomerOrdersPage } from './features/commerce/customer/orders/customer-orders-page';
+import { OrderLookupPage } from './features/commerce/customer/orders/order-lookup-page';
 import { HomePage } from './features/home/home-page';
 import { Header } from './shared/header';
 // Tách trình soạn mô tả khỏi bundle trang khách, chỉ tải khi nhân viên mở trang sản phẩm.
@@ -87,6 +88,7 @@ export function App() {
           <Route path="/compare" element={<ComparePage />} />
           <Route path="/cart" element={<CartPage />} />
           <Route path="/checkout" element={<CheckoutPage />} />
+          <Route path="/order-lookup" element={<OrderLookupPage />} />
           <Route path="/orders/:code/payment" element={<PaymentPage />} />
           <Route path="/orders/:code/success" element={<OrderSuccessPage />} />
           <Route path="/orders/:code" element={<OrderDetailPage />} />

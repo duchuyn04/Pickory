@@ -41,6 +41,8 @@ export function Header() {
         </Link>
         <nav className="site-nav" aria-label="Điều hướng chính">
           <Link to="/">Trang chủ</Link>
+          {/* Khách vãng lai chưa có tài khoản vẫn cần đường vào trang tra cứu đơn từ mọi trang. */}
+          <Link to="/order-lookup">Tra cứu đơn</Link>
           <Link to="/privacy">Quyền riêng tư</Link>
         </nav>
 

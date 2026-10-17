@@ -104,3 +104,16 @@ export function cancelOrder(code: string, token?: string | null): Promise<OrderD
 export function fetchCustomerOrders(page = 1, limit = 20): Promise<CustomerOrdersPagedResponse> {
   return apiRequest<CustomerOrdersPagedResponse>(`/api/orders?page=${page}&limit=${limit}`);
 }
+
+// Kết quả cố định của route tra cứu đơn. Server trả cùng một câu cho mọi thông tin hợp lệ về định dạng.
+export interface OrderLookupResult {
+  message: string;
+}
+
+// Gọi API yêu cầu gửi lại link xem đơn qua email của đơn. Mã đơn và email phải đã chuẩn hóa ở nơi gọi.
+export function requestOrderLookup(orderCode: string, email: string): Promise<OrderLookupResult> {
+  return apiRequest<OrderLookupResult>('/api/order-lookups', {
+    method: 'POST',
+    body: JSON.stringify({ orderCode, email }),
+  });
+}

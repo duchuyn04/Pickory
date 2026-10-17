@@ -60,7 +60,7 @@ export function ForgotPasswordPage() {
             bạn.
           </p>
           <Link to="/login" className="auth-link">
-            ← Quay lại trang đăng nhập
+            Quay lại trang đăng nhập
           </Link>
         </div>
       ) : (
@@ -89,7 +89,7 @@ export function ForgotPasswordPage() {
           </form>
 
           <p className="auth-footer">
-            <Link to="/login">← Quay lại đăng nhập</Link>
+            <Link to="/login">Quay lại đăng nhập</Link>
           </p>
         </>
       )}

@@ -31,9 +31,29 @@ export function CustomerOrdersPage() {
     );
   }
 
-  // Khách chưa đăng nhập bị chuyển hướng về trang đăng nhập theo thiết kế.
-  if (!actor || actor.kind !== 'customer') {
+  // Nhân viên không có đơn hàng của khách để xem, nên giữ chuyển hướng về trang đăng nhập.
+  if (actor?.kind === 'staff') {
     return <Navigate to="/login" replace />;
+  }
+
+  // Khách vãng lai ở lại trang này. Họ cần thấy hai đường: đăng nhập hoặc tra cứu đơn bằng mã đơn.
+  if (!actor || actor.kind !== 'customer') {
+    return (
+      <main className="catalog-page customer-orders-page">
+        <div className="customer-orders-header">
+          <h1>Đơn hàng của tôi</h1>
+        </div>
+        <div className="card order-empty-state stack">
+          <p className="muted">Đăng nhập để xem các đơn hàng của bạn.</p>
+          <Link to="/login" className="btn btn-primary">
+            Đăng nhập
+          </Link>
+          <Link to="/order-lookup" className="btn btn-outline">
+            Tra cứu đơn bằng mã đơn
+          </Link>
+        </div>
+      </main>
+    );
   }
 
   function handlePageChange(nextPage: number) {

@@ -89,7 +89,7 @@ export function ResetPasswordPage() {
         <div className="auth-result">
           <ErrorAlert message="Mã token không hợp lệ hoặc thiếu trong liên kết. Vui lòng kiểm tra lại liên kết trong email của bạn." />
           <Link to="/forgot-password" className="auth-link">
-            ← Yêu cầu đặt lại mật khẩu mới
+            Yêu cầu đặt lại mật khẩu mới
           </Link>
         </div>
       </AuthCard>

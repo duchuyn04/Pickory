@@ -86,7 +86,7 @@ export function VerifyEmailPage() {
           <>
             <ErrorAlert message={error} />
             <Link to="/" className="auth-link">
-              ← Quay lại trang chủ
+              Quay lại trang chủ
             </Link>
           </>
         )}

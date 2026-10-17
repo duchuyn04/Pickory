@@ -132,3 +132,57 @@ export async function readOrderConfirmation(
   if (!confirmation) throw new Error('Không đọc được thư xác nhận đơn từ outbox dev.');
   return confirmation;
 }
+
+// Đọc thư tra cứu của một đơn gửi tới `recipient`. Lọc theo `purpose` và `orderCode` nên không lẫn thư xác nhận hay đơn khác.
+export async function readOrderLookupLink(recipient: string, orderCode: string): Promise<string> {
+  let lookupLink: string | undefined;
+  // Chờ đúng thư xuất hiện trên đĩa. Không dùng sleep cố định.
+  await expect
+    .poll(
+      async () => {
+        const rawEntries = await readdir(e2eEnvironment.outboxDirectory, { withFileTypes: true });
+        for (const entry of rawEntries) {
+          // Bỏ qua symlink và file không phải JSON để không đọc ngoài outbox.
+          if (!entry.isFile() || !entry.name.endsWith('.json')) continue;
+          const message: unknown = JSON.parse(
+            await readFile(join(e2eEnvironment.outboxDirectory, entry.name), 'utf8'),
+          );
+          if (
+            typeof message !== 'object' ||
+            message === null ||
+            !('to' in message) ||
+            message.to !== recipient ||
+            !('text' in message) ||
+            typeof message.text !== 'string' ||
+            !('metadata' in message) ||
+            typeof message.metadata !== 'object' ||
+            message.metadata === null ||
+            !('purpose' in message.metadata) ||
+            message.metadata.purpose !== 'order-lookup' ||
+            !('orderCode' in message.metadata) ||
+            message.metadata.orderCode !== orderCode
+          ) {
+            continue;
+          }
+          const link = message.text.match(/https?:\/\/[^\s]+/)?.[0];
+          if (!link) throw new Error('Thư tra cứu đơn không có liên kết xem đơn.');
+          const url = new URL(link);
+          // Chỉ mở link của web E2E, đúng trang đơn cần xem, để tránh điều hướng ra ngoài.
+          if (url.origin !== e2eEnvironment.webOrigin || url.pathname !== `/orders/${orderCode}`) {
+            throw new Error('Link trong thư tra cứu đơn sai origin hoặc sai đường dẫn.');
+          }
+          lookupLink = url.toString();
+          return true;
+        }
+        return false;
+      },
+      {
+        message: `Chờ thư tra cứu đơn ${orderCode} của ${recipient} trong outbox dev`,
+        timeout: 10000,
+      },
+    )
+    .toBe(true);
+  // Không dựng liên kết giả khi outbox thiếu thư.
+  if (!lookupLink) throw new Error('Không đọc được thư tra cứu đơn từ outbox dev.');
+  return lookupLink;
+}
