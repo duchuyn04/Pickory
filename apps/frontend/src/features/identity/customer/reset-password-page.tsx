@@ -11,6 +11,7 @@ import {
 import { getConfirmPasswordError, getPasswordError } from '../../../shared/identity-validation';
 import { AuthCard, PasswordInput } from './auth-ui';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { ResultPanel } from '../../../shared/result-panel';
 
 // Trang đặt mật khẩu mới từ link trong email; dùng chung cho quên mật khẩu và lời mời nhân viên.
 export function ResetPasswordPage() {
@@ -85,30 +86,45 @@ export function ResetPasswordPage() {
   // Không có token thì không có gì để đặt lại, báo ngay thay vì hiện form không bao giờ thành công.
   if (!token) {
     return (
-      <AuthCard title="Đặt lại mật khẩu">
-        <div className="auth-result">
-          <ErrorAlert message="Mã token không hợp lệ hoặc thiếu trong liên kết. Vui lòng kiểm tra lại liên kết trong email của bạn." />
-          <Link to="/forgot-password" className="auth-link">
-            Yêu cầu đặt lại mật khẩu mới
-          </Link>
-        </div>
+      <AuthCard>
+        <ResultPanel
+          headingLevel={1}
+          tone="error"
+          title="Liên kết không hợp lệ"
+          description="Mã token không hợp lệ hoặc thiếu trong liên kết. Vui lòng kiểm tra lại liên kết trong email của bạn."
+          announceDescription
+          actions={
+            <Link to="/forgot-password" className="btn btn-primary btn-block">
+              Yêu cầu đặt lại mật khẩu mới
+            </Link>
+          }
+        />
       </AuthCard>
     );
   }
 
   return (
-    <AuthCard title="Đặt lại mật khẩu" subtitle="Nhập mật khẩu mới cho tài khoản của bạn">
+    <AuthCard
+      title={submitted ? undefined : 'Đặt lại mật khẩu'}
+      subtitle={submitted ? undefined : 'Nhập mật khẩu mới cho tài khoản của bạn'}
+    >
       {submitted ? (
-        <div className="auth-result">
-          <p role="status" className="alert alert-ok">
-            Mật khẩu của bạn đã được cập nhật thành công! Mọi phiên đăng nhập cũ đã được đăng xuất
-            an toàn.
-          </p>
-          {/* Nhân viên đặt mật khẩu từ lời mời nên quay về trang đăng nhập quản trị, không về trang của khách. */}
-          <Link to={userKind === 'staff' ? '/admin/login' : '/login'} className="btn btn-primary">
-            {userKind === 'staff' ? 'Đăng nhập trang quản trị' : 'Đăng nhập ngay'}
-          </Link>
-        </div>
+        <ResultPanel
+          headingLevel={1}
+          tone="success"
+          title="Đã cập nhật mật khẩu"
+          description="Mật khẩu của bạn đã được cập nhật thành công! Mọi phiên đăng nhập cũ đã được đăng xuất an toàn."
+          announceDescription
+          actions={
+            // Nhân viên đặt mật khẩu từ lời mời nên quay về trang đăng nhập quản trị, không về trang của khách.
+            <Link
+              to={userKind === 'staff' ? '/admin/login' : '/login'}
+              className="btn btn-primary btn-block"
+            >
+              {userKind === 'staff' ? 'Đăng nhập trang quản trị' : 'Đăng nhập ngay'}
+            </Link>
+          }
+        />
       ) : (
         <>
           {error && <ErrorAlert message={error} />}

@@ -313,7 +313,7 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
     // Link cũ trong thư xác nhận không còn token hợp lệ nên trang báo không tìm thấy đơn.
     await lookupPage.goto(confirmation.link);
     await expect(
-      lookupPage.getByRole('heading', { level: 1, name: 'Không tìm thấy đơn hàng.' }),
+      lookupPage.getByRole('heading', { level: 1, name: 'Không tìm thấy đơn hàng' }),
     ).toBeVisible();
 
     expect(issues).toEqual([]);

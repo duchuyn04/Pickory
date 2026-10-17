@@ -231,9 +231,11 @@ describe('OrderDetailPage', () => {
     stubOrderApi(null);
     await renderOrderDetail('PK99999999');
 
-    expect(container.textContent).toContain('Không tìm thấy đơn hàng.');
-    const homeLink = container.querySelector('a.btn-primary') as HTMLAnchorElement | null;
-    expect(homeLink?.getAttribute('href')).toBe('/');
+    expect(container.textContent).toContain('Không tìm thấy đơn hàng');
+    const homeLink = container.querySelector('a[href="/"]') as HTMLAnchorElement | null;
+    expect(homeLink?.textContent).toBe('Về trang chủ');
+    // Khách mất link xem đơn có đường tự nhận link mới.
+    expect(container.querySelector('a[href="/order-lookup"]')).not.toBeNull();
   });
 
   it('nút hủy hiển thị khi canCancel là true', async () => {

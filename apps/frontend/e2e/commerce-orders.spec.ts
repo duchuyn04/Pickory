@@ -262,6 +262,17 @@ test.describe('COM-UI3: theo dõi đơn hàng và khách tự hủy', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Đặt hàng thành công' }),
     ).toBeVisible();
+    // Trang thành công tải chi tiết đơn: dòng hàng và tiền khớp với giỏ đã đặt.
+    const itemRow = page.locator('.order-item-row').filter({ hasText: product.name });
+    await expect(itemRow).toContainText('Số lượng: 1');
+    await expect(itemRow).toContainText('1.500.000 đ');
+    await expect(page.locator('.order-summary-row').filter({ hasText: 'Tạm tính' })).toContainText(
+      '1.500.000 đ',
+    );
+    const successTotal = (await page.locator('.order-summary-total').textContent())?.trim() ?? '';
+    await expect(
+      page.getByText('Pickory đã gửi email xác nhận kèm link xem đơn tới khach@example.com.'),
+    ).toBeVisible();
     await checkLayoutAtBothWidths(page, 'order-success');
 
     const viewOrderLink = page.getByRole('link', { name: 'Xem đơn hàng' });
@@ -278,6 +289,8 @@ test.describe('COM-UI3: theo dõi đơn hàng và khách tự hủy', () => {
     await expect(page.locator('.order-badge').filter({ hasText: 'Chờ xác nhận' })).toBeVisible();
     await expect(page.getByText('Chưa thanh toán')).toBeVisible();
     await expect(page.getByText(product.name)).toBeVisible();
+    // Tổng tiền ở trang chi tiết phải bằng tổng tiền đã hiện ở trang thành công.
+    await expect(page.locator('.order-summary-total')).toHaveText(successTotal);
     await checkLayoutAtBothWidths(page, 'order-detail');
 
     const currentUrl = page.url();
@@ -321,10 +334,26 @@ test.describe('COM-UI3: theo dõi đơn hàng và khách tự hủy', () => {
     await forbiddenPage.goto(`/orders/${orderCode}`);
     await dismissConsent(forbiddenPage);
     await expect(
-      forbiddenPage.getByRole('heading', { level: 1, name: 'Không tìm thấy đơn hàng.' }),
+      forbiddenPage.getByRole('heading', { level: 1, name: 'Không tìm thấy đơn hàng' }),
     ).toBeVisible();
     expect(forbiddenIssues).toEqual([]);
     await forbiddenContext.close();
+
+    // 4b. Mở trang thành công không có token và chưa đăng nhập thì không gọi API đơn hàng, chỉ chỉ đường tra cứu.
+    const reopenContext = await browser.newContext({ baseURL: e2eEnvironment.webOrigin });
+    const reopenPage = await reopenContext.newPage();
+    const reopenIssues = collectConsoleIssues(reopenPage);
+    const orderRequests: string[] = [];
+    reopenPage.on('request', (request) => {
+      if (request.url().includes('/api/orders/')) orderRequests.push(request.url());
+    });
+    await reopenPage.goto(`/orders/${orderCode}/success`);
+    await dismissConsent(reopenPage);
+    await expect(reopenPage.getByRole('link', { name: 'Tra cứu đơn hàng' })).toBeVisible();
+    await expect(reopenPage.getByText('Liên kết xem đơn đã gửi tới email của bạn.')).toBeVisible();
+    expect(orderRequests).toEqual([]);
+    expect(reopenIssues).toEqual([]);
+    await reopenContext.close();
 
     // 5. Khách tự hủy đơn: mở hộp thoại, Giữ đơn không đổi, Hủy đơn thành công.
     const cancelButton = page.getByRole('button', { name: 'Hủy đơn hàng' });

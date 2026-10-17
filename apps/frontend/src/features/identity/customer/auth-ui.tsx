@@ -3,7 +3,8 @@ import { fieldErrorProps } from '../../../shared/field-error';
 import './customer-auth.css';
 
 interface AuthCardProps {
-  title: string;
+  // Màn kết quả bỏ tiêu đề thẻ, vì tiêu đề của khối kết quả đã nói rõ chủ đề.
+  title?: string;
   subtitle?: string;
   children: ReactNode;
 }
@@ -13,10 +14,12 @@ export function AuthCard({ title, subtitle, children }: AuthCardProps) {
   return (
     <main className="auth-page">
       <div className="card auth-card">
-        <div className="auth-head">
-          <h1>{title}</h1>
-          {subtitle && <p>{subtitle}</p>}
-        </div>
+        {title && (
+          <div className="auth-head">
+            <h1>{title}</h1>
+            {subtitle && <p>{subtitle}</p>}
+          </div>
+        )}
         {children}
       </div>
     </main>

@@ -1,0 +1,81 @@
+/* Khối kết quả dùng chung: icon trạng thái, tiêu đề, mô tả và khu nút, canh giữa theo chiều dọc. */
+.result-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  align-items: center;
+  text-align: center;
+}
+
+/* Khi tự đứng thành thẻ riêng, thẻ hẹp lại và canh giữa để dòng chữ không kéo dài hết màn rộng. */
+.card.result-panel {
+  width: min(560px, 100%);
+  margin: var(--space-5) auto 0;
+  padding: var(--space-6) var(--space-5);
+}
+
+/* Vòng tròn 56px nền nhạt, icon 28px bên trong. Màu theo loại kết quả. */
+.result-panel-icon {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-pill);
+}
+
+.result-panel-icon .icon {
+  width: 28px;
+  height: 28px;
+}
+
+.result-panel-icon-success {
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.result-panel-icon-info {
+  background: var(--color-info-soft);
+  color: var(--color-info);
+}
+
+.result-panel-icon-error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.result-panel-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-lg);
+  font-weight: 700;
+}
+
+h1.result-panel-title {
+  font-size: var(--text-title);
+}
+
+.result-panel-description {
+  margin: 0;
+  max-width: 44ch;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* Nút xếp hàng ngang khi đủ chỗ. Nút `btn-block` tự chiếm cả hàng nên xuống dòng riêng. */
+.result-panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: var(--space-1);
+}
+
+/* Màn hẹp: mỗi nút chiếm cả hàng để các nút xếp dọc bằng nhau, dễ bấm bằng ngón tay. */
+@media (max-width: 479px) {
+  .result-panel-actions .btn {
+    flex: 1 1 100%;
+  }
+}

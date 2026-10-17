@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, Navigate, useSearchParams } from 'react-router-dom';
 import { useActor } from '../../../identity/hooks/use-actor';
 import { ErrorAlert } from '../../../../shared/error-alert';
+import { ResultPanel } from '../../../../shared/result-panel';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
 import { ProductThumbnail } from '../product-thumbnail';
 import { formatOrderStatus } from '../../order-labels';
@@ -43,15 +44,23 @@ export function CustomerOrdersPage() {
         <div className="customer-orders-header">
           <h1>Đơn hàng của tôi</h1>
         </div>
-        <div className="card order-empty-state stack">
-          <p className="muted">Đăng nhập để xem các đơn hàng của bạn.</p>
-          <Link to="/login" className="btn btn-primary">
-            Đăng nhập
-          </Link>
-          <Link to="/order-lookup" className="btn btn-outline">
-            Tra cứu đơn bằng mã đơn
-          </Link>
-        </div>
+        <ResultPanel
+          framed
+          tone="info"
+          icon="user"
+          title="Bạn chưa đăng nhập"
+          description="Đăng nhập để xem các đơn hàng của bạn."
+          actions={
+            <>
+              <Link to="/login" className="btn btn-primary">
+                Đăng nhập
+              </Link>
+              <Link to="/order-lookup" className="btn btn-outline">
+                Tra cứu đơn bằng mã đơn
+              </Link>
+            </>
+          }
+        />
       </main>
     );
   }
@@ -79,26 +88,35 @@ export function CustomerOrdersPage() {
         <ErrorAlert message={error instanceof Error ? error.message : 'Lỗi tải đơn hàng.'} />
       )}
 
-      {data && data.items.length === 0 && (
-        <div className="card order-empty-state stack">
-          {/* Trang rỗng ngoài giới hạn không có nghĩa tài khoản chưa có đơn. */}
-          {data.total > 0 ? (
-            <>
-              <p className="muted">Trang này không có đơn hàng.</p>
+      {data &&
+        data.items.length === 0 &&
+        // Trang rỗng ngoài giới hạn không có nghĩa tài khoản chưa có đơn.
+        (data.total > 0 ? (
+          <ResultPanel
+            framed
+            tone="info"
+            icon="search"
+            title="Trang này không có đơn hàng."
+            actions={
               <Link to="/me/orders?page=1" className="btn btn-outline">
                 Về trang 1
               </Link>
-            </>
-          ) : (
-            <>
-              <p className="muted">Bạn chưa có đơn hàng nào.</p>
+            }
+          />
+        ) : (
+          <ResultPanel
+            framed
+            tone="info"
+            icon="package"
+            title="Bạn chưa có đơn hàng nào."
+            description="Đơn hàng bạn đặt sẽ hiện ở đây để theo dõi."
+            actions={
               <Link to="/" className="btn btn-outline">
                 Tiếp tục mua sắm
               </Link>
-            </>
-          )}
-        </div>
-      )}
+            }
+          />
+        ))}
 
       {data && data.items.length > 0 && (
         <>

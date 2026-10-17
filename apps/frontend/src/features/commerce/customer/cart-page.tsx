@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { ResultPanel } from '../../../shared/result-panel';
 import { formatProductPrice } from '../../catalog/customer/product-display';
 import type { Cart } from './cart-api';
 import { CartLineRow } from './cart-line-row';
@@ -10,13 +11,18 @@ import './cart-page.css';
 
 function EmptyCart() {
   return (
-    <div className="card cart-empty">
-      <h2>Giỏ hàng của bạn đang trống</h2>
-      <p className="muted">Hãy chọn sản phẩm bạn thích rồi thêm vào giỏ.</p>
-      <Link to="/" className="btn btn-primary">
-        Tiếp tục mua sắm
-      </Link>
-    </div>
+    <ResultPanel
+      framed
+      tone="info"
+      icon="cart"
+      title="Giỏ hàng của bạn đang trống"
+      description="Hãy chọn sản phẩm bạn thích rồi thêm vào giỏ."
+      actions={
+        <Link to="/" className="btn btn-primary">
+          Tiếp tục mua sắm
+        </Link>
+      }
+    />
   );
 }
 

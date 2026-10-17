@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
 import { AuthCard } from './auth-ui';
-import { ErrorAlert } from '../../../shared/error-alert';
+import { ResultPanel } from '../../../shared/result-panel';
 
 // Trang xác thực email, mở từ link trong thư đăng ký.
 export function VerifyEmailPage() {
@@ -58,11 +58,25 @@ export function VerifyEmailPage() {
       });
   }, [token]);
 
+  // Ba trạng thái kết quả tự có tiêu đề `h1` riêng. Chỉ lúc đang xác thực mới cần tiêu đề của thẻ.
+  const showsResult = !token || success || Boolean(error);
+
   return (
-    <AuthCard title="Xác thực email">
+    <AuthCard title={showsResult ? undefined : 'Xác thực email'}>
       <div className="auth-result">
         {!token && (
-          <ErrorAlert message="Liên kết xác thực thiếu mã token. Vui lòng kiểm tra lại liên kết trong email của bạn." />
+          <ResultPanel
+            headingLevel={1}
+            tone="error"
+            title="Liên kết không hợp lệ"
+            description="Liên kết xác thực thiếu mã token. Vui lòng kiểm tra lại liên kết trong email của bạn."
+            announceDescription
+            actions={
+              <Link to="/" className="btn btn-outline btn-block">
+                Quay lại trang chủ
+              </Link>
+            }
+          />
         )}
 
         {loading && (
@@ -72,23 +86,33 @@ export function VerifyEmailPage() {
         )}
 
         {!loading && success && (
-          <>
-            <p role="status" className="alert alert-ok">
-              Chúc mừng! Địa chỉ email của bạn đã được xác thực thành công.
-            </p>
-            <Link to="/" className="btn btn-primary">
-              Về trang chủ mua sắm
-            </Link>
-          </>
+          <ResultPanel
+            headingLevel={1}
+            tone="success"
+            title="Email đã được xác thực"
+            description="Chúc mừng! Địa chỉ email của bạn đã được xác thực thành công."
+            announceDescription
+            actions={
+              <Link to="/" className="btn btn-primary btn-block">
+                Về trang chủ mua sắm
+              </Link>
+            }
+          />
         )}
 
         {!loading && error && (
-          <>
-            <ErrorAlert message={error} />
-            <Link to="/" className="auth-link">
-              Quay lại trang chủ
-            </Link>
-          </>
+          <ResultPanel
+            headingLevel={1}
+            tone="error"
+            title="Xác thực không thành công"
+            description={error}
+            announceDescription
+            actions={
+              <Link to="/" className="btn btn-outline btn-block">
+                Quay lại trang chủ
+              </Link>
+            }
+          />
         )}
       </div>
     </AuthCard>

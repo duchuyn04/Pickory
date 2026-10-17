@@ -8,6 +8,7 @@ import {
   type FieldErrors,
 } from '../../../shared/field-error';
 import { getEmailError } from '../../../shared/identity-validation';
+import { ResultPanel } from '../../../shared/result-panel';
 import { AuthCard } from './auth-ui';
 import { ErrorAlert } from '../../../shared/error-alert';
 
@@ -51,18 +52,25 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <AuthCard title="Quên mật khẩu" subtitle="Nhập email để nhận liên kết đặt lại mật khẩu">
+    <AuthCard
+      title={submitted ? undefined : 'Quên mật khẩu'}
+      subtitle={submitted ? undefined : 'Nhập email để nhận liên kết đặt lại mật khẩu'}
+    >
       {submitted ? (
-        <div className="auth-result">
-          {/* Cùng một câu cho email có và không có tài khoản, để không lộ email nào đã đăng ký. */}
-          <p role="status" className="alert alert-ok">
-            Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến hộp thư của
-            bạn.
-          </p>
-          <Link to="/login" className="auth-link">
-            Quay lại trang đăng nhập
-          </Link>
-        </div>
+        // Cùng một câu cho email có và không có tài khoản, để không lộ email nào đã đăng ký.
+        <ResultPanel
+          headingLevel={1}
+          tone="success"
+          icon="mail"
+          title="Kiểm tra hộp thư của bạn"
+          description="Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi đến hộp thư của bạn."
+          announceDescription
+          actions={
+            <Link to="/login" className="btn btn-outline btn-block">
+              Quay lại trang đăng nhập
+            </Link>
+          }
+        />
       ) : (
         <>
           {error && <ErrorAlert message={error} />}

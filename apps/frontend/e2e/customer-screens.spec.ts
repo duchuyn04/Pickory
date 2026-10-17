@@ -16,7 +16,7 @@ const publicScreens = [
   { path: '/register', heading: 'Đăng ký tài khoản', name: 'register' },
   { path: '/forgot-password', heading: 'Quên mật khẩu', name: 'forgot-password' },
   { path: '/reset-password?token=token-e2e', heading: 'Đặt lại mật khẩu', name: 'reset-password' },
-  { path: '/verify-email', heading: 'Xác thực email', name: 'verify-email' },
+  { path: '/verify-email', heading: 'Liên kết không hợp lệ', name: 'verify-email' },
   { path: '/privacy', heading: 'Cài đặt quyền riêng tư', name: 'privacy' },
 ];
 

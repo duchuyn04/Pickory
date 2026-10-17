@@ -8,6 +8,7 @@ import {
   hasFieldErrors,
   type FieldErrors,
 } from '../../../../shared/field-error';
+import { ResultPanel } from '../../../../shared/result-panel';
 import { AuthCard } from '../../../identity/customer/auth-ui';
 import {
   getLookupEmailError,
@@ -105,18 +106,27 @@ export function OrderLookupPage() {
 
   return (
     <AuthCard
-      title="Tra cứu đơn hàng"
-      subtitle="Hệ thống gửi link xem đơn tới email đã dùng khi đặt hàng."
+      title={submitted ? undefined : 'Tra cứu đơn hàng'}
+      subtitle={submitted ? undefined : 'Hệ thống gửi link xem đơn tới email đã dùng khi đặt hàng.'}
     >
       {submitted ? (
-        <div className="auth-result">
-          <p role="status" className="alert alert-ok">
-            {SUCCESS_MESSAGE}
-          </p>
-          <button type="button" className="btn btn-outline btn-block" onClick={handleLookupAnother}>
-            Tra cứu đơn khác
-          </button>
-        </div>
+        <ResultPanel
+          headingLevel={1}
+          tone="success"
+          icon="mail"
+          title="Kiểm tra hộp thư của bạn"
+          description={SUCCESS_MESSAGE}
+          announceDescription
+          actions={
+            <button
+              type="button"
+              className="btn btn-outline btn-block"
+              onClick={handleLookupAnother}
+            >
+              Tra cứu đơn khác
+            </button>
+          }
+        />
       ) : (
         <>
           {error && <ErrorAlert message={error} />}

@@ -165,19 +165,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.cart-empty {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-3);
-  align-items: flex-start;
-  padding: var(--space-5);
-}
-
-.cart-empty h2,
-.cart-empty p {
-  margin: 0;
-}
-
 /*
  * Màn hẹp: tóm tắt xuống dưới danh sách, mỗi dòng giỏ gọn hai hàng.
  * Hàng trên có ảnh, tên và nút xóa ở góc phải, hàng dưới có ô số lượng bên trái và thành tiền căn phải.

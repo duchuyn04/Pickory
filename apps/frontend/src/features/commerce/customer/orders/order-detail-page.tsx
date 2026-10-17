@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ApiError } from '../../../../shared/api';
 import { ErrorAlert } from '../../../../shared/error-alert';
-import { formatProductPrice } from '../../../catalog/customer/product-display';
+import { ResultPanel } from '../../../../shared/result-panel';
 import { CancelOrderDialog } from './cancel-order-dialog';
-import { ProductThumbnail } from '../product-thumbnail';
 import { formatOrderStatus, formatPaymentMethod, formatPaymentStatus } from '../../order-labels';
 import { formatDateTime } from './order-format';
+import { OrderItemsList, OrderPaymentRows, formatShippingAddress } from './order-sections';
 import { cancelOrder, fetchOrderDetail } from './orders-api';
 import './orders.css';
 
@@ -70,14 +70,24 @@ export function OrderDetailPage() {
   if (error instanceof ApiError && error.status === 404) {
     return (
       <main className="catalog-page order-detail-page">
-        <div className="card order-empty-state stack">
-          <h1>Không tìm thấy đơn hàng.</h1>
-          <div>
-            <Link to="/" className="btn btn-primary">
-              Về trang chủ
-            </Link>
-          </div>
-        </div>
+        <ResultPanel
+          framed
+          tone="info"
+          icon="search"
+          headingLevel={1}
+          title="Không tìm thấy đơn hàng"
+          description="Hãy kiểm tra lại link trong thư xác nhận. Nếu không còn link, bạn nhận link mới bằng mã đơn và email đặt hàng."
+          actions={
+            <>
+              <Link to="/order-lookup" className="btn btn-primary">
+                Tra cứu đơn hàng
+              </Link>
+              <Link to="/" className="btn btn-outline">
+                Về trang chủ
+              </Link>
+            </>
+          }
+        />
       </main>
     );
   }
@@ -151,30 +161,7 @@ export function OrderDetailPage() {
           {/* Danh sách các sản phẩm trong đơn hàng */}
           <section className="card order-card">
             <h2>Sản phẩm đã đặt</h2>
-            <ul className="order-items-list">
-              {order.items.map((item, index) => (
-                <li key={`${item.name}-${index}`} className="order-item-row">
-                  <ProductThumbnail
-                    imageUrl={item.imageUrl}
-                    size={64}
-                    className="order-line-image"
-                  />
-                  <div className="order-item-info">
-                    <p className="order-item-name">{item.name}</p>
-                    {item.variantName && <p className="order-item-meta">{item.variantName}</p>}
-                    <p className="order-item-meta">Số lượng: {item.quantity}</p>
-                  </div>
-                  <div className="order-item-price">
-                    <div className="order-item-unit-price">
-                      {formatProductPrice(item.unitPrice)}
-                    </div>
-                    <div className="order-item-line-total">
-                      {formatProductPrice(item.lineTotal)}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <OrderItemsList items={order.items} />
           </section>
 
           {/* Lịch sử và tiến trình thay đổi trạng thái của đơn */}
@@ -208,11 +195,7 @@ export function OrderDetailPage() {
             </p>
             <hr className="order-divider" />
             <h2>Địa chỉ giao hàng</h2>
-            <p>
-              {order.shippingAddress.line}
-              {order.shippingAddress.wardName && `, ${order.shippingAddress.wardName}`}
-              {order.shippingAddress.provinceName && `, ${order.shippingAddress.provinceName}`}
-            </p>
+            <p>{formatShippingAddress(order.shippingAddress)}</p>
           </section>
 
           {/* Hóa đơn VAT nếu có */}
@@ -234,26 +217,7 @@ export function OrderDetailPage() {
           {/* Tóm tắt thanh toán */}
           <section className="card order-card">
             <h2>Thanh toán</h2>
-            <div className="stack">
-              <div className="order-summary-row">
-                <span>Tạm tính</span>
-                <strong>{formatProductPrice(order.subtotal)}</strong>
-              </div>
-              <div className="order-summary-row">
-                <span>Phí vận chuyển</span>
-                <strong>{formatProductPrice(order.shippingFee)}</strong>
-              </div>
-              {order.shippingDiscount > 0 && (
-                <div className="order-summary-row order-summary-discount">
-                  <span>Miễn phí vận chuyển</span>
-                  <strong>-{formatProductPrice(order.shippingDiscount)}</strong>
-                </div>
-              )}
-              <div className="order-summary-row order-summary-total">
-                <span>Tổng cộng</span>
-                <strong className="order-total-price">{formatProductPrice(order.total)}</strong>
-              </div>
-            </div>
+            <OrderPaymentRows order={order} />
           </section>
         </aside>
       </div>
