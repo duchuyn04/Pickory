@@ -10,6 +10,7 @@ using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Configuration;
 using Pickory.Modules.Commerce.Orders;
 using Pickory.Modules.Commerce.Orders.Admin;
+using Pickory.Modules.Commerce.Orders.Lookup;
 using Pickory.Modules.Commerce.Payments;
 using Pickory.Modules.Commerce.Payments.Admin;
 using Pickory.Modules.Commerce.Persistence;
@@ -72,6 +73,10 @@ public static class CommerceModule
 
         // Bộ đếm tần suất của route preview nằm trong bộ nhớ, nên phải là singleton để mọi request dùng chung một bộ đếm.
         services.AddSingleton<CheckoutPreviewRateLimiter>();
+        // Dịch vụ tra cứu đơn hàng bằng mã đơn và email phục vụ khách vãng lai.
+        services.AddScoped<OrderLookupService>();
+        // Bộ đếm tần suất tra cứu đơn hàng là singleton để dùng chung bộ nhớ giữa các request.
+        services.AddSingleton<OrderLookupRateLimiter>();
         // Webhook giữ bộ đếm chung theo IP, còn dịch vụ khớp dùng context riêng của từng request.
         services.AddSingleton<SepayWebhookRateLimiter>();
         services.AddScoped<SepayPaymentService>();
@@ -113,6 +118,7 @@ public static class CommerceModule
         CartEndpoints.Map(moduleRoutes);
         CheckoutEndpoints.Map(moduleRoutes);
         OrderEndpoints.Map(moduleRoutes);
+        OrderLookupEndpoints.Map(moduleRoutes);
         SavedAddressEndpoints.Map(moduleRoutes);
         ReviewEndpoints.Map(moduleRoutes);
         AdminReviewEndpoints.Map(moduleRoutes);

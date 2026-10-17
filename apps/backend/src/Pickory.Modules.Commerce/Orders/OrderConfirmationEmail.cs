@@ -93,6 +93,6 @@ public static class OrderConfirmationEmail
         };
 
     private static string BuildOrderLink(string webOrigin, string orderCode, string accessToken) =>
-        // Mã đơn và token đi qua `EscapeDataString`, để ký tự lạ không đổi nghĩa của đường dẫn hay query.
-        $"{webOrigin.TrimEnd('/')}/orders/{Uri.EscapeDataString(orderCode)}?t={Uri.EscapeDataString(accessToken)}";
+        // Dùng bộ dựng liên kết chung để định dạng link đồng nhất giữa các thư.
+        OrderLinkBuilder.Build(webOrigin, orderCode, accessToken);
 }
