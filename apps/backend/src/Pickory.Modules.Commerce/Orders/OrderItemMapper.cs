@@ -30,7 +30,7 @@ internal static class OrderItemMapper
     public static string? ResolveImageUrl(ICatalogReader catalogReader, string? publicId) =>
         string.IsNullOrEmpty(publicId) ? null : catalogReader.BuildProductImageUrl(publicId);
 
-    private static string? FormatVariantName(JsonDocument? optionValues)
+    internal static string? FormatVariantName(JsonDocument? optionValues)
     {
         // Bỏ qua định dạng khi dòng đơn không có tùy chọn biến thể.
         if (optionValues is null)

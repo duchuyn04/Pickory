@@ -1,4 +1,3 @@
-using System.Globalization;
 using System.Text.Json;
 using FluentValidation;
 using FluentValidation.Results;
@@ -49,52 +48,28 @@ internal sealed class ReviewService(
             throw new ValidationException([new ValidationFailure("cursor", CursorMessage)]);
         }
 
-        var summary = await BuildSummaryAsync(productId, cancellationToken);
+        var summary = await VisibleReviewReader.ReadProductSummaryAsync(database, productId, cancellationToken);
 
-        // Chỉ đánh giá đang hiện được liệt kê. Tóm tắt và trang dùng cùng điều kiện nên số liệu khớp nhau.
-        var visible = database.Reviews.AsNoTracking()
-            .Where(review => review.ProductId == productId && review.HiddenAt == null);
+        // Đọc các dòng đánh giá hiển thị qua hàm dùng chung để thống nhất điều kiện lọc.
+        var queryResult = await VisibleReviewReader.ReadVisibleReviewsAsync(
+            database,
+            productId,
+            limit,
+            hasCursor ? cursorCreatedAt : null,
+            hasCursor ? cursorId : null,
+            cancellationToken);
 
-        // Cursor trỏ tới dòng cuối của trang trước. Dòng cùng thời điểm được chia nốt theo `Id` để không lặp hay mất dòng.
-        if (hasCursor)
-        {
-            visible = visible.Where(review =>
-                review.CreatedAt < cursorCreatedAt
-                || (review.CreatedAt == cursorCreatedAt && review.Id.CompareTo(cursorId) > 0));
-        }
-
-        // Lấy thêm một dòng để biết còn trang sau mà không cần đếm cả bảng.
-        var rows = await visible
-            .OrderByDescending(review => review.CreatedAt)
-            .ThenBy(review => review.Id)
-            .Take(limit + 1)
-            .Select(review => new
-            {
-                review.Id, review.Rating, review.Body, review.UserId, review.CreatedAt, review.UpdatedAt,
-                // Tên người nhận nằm trong `Contact` của đơn gắn với đánh giá, vì identity không có hàm đọc tên cho module khác.
-                Contact = review.Order!.Contact,
-            })
-            .ToListAsync(cancellationToken);
-
-        var pageRows = rows.Take(limit).ToList();
-        string? nextCursor = null;
-        if (rows.Count > limit)
-        {
-            var last = pageRows[^1];
-            nextCursor = ReviewCursor.Encode(last.CreatedAt, last.Id);
-        }
-
-        var items = pageRows
+        var items = queryResult.Items
             .Select(row => new PublicReviewResponse(
                 row.Id,
                 row.Rating,
                 row.Body,
-                ReviewAuthorName.ForReview(row.UserId, row.Contact),
-                AsUtc(row.CreatedAt),
-                AsUtc(row.UpdatedAt)))
+                row.AuthorName,
+                row.CreatedAt,
+                row.UpdatedAt))
             .ToList();
 
-        return new ProductReviewListResponse(summary, items, nextCursor);
+        return new ProductReviewListResponse(summary, items, queryResult.NextCursor);
     }
 
     public async Task<MyReviewStatusResponse> GetMineAsync(string productId, string userId, CancellationToken cancellationToken)
@@ -219,33 +194,6 @@ internal sealed class ReviewService(
             .OrderByDescending(order => order.CreatedAt)
             .Select(order => order.Id)
             .FirstOrDefaultAsync(cancellationToken);
-    }
-
-    private async Task<ProductReviewSummaryResponse> BuildSummaryAsync(string productId, CancellationToken cancellationToken)
-    {
-        // Một truy vấn nhóm theo số sao trên đánh giá đang hiện. Số lượng và điểm trung bình tính từ cùng kết quả.
-        var counts = await database.Reviews.AsNoTracking()
-            .Where(review => review.ProductId == productId && review.HiddenAt == null)
-            .GroupBy(review => review.Rating)
-            .Select(group => new { Rating = group.Key, Count = group.Count() })
-            .ToListAsync(cancellationToken);
-
-        // Luôn đủ năm khóa, kể cả mức sao chưa có đánh giá, để UI vẽ biểu đồ không phải đoán khóa thiếu.
-        var distribution = Enumerable.Range(ReviewRequests.MinRating, ReviewRequests.MaxRating - ReviewRequests.MinRating + 1)
-            .ToDictionary(
-                star => star.ToString(CultureInfo.InvariantCulture),
-                star => counts.Where(row => row.Rating == star).Sum(row => row.Count));
-
-        var total = distribution.Values.Sum();
-        if (total == 0)
-        {
-            return new ProductReviewSummaryResponse(null, 0, distribution);
-        }
-
-        var weightedSum = counts.Sum(row => row.Rating * row.Count);
-        // Làm tròn một chữ số thập phân theo kiểu thông thường (0,5 làm tròn lên), không theo kiểu làm tròn về số chẵn.
-        var average = Math.Round((double)weightedSum / total, 1, MidpointRounding.AwayFromZero);
-        return new ProductReviewSummaryResponse(average, total, distribution);
     }
 
     private async Task PublishChangeAsync(Review review, ReviewChange change, CancellationToken cancellationToken)
