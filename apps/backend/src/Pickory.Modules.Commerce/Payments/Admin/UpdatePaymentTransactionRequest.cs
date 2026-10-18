@@ -9,7 +9,6 @@ internal sealed record UpdatePaymentTransactionRequest(string? OrderCode, bool I
 {
     public const string OrderCodeField = "orderCode";
     public const string MatchStatusField = "matchStatus";
-    public const string IgnoredValue = "ignored";
 
     private const string UnknownFieldMessage = "Trường này không được hỗ trợ.";
     private const string EitherFieldRequiredMessage = "Chỉ gửi một trong `orderCode` hoặc `matchStatus`.";
@@ -69,7 +68,7 @@ internal sealed record UpdatePaymentTransactionRequest(string? OrderCode, bool I
 
         // Chỉ `ignored` là trạng thái nhân viên được đặt tay. `matched` chỉ có qua việc gắn đơn.
         if (matchStatusElement.ValueKind != JsonValueKind.String
-            || !string.Equals(matchStatusElement.GetString(), IgnoredValue, StringComparison.Ordinal))
+            || !string.Equals(matchStatusElement.GetString(), PaymentMatchStatuses.Ignored, StringComparison.Ordinal))
         {
             failures.Add(new ValidationFailure(MatchStatusField, MatchStatusInvalidMessage));
             return empty;

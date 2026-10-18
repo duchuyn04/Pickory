@@ -15,7 +15,6 @@ public sealed class OrderTrackingService(
     OrderCancellationService cancellation)
 {
     private const string OrderNotFoundMessage = "Không tìm thấy đơn hàng.";
-    private const string CustomerCancellationReason = "Khách tự hủy.";
 
     public async Task<PagedResponse<OrderListItemResponse>> GetListAsync(
         string userId,
@@ -140,7 +139,7 @@ public sealed class OrderTrackingService(
         // Phần hủy dùng chung với nhân viên: khóa đơn, trả kho, đổi trạng thái, ghi lịch sử và phát sự kiện.
         var order = await cancellation.CancelAsync(
             initial.Id,
-            new OrderCancellationRequest(TransitionActor.Customer, callerUserId, CustomerCancellationReason),
+            new OrderCancellationRequest(TransitionActor.Customer, callerUserId, OrderReportMarkers.CustomerCancellationReason),
             cancellationToken);
 
         return ToDetailResponse(order);

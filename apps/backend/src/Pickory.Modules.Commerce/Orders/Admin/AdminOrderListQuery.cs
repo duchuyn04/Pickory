@@ -24,7 +24,7 @@ public sealed record AdminOrderListQuery(
         "underpaid",
         "overpaid",
         "late_payment",
-        "payment_expired",
+        OrderReportMarkers.PaymentExpiredFlag,
         AdminOrderActionService.InvoiceIssuedFlag,
         ShipmentStatusChangedHandler.ShipmentCancelledFlag,
     ];

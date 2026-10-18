@@ -21,7 +21,7 @@ internal sealed class SepayOrderMatcher(CommerceDbContext database, TimeProvider
         Order order, PaymentTransaction payment, DomainEventCollector events, string? actorId, CancellationToken cancellationToken)
     {
         // Chỉ đơn hết hạn chưa trả tiền được giữ lại hàng, không khôi phục đơn khách tự hủy.
-        if (order.Status == OrderStatus.Cancelled && order.Flags.Contains("payment_expired")
+        if (order.Status == OrderStatus.Cancelled && order.Flags.Contains(OrderReportMarkers.PaymentExpiredFlag)
             && order.PaymentMethod == PaymentMethod.Sepay && order.PaymentStatus == PaymentStatus.Unpaid)
         {
             // Chỉ khôi phục cần dòng hàng, nên chứng từ thường không tải snapshot sản phẩm thừa.
@@ -39,7 +39,7 @@ internal sealed class SepayOrderMatcher(CommerceDbContext database, TimeProvider
             return false;
         }
         // Chỉ dòng `matched` được gắn `OrderId`, hai trường phải commit cùng nhau.
-        payment.MatchStatus = "matched";
+        payment.MatchStatus = PaymentMatchStatuses.Matched;
         payment.OrderId = order.Id;
         // So từng giao dịch với tổng đơn, không cộng dồn nhiều lần chuyển thiếu tiền.
         if (payment.Amount >= order.Total)

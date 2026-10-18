@@ -58,6 +58,33 @@ public sealed class VietnamCalendarTests
     }
 
     [Fact]
+    // Giây cuối cùng trước nửa đêm giờ Việt Nam (16:59:59.999999 UTC) vẫn thuộc ngày D.
+    public void ToVietnamDate_LastMomentBeforeVietnamMidnight_IsSameDay()
+    {
+        var moment = new DateTime(2026, 10, 5, 16, 59, 59, DateTimeKind.Utc).AddTicks(9_999);
+
+        Assert.Equal(new DateOnly(2026, 10, 5), VietnamCalendar.ToVietnamDate(moment));
+    }
+
+    [Fact]
+    // Đúng 17:00:00 UTC là nửa đêm giờ Việt Nam, nên thuộc ngày D+1.
+    public void ToVietnamDate_VietnamMidnight_IsNextDay()
+    {
+        var moment = new DateTime(2026, 10, 5, 17, 0, 0, DateTimeKind.Utc);
+
+        Assert.Equal(new DateOnly(2026, 10, 6), VietnamCalendar.ToVietnamDate(moment));
+    }
+
+    [Fact]
+    // Bên gọi có thể truyền `DateTime` có `Kind` không xác định. Hàm vẫn phải hiểu giá trị đó là giờ UTC.
+    public void ToVietnamDate_UnspecifiedKind_IsTreatedAsUtc()
+    {
+        var moment = new DateTime(2026, 12, 31, 17, 0, 0, DateTimeKind.Unspecified);
+
+        Assert.Equal(new DateOnly(2027, 1, 1), VietnamCalendar.ToVietnamDate(moment));
+    }
+
+    [Fact]
     // Ngày cuối năm vẫn cộng đúng một ngày.
     public void DayEndExclusiveUtc_HandlesYearBoundary()
     {

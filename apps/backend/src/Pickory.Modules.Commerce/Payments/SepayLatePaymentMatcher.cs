@@ -16,7 +16,7 @@ internal sealed class SepayLatePaymentMatcher(CommerceDbContext database, IStock
         Order order, PaymentTransaction payment, DomainEventCollector events, string? actorId, CancellationToken cancellationToken)
     {
         // Tiền về muộn vẫn phải gắn chứng từ cho đơn kể cả khi cần hoàn tiền.
-        payment.MatchStatus = "matched";
+        payment.MatchStatus = PaymentMatchStatuses.Matched;
         payment.OrderId = order.Id;
         // Chuyển thiếu không cộng dồn, vì mỗi chứng từ phải đủ tiền để khôi phục đơn.
         if (payment.Amount < order.Total)
@@ -47,7 +47,7 @@ internal sealed class SepayLatePaymentMatcher(CommerceDbContext database, IStock
         // Chỉ chuyển đơn sau khi cả luật thanh toán và luật đơn đã chấp nhận.
         order.Status = OrderStatus.PendingConfirmation;
         // Bỏ dấu hết hạn để lần hủy sau không bị coi là lần hết hạn còn có thể khôi phục.
-        order.Flags.Remove("payment_expired");
+        order.Flags.Remove(OrderReportMarkers.PaymentExpiredFlag);
         AddFlag(order, "late_payment");
         if (payment.Amount > order.Total)
         {

@@ -8,7 +8,7 @@ namespace Pickory.Modules.Commerce.Payments.Admin;
 public sealed record AdminPaymentTransactionListQuery(PageQuery Page, string? MatchStatus, string? OrderFlag)
 {
     // Ba trạng thái khớp mà `SepayPaymentService` và route đối soát tay ghi vào `payment_transactions.matchStatus`.
-    public static readonly IReadOnlyList<string> KnownMatchStatuses = ["unmatched", "matched", "ignored"];
+    public static readonly IReadOnlyList<string> KnownMatchStatuses = [PaymentMatchStatuses.Unmatched, PaymentMatchStatuses.Matched, PaymentMatchStatuses.Ignored];
 
     // Màn đối soát chỉ cần hai cờ do lệch số tiền chuyển khoản. Các cờ khác của đơn không thuộc màn này.
     public static readonly IReadOnlyList<string> KnownOrderFlags = ["underpaid", "overpaid"];

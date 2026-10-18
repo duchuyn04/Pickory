@@ -27,7 +27,7 @@ internal sealed class SepayPaymentService(
         var payment = new PaymentTransaction
         {
             Provider = "sepay", ProviderTxId = providerId, Amount = payload.Amount,
-            Content = payload.Content, Raw = payload.Raw, MatchStatus = "unmatched", OrderId = null,
+            Content = payload.Content, Raw = payload.Raw, MatchStatus = PaymentMatchStatuses.Unmatched, OrderId = null,
             ReceivedAt = clock.GetUtcNow().UtcDateTime,
         };
         try
@@ -80,7 +80,7 @@ internal sealed class SepayPaymentService(
         // Tiền ra hoặc tài khoản chưa cấu hình không được ghi nhận thanh toán của khách.
         if (payload.TransferType != "in" || string.IsNullOrEmpty(accountNumber) || payload.AccountNumber != accountNumber)
         {
-            payment.MatchStatus = "ignored";
+            payment.MatchStatus = PaymentMatchStatuses.Ignored;
             return;
         }
         // Parser trả mã đầu tiên đã chuẩn hóa, không dùng trường code tùy chọn của SePay.

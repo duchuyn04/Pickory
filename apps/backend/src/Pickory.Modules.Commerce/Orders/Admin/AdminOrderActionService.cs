@@ -31,7 +31,6 @@ public sealed class AdminOrderActionService(
     private const string InvoiceNotRequestedMessage = "Đơn này không có thông tin hóa đơn VAT để đánh dấu.";
     private const string InvoiceOrderEndedMessage = "Đơn đã hủy hoặc đã hoàn nên không đánh dấu xuất hóa đơn.";
     private const string InvoiceIssuedReason = "Đã xuất hóa đơn VAT.";
-    private const string CodReceivedReason = "Đã nhận tiền COD từ GHN.";
     private const string CodReceiptNotCodMessage = "Chỉ đơn COD mới nhận tiền COD từ GHN.";
     private const string CodReceiptNotDeliveredMessage = "Chỉ nhận tiền COD của đơn đã giao.";
     private const string CodReceiptPaymentStateMessage = "Thanh toán của đơn không còn ở trạng thái chưa trả.";
@@ -194,7 +193,7 @@ public sealed class AdminOrderActionService(
 
             // Trạng thái đơn không đổi nên `fromStatus` bằng `toStatus`, và không phát `OrderStatusChangedEvent`.
             var now = OrderHistoryEntries.TruncateToMicroseconds(clock.GetUtcNow().UtcDateTime);
-            OrderHistoryEntries.Add(database, order, order.Status, order.Status, actorId, CodReceivedReason, now);
+            OrderHistoryEntries.Add(database, order, order.Status, order.Status, actorId, OrderReportMarkers.CodReceivedReason, now);
 
             // Gom sự kiện để phát sau commit. `Amount` là tổng tiền đơn, vì GHN thu đủ khi giao.
             events.Emit(new OrderPaidEvent(order.Id, order.Code, order.UserId, order.AnonymousId, order.Total));

@@ -22,8 +22,6 @@ internal sealed class AdminPaymentReconciliationService(
     public const string IgnoreAuditAction = "commerce.payment.ignore";
     public const string AuditTargetType = "payment_transaction";
 
-    private const string UnmatchedStatus = "unmatched";
-    private const string IgnoredStatus = "ignored";
     private const string InvalidMatchCode = "INVALID_PAYMENT_MATCH";
     private const string TransactionNotFoundMessage = "Không tìm thấy giao dịch.";
     private const string OrderNotFoundMessage = "Không tìm thấy đơn hàng.";
@@ -72,7 +70,7 @@ internal sealed class AdminPaymentReconciliationService(
                 AttachAuditAction,
                 AuditTargetType,
                 payment.Id,
-                new { matchStatus = UnmatchedStatus, orderCode = (string?)null },
+                new { matchStatus = PaymentMatchStatuses.Unmatched, orderCode = (string?)null },
                 new { matchStatus = payment.MatchStatus, orderCode = order.Code });
             await auditLogWriter.WriteAsync(entry, transaction.GetDbTransaction(), cancellationToken);
 
@@ -99,7 +97,7 @@ internal sealed class AdminPaymentReconciliationService(
         var payment = await LoadUnmatchedForUpdateAsync(transactionId, cancellationToken);
 
         // Đánh dấu bỏ qua không có đơn gắn kèm, nên `OrderId` giữ `null`.
-        payment.MatchStatus = IgnoredStatus;
+        payment.MatchStatus = PaymentMatchStatuses.Ignored;
         await database.SaveChangesAsync(cancellationToken);
 
         // Mỗi lần đánh dấu ghi một dòng audit trong cùng transaction.
@@ -108,8 +106,8 @@ internal sealed class AdminPaymentReconciliationService(
             IgnoreAuditAction,
             AuditTargetType,
             payment.Id,
-            new { matchStatus = UnmatchedStatus, orderCode = (string?)null },
-            new { matchStatus = IgnoredStatus, orderCode = (string?)null });
+            new { matchStatus = PaymentMatchStatuses.Unmatched, orderCode = (string?)null },
+            new { matchStatus = PaymentMatchStatuses.Ignored, orderCode = (string?)null });
         await auditLogWriter.WriteAsync(entry, transaction.GetDbTransaction(), cancellationToken);
 
         await transaction.CommitAsync(cancellationToken);
@@ -132,7 +130,7 @@ internal sealed class AdminPaymentReconciliationService(
         }
 
         // Giao dịch đã khớp hoặc đã bỏ qua là kết quả đã chốt, nên không cho đổi lần hai.
-        if (payment.MatchStatus != UnmatchedStatus)
+        if (payment.MatchStatus != PaymentMatchStatuses.Unmatched)
         {
             throw new AppException(InvalidMatchCode, 409, AlreadyResolvedMessage);
         }

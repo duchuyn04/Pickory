@@ -9,6 +9,7 @@ using Pickory.Modules.Commerce.Carts;
 using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Configuration;
 using Pickory.Modules.Commerce.Contracts.Reading;
+using Pickory.Modules.Commerce.Contracts.Reports;
 using Pickory.Modules.Commerce.Orders;
 using Pickory.Modules.Commerce.Orders.Admin;
 using Pickory.Modules.Commerce.Orders.Lookup;
@@ -16,6 +17,7 @@ using Pickory.Modules.Commerce.Payments;
 using Pickory.Modules.Commerce.Payments.Admin;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Commerce.Reading;
+using Pickory.Modules.Commerce.Reports;
 using Pickory.Modules.Commerce.Reviews;
 using Pickory.Modules.Commerce.Reviews.Admin;
 using Pickory.Modules.Commerce.Settings;
@@ -57,6 +59,8 @@ public static class CommerceModule
         services.AddScoped<AdminReviewModerationService>();
         // Module khác đọc dữ liệu commerce qua cổng này thay vì đọc bảng trực tiếp.
         services.AddScoped<ICommerceReader, CommerceReader>();
+        // Cổng báo cáo cho `admin-console` đọc doanh thu, bán theo sản phẩm và việc chờ, thay vì đọc bảng trực tiếp.
+        services.AddScoped<ICommerceReports, CommerceReports>();
         // Preview đọc giỏ, catalog và shipping, rồi tính tiền mà không ghi DB.
         services.AddScoped<CheckoutPreviewService>();
         // Đặt đơn dùng lại phần tính tiền của preview, rồi giữ hàng và ghi đơn trong một transaction.

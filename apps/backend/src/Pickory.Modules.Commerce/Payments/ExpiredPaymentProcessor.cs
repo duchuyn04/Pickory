@@ -79,9 +79,9 @@ public sealed class ExpiredPaymentProcessor(
         // Chỉ đổi trạng thái sau khi kho đã trả thành công trong transaction hiện tại.
         order.Status = OrderStatus.Cancelled;
         // Cờ phân biệt hết hạn với khách tự hủy, không cho webhook khôi phục nhầm đơn.
-        if (!order.Flags.Contains("payment_expired"))
+        if (!order.Flags.Contains(OrderReportMarkers.PaymentExpiredFlag))
         {
-            order.Flags.Add("payment_expired");
+            order.Flags.Add(OrderReportMarkers.PaymentExpiredFlag);
         }
         // Lịch sử cùng commit với cờ để webhook phân biệt đúng nguyên nhân đơn bị hủy.
         database.OrderStatusHistory.Add(new OrderStatusHistory
