@@ -51,10 +51,6 @@ Thumbs.db
 # File khóa phiên bản skill của công cụ agent trên máy, không thuộc mã nguồn.
 /skills-lock.json
 
-# Spec, task, tài liệu và bản mẫu giao diện là ghi chép làm việc trên máy, không đưa lên repo.
-/spec/*
-/tasks/
+# Tài liệu và bản mẫu giao diện là ghi chép làm việc trên máy, không đưa lên repo.
 /docs/
 /shop-retail/
-# Test backend và frontend cùng đọc dữ liệu mẫu trong `spec/fixtures`, nên thư mục này phải ở lại repo.
-!/spec/fixtures/
