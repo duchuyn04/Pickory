@@ -16,8 +16,8 @@ coverage/
 playwright-report/
 test-results/
 
-# Claude Code: chỉ commit settings.json của project
-.claude/settings.local.json
+# Cấu hình và skill của Claude Code chỉ dùng trên máy, không đưa lên repo.
+/.claude/
 
 # OS, editor
 .DS_Store
@@ -42,3 +42,19 @@ Thumbs.db
 **/bin/
 **/obj/
 .vs/
+
+# Tài liệu riêng trên máy: báo cáo môn học và ảnh logo gốc. Không thuộc mã nguồn.
+/baocao/
+/Inovexa-logo.png
+/pickory-logo.png
+
+# File khóa phiên bản skill của công cụ agent trên máy, không thuộc mã nguồn.
+/skills-lock.json
+
+# Spec, task, tài liệu và bản mẫu giao diện là ghi chép làm việc trên máy, không đưa lên repo.
+/spec/*
+/tasks/
+/docs/
+/shop-retail/
+# Test backend và frontend cùng đọc dữ liệu mẫu trong `spec/fixtures`, nên thư mục này phải ở lại repo.
+!/spec/fixtures/
