@@ -59,6 +59,10 @@ public static class E2eStartup
             ("e2e-screens-customer@pickory.local", "Khách Giao Diện E2E", "0987654321"),
             ("e2e-orders-customer@pickory.local", "Khách Đơn Hàng E2E", "0987654321"),
             ("e2e-seed-verification@pickory.local", "Khách Xác Thực Seed E2E", "0987654321"),
+            // Mỗi khách chỉ đánh giá được một lần cho một sản phẩm, nên spec kiểm duyệt đánh giá cần ba khách riêng.
+            ("e2e-reviews-visible@pickory.local", "Khách Đánh Giá Hiện E2E", "0987654321"),
+            ("e2e-reviews-hidden@pickory.local", "Khách Đánh Giá Ẩn E2E", "0987654321"),
+            ("e2e-reviews-unreceived@pickory.local", "Khách Chưa Nhận Hàng E2E", "0987654321"),
         };
         var accountPassword = configuration["E2E_ACCOUNT_PASSWORD"]
             ?? throw new InvalidOperationException("E2E cần E2E_ACCOUNT_PASSWORD để tạo tài khoản khách fixture.");

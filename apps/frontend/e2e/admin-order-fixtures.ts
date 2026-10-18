@@ -16,8 +16,11 @@ export async function expectNoHorizontalOverflow(page: Page) {
 }
 
 export interface SeededProduct {
+  id: string;
   name: string;
   slug: string;
+  skuId: string;
+  price: number;
 }
 
 export interface AddressChoice {
@@ -39,6 +42,7 @@ export async function seedProduct(page: Page): Promise<SeededProduct> {
   });
   expect(brand.status(), await brand.text()).toBe(201);
 
+  const price = 450_000;
   const name = `Chuột không dây ${suffix}`;
   const created = await page.request.post('/api/admin/products', {
     headers: adminHeaders,
@@ -53,7 +57,7 @@ export async function seedProduct(page: Page): Promise<SeededProduct> {
       variants: [
         {
           optionValues: {},
-          price: 450_000,
+          price,
           compareAtPrice: null,
           enabled: true,
           weightGrams: 200,
@@ -72,7 +76,8 @@ export async function seedProduct(page: Page): Promise<SeededProduct> {
     variants: { id: string }[];
   };
 
-  const stocked = await page.request.post(`/api/admin/skus/${product.variants[0]!.id}/movements`, {
+  const skuId = product.variants[0]!.id;
+  const stocked = await page.request.post(`/api/admin/skus/${skuId}/movements`, {
     headers: adminHeaders,
     data: { delta: 50, reason: 'Nhập kho E2E đơn admin' },
   });
@@ -83,41 +88,56 @@ export async function seedProduct(page: Page): Promise<SeededProduct> {
   });
   expect(published.status(), await published.text()).toBe(200);
 
-  return { name, slug: product.slug };
+  return { id: product.id, name, slug: product.slug, skuId, price };
 }
 
-// Chọn tỉnh và phường đầu tiên của API địa chỉ, rồi cấu hình kho gửi để tính được phí vận chuyển.
+export interface ShippingAddressChoice extends AddressChoice {
+  provinceCode: string;
+  wardCode: string;
+}
+
+// Đọc tỉnh và phường đầu tiên của API địa chỉ. Mọi spec chọn cùng một địa chỉ, nên GHN giả tính được phí giống nhau.
+export async function readFirstShippingAddress(page: Page): Promise<ShippingAddressChoice> {
+  const provincesResponse = await page.request.get('/api/addresses/provinces');
+  // Kiểm mã trạng thái trước khi đọc JSON, để lỗi API báo đúng chỗ thay vì lỗi đọc dữ liệu rỗng.
+  expect(provincesResponse.status(), await provincesResponse.text()).toBe(200);
+  const province = ((await provincesResponse.json()).data as { code: string; name: string }[])[0]!;
+
+  const wardsResponse = await page.request.get(
+    `/api/addresses/wards?provinceCode=${encodeURIComponent(province.code)}`,
+  );
+  expect(wardsResponse.status(), await wardsResponse.text()).toBe(200);
+  const ward = ((await wardsResponse.json()).data as { code: string; name: string }[])[0]!;
+
+  return {
+    provinceCode: province.code,
+    provinceName: province.name,
+    wardCode: ward.code,
+    wardName: ward.name,
+  };
+}
+
+// Cấu hình kho gửi bằng địa chỉ đầu tiên để tính được phí vận chuyển. Trả tên tỉnh và phường để khách chọn khi đặt hàng.
 export async function prepareShipping(page: Page): Promise<AddressChoice> {
-  const provinces = (await (await page.request.get('/api/addresses/provinces')).json()).data as {
-    code: string;
-    name: string;
-  }[];
-  const province = provinces[0]!;
-  const wards = (
-    await (
-      await page.request.get(
-        `/api/addresses/wards?provinceCode=${encodeURIComponent(province.code)}`,
-      )
-    ).json()
-  ).data as { code: string; name: string }[];
-  const ward = wards[0]!;
+  const { provinceCode, provinceName, wardCode, wardName } = await readFirstShippingAddress(page);
 
   const settings = await page.request.put('/api/admin/shipping/settings', {
     headers: adminHeaders,
     data: {
       senderName: 'Kho Pickory E2E',
       senderPhone: '0912345678',
-      provinceCode: province.code,
-      wardCode: ward.code,
+      provinceCode,
+      wardCode,
       line: '12 Phố Kho',
       defaultServiceTypeId: 2,
     },
   });
   expect(settings.status(), await settings.text()).toBe(200);
-  return { provinceName: province.name, wardName: ward.name };
+  return { provinceName, wardName };
 }
 
-async function chooseOption(page: Page, inputId: string, name: string) {
+// Chữ gõ vào `AddressPicker` chỉ lọc danh sách, không thành giá trị. Hàm bấm đúng dòng có tên cần chọn, để không phụ thuộc dòng nào đang sáng.
+export async function chooseOption(page: Page, inputId: string, name: string) {
   const input = page.locator(`#${inputId}`);
   await expect(input).toBeEnabled();
   await input.fill(name);

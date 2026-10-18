@@ -46,6 +46,8 @@ export default defineConfig({
         LLM_MODEL: '',
         EMBEDDING_API_KEY: '',
         SEPAY_WEBHOOK_API_KEY: e2eEnvironment.sepayWebhookApiKey,
+        // Webhook GHN cần bí mật để test gọi được `POST /api/webhooks/ghn`. Thiếu biến này webhook luôn trả 401.
+        GHN_WEBHOOK_SECRET: e2eEnvironment.ghnWebhookSecret,
       },
     },
     {

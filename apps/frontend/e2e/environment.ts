@@ -35,6 +35,8 @@ process.env.E2E_ACCOUNT_PASSWORD ??= randomBytes(24).toString('base64url');
 export const e2eEnvironment = {
   // Khóa giả chỉ dùng cho API E2E, không dùng cho môi trường thật.
   sepayWebhookApiKey: 'com-ui4-e2e-key',
+  // Bí mật giả của webhook GHN, chỉ dùng cho API E2E. API thật dùng `GHN_WEBHOOK_SECRET` riêng.
+  ghnWebhookSecret: 'com-e2e3-ghn-webhook-secret',
   databaseUrl: databaseUrl.toString(),
   webOrigin: 'http://127.0.0.1:4173',
   apiOrigin: 'http://127.0.0.1:3101',
@@ -46,13 +48,21 @@ export const e2eEnvironment = {
   screensCustomerEmail: 'e2e-screens-customer@pickory.local',
   ordersCustomerEmail: 'e2e-orders-customer@pickory.local',
   seedVerificationEmail: 'e2e-seed-verification@pickory.local',
+  // Spec kiểm duyệt đánh giá dùng ba khách riêng. Mỗi khách chỉ đánh giá được một lần cho một sản phẩm.
+  reviewsVisibleCustomerEmail: 'e2e-reviews-visible@pickory.local',
+  reviewsHiddenCustomerEmail: 'e2e-reviews-hidden@pickory.local',
+  reviewsUnreceivedCustomerEmail: 'e2e-reviews-unreceived@pickory.local',
   salesEmail: 'e2e-identity-sales@pickory.local',
   catalogSalesEmail: 'e2e-catalog-sales@pickory.local',
   inventorySalesEmail: 'e2e-inventory-sales@pickory.local',
   productStatusSalesEmail: 'e2e-product-status-sales@pickory.local',
   shippingSalesEmail: 'e2e-shipping-sales@pickory.local',
   commerceSalesEmail: 'e2e-commerce-sales@pickory.local',
+  // Spec fulfillment dùng hai nhân viên riêng, để vai trò của họ không lẫn với các spec khác.
+  fulfillmentSalesEmail: 'e2e-fulfillment-sales@pickory.local',
+  fulfillmentSupportEmail: 'e2e-fulfillment-support@pickory.local',
   reviewsSalesEmail: 'e2e-reviews-sales@pickory.local',
+  reviewsSupportEmail: 'e2e-reviews-support@pickory.local',
   accountPassword: process.env.E2E_ACCOUNT_PASSWORD,
   outboxDirectory: fileURLToPath(
     new URL('../../backend/.dev-outbox/e2e-identity/', import.meta.url),

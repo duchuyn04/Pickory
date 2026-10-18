@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test';
+import { expect, type ConsoleMessage, type Page } from '@playwright/test';
 import { e2eEnvironment } from './environment';
 
 // Ảnh PNG 1x1 trả cho mọi yêu cầu ảnh sản phẩm, để trình duyệt không ghi lỗi tải ảnh vào console.
@@ -7,12 +7,33 @@ export const tinyPng = Buffer.from(
   'base64',
 );
 
-// Ghi lỗi console và lỗi trang. Mỗi test phải kết thúc với 0 lỗi và 0 cảnh báo.
-export function collectConsoleIssues(page: Page): string[] {
+// Một lỗi tải mà test chủ động gây ra. Trình duyệt ghi dòng "Failed to load resource" kèm mã trạng thái cho phản hồi đó.
+export interface AllowedLoadFailure {
+  urlPattern: RegExp;
+  status: number;
+}
+
+// Dòng console có đúng là dòng "Failed to load resource" của lỗi tải đã cho hay không.
+export function isAllowedLoadFailure(message: ConsoleMessage, failure: AllowedLoadFailure) {
+  return (
+    message.type() === 'error' &&
+    failure.urlPattern.test(message.location().url) &&
+    message.text().includes(`status of ${failure.status}`)
+  );
+}
+
+// Ghi lỗi console và lỗi trang, để mỗi test kết thúc với 0 lỗi và 0 cảnh báo.
+// Chỉ bỏ qua lỗi tải khớp cả URL lẫn mã trạng thái trong `allowedFailures`.
+export function collectConsoleIssues(
+  page: Page,
+  allowedFailures: AllowedLoadFailure[] = [],
+): string[] {
   const issues: string[] = [];
   page.on('console', (message) => {
     // Chromium có giao diện tự tải favicon dù ứng dụng chưa cung cấp tệp này.
     if (message.location().url.endsWith('/favicon.ico')) return;
+    // Bỏ qua lỗi tải mà test chủ động gây ra. Mọi dòng khác vẫn tính là lỗi.
+    if (allowedFailures.some((failure) => isAllowedLoadFailure(message, failure))) return;
     if (message.type() === 'error' || message.type() === 'warning') {
       issues.push(`${message.type()}: ${message.text()}`);
     }

@@ -11,6 +11,7 @@ using Microsoft.Extensions.Logging;
 using Pickory.Modules.Shipping.Contracts.Errors;
 using Pickory.Modules.Shipping.Entities;
 using Pickory.Modules.Shipping.Ghn;
+using Pickory.Modules.Shipping.Http;
 using Pickory.Modules.Shipping.Persistence;
 using Pickory.Modules.Shipping.Shipments;
 using Pickory.Shared.Configuration;
@@ -103,7 +104,9 @@ internal static class GhnWebhookEndpoint
 
     private static async Task<string> ReadOrderCodeAsync(HttpRequest request, CancellationToken cancellationToken)
     {
-        var body = await ReadBoundedBodyAsync(request, cancellationToken);
+        // Body vượt giới hạn bị từ chối bằng lỗi validation của trường `OrderCode`.
+        var body = await BoundedRequestBody.ReadAsync(request, MaxBodyBytes, cancellationToken)
+            ?? throw Invalid("Body quá lớn.");
 
         JsonDocument document;
         try
@@ -139,24 +142,6 @@ internal static class GhnWebhookEndpoint
         }
 
         throw Invalid("Thiếu mã vận đơn.");
-    }
-
-    // Đọc tối đa `MaxBodyBytes` byte. Body dài hơn bị từ chối thay vì đọc hết vào bộ nhớ.
-    private static async Task<byte[]> ReadBoundedBodyAsync(HttpRequest request, CancellationToken cancellationToken)
-    {
-        using var buffer = new MemoryStream();
-        var chunk = new byte[4096];
-        int read;
-        while ((read = await request.Body.ReadAsync(chunk, cancellationToken)) > 0)
-        {
-            buffer.Write(chunk, 0, read);
-            if (buffer.Length > MaxBodyBytes)
-            {
-                throw Invalid("Body quá lớn.");
-            }
-        }
-
-        return buffer.ToArray();
     }
 
     private static ValidationException Invalid(string message) =>

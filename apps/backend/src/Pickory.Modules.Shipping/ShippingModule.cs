@@ -96,6 +96,14 @@ public static class ShippingModule
     public static Task<int> RunShippingCommandAsync(IServiceProvider services) =>
         ShippingCommandLine.RunSyncAddressesAsync(services, Console.Out, Console.Error, CancellationToken.None);
 
+    // Route đổi trạng thái GHN giả cho Playwright. `Program.cs` chỉ gọi hàm này khi API chạy bằng lệnh `e2e:start`.
+    // Hàm tự bỏ qua khi có `GHN_TOKEN` hoặc client GHN không phải bản giả, nên host thường không bao giờ có route này.
+    public static IEndpointRouteBuilder MapShippingE2eEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        GhnE2eStatusEndpoint.Map(endpoints);
+        return endpoints;
+    }
+
     public static IEndpointRouteBuilder MapShippingEndpoints(this IEndpointRouteBuilder endpoints)
     {
         // Nhóm không thêm tiền tố. Nhóm chỉ gắn tag `Shipping` cho mọi route của module trong tài liệu OpenAPI.

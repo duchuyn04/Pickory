@@ -172,6 +172,11 @@ app.MapIdentityEndpoints();
 app.MapAiGatewayEndpoints();
 app.MapCatalogEndpoints();
 app.MapShippingEndpoints();
+// Route đổi trạng thái GHN giả chỉ dành cho Playwright. Host thường không gọi hàm này nên request tới route nhận 404.
+if (E2eStartup.IsCommand(args))
+{
+    app.MapShippingE2eEndpoints();
+}
 app.MapCommerceEndpoints();
 
 // Lệnh benchmark cần đủ route để đo `GET /api/products`, nên chạy sau khi route đã gắn.

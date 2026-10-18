@@ -173,6 +173,20 @@ public sealed class GhnWebhookTests : IClassFixture<ConfiguredGhnWebApplicationF
     }
 
     [Fact]
+    // Body lớn hơn 64 KB bị từ chối bằng lỗi validation, và webhook không hỏi GHN.
+    public async Task Webhook_BodyOverSizeLimit_Returns400WithoutCallingGhn()
+    {
+        var oversizedBody = JsonSerializer.Serialize(new { OrderCode = new string('a', 70 * 1024) });
+
+        var response = await _client.SendAsync(BuildRequest(oversizedBody, Secret));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var document = await ReadJsonAsync(response);
+        Assert.Equal("VALIDATION_ERROR", document.RootElement.GetProperty("error").GetProperty("code").GetString());
+        Assert.Equal(0, Fake.OrderDetailCallCount);
+    }
+
+    [Fact]
     public async Task Webhook_UnknownOrderCode_Returns200WithoutCallingGhnOrChangingDb()
     {
         await CreateShipmentAsync();

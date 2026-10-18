@@ -47,39 +47,43 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
     await page.getByLabel(/^Email/).fill(e2eEnvironment.salesEmail);
     await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.accountPassword);
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
-    const navigation = page.getByRole('navigation');
-    // Kiểm tra menu hiện có. Hoãn yêu cầu thấy Đơn hàng tới commerce/admin-console.
-    for (const label of [
-      'Tổng quan',
-      'Sản phẩm',
-      'Tồn kho',
-      'Danh mục',
-      'Thương hiệu',
-      'Khách hàng',
-      'Cấu hình AI',
-    ]) {
-      await expect(navigation.getByRole('link', { name: label, exact: true })).toBeVisible();
-    }
-    // Sales không có các quyền này trong policy mặc định.
-    for (const label of ['CSKH', 'Nhân viên', 'Quản lý Role', 'Nhật ký thao tác']) {
-      await expect(navigation.getByRole('link', { name: label, exact: true })).toHaveCount(0);
-    }
-    // Allowlist độc lập với NAV_ITEMS để bắt cả menu trái quyền được thêm sau này.
-    const allowedLabels = [
+    // Chỉ lấy menu quản trị (`aria-label` là `Quản trị`). Link trong `<nav>` khác, như phân trang, không làm sai kết quả.
+    const navigation = page.getByRole('navigation', { name: 'Quản trị', exact: true });
+    // Danh sách lấy từ `ADMIN_NAV_GROUPS` luôn khớp menu đang chạy, nên test không bắt được lỗi quyền. Vì vậy danh sách này viết tay.
+    const salesMenuLabels = [
       'Tổng quan',
       'Đơn hàng',
+      'Đối soát',
+      'Khách hàng',
       'Sản phẩm',
       'Tồn kho',
       'Danh mục',
       'Thương hiệu',
-      'Khách hàng',
       'Cấu hình AI',
     ];
+    // `sales` không có quyền mặc định cho các trang này. Thấy mục nào ở đây nghĩa là menu hiện trang của quyền `sales` không có.
+    const salesHiddenMenuLabels = [
+      'CSKH',
+      'Đánh giá',
+      'Nhân viên',
+      'Quản lý Role',
+      'Vận chuyển',
+      'Cấu hình bán hàng',
+      'Nhật ký thao tác',
+    ];
+    // Đây là các mục `sales` phải thấy theo quyền mặc định. Thiếu mục nào nghĩa là menu ẩn nhầm một trang `sales` được dùng.
+    for (const label of salesMenuLabels) {
+      await expect(navigation.getByRole('link', { name: label, exact: true })).toBeVisible();
+    }
+    for (const label of salesHiddenMenuLabels) {
+      await expect(navigation.getByRole('link', { name: label, exact: true })).toHaveCount(0);
+    }
+    // Allowlist bắt mục menu mới hiện cho `sales` mà không kiểm quyền. Link nào ngoài `salesMenuLabels` làm test đỏ.
     for (const label of await navigation.getByRole('link').allTextContents()) {
-      expect(allowedLabels).toContain(label);
+      expect(salesMenuLabels).toContain(label);
     }
   });
 
-  // Lưu menu thực tế ngoài Git để có bằng chứng quyền của sales.
+  // Lưu menu thực tế ngoài Git để có bằng chứng quyền của `sales`.
   await page.screenshot({ path: testInfo.outputPath('sales-menu.png'), fullPage: true });
 });

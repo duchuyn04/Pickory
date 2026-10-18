@@ -66,14 +66,24 @@ internal sealed class FakeGhnClient : IGhnClient
     // Đặt trạng thái gốc của một đơn đã tạo, như GHN đổi trạng thái sau khi shipper lấy hàng. Mã đơn lạ thì ném lỗi để test không đặt nhầm.
     public void SetOrderStatus(string orderCode, string rawStatus)
     {
+        if (!TrySetOrderStatus(orderCode, rawStatus))
+        {
+            throw new InvalidOperationException($"Đơn giả {orderCode} chưa được tạo.");
+        }
+    }
+
+    // Bản không ném lỗi của `SetOrderStatus`. Route E2E cần phân biệt mã đơn lạ để trả 404 thay vì 500.
+    public bool TrySetOrderStatus(string orderCode, string rawStatus)
+    {
         lock (_gate)
         {
             if (!_ordersByCode.TryGetValue(orderCode, out var order))
             {
-                throw new InvalidOperationException($"Đơn giả {orderCode} chưa được tạo.");
+                return false;
             }
 
             order.Status = rawStatus;
+            return true;
         }
     }
 
