@@ -157,7 +157,10 @@ export function describeOrderError(error: ApiError): OrderFailure {
     return { kind: 'insufficient-stock', message: error.message, shortages };
   }
 
-  if (error.code === 'VALIDATION_ERROR' && error.details && error.details.length > 0) {
+  // `ADDRESS_NOT_DELIVERABLE` có `details` gắn với từng ô. Cho nó đi cùng đường với lỗi 400 để form focus đúng ô.
+  const hasFieldDetails =
+    error.code === 'VALIDATION_ERROR' || error.code === 'ADDRESS_NOT_DELIVERABLE';
+  if (hasFieldDetails && error.details && error.details.length > 0) {
     const { fieldErrors, unmatched } = mapServerDetailsToFieldErrors(error.details);
     return { kind: 'field-errors', fieldErrors, unmatched };
   }

@@ -15,6 +15,10 @@ public interface IShippingService
     // Tạo vận đơn GHN. Không thử lại khi lỗi mạng, và gọi lại với cùng `Ref` không tạo đơn thứ hai.
     Task<Shipment> CreateShipmentAsync(CreateShipmentRequest request, CancellationToken cancellationToken);
 
+    // Hỏi đơn vị vận chuyển có nhận địa chỉ nhận này không, bằng API xem trước, và không tạo vận đơn hay ghi DB.
+    // Địa chỉ bị từ chối thì trả `Rejected` kèm lý do, còn đơn vị vận chuyển lỗi thì trả `Unverifiable` và không ném lỗi.
+    Task<AddressCheckResult> CheckDeliveryAddressAsync(ShippingAddress to, Parcel parcel, CancellationToken cancellationToken);
+
     // Hủy vận đơn còn hủy được. Vận đơn đã hủy thì không làm gì.
     Task CancelShipmentAsync(string shipmentId, CancellationToken cancellationToken);
 

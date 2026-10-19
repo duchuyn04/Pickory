@@ -42,7 +42,7 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
         AssertModuleTables(shipping, ApplicationDatabaseSchema.ShippingTables);
         AssertModuleTables(commerce, ApplicationDatabaseSchema.CommerceTables);
         var model = ApplicationDatabaseSchema.ReadModel([identity, catalog, aiGateway, shipping, commerce]);
-        Assert.Equal(35, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
+        Assert.Equal(37, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
 
         // Metadata thực phải khớp dump, kể cả thứ tự cột, cập nhật khóa ngoại và mô tả extension.
         var actual = await ApplicationDatabaseSchema.ReadAsync(identity);

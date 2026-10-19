@@ -14,6 +14,8 @@ internal sealed class RecordingGhnClient(IGhnClient inner) : IGhnClient
 
     public List<GhnCreateOrderRequest> CreateOrderRequests { get; } = [];
 
+    public List<GhnCreateOrderRequest> PreviewOrderRequests { get; } = [];
+
     public List<string> CancelledOrderCodes { get; } = [];
 
     public List<string> CancelReasonCodes { get; } = [];
@@ -60,6 +62,13 @@ internal sealed class RecordingGhnClient(IGhnClient inner) : IGhnClient
         }
 
         return created;
+    }
+
+    public Task<GhnOrderPreview> PreviewOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken)
+    {
+        TotalCallCount++;
+        PreviewOrderRequests.Add(request);
+        return inner.PreviewOrderAsync(request, cancellationToken);
     }
 
     public Task CancelOrderAsync(string orderCode, string reasonCode, string? reason, CancellationToken cancellationToken)

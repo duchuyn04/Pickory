@@ -26,6 +26,7 @@ namespace Pickory.Modules.Commerce.Persistence.Migrations
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "OrderStatus", new[] { "pending_payment", "pending_confirmation", "confirmed", "shipping", "delivered", "returned", "cancelled" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "PaymentMethod", new[] { "cod", "sepay" });
             NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "PaymentStatus", new[] { "unpaid", "paid", "refund_pending", "refunded" });
+            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "ShippingFeeSource", new[] { "ghn", "cached", "fallback" });
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Pickory.Modules.Commerce.Entities.Cart", b =>
@@ -203,6 +204,12 @@ namespace Pickory.Modules.Commerce.Persistence.Migrations
                     b.Property<int>("ShippingFee")
                         .HasColumnType("integer")
                         .HasColumnName("shippingFee");
+
+                    b.Property<ShippingFeeSource>("ShippingFeeSource")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("\"ShippingFeeSource\"")
+                        .HasDefaultValue(ShippingFeeSource.Ghn)
+                        .HasColumnName("shippingFeeSource");
 
                     b.Property<OrderStatus>("Status")
                         .HasColumnType("\"OrderStatus\"")

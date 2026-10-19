@@ -9,6 +9,7 @@ using Pickory.Modules.Shipping.Contracts.Parcels;
 using Pickory.Modules.Shipping.Contracts.Quotes;
 using Pickory.Modules.Shipping.Contracts.Shipments;
 using Pickory.Modules.Shipping.Entities;
+using Pickory.Modules.Shipping.FallbackFees;
 using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Shipping.Parcels;
 using Pickory.Modules.Shipping.Persistence;
@@ -36,6 +37,12 @@ internal sealed class ShippingService : IShippingService
     // Giá trị `payment_type_id` của GHN: 1 là shop trả phí vận chuyển, 2 là người nhận trả.
     private const int ShopPaysShippingFee = 1;
 
+    // Tên người nhận và tên hàng của request xem trước. Không có dữ liệu khách hàng nên không lộ gì ra GHN.
+    private const string PreviewRecipientName = "Kiem tra dia chi";
+
+    // Mã đơn của request xem trước. GHN không tạo đơn từ API xem trước, nên mã này không đi vào DB hay vào danh sách đơn của GHN.
+    private const string PreviewClientOrderCode = "preview";
+
     // GHN bắt buộc `content` khi không gửi `items`. Giới hạn 2000 ký tự là của GHN.
     private const int MaxContentLength = 2000;
 
@@ -45,6 +52,8 @@ internal sealed class ShippingService : IShippingService
     private readonly IEventDispatcher _eventDispatcher;
     private readonly TimeProvider _timeProvider;
     private readonly ShipmentStatusUpdater _statusUpdater;
+    private readonly QuoteCacheStore _quoteCache;
+    private readonly FallbackFeeStore _fallbackFeeStore;
     private readonly ILogger<ShippingService> _logger;
 
     public ShippingService(
@@ -54,6 +63,8 @@ internal sealed class ShippingService : IShippingService
         IEventDispatcher eventDispatcher,
         TimeProvider timeProvider,
         ShipmentStatusUpdater statusUpdater,
+        QuoteCacheStore quoteCache,
+        FallbackFeeStore fallbackFeeStore,
         ILogger<ShippingService> logger)
     {
         _settingsStore = settingsStore;
@@ -62,6 +73,8 @@ internal sealed class ShippingService : IShippingService
         _eventDispatcher = eventDispatcher;
         _timeProvider = timeProvider;
         _statusUpdater = statusUpdater;
+        _quoteCache = quoteCache;
+        _fallbackFeeStore = fallbackFeeStore;
         _logger = logger;
     }
 
@@ -121,24 +134,116 @@ internal sealed class ShippingService : IShippingService
         // Chạy song song với báo phí để tổng thời gian không cộng thêm thời gian của ngày giao.
         var expectedDeliveryDateTask = FindExpectedDeliveryDateAsync(leadTimeRequest, leadTimeCancellation.Token);
 
+        // Khóa của phí đã lưu dùng đúng các giá trị gửi GHN, nên cùng khóa thì GHN trả cùng phí.
+        var cacheKey = new QuoteCacheKey(
+            to.WardCode, settings.WardCode, serviceTypeId, FallbackFeeCalculator.ChargeableWeightGrams(parcel), feeRequest.InsuranceValue, codAmount);
+
         GhnFee fee;
         try
         {
             // Lỗi mạng và 5xx đã được adapter thử lại đúng 1 lần. Service không thêm vòng thử lại nào.
             fee = await _ghnClient.CalculateFeeAsync(feeRequest, cancellationToken);
         }
+        catch (ShippingUnavailableException)
+        {
+            // Dừng ngày giao trước khi tìm phí thay thế, để lời gọi treo không giữ kết nối trong lúc đó.
+            await StopLeadTimeLookupAsync(leadTimeCancellation, expectedDeliveryDateTask);
+
+            // GHN không phản hồi. Thử phí đã lưu rồi phí dự phòng trước khi báo khách là không có phí.
+            var substitute = await FindSubstituteQuoteAsync(cacheKey, serviceTypeId, settings, to, parcel, cancellationToken);
+            if (substitute is not null)
+            {
+                return substitute;
+            }
+
+            // Không có phí thay thế nào dùng được thì giữ nguyên lỗi `SHIPPING_UNAVAILABLE` như trước SHIP-14.
+            throw;
+        }
         catch
         {
-            // Báo phí lỗi thì ngày giao vô nghĩa. Hủy lời gọi còn treo để không giữ kết nối tới hết timeout.
-            await leadTimeCancellation.CancelAsync();
+            // Dừng ngày giao rồi ném lại lỗi gốc, để lời gọi treo không chạy tiếp sau khi báo phí đã thất bại.
+            await StopLeadTimeLookupAsync(leadTimeCancellation, expectedDeliveryDateTask);
 
-            // Chờ lời gọi ngày giao dừng hẳn. Hàm này không ném lỗi, nên lỗi của báo phí vẫn là lỗi được ném ra.
-            await expectedDeliveryDateTask;
+            // GHN từ chối hoặc lỗi khác thì không dùng phí thay thế. GHN đã trả lời, và phí cũ có thể sai với yêu cầu này.
             throw;
         }
 
+        // Lưu phí vừa nhận để dùng khi GHN không phản hồi lần sau. Bước này chạy khi lời gọi ngày giao còn đang chờ.
+        await TrySaveQuoteAsync(cacheKey, fee.Total, cancellationToken);
+
         var expectedDeliveryDate = await expectedDeliveryDateTask;
-        return new Quote(fee.Total, serviceTypeId, expectedDeliveryDate);
+        return new Quote(fee.Total, serviceTypeId, expectedDeliveryDate, QuoteSource.Ghn);
+    }
+
+    // Dừng lời gọi ngày giao khi báo phí đã lỗi, vì ngày giao không còn ý nghĩa.
+    private static async Task StopLeadTimeLookupAsync(CancellationTokenSource leadTimeCancellation, Task leadTimeLookup)
+    {
+        // Hủy lời gọi còn treo để không giữ kết nối tới hết timeout.
+        await leadTimeCancellation.CancelAsync();
+
+        // Chờ lời gọi dừng hẳn. Lời gọi ngày giao không ném lỗi, nên không che lỗi của báo phí.
+        await leadTimeLookup;
+    }
+
+    // Lưu phí GHN đã tính. Lỗi lưu chỉ ghi cảnh báo, vì khách đã có phí đúng từ GHN và không được mất báo phí vì cache.
+    private async Task TrySaveQuoteAsync(QuoteCacheKey key, int fee, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _quoteCache.SaveAsync(key, fee, cancellationToken);
+        }
+        // Khách hủy request thì để lỗi hủy đi tiếp. Mọi lỗi khác của DB chỉ làm mất một lần lưu.
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning(exception, "Không lưu được phí GHN vừa tính. Báo phí vẫn trả phí của GHN.");
+        }
+    }
+
+    // Tìm phí thay thế khi GHN không phản hồi: phí đã lưu còn hạn trước, rồi bảng phí dự phòng. Trả `null` khi không có cái nào dùng được.
+    private async Task<Quote?> FindSubstituteQuoteAsync(
+        QuoteCacheKey cacheKey,
+        int serviceTypeId,
+        ShippingSettings settings,
+        ShippingAddress to,
+        Parcel parcel,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Phí đã lưu đi trước vì đó là số GHN từng tính cho đúng điều kiện này, sát thực tế hơn bảng của admin.
+            var cachedFee = await _quoteCache.FindFreshFeeAsync(cacheKey, cancellationToken);
+            if (cachedFee is not null)
+            {
+                var cachedRoute = FallbackFeeRouteRules.Determine(settings.ProvinceCode, to.ProvinceCode);
+                LogSubstituteQuote(QuoteSource.Cached, cachedRoute, cacheKey.ChargeableWeightGrams);
+                // Không có ngày giao dự kiến, vì GHN không trả lời lần này.
+                return new Quote(cachedFee.Value, serviceTypeId, null, QuoteSource.Cached);
+            }
+
+            var fallbackConfig = await _fallbackFeeStore.GetAsync(cancellationToken);
+            var fallbackQuote = FallbackFeeQuoter.TryQuote(fallbackConfig, settings.ProvinceCode, to.ProvinceCode, parcel);
+            if (fallbackQuote is null)
+            {
+                return null;
+            }
+
+            LogSubstituteQuote(QuoteSource.Fallback, fallbackQuote.Route, fallbackQuote.ChargeableWeightGrams);
+            return new Quote(fallbackQuote.Fee, serviceTypeId, null, QuoteSource.Fallback);
+        }
+        // DB lỗi lúc tìm phí thay thế không được che lỗi gốc. Trả `null` để bên gọi ném lại `SHIPPING_UNAVAILABLE`.
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            _logger.LogWarning(exception, "Không đọc được phí đã lưu hoặc phí dự phòng khi GHN không phản hồi.");
+            return null;
+        }
+    }
+
+    // Log chỉ ghi nguồn phí, tuyến và khối lượng tính cước. Không ghi địa chỉ, tên, số điện thoại hay mã phường.
+    private void LogSubstituteQuote(QuoteSource source, FallbackFeeRoute route, long chargeableWeightGrams)
+    {
+        _logger.LogWarning(
+            "GHN không phản hồi khi báo phí, dùng phí {Source}: tuyến {Route}, khối lượng tính cước {ChargeableWeightGrams} g.",
+            source, route, chargeableWeightGrams);
     }
 
     public async Task<Shipment> CreateShipmentAsync(CreateShipmentRequest request, CancellationToken cancellationToken)
@@ -238,6 +343,61 @@ internal sealed class ShippingService : IShippingService
         // Phát sau commit. Bên nhận đọc DB bằng kết nối khác vẫn thấy vận đơn mới.
         await events.FlushAsync(CancellationToken.None);
         return ToContract(shipment);
+    }
+
+    public async Task<AddressCheckResult> CheckDeliveryAddressAsync(
+        ShippingAddress to, Parcel parcel, CancellationToken cancellationToken)
+    {
+        // Tham số null là lỗi lập trình của bên gọi. Báo ngay, không trả kết quả kiểm.
+        ArgumentNullException.ThrowIfNull(to);
+        ArgumentNullException.ThrowIfNull(parcel);
+
+        // Chưa có địa chỉ lấy hàng thì request xem trước thiếu thông tin. Không kiểm được, và không chặn khách đặt đơn.
+        var settings = await _settingsStore.GetAsync(cancellationToken);
+        if (settings is null)
+        {
+            _logger.LogWarning("Kiểm địa chỉ nhận bị bỏ qua vì admin chưa cấu hình địa chỉ lấy hàng của shipping.");
+            return AddressCheckResult.Unverifiable;
+        }
+
+        // Dùng chung luật danh mục với báo phí và tạo vận đơn. Phường đã tắt thì khỏi tốn một lời gọi GHN.
+        var ward = await FindDeliverableWardAsync(to, cancellationToken);
+        if (ward is null)
+        {
+            return AddressCheckResult.Rejected(AddressRejectionReason.NotInCatalog);
+        }
+
+        // Dựng request bằng đúng hàm của tạo vận đơn. Địa chỉ nhận và địa chỉ lấy hàng gửi GHN giống hệt lúc tạo đơn thật.
+        var previewRequest = BuildCreateOrderRequest(
+            BuildPreviewShipmentRequest(to, parcel, settings),
+            settings.SenderPhone,
+            ward,
+            settings,
+            PreviewClientOrderCode);
+
+        try
+        {
+            // Chỉ gọi API xem trước. Hàm này không gọi `CreateOrderAsync` và không ghi DB, nên kiểm xong không để lại gì.
+            await _ghnClient.PreviewOrderAsync(previewRequest, cancellationToken);
+            return AddressCheckResult.Valid;
+        }
+        catch (ShippingRejectedException rejection) when (rejection.Kind == ShippingRejectionKind.ToAddressMismatch)
+        {
+            // Chỉ lỗi `To address conflict` được coi là lỗi địa chỉ của khách. GHN chưa từng gắn nhãn này cho địa chỉ lấy hàng (ADR 0003).
+            return AddressCheckResult.Rejected(AddressRejectionReason.StreetNotInWard);
+        }
+        catch (ShippingRejectedException rejection)
+        {
+            // Lỗi còn lại thuộc cấu hình lấy hàng hoặc yêu cầu của shop, khách không sửa được. Cho đặt đơn và ghi log để admin biết.
+            _logger.LogWarning("Kiểm địa chỉ nhận không kết luận được. GHN từ chối vì lý do {Kind}.", rejection.Kind);
+            return AddressCheckResult.Unverifiable;
+        }
+        catch (ShippingUnavailableException)
+        {
+            // GHN lỗi mạng, hết thời gian chờ hoặc 5xx. Kiểm địa chỉ là bước phụ nên không được chặn khách đặt đơn.
+            _logger.LogWarning("Kiểm địa chỉ nhận không kết luận được vì GHN không phản hồi.");
+            return AddressCheckResult.Unverifiable;
+        }
     }
 
     // Vi phạm ràng buộc unique của `shipments` (`ref` hoặc `trackingCode`). Hai request cùng `Ref` có thể chạm một trong hai.
@@ -346,7 +506,8 @@ internal sealed class ShippingService : IShippingService
         }
     }
 
-    private static GhnCreateOrderRequest BuildCreateOrderRequest(
+    // Để `internal` cho contract test sandbox gọi đúng hàm này, nên test không lệch với request thật của trang đơn.
+    internal static GhnCreateOrderRequest BuildCreateOrderRequest(
         CreateShipmentRequest request,
         string normalizedPhone,
         AddressWard ward,
@@ -381,7 +542,7 @@ internal sealed class ShippingService : IShippingService
             Items = serviceTypeId == QuoteRules.HeavyGoodsServiceTypeId
                 ? [new GhnOrderItem(content, 1, parcel.WeightGrams, parcel.LengthCm, parcel.WidthCm, parcel.HeightCm)]
                 : null,
-            // Gửi địa chỉ lấy hàng admin đã cấu hình để cấu hình đó có hiệu lực. Sandbox xác nhận GHN vẫn nhận đơn khi không gửi địa chỉ này (ADR 0003).
+            // Gửi địa chỉ lấy hàng admin đã cấu hình để cấu hình đó có hiệu lực. Thiếu cờ `IsNewFromAddress` thì GHN bỏ qua tên tỉnh và tên phường rồi giữ phường của shop (ADR 0003, SHIP-11).
             FromName = settings.SenderName,
             FromPhone = settings.SenderPhone,
             FromAddress = settings.Line,
@@ -401,8 +562,20 @@ internal sealed class ShippingService : IShippingService
     // Trả phường kèm tỉnh để nơi gọi lấy tên chuẩn của danh mục.
     private async Task<AddressWard> RequireDeliverableWardAsync(ShippingAddress address, CancellationToken cancellationToken)
     {
+        var ward = await FindDeliverableWardAsync(address, cancellationToken);
+        if (ward is null)
+        {
+            throw new ShippingRejectedException("Địa chỉ giao hàng không còn trong danh mục.");
+        }
+
+        return ward;
+    }
+
+    // Luật danh mục của địa chỉ nhận, tách riêng để hàm kiểm địa chỉ trả kết quả thay vì ném lỗi. Trả `null` khi phường không còn dùng được.
+    private Task<AddressWard?> FindDeliverableWardAsync(ShippingAddress address, CancellationToken cancellationToken)
+    {
         // Phường có thể bị tắt hoặc đổi tỉnh sau khi khách chọn, nên kiểm lại với danh mục hiện tại.
-        var ward = await _database.AddressWards
+        return _database.AddressWards
             .AsNoTracking()
             .Include(candidate => candidate.Province)
             .FirstOrDefaultAsync(
@@ -410,12 +583,21 @@ internal sealed class ShippingService : IShippingService
                     && candidate.ProvinceCode == address.ProvinceCode
                     && candidate.IsActive,
                 cancellationToken);
-        if (ward is null)
-        {
-            throw new ShippingRejectedException("Địa chỉ giao hàng không còn trong danh mục.");
-        }
+    }
 
-        return ward;
+    // Người nhận giả cho request xem trước. GHN cần tên và số điện thoại để nhận request, và khách chưa nhập thông tin này lúc kiểm địa chỉ.
+    private static CreateShipmentRequest BuildPreviewShipmentRequest(
+        ShippingAddress to, Parcel parcel, ShippingSettings settings)
+    {
+        var placeholderRecipient = new ShippingRecipient(PreviewRecipientName, settings.SenderPhone, to);
+        return new CreateShipmentRequest(
+            PreviewClientOrderCode,
+            placeholderRecipient,
+            parcel,
+            [new ShipmentLine(PreviewRecipientName, 1)],
+            CodAmount: 0,
+            InsuredValue: 0,
+            Note: null);
     }
 
     // Vận đơn đã hủy có `ref` đã đổi sang `{ref}#cancelled#{n}`, nên tra theo `ref` gốc chỉ thấy vận đơn còn hiệu lực.

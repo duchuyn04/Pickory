@@ -35,7 +35,8 @@ internal sealed class AdminOrderTestKit(IntegrationDatabaseFixture database)
         string recipientPhone = "0901234567",
         bool withInvoice = false,
         string recipientEmail = "an@example.com",
-        bool omitRecipientEmail = false)
+        bool omitRecipientEmail = false,
+        ShippingFeeSource shippingFeeSource = ShippingFeeSource.Ghn)
     {
         var orderId = id ?? Guid.NewGuid().ToString();
         var order = new Order
@@ -65,6 +66,7 @@ internal sealed class AdminOrderTestKit(IntegrationDatabaseFixture database)
             Subtotal = 200_000 * lineCount,
             ShippingFee = 30_000,
             ShippingDiscount = 10_000,
+            ShippingFeeSource = shippingFeeSource,
             Total = 200_000 * lineCount + 30_000 - 10_000,
             AccessTokenHash = "hash-" + code,
             IdempotencyKey = "key-" + code,

@@ -45,13 +45,14 @@ export const shipping: {
   buildParcel(items: { parcel: Parcel; quantity: number }[]): Parcel;   // gộp nhiều SKU thành 1 kiện
 };
 
-export type Quote = { fee: number; serviceId: string; expectedDeliveryDate: string | null };
+export type Quote = { fee: number; serviceId: string; expectedDeliveryDate: string | null; source: 'ghn' | 'cached' | 'fallback' };
 export type Shipment = { id: string; ref: string; trackingCode: string; fee: number; status: ShipmentStatus };
 
 export { onShipmentStatusChanged } from './events';  // { shipmentId, ref, status, previousStatus, occurredAt }
 export { shippingPermissions } from './permissions';  // ['shipping-settings:manage']
 ```
 
+- `Quote.source` cho biết nguồn của phí: `ghn` là phí GHN vừa tính, `cached` là phí GHN đã lưu, `fallback` là phí theo bảng dự phòng. Hai nguồn sau có `expectedDeliveryDate` là `null`. Xem mục "Phí dự phòng".
 - Mọi lỗi từ GHN quy về `ShippingUnavailableError` (GHN lỗi, timeout) hoặc `ShippingRejectedError` (GHN từ chối, ví dụ địa chỉ không phục vụ). Lỗi kèm thông báo tiếng Việt cho người dùng.
 - `quote` timeout 5 giây, retry 1 lần với lỗi mạng hoặc 5xx. `createShipment` **không retry tự động** để tránh tạo trùng vận đơn. Nếu lỗi mạng, người dùng bấm tạo lại. Module gửi lại cùng `client_order_code`, và GHN trả vận đơn đã tạo thay vì tạo vận đơn mới (cập nhật 2026-10-09, xem `tasks/shipping/plan.md`).
 
@@ -109,6 +110,112 @@ GHN_SHOP_ID=
 GHN_LIVE_TESTS=0
 ```
 
+### Phí dự phòng
+
+GHN lỗi lúc báo phí thì khách không đặt được đơn. Phí dự phòng cho phép shop vẫn báo một mức phí gần đúng. SHIP-13 làm bảng phí và cách tính. SHIP-14 làm phần báo phí khi GHN không phản hồi, ghi ở mục "Báo phí khi GHN không phản hồi".
+
+Người dùng chốt các quyết định sau ngày 2026-10-19:
+
+1. Khi GHN không phản hồi, shipping dùng phí GHN đã lưu trong 24 giờ trước. Chưa có phí đã lưu thì dùng bảng phí dự phòng.
+2. Bảng phí chia 3 tuyến theo vùng của GHN: nội tỉnh, nội vùng, liên vùng.
+3. Khối lượng tính cước giống GHN. Admin nhập giá đã gồm phụ phí.
+4. Chỉ dùng phí dự phòng khi GHN không phản hồi: lỗi mạng, hết thời gian chờ hoặc 5xx. GHN từ chối yêu cầu thì vẫn báo lỗi.
+5. Admin bật hoặc tắt phí dự phòng. Tắt thì giữ cách báo lỗi hiện tại.
+6. Khách không thấy nhãn nào khác. Trang đơn admin có nhãn "Phí ship dự phòng".
+7. Phí dự phòng không có ngày giao dự kiến.
+
+#### Bảng phí
+
+Mỗi tuyến có 3 giá trị:
+
+| Giá trị | Đơn vị | Giới hạn |
+|---|---|---|
+| Giá gốc | đồng | từ 0 đến 5.000.000 |
+| Khối lượng gốc (đã gồm trong giá gốc) | gram | từ 1 đến 20.000 |
+| Giá bước (cho mỗi 500 g tiếp theo) | đồng | từ 0 đến 5.000.000 |
+
+- Mọi giá trị là số nguyên.
+- Bảng lưu trong `shipping_fallback_fee`. Bảng chỉ có một dòng, mã dòng là `singleton`.
+- Khi tắt, chín giá trị được phép để trống. Giá trị đã nhập vẫn phải đúng giới hạn.
+- Khi bật, cả chín giá trị phải có.
+
+#### Vùng và tuyến
+
+- Code giữ bảng 34 tỉnh theo đơn vị hành chính từ ngày 1/7/2025, ghép theo mã tỉnh của GHN API v3. Mã lấy từ `province/all` của sandbox.
+- Vùng 3 có 18 tỉnh từ Hà Tĩnh trở ra miền Bắc. Vùng 2 có 4 tỉnh từ Quảng Trị đến Quảng Ngãi. Vùng 1 có 12 tỉnh từ Gia Lai trở vào miền Nam.
+- Cùng mã tỉnh với địa chỉ lấy hàng là nội tỉnh, kể cả khi tỉnh không có trong bảng vùng.
+- Khác tỉnh, cùng vùng là nội vùng. Khác vùng là liên vùng.
+- Một trong hai tỉnh không có trong bảng vùng thì tuyến là "không xác định". Hàm không đoán tuyến. Khi đó không tính được phí dự phòng.
+
+#### Cách tính phí
+
+1. Tính cân quy đổi (gram) bằng `Dài × Rộng × Cao / 5` (cm). Công thức này tương đương chia 5000 rồi đổi kg sang gram.
+2. Lấy số lớn hơn giữa cân thật và cân quy đổi.
+3. Làm tròn lên bội số của 500 g. Kết quả là khối lượng tính cước.
+4. Khối lượng tính cước không vượt khối lượng gốc thì phí bằng giá gốc.
+5. Mỗi 500 g vượt, kể cả phần lẻ, cộng một lần giá bước.
+
+Ví dụ: khối lượng gốc 1200 g, giá gốc 10.000 đồng, giá bước 3.000 đồng. Khối lượng tính cước 1500 g vượt 300 g, tính một bước. Phí là 13.000 đồng.
+
+Phép tính dùng số nguyên 64 bit, nên giá lớn nhất và kiện 30 kg không tràn số.
+
+#### Báo phí khi GHN không phản hồi
+
+`QuoteAsync` coi GHN là không phản hồi khi `CalculateFeeAsync` ném `ShippingUnavailableException`. Adapter đưa lỗi mạng, hết thời gian chờ, 5xx, 401, 403 và 429 về lỗi này. Khách bị chặn trong mọi trường hợp đó, nên các trường hợp dùng chung một luật.
+
+Các lỗi sau giữ nguyên, không dùng phí đã lưu hay phí dự phòng:
+
+- `ShippingRejectedException`: GHN đã trả lời và từ chối yêu cầu.
+- `ShippingNotConfiguredException`: admin chưa cấu hình địa chỉ lấy hàng.
+- Lỗi danh mục địa chỉ: phường không còn trong danh mục, hoặc mã không phải số.
+
+Khi GHN không phản hồi, `QuoteAsync` làm theo thứ tự này:
+
+1. Tìm phí đã lưu còn hạn cùng khóa. Nếu có, trả phí đó. `source` là `cached`.
+2. Đọc bảng phí dự phòng. Nếu bảng bật, tuyến xác định được và tuyến đủ giá, trả phí theo bảng. `source` là `fallback`.
+3. Nếu không có nguồn nào dùng được, ném lại `ShippingUnavailableException` gốc.
+
+- Tuyến lấy mã tỉnh trong cấu hình lấy hàng và mã tỉnh của địa chỉ nhận.
+- Cả hai nguồn giữ `serviceTypeId` đang dùng.
+- Cả hai nguồn có `expectedDeliveryDate` là `null`. Lời gọi ngày giao đang chạy song song bị hủy, như khi báo phí lỗi.
+- Phí dự phòng vượt giới hạn của `int` (chỉ có với kiện vô lý) coi là không tính được.
+- Phí GHN tính thành công có `source` là `ghn`.
+- Mỗi lần dùng phí đã lưu hoặc phí dự phòng ghi một log cảnh báo. Log chỉ có nguồn phí, tuyến và khối lượng tính cước. Log không có địa chỉ, tên, số điện thoại hay mã phường.
+
+#### Phí đã lưu
+
+Mỗi lần GHN báo phí thành công, module lưu phí vào bảng `shipping_quote_cache`. Một dòng có sáu cột khóa, cột `fee` và cột `savedAt`. Sáu cột khóa là khóa chính của bảng.
+
+| Cột khóa | Ghi chú |
+|---|---|
+| `receiverWardCode` | Mã phường nhận |
+| `pickupWardCode` | Mã phường lấy hàng trong cấu hình lấy hàng. Đổi địa chỉ lấy hàng thì khóa cũ không còn khớp |
+| `serviceTypeId` | Loại dịch vụ |
+| `chargeableWeightGrams` | Khối lượng tính cước, tính bằng `FallbackFeeCalculator.ChargeableWeightGrams` |
+| `insuredValue` | Giá trị khai giá đã kẹp trần 5.000.000 đồng |
+| `codAmount` | Số tiền thu hộ. GHN tính phí thu hộ theo số này |
+
+- Cùng khóa thì ghi đè phí và `savedAt`. Lệnh dùng `INSERT ... ON CONFLICT DO UPDATE` của Postgres, nên hai request song song cùng khóa không gây lỗi.
+- Phí còn hạn khi `bây giờ - savedAt < 24 giờ`. Đúng 24 giờ là quá hạn.
+- Mỗi lần lưu thành công xóa các dòng có `savedAt` từ 24 giờ trở lên. Chỉ mục trên `savedAt` giúp lệnh xóa không quét cả bảng.
+- Lưu phí lỗi chỉ ghi log cảnh báo. Báo phí vẫn trả phí GHN.
+- Đọc phí đã lưu hoặc bảng phí dự phòng lỗi thì ghi log cảnh báo và giữ lỗi `SHIPPING_UNAVAILABLE`.
+
+#### Route cho Playwright
+
+Hai route sau chỉ dành cho Playwright. Chúng giúp test E2E (end-to-end) bật và tắt lỗi báo phí của GHN giả. Cả hai trả 204.
+
+- `PUT /api/e2e/ghn/failures/calculate-fee`: bật lỗi `Unavailable` ở hàm báo phí của `FakeGhnClient`.
+- `DELETE /api/e2e/ghn/failures/calculate-fee`: tắt lỗi báo phí. Lỗi của các hàm khác giữ nguyên.
+
+Route chỉ có khi API không có `GHN_TOKEN`, DI có `FakeGhnClient` và API chạy bằng lệnh `e2e:start`. Host thường trả 404. Route làm hỏng báo phí mà không cần đăng nhập, nên điều kiện này là bắt buộc.
+
+#### Quyền và audit
+
+- Hai route phí dự phòng dùng quyền `shipping-settings:manage`, giống cấu hình lấy hàng.
+- Mỗi lần lưu ghi một dòng audit log với hành động `shipping.fallback_fee.update` và loại đích `shipping_fallback_fee`. Dòng audit có trạng thái trước và sau.
+- Lần lưu đầu, trạng thái trước là giá trị mặc định: tắt và chín giá trị trống.
+
 ## API
 
 | Method | Path | Quyền | Mô tả |
@@ -117,6 +224,7 @@ GHN_LIVE_TESTS=0
 | GET | `/api/addresses/wards?provinceCode=` | công khai | Phường/xã (và quận/huyện nếu cần) |
 | POST | `/api/webhooks/ghn` | GHN | Nhận cập nhật trạng thái |
 | GET · PUT | `/api/admin/shipping/settings` | `shipping-settings:manage` | Cấu hình. Lỗi 400 `VALIDATION_ERROR` có `details` dạng `[{ key, message }]`. `key` là tên trường, và là `body` khi lỗi cả body. |
+| GET · PUT | `/api/admin/shipping/fallback-fee` | `shipping-settings:manage` | Bảng phí dự phòng. Body là đối tượng phẳng gồm `enabled` và 9 trường giá, tên như `sameProvinceBaseFee`. `GET` khi chưa lưu trả tắt và 9 trường `null`. Sai kiểu, sai khoảng hoặc trường lạ trả 400 `VALIDATION_ERROR`. Bật mà thiếu giá trả 422 `FALLBACK_FEE_INCOMPLETE`. Cả hai lỗi có `details` dạng `[{ key, message }]`. |
 
 Tạo và hủy vận đơn cho đơn hàng đi qua endpoint của `commerce` (quyền `orders:fulfill`). `commerce` gọi `shipping.createShipment`.
 
@@ -144,6 +252,8 @@ model ShipmentEvent   { /* shipmentId, status, rawStatus, occurredAt, source(web
 model AddressProvince { /* code, name, syncedAt */ }
 model AddressWard     { /* code, provinceCode, districtCode?, name, syncedAt */ }
 model ShippingSettings { /* pickup address, ghnShopId, defaultServiceTypeId */ }
+model ShippingFallbackFee { /* enabled, 3 tuyến x (baseFee, baseWeightGrams, stepFee), updatedAt */ }
+model ShippingQuoteCache { /* receiverWardCode, pickupWardCode, serviceTypeId, chargeableWeightGrams, insuredValue, codAmount (sáu cột khóa chính), fee, savedAt (có chỉ mục) */ }
 ```
 
 - Đơn bị hủy vận đơn rồi tạo lại: vận đơn cũ chuyển `cancelled`, trường `ref` của nó được đổi thành `ref#cancelled#<n>` để giữ ràng buộc unique.
@@ -151,6 +261,16 @@ model ShippingSettings { /* pickup address, ghnShopId, defaultServiceTypeId */ }
 ## Testing
 
 - Unit: `buildParcel`; bảng ánh xạ trạng thái (kể cả trạng thái lạ); xử lý webhook idempotent.
+- Unit phí dự phòng: bảng 34 tỉnh, chọn tuyến, khối lượng tính cước và phí tại từng giá trị biên (500 g, 501 g, phần lẻ của bước), không tràn số ở giá trị lớn nhất.
+- Integration báo phí khi GHN không phản hồi, dùng DB thật và đồng hồ giả:
+  - Phí đã lưu còn hạn ở 23:59:59 và quá hạn ở 24:00:00.
+  - Mỗi thành phần của khóa khác đi thì phí đã lưu không khớp.
+  - Nhiều lần ghi song song cùng khóa không gây lỗi và chỉ còn một dòng.
+  - Mỗi lần lưu xóa dòng quá hạn và giữ dòng còn hạn.
+  - Phí đã lưu được dùng trước, rồi tới bảng phí dự phòng ở cả 3 tuyến.
+  - GHN từ chối giữ nguyên lỗi, kể cả khi có phí đã lưu và bảng đang bật.
+  - Lưu phí lỗi vẫn trả phí GHN.
+  - Log không có dữ liệu khách.
 - Adapter GHN test bằng HTTP mock: thành công, GHN từ chối địa chỉ, 5xx, timeout.
 - Integration: webhook chỉ phát sự kiện khi trạng thái thật sự đổi; job đồng bộ cập nhật vận đơn khi webhook bị mất; webhook bị giới hạn tần suất.
 - `createShipment` lỗi mạng: không tạo trùng khi bấm lại (tra theo `ref` trước).

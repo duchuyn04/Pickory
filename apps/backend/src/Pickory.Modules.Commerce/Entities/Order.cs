@@ -22,6 +22,8 @@ public sealed class Order
     public int ShippingFee { get; set; }
     public int ShippingDiscount { get; set; }
     public int Total { get; set; }
+    // Nguồn của `ShippingFee`. Đơn đặt trước khi có cột này nhận `Ghn`.
+    public ShippingFeeSource ShippingFeeSource { get; set; } = ShippingFeeSource.Ghn;
     public DateTime? PaymentDeadline { get; set; }
     // Mã giao dịch hoàn tiền do nhân viên nhập khi đánh dấu `refunded`. Đơn chưa hoàn tiền để `null`.
     public string? RefundTransactionRef { get; set; }

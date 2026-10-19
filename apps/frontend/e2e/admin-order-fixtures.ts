@@ -28,8 +28,8 @@ export interface AddressChoice {
   wardName: string;
 }
 
-// Tạo sản phẩm đang bán có tồn kho bằng API admin để khách đặt được đơn COD qua luồng thật.
-export async function seedProduct(page: Page): Promise<SeededProduct> {
+// Tạo sản phẩm đang bán có tồn kho bằng API admin để khách đặt được đơn COD qua luồng thật. Spec cần khóa phí đã lưu riêng thì truyền giá khác giá mặc định.
+export async function seedProduct(page: Page, price = 450_000): Promise<SeededProduct> {
   const suffix = Date.now().toString(36);
   const category = await page.request.post('/api/admin/categories', {
     headers: adminHeaders,
@@ -42,7 +42,6 @@ export async function seedProduct(page: Page): Promise<SeededProduct> {
   });
   expect(brand.status(), await brand.text()).toBe(201);
 
-  const price = 450_000;
   const name = `Chuột không dây ${suffix}`;
   const created = await page.request.post('/api/admin/products', {
     headers: adminHeaders,

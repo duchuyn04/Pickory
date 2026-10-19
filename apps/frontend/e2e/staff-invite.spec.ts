@@ -68,6 +68,7 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
       'Nhân viên',
       'Quản lý Role',
       'Vận chuyển',
+      'Phí ship dự phòng',
       'Cấu hình bán hàng',
       'Nhật ký thao tác',
     ];

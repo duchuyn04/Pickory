@@ -118,6 +118,17 @@ internal sealed class GhnHttpClient : IGhnClient
         return order;
     }
 
+    public async Task<GhnOrderPreview> PreviewOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken)
+    {
+        // Không thử lại: bên gọi coi "không kiểm được" là kết quả bình thường, và lần thử thứ hai kéo dài lúc khách đặt đơn.
+        var preview = await SendAsync<GhnOrderPreview>(
+            "PreviewOrder",
+            () => CreateRequest(HttpMethod.Post, "/shiip/public-api/v2/shipping-order/preview", request),
+            retryOnTransientFailure: false,
+            cancellationToken);
+        return RequireData("PreviewOrder", preview);
+    }
+
     public async Task CancelOrderAsync(string orderCode, string reasonCode, string? reason, CancellationToken cancellationToken)
     {
         // GHN nhận lô mã đơn và hủy cả lô hoặc không hủy gì. Adapter chỉ gửi một mã mỗi lần.
@@ -312,7 +323,9 @@ internal sealed class GhnHttpClient : IGhnClient
     {
         var safeMessage = SanitizeCarrierMessage(carrierMessage);
         _logger.LogWarning("GHN {Operation} từ chối với mã {CarrierCode}: {CarrierMessage}", operation, carrierCode, safeMessage);
-        return new ShippingRejectedException(safeMessage);
+
+        // Dịch sau khi làm sạch. Câu tiếng Việt do code viết nên không mang token, và log vẫn giữ nguyên văn của GHN.
+        return GhnRejections.Create(safeMessage);
     }
 
     // Đọc `message` của GHN từ thân lỗi. Thân không đọc được thì bỏ qua, vì HTTP 400 đã đủ để biết bị từ chối.

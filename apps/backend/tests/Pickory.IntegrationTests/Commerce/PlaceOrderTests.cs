@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.IntegrationTests.Shipping;
@@ -19,6 +20,12 @@ using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Entities;
 using Pickory.Modules.Commerce.Orders;
 using Pickory.Modules.Commerce.Persistence;
+using Pickory.Modules.Shipping;
+using Pickory.Modules.Shipping.Contracts;
+using Pickory.Modules.Shipping.Contracts.Addresses;
+using Pickory.Modules.Shipping.Contracts.Parcels;
+using Pickory.Modules.Shipping.Contracts.Quotes;
+using Pickory.Modules.Shipping.Contracts.Shipments;
 using Pickory.Modules.Shipping.Ghn;
 using Pickory.Shared.Events;
 using Xunit;
@@ -271,6 +278,9 @@ public sealed class PlaceOrderTests : IClassFixture<CheckoutWebApplicationFactor
 
         public Task<GhnLeadTime> GetLeadTimeAsync(GhnLeadTimeRequest request, CancellationToken cancellationToken) =>
             inner.GetLeadTimeAsync(request, cancellationToken);
+
+        public Task<GhnOrderPreview> PreviewOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken) =>
+            inner.PreviewOrderAsync(request, cancellationToken);
 
         public Task<GhnCreatedOrder> CreateOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken) =>
             inner.CreateOrderAsync(request, cancellationToken);
@@ -584,6 +594,8 @@ public sealed class PlaceOrderTests : IClassFixture<CheckoutWebApplicationFactor
         var anonymousId = _kit.NewAnonymousId();
         var skuId = await AddToCartAsync(anonymousId, price: 100_000);
         var total = await PreviewTotalAsync(anonymousId);
+        // Lần xem trước vừa rồi đã lưu phí GHN. Xóa phí đã lưu để test kiểm đúng trường hợp GHN lỗi mà không có phí thay thế.
+        await QuoteTestSetup.ClearQuoteCacheAsync(_factory);
         _factory.GhnClient.SetFailure(FakeGhnOperation.CalculateFee, FakeGhnFailure.Unavailable);
         var key = NewKey();
 
@@ -592,6 +604,169 @@ public sealed class PlaceOrderTests : IClassFixture<CheckoutWebApplicationFactor
         await CartTestKit.AssertErrorAsync(response, HttpStatusCode.ServiceUnavailable, "SHIPPING_UNAVAILABLE");
         Assert.Equal(0, await OrderCountAsync(key));
         Assert.Equal(10, await _kit.StockOfAsync(skuId));
+    }
+
+    // ----- COM-26: kiểm địa chỉ nhận với GHN -----
+
+    private const string StreetNotInWardMessage =
+        "Đơn vị vận chuyển không nhận địa chỉ này. Kiểm tra tên đường có thuộc phường/xã đã chọn không.";
+
+    // Thân request có dòng địa chỉ do test chọn. Mã tỉnh và phường vẫn là địa chỉ hợp lệ trong danh mục.
+    private static Dictionary<string, object?> BodyWithLine(int expectedTotal, string line, string email)
+    {
+        var body = BodyFor(expectedTotal, email: email);
+        body["address"] = new { provinceCode = ProvinceCode, wardCode = WardCode, line };
+        return body;
+    }
+
+    [Fact]
+    public async Task PlaceOrder_GhnRejectsStreet_Returns422OnAddressLineAndChangesNothing()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var skuId = await AddToCartAsync(anonymousId, price: 100_000);
+        var total = await PreviewTotalAsync(anonymousId);
+        var key = NewKey();
+        var email = $"khach-{Guid.NewGuid():N}@example.com";
+        var movementsBefore = await _kit.MovementCountOfAsync(skuId);
+        var line = $"12 Phố Test {FakeGhnClient.RejectedAddressMarker}";
+
+        var response = await PlaceAsync(anonymousId, key, BodyWithLine(total, line, email));
+
+        var error = await CartTestKit.AssertErrorAsync(response, HttpStatusCode.UnprocessableEntity, "ADDRESS_NOT_DELIVERABLE");
+        Assert.Equal([CheckoutPreviewRequests.LineField], DetailKeys(error));
+        Assert.Equal(StreetNotInWardMessage, error.GetProperty("details")[0].GetProperty("message").GetString());
+        // Từ chối nằm trước transaction: không có đơn, không giữ hàng, giỏ còn nguyên và không có thư.
+        Assert.Equal(0, await OrderCountAsync(key));
+        Assert.Equal(10, await _kit.StockOfAsync(skuId));
+        Assert.Equal(movementsBefore, await _kit.MovementCountOfAsync(skuId));
+        Assert.Equal(1, await CartLineCountAsync(anonymousId));
+        Assert.Empty(_factory.EmailSender.MessagesTo(email));
+    }
+
+    // Bản bọc `IShippingService` luôn báo phường/xã không còn trong danh mục. Bước báo phí thường chặn ca này trước, nên request thật khó chạm tới nhánh.
+    private sealed class WardNotInCatalogShippingService(IShippingService inner) : IShippingService
+    {
+        public Task<AddressCheckResult> CheckDeliveryAddressAsync(
+            ShippingAddress to, Parcel parcel, CancellationToken cancellationToken) =>
+            Task.FromResult(AddressCheckResult.Rejected(AddressRejectionReason.NotInCatalog));
+
+        public Task<Quote> QuoteAsync(
+            ShippingAddress to, Parcel parcel, int codAmount, int insuredValue, CancellationToken cancellationToken) =>
+            inner.QuoteAsync(to, parcel, codAmount, insuredValue, cancellationToken);
+
+        public Task<Shipment> CreateShipmentAsync(CreateShipmentRequest request, CancellationToken cancellationToken) =>
+            inner.CreateShipmentAsync(request, cancellationToken);
+
+        public Task CancelShipmentAsync(string shipmentId, CancellationToken cancellationToken) =>
+            inner.CancelShipmentAsync(shipmentId, cancellationToken);
+
+        public Task<Shipment?> GetShipmentAsync(string shipmentId, CancellationToken cancellationToken) =>
+            inner.GetShipmentAsync(shipmentId, cancellationToken);
+
+        public Task<Shipment?> GetShipmentByRefAsync(string reference, CancellationToken cancellationToken) =>
+            inner.GetShipmentByRefAsync(reference, cancellationToken);
+
+        public Parcel BuildParcel(IReadOnlyList<ParcelItem> items) => inner.BuildParcel(items);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_WardNotInCatalogAtCheck_Returns422OnWardCodeAndChangesNothing()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var skuId = await AddToCartAsync(anonymousId, price: 100_000);
+        var total = await PreviewTotalAsync(anonymousId);
+        var key = NewKey();
+        var host = CreateHostWith(services =>
+        {
+            services.RemoveAll<IShippingService>();
+            services.AddScoped<IShippingService>(provider =>
+                new WardNotInCatalogShippingService(ActivatorUtilities.CreateInstance<ShippingService>(provider)));
+        });
+
+        var response = await SendOrderAsync(host.Client, anonymousId, key, BodyFor(total));
+
+        var error = await CartTestKit.AssertErrorAsync(response, HttpStatusCode.UnprocessableEntity, "ADDRESS_NOT_DELIVERABLE");
+        Assert.Equal([CheckoutPreviewRequests.WardCodeField], DetailKeys(error));
+        Assert.Equal(0, await OrderCountAsync(key));
+        Assert.Equal(10, await _kit.StockOfAsync(skuId));
+        Assert.Equal(1, await CartLineCountAsync(anonymousId));
+    }
+
+    [Fact]
+    public async Task PlaceOrder_GhnRejectsStreet_ThenCorrectedAddressWithSameKey_CreatesOrder()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        await AddToCartAsync(anonymousId, price: 100_000);
+        var total = await PreviewTotalAsync(anonymousId);
+        var key = NewKey();
+        var email = $"khach-{Guid.NewGuid():N}@example.com";
+        var rejectedLine = $"12 Phố Test {FakeGhnClient.RejectedAddressMarker}";
+        var rejected = await PlaceAsync(anonymousId, key, BodyWithLine(total, rejectedLine, email));
+        await CartTestKit.AssertErrorAsync(rejected, HttpStatusCode.UnprocessableEntity, "ADDRESS_NOT_DELIVERABLE");
+
+        // Khách sửa địa chỉ rồi gửi lại. Lần bị từ chối không lưu khóa, nên khóa cũ dùng được.
+        var corrected = await PlaceAsync(anonymousId, key, BodyWithLine(total, "12 Phố Test", email));
+
+        await ReadDataAsync(corrected, HttpStatusCode.Created);
+        Assert.Equal(1, await OrderCountAsync(key));
+    }
+
+    [Fact]
+    public async Task PlaceOrder_ValidAddress_CreatesOrderWithExactlyOnePreviewCall()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        await AddToCartAsync(anonymousId, price: 100_000);
+        var total = await PreviewTotalAsync(anonymousId);
+        var key = NewKey();
+        var previewCallsBefore = _factory.Recorder.PreviewOrderRequests.Count;
+
+        var response = await PlaceAsync(anonymousId, key, BodyFor(total));
+
+        await ReadDataAsync(response, HttpStatusCode.Created);
+        Assert.Equal(1, _factory.Recorder.PreviewOrderRequests.Count - previewCallsBefore);
+        Assert.Empty(_factory.Recorder.CreateOrderRequests);
+    }
+
+    [Theory]
+    [InlineData("Unavailable")]
+    [InlineData("UnavailableAfterProcessing")]
+    // Tên chế độ lỗi là chuỗi vì `FakeGhnFailure` là `internal`.
+    public async Task PlaceOrder_GhnPreviewFails_StillCreatesOrderAndLogsWarningWithKey(string failureName)
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        await AddToCartAsync(anonymousId, price: 100_000);
+        var total = await PreviewTotalAsync(anonymousId);
+        _factory.GhnClient.SetFailure(FakeGhnOperation.PreviewOrder, Enum.Parse<FakeGhnFailure>(failureName));
+        var key = NewKey();
+
+        var response = await PlaceAsync(anonymousId, key, BodyFor(total));
+
+        await ReadDataAsync(response, HttpStatusCode.Created);
+        Assert.Equal(1, await OrderCountAsync(key));
+        var warning = Assert.Single(
+            _factory.Logs.Entries,
+            log => log.Level == LogLevel.Warning && log.Message.Contains(key, StringComparison.Ordinal));
+        // Log không mang dữ liệu khách: tên, số điện thoại, email và dòng địa chỉ.
+        Assert.DoesNotContain("Nguyễn Văn An", warning.Message);
+        Assert.DoesNotContain("0901234567", warning.Message);
+        Assert.DoesNotContain("an@example.com", warning.Message);
+        Assert.DoesNotContain("12 Phố Test", warning.Message);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_SameKeyAfterOrderCreated_ReturnsOrderWithoutSecondPreviewCall()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        await AddToCartAsync(anonymousId, price: 100_000);
+        var total = await PreviewTotalAsync(anonymousId);
+        var key = NewKey();
+        await ReadDataAsync(await PlaceAsync(anonymousId, key, BodyFor(total)), HttpStatusCode.Created);
+        var previewCallsAfterFirst = _factory.Recorder.PreviewOrderRequests.Count;
+
+        var second = await PlaceAsync(anonymousId, key, BodyFor(total));
+
+        await ReadDataAsync(second, HttpStatusCode.OK);
+        Assert.Equal(previewCallsAfterFirst, _factory.Recorder.PreviewOrderRequests.Count);
     }
 
     // ----- Tiêu chí 4: thiếu hàng -----

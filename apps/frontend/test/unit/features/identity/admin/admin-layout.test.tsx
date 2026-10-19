@@ -109,6 +109,7 @@ describe('AdminLayout', () => {
       'Quản lý Role',
       'Cấu hình AI',
       'Vận chuyển',
+      'Phí ship dự phòng',
       'Cấu hình bán hàng',
       'Nhật ký thao tác',
     ]);
@@ -126,6 +127,20 @@ describe('AdminLayout', () => {
   it('nhân viên thiếu quyền shipping-settings:manage không thấy mục Vận chuyển', async () => {
     await renderLayout(salesActor);
     expect(navLabels()).not.toContain('Vận chuyển');
+  });
+
+  it('mục Phí ship dự phòng chỉ hiện khi có quyền shipping-settings:manage', async () => {
+    await renderLayout({
+      ...salesActor,
+      permissions: [...salesActor.permissions, 'shipping-settings:manage'],
+    });
+    expect(navLabels()).toContain('Phí ship dự phòng');
+    expect(navLink('Phí ship dự phòng').getAttribute('href')).toBe('/admin/shipping/fallback-fee');
+  });
+
+  it('nhân viên thiếu quyền shipping-settings:manage không thấy mục Phí ship dự phòng', async () => {
+    await renderLayout(salesActor);
+    expect(navLabels()).not.toContain('Phí ship dự phòng');
   });
 
   it('ẩn mục thiếu quyền và ẩn nhãn nhóm không còn mục nào', async () => {

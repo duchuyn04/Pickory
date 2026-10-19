@@ -10,6 +10,8 @@ using Pickory.Modules.Commerce.Contracts.Events;
 using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Entities;
 using Pickory.Modules.Commerce.Persistence;
+using Pickory.Modules.Shipping.Contracts;
+using Pickory.Modules.Shipping.Contracts.Addresses;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.Email;
 using Pickory.Shared.Events;
@@ -24,6 +26,7 @@ public sealed class PlaceOrderService(
     CommerceDbContext database,
     CheckoutPreviewService checkout,
     CartService carts,
+    IShippingService shipping,
     IStockService stock,
     IOrderCodeSource codeSource,
     IEventDispatcher dispatcher,
@@ -43,6 +46,9 @@ public sealed class PlaceOrderService(
     private const string InsufficientStockMessage = "Một số sản phẩm không đủ hàng. Vui lòng kiểm tra lại giỏ hàng.";
     private const string KeyConflictMessage = "Khóa đặt đơn này đã được dùng cho một đơn khác.";
     private const string OrderPlacedReason = "Khách đặt đơn.";
+    private const string AddressNotDeliverableCode = "ADDRESS_NOT_DELIVERABLE";
+    private const string StreetNotInWardMessage =
+        "Đơn vị vận chuyển không nhận địa chỉ này. Kiểm tra tên đường có thuộc phường/xã đã chọn không.";
 
     public async Task<PlaceOrderResult> PlaceAsync(
         CartOwner owner, string idempotencyKey, PlaceOrderInput input, CancellationToken cancellationToken)
@@ -62,6 +68,9 @@ public sealed class PlaceOrderService(
         {
             throw TotalChanged();
         }
+
+        // Kiểm địa chỉ nhận trước transaction. Lời gọi GHN có thể chờ mạng, nên không được giữ khóa giỏ hay khóa kho.
+        await EnsureAddressDeliverableAsync(idempotencyKey, calculation, cancellationToken);
 
         var events = new DomainEventCollector(dispatcher);
         CreatedOrder created;
@@ -97,6 +106,27 @@ public sealed class PlaceOrderService(
         }
 
         return created.Result;
+    }
+
+    // Chặn đơn khi shipping từ chối địa chỉ nhận. Lý do là tên đường không thuộc phường/xã, hoặc phường/xã không còn trong danh mục.
+    private async Task EnsureAddressDeliverableAsync(
+        string idempotencyKey, CheckoutCalculation calculation, CancellationToken cancellationToken)
+    {
+        var check = await shipping.CheckDeliveryAddressAsync(calculation.Destination, calculation.Parcel, cancellationToken);
+
+        // Không kiểm được thì vẫn cho đặt đơn, vì lỗi của GHN không phải lỗi của khách. Log chỉ có khóa đặt đơn, không có dữ liệu khách.
+        if (check.Outcome == AddressCheckOutcome.Unverifiable)
+        {
+            logger.LogWarning(
+                "Không kiểm được địa chỉ nhận với đơn vị vận chuyển, đơn vẫn được đặt. Khóa đặt đơn: {IdempotencyKey}.",
+                idempotencyKey);
+            return;
+        }
+
+        if (check.Outcome == AddressCheckOutcome.Rejected)
+        {
+            throw AddressNotDeliverable(check.Reason);
+        }
     }
 
     // Gửi thư sau commit và sau khi phát sự kiện. Mọi lỗi ở bước này chỉ ghi log, vì đơn đã tạo xong.
@@ -249,6 +279,8 @@ public sealed class PlaceOrderService(
             ShippingFee = calculation.Pricing.ShippingFee,
             ShippingDiscount = calculation.Pricing.ShippingDiscount,
             Total = calculation.Pricing.Total,
+            // Ghi nguồn phí để nhân viên biết đơn dùng phí GHN, phí đã lưu hay phí dự phòng. Khách không thấy giá trị này.
+            ShippingFeeSource = calculation.FeeSource,
             AccessTokenHash = accessTokenHash,
             IdempotencyKey = idempotencyKey,
             CreatedAt = now,
@@ -369,6 +401,15 @@ public sealed class PlaceOrderService(
         new(value.Ticks - (value.Ticks % 10), DateTimeKind.Utc);
 
     private static AppException TotalChanged() => new("ORDER_TOTAL_CHANGED", 409, TotalChangedMessage);
+
+    private static AppException AddressNotDeliverable(AddressRejectionReason? reason)
+    {
+        // Gắn lỗi vào đúng ô để form đưa focus về đó. Phường/xã không còn trong danh mục thì khách phải chọn lại phường/xã.
+        var (field, message) = reason == AddressRejectionReason.NotInCatalog
+            ? (CheckoutPreviewRequests.WardCodeField, CheckoutPreviewService.AddressNotFoundMessage)
+            : (CheckoutPreviewRequests.LineField, StreetNotInWardMessage);
+        return new AppException(AddressNotDeliverableCode, 422, message, [new ErrorFieldDetail(field, message)]);
+    }
 
     private static AppException InsufficientStock(IReadOnlyList<StockShortage> shortages)
     {

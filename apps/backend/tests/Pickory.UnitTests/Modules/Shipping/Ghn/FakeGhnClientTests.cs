@@ -189,6 +189,7 @@ public sealed class FakeGhnClientTests
     [InlineData("CalculateFee")]
     [InlineData("GetLeadTime")]
     [InlineData("CreateOrder")]
+    [InlineData("PreviewOrder")]
     [InlineData("CancelOrder")]
     [InlineData("GetOrderDetail")]
     // Tên hàm là chuỗi vì kiểu `FakeGhnOperation` là `internal`, còn phương thức test là `public`.
@@ -250,6 +251,127 @@ public sealed class FakeGhnClientTests
             int.Parse(next.OrderCode["FAKE".Length..]));
     }
 
+    // Đơn có địa chỉ lấy hàng hai cấp giống request mà `ShippingService` dựng: đủ năm trường và cờ địa chỉ mới.
+    private static GhnCreateOrderRequest OrderRequestWithPickup(
+        string clientOrderCode,
+        string provinceName = "Hà Nội",
+        string wardName = "Phường Hoàn Kiếm",
+        bool? isNewFromAddress = true) => OrderRequest(clientOrderCode) with
+        {
+            FromName = "Kho Pickory",
+            FromPhone = "0901234567",
+            FromAddress = "12 Tràng Tiền",
+            FromProvinceName = provinceName,
+            FromWardName = wardName,
+            IsNewFromAddress = isNewFromAddress,
+        };
+
+    [Fact]
+    // Đơn có phường lấy hàng đúng danh mục thì GHN nhận và lưu địa chỉ đó, giống kết quả sandbox ngày 2026-10-19.
+    public async Task CreateOrder_PickupAddressInCatalogWithNewAddressFlag_CreatesOrder()
+    {
+        var client = new FakeGhnClient();
+
+        var created = await client.CreateOrderAsync(OrderRequestWithPickup("ORD-FROM-OK"), CancellationToken.None);
+
+        Assert.Equal("FAKE000001", created.OrderCode);
+        Assert.Equal(1, client.CreatedOrderCount);
+    }
+
+    [Fact]
+    // Không gửi địa chỉ lấy hàng thì GHN dùng địa chỉ của shop và vẫn nhận đơn (mốc đã biết của sandbox).
+    public async Task CreateOrder_WithoutPickupAddress_CreatesOrder()
+    {
+        var client = new FakeGhnClient();
+
+        await client.CreateOrderAsync(OrderRequest("ORD-NO-FROM"), CancellationToken.None);
+
+        Assert.Equal(1, client.CreatedOrderCount);
+    }
+
+    [Theory]
+    [InlineData("Hà Nội", "Phường Không Có")]
+    [InlineData("Hà Nội", "Phường Bến Nghé")]
+    [InlineData("Tỉnh Không Có", "Phường Hoàn Kiếm")]
+    // Ba ca của sandbox ngày 2026-10-19 (ADR 0003, mục "Bổ sung SHIP-11"): phường lạ, phường của tỉnh khác, tỉnh lạ.
+    // Bản giả đi qua cùng bước dịch với adapter thật, nên test thấy câu tiếng Việt.
+    public async Task CreateOrder_PickupWardOrProvinceNotInCatalog_IsRejectedWithTranslatedMessage(
+        string provinceName, string wardName)
+    {
+        var client = new FakeGhnClient();
+
+        var error = await Assert.ThrowsAsync<ShippingRejectedException>(() => client.CreateOrderAsync(
+            OrderRequestWithPickup("ORD-FROM-BAD", provinceName, wardName), CancellationToken.None));
+
+        Assert.Equal(ShippingRejectionKind.PickupPlaceNotInCatalog, error.Kind);
+        Assert.Contains("Cập nhật lại ở trang cấu hình vận chuyển.", error.Message);
+        Assert.Equal(0, client.CreatedOrderCount);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(null)]
+    // Luật riêng của bản giả: sandbox nhận đơn thiếu cờ và bỏ qua phường, còn bản giả từ chối để lỗi cấu hình lộ ra.
+    public async Task CreateOrder_PickupAddressWithoutNewAddressFlag_IsRejectedByFakeOnly(bool? isNewFromAddress)
+    {
+        var client = new FakeGhnClient();
+
+        var error = await Assert.ThrowsAsync<ShippingRejectedException>(() => client.CreateOrderAsync(
+            OrderRequestWithPickup("ORD-FROM-FLAG", isNewFromAddress: isNewFromAddress), CancellationToken.None));
+
+        Assert.Contains("is_new_from_address", error.Message);
+        Assert.Equal(0, client.CreatedOrderCount);
+    }
+
+    [Fact]
+    // Quy ước cho test của `commerce`: dòng địa chỉ nhận chứa `RejectedAddressMarker` thì GHN giả báo `To address conflict`.
+    public async Task CreateOrder_ToAddressWithRejectedMarker_IsRejectedAsAddressMismatchAndCreatesNothing()
+    {
+        var client = new FakeGhnClient();
+        var request = OrderRequest("ORD-TO-BAD") with { ToAddress = $"1 Nguyen Hue {FakeGhnClient.RejectedAddressMarker}" };
+
+        var error = await Assert.ThrowsAsync<ShippingRejectedException>(() => client.CreateOrderAsync(request, CancellationToken.None));
+
+        Assert.Equal(ShippingRejectionKind.ToAddressMismatch, error.Kind);
+        Assert.Contains("tên đường không khớp với phường/xã", error.Message);
+        Assert.Equal(0, client.CreatedOrderCount);
+    }
+
+    [Fact]
+    public async Task PreviewOrder_ValidAddress_ReturnsFeeAndCreatesNothing()
+    {
+        var client = new FakeGhnClient();
+
+        var preview = await client.PreviewOrderAsync(OrderRequestWithPickup("ORD-PREVIEW-OK"), CancellationToken.None);
+
+        Assert.True(preview.TotalFee > 0);
+        // API xem trước của GHN không tạo đơn. Bản giả cũng không tạo đơn và không tăng bộ đếm.
+        Assert.Equal(0, client.CreatedOrderCount);
+    }
+
+    [Fact]
+    public async Task PreviewOrder_ToAddressWithRejectedMarker_IsRejectedAsAddressMismatch()
+    {
+        var client = new FakeGhnClient();
+        var request = OrderRequest("ORD-PREVIEW-TO") with { ToAddress = $"{FakeGhnClient.RejectedAddressMarker} 1 Nguyen Hue" };
+
+        var error = await Assert.ThrowsAsync<ShippingRejectedException>(() => client.PreviewOrderAsync(request, CancellationToken.None));
+
+        Assert.Equal(ShippingRejectionKind.ToAddressMismatch, error.Kind);
+        Assert.Equal(0, client.CreatedOrderCount);
+    }
+
+    [Fact]
+    public async Task PreviewOrder_PickupWardNotInCatalog_IsRejectedAsPickupPlaceNotInCatalog()
+    {
+        var client = new FakeGhnClient();
+
+        var error = await Assert.ThrowsAsync<ShippingRejectedException>(() => client.PreviewOrderAsync(
+            OrderRequestWithPickup("ORD-PREVIEW-FROM", wardName: "Phường Không Có"), CancellationToken.None));
+
+        Assert.Equal(ShippingRejectionKind.PickupPlaceNotInCatalog, error.Kind);
+    }
+
     private static Func<Task> Call(FakeGhnClient client, FakeGhnOperation operation, string orderCode) => operation switch
     {
         FakeGhnOperation.GetProvinces => () => client.GetProvincesAsync(CancellationToken.None),
@@ -257,6 +379,7 @@ public sealed class FakeGhnClientTests
         FakeGhnOperation.CalculateFee => () => client.CalculateFeeAsync(new GhnFeeRequest(1, 1, 1, 1, 2, 0, 0, 1000001, 1003646), CancellationToken.None),
         FakeGhnOperation.GetLeadTime => () => client.GetLeadTimeAsync(new GhnLeadTimeRequest(1000001, 1003646, 2, 1, 1, 1, 1), CancellationToken.None),
         FakeGhnOperation.CreateOrder => () => client.CreateOrderAsync(OrderRequest("ORD-LOOP"), CancellationToken.None),
+        FakeGhnOperation.PreviewOrder => () => client.PreviewOrderAsync(OrderRequest("ORD-LOOP-PREVIEW"), CancellationToken.None),
         FakeGhnOperation.CancelOrder => () => client.CancelOrderAsync(orderCode, GhnCancelReason.Other, null, CancellationToken.None),
         _ => () => client.GetOrderDetailAsync(orderCode, CancellationToken.None),
     };

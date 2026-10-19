@@ -6,6 +6,9 @@ namespace Pickory.IntegrationTests.Shipping;
 // Test dùng nó để mô phỏng bên gọi đóng request đúng lúc GHN đã đổi trạng thái.
 internal sealed class CancelAfterGhnClient(IGhnClient inner, CancellationTokenSource callerCancellation) : IGhnClient
 {
+    public Task<GhnOrderPreview> PreviewOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken) =>
+        inner.PreviewOrderAsync(request, cancellationToken);
+
     public async Task<GhnCreatedOrder> CreateOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken)
     {
         var created = await inner.CreateOrderAsync(request, cancellationToken);

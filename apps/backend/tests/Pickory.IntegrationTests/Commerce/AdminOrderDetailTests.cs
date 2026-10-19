@@ -85,6 +85,31 @@ public sealed class AdminOrderDetailTests : IClassFixture<PickoryWebApplicationF
         return shipment;
     }
 
+    [Theory]
+    [InlineData(ShippingFeeSource.Ghn, "ghn")]
+    [InlineData(ShippingFeeSource.Cached, "cached")]
+    [InlineData(ShippingFeeSource.Fallback, "fallback")]
+    // COM-27: nhân viên thấy nguồn của phí vận chuyển, viết thường như các nhãn khác của đơn.
+    public async Task Detail_ReturnsShippingFeeSourceLabel(ShippingFeeSource source, string expectedLabel)
+    {
+        await _kit.AddOrderAsync("DT-SRC", CreatedAt, shippingFeeSource: source);
+
+        var data = await ReadDataAsync(await GetAsync("DT-SRC"));
+
+        Assert.Equal(expectedLabel, data.GetProperty("shippingFeeSource").GetString());
+    }
+
+    [Fact]
+    // Đơn tạo mà không nói rõ nguồn phí nhận nguồn GHN, giống đơn đặt trước khi có cột mới.
+    public async Task Detail_OrderWithoutExplicitSource_IsGhn()
+    {
+        await _kit.AddOrderAsync("DT-DEFAULT-SRC", CreatedAt);
+
+        var data = await ReadDataAsync(await GetAsync("DT-DEFAULT-SRC"));
+
+        Assert.Equal("ghn", data.GetProperty("shippingFeeSource").GetString());
+    }
+
     [Fact]
     // Chi tiết có đủ mọi phần nhân viên cần để làm việc với đơn.
     public async Task Detail_ReturnsEveryPart()

@@ -252,6 +252,23 @@ public sealed class ShipmentCreateTests(PickoryWebApplicationFactory factory) : 
     }
 
     [Fact]
+    // SHIP-11: sandbox từ chối tên phường lấy hàng không thuộc tỉnh (ADR 0003, mục "Bổ sung SHIP-11"). Bản giả từ chối giống vậy, để lỗi cấu hình lộ ra ở test.
+    public async Task Create_SenderWardUnknownToGhn_ThrowsRejectedAndStoresNothing()
+    {
+        await ShipmentTestSetup.UpdateSenderWardNameAsync(factory, "Phường Không Có");
+
+        var error = await Assert.ThrowsAsync<ShippingRejectedException>(() => CreateAsync(ShipmentTestSetup.SampleRequest));
+
+        Assert.Equal(ShippingRejectionKind.PickupPlaceNotInCatalog, error.Kind);
+        Assert.Contains("Cập nhật lại ở trang cấu hình vận chuyển.", error.Message);
+        // Service đã gọi GHN một lần, vì chỉ GHN biết địa chỉ lấy hàng có khớp hay không.
+        Assert.Single(_ghn.CreateOrderRequests);
+        Assert.Empty(await ShipmentTestSetup.ReadShipmentsAsync(factory));
+        Assert.Empty(await ShipmentTestSetup.ReadEventsAsync(factory));
+        Assert.Empty(_events.Published);
+    }
+
+    [Fact]
     public async Task Create_NotConfigured_ThrowsNotConfiguredAndDoesNotCallGhn()
     {
         await ShipmentTestSetup.DeleteSettingsAsync(factory);

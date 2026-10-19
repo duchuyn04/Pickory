@@ -89,6 +89,8 @@ export interface AdminOrderSuggestedParcel {
   heightCm: number;
 }
 
+export type ShippingFeeSource = 'ghn' | 'cached' | 'fallback';
+
 export interface AdminOrderDetail {
   code: string;
   status: string;
@@ -105,6 +107,8 @@ export interface AdminOrderDetail {
   shippingFee: number;
   shippingDiscount: number;
   total: number;
+  // Nguồn của phí vận chuyển. `ghn` là phí GHN vừa tính, `cached` là phí GHN đã lưu, `fallback` là phí theo bảng dự phòng.
+  shippingFeeSource: ShippingFeeSource;
   statusHistory: AdminOrderHistoryEntry[];
   shipment: AdminOrderShipment | null;
   suggestedParcel: AdminOrderSuggestedParcel | null;

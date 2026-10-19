@@ -190,12 +190,19 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 7: E2E và nghiệm thu
-- [x] COM-E2E0 · [x] COM-E2E0B · [x] COM-E2E1 · [x] COM-E2E2 · [x] COM-E2E3 · [x] COM-E2E4 · [ ] COM-E2E5 (chuyển sang CBW-E2E1) · [ ] COM-24
+- [x] COM-E2E0 · [x] COM-E2E0B · [x] COM-E2E1 · [x] COM-E2E2 · [x] COM-E2E3 · [x] COM-E2E4 · [ ] COM-E2E5 (chuyển sang CBW-E2E1) · [ ] COM-24 (chờ khóa SePay)
+
+### Phase 8: Sửa sau nghiệm thu (thêm ngày 2026-10-19)
+- [x] COM-26 kiểm địa chỉ nhận với GHN khi khách đặt đơn
+- [x] COM-27 đơn dùng phí vận chuyển dự phòng
 
 ### Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt, trừ dòng ghi chờ khóa
-- [ ] Coverage dòng của `Pickory.Modules.Commerce` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
-- [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+  Dòng chatbot chờ CBW-E2E1. Dòng SePay chờ khóa.
+- [x] Coverage dòng của `Pickory.Modules.Commerce` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
+  Coverage gộp là 97.9% (5165/5274 dòng), đo ngày 2026-10-19.
+- [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+  Reviewer chạy ngày 2026-10-19 sau COM-27: E2E toàn bộ 113 đạt, 0 lỗi; `Pickory.IntegrationTests` toàn bộ 2246 đạt, 12 bỏ qua, 1 lỗi. Test lỗi là `AdminStaffTests.TwoLastAdmins_DemotingEachOtherConcurrentlyKeepsOneAdmin` của `identity`: lỗi khi chạy toàn bộ, đạt cả 3 lần chạy riêng.
 - [ ] Review với người dùng, rồi mới bắt đầu `activity-tracking`
 
 ## Traceability: Success Criteria → Task

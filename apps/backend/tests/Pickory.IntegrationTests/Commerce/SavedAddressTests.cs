@@ -20,7 +20,7 @@ public sealed class SavedAddressTests : IClassFixture<PickoryWebApplicationFacto
     private const string AddressesPath = "/api/me/addresses";
     private const string ProvinceCode = "1000001";
     private const string WardCode = "1003646";
-    private const string OtherProvinceCode = "1000002";
+    private const string OtherProvinceCode = "1000000";
     private const string InactiveWardCode = "1003649";
     private const string OtherProvinceWardCode = "1004001";
 

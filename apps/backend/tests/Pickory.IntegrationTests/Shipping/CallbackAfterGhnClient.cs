@@ -24,6 +24,9 @@ internal sealed class CallbackAfterGhnClient(IGhnClient inner, Func<Task> afterC
     public Task<GhnLeadTime> GetLeadTimeAsync(GhnLeadTimeRequest request, CancellationToken cancellationToken) =>
         inner.GetLeadTimeAsync(request, cancellationToken);
 
+    public Task<GhnOrderPreview> PreviewOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken) =>
+        inner.PreviewOrderAsync(request, cancellationToken);
+
     public Task<GhnCreatedOrder> CreateOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken) =>
         inner.CreateOrderAsync(request, cancellationToken);
 

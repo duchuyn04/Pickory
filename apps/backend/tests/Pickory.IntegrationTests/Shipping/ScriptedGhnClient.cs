@@ -84,6 +84,8 @@ internal sealed class ScriptedGhnClient : IGhnClient
 
     public Task<GhnLeadTime> GetLeadTimeAsync(GhnLeadTimeRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
 
+    public Task<GhnOrderPreview> PreviewOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
+
     public Task<GhnCreatedOrder> CreateOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken) => throw new NotSupportedException();
 
     public Task CancelOrderAsync(string orderCode, string reasonCode, string? reason, CancellationToken cancellationToken) => throw new NotSupportedException();

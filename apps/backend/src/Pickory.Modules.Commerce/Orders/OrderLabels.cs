@@ -13,6 +13,8 @@ public static class OrderLabels
 
     public static string ToLabel(PaymentMethod method) => Convert(method);
 
+    public static string ToLabel(ShippingFeeSource source) => Convert(source);
+
     // Trạng thái vận đơn do module Shipping sở hữu. Nhãn dùng cùng quy tắc để client không có hai kiểu viết.
     public static string ToLabel(ShipmentStatus status) => Convert(status);
 

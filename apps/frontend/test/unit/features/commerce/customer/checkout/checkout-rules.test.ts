@@ -169,6 +169,32 @@ describe('describeOrderError', () => {
     });
   });
 
+  it('ADDRESS_NOT_DELIVERABLE gán câu vào ô dòng địa chỉ theo key', () => {
+    const failure = describeOrderError(
+      new ApiError('ADDRESS_NOT_DELIVERABLE', 422, 'Không nhận địa chỉ.', [
+        { key: 'address.line', message: 'Kiểm tra tên đường.' },
+      ]),
+    );
+    expect(failure).toEqual({
+      kind: 'field-errors',
+      fieldErrors: { 'address.line': 'Kiểm tra tên đường.' },
+      unmatched: [],
+    });
+  });
+
+  it('ADDRESS_NOT_DELIVERABLE gán câu vào ô phường/xã khi key là address.wardCode', () => {
+    const failure = describeOrderError(
+      new ApiError('ADDRESS_NOT_DELIVERABLE', 422, 'Không nhận địa chỉ.', [
+        { key: 'address.wardCode', message: 'Chọn lại phường/xã.' },
+      ]),
+    );
+    expect(failure).toEqual({
+      kind: 'field-errors',
+      fieldErrors: { 'address.wardCode': 'Chọn lại phường/xã.' },
+      unmatched: [],
+    });
+  });
+
   it('mã khác dùng câu của API', () => {
     expect(describeOrderError(new ApiError('SERVER_ERROR', 500, 'Lỗi máy chủ.'))).toEqual({
       kind: 'other',

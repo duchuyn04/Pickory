@@ -9,6 +9,9 @@ internal sealed class GatedGhnClient(IGhnClient inner, int participants) : IGhnC
     private readonly TaskCompletionSource _allArrived = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int _arrived;
 
+    public Task<GhnOrderPreview> PreviewOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken) =>
+        inner.PreviewOrderAsync(request, cancellationToken);
+
     public async Task<GhnCreatedOrder> CreateOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken)
     {
         if (Interlocked.Increment(ref _arrived) == participants)

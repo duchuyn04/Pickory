@@ -124,7 +124,10 @@ public sealed class CheckoutPreviewService(
             pricing,
             limits,
             codAllowed,
-            quote.ExpectedDeliveryDate);
+            quote.ExpectedDeliveryDate,
+            destination,
+            parcel,
+            ShippingFeeSourceMapper.FromQuote(quote.Source));
     }
 
     private static CheckoutLine ToCheckoutLine(CartLineInput line, SkuSnapshot sku) =>

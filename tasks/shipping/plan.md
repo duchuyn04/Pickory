@@ -99,6 +99,13 @@ Chi tiết từng task ở `tasks/shipping/todo.md`.
 ### Phase 3: Nghiệm thu
 - [x] SHIP-09
 
+### Phase 4: Sửa sau nghiệm thu commerce (thêm ngày 2026-10-19)
+- [x] SHIP-11 gửi đúng địa chỉ lấy hàng khi tạo vận đơn GHN
+- [x] SHIP-12 báo rõ lỗi địa chỉ của GHN và kiểm địa chỉ nhận trước khi tạo vận đơn
+
+### Phase 5: Phí vận chuyển dự phòng (thêm ngày 2026-10-19)
+- [x] SHIP-13 · [x] SHIP-14 · [x] UI-S3
+
 ### Checkpoint cuối
 - [x] Mọi dòng Traceability đạt
 - [x] Coverage dòng của `Pickory.Modules.Shipping` ít nhất 80%, bỏ `Persistence/Migrations/`

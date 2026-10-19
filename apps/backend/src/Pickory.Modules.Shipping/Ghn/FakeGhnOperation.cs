@@ -1,6 +1,6 @@
 namespace Pickory.Modules.Shipping.Ghn;
 
-// Bảy hàm của `IGhnClient`, để test chọn hàm nào của client giả bị lỗi.
+// Tám hàm của `IGhnClient`, để test chọn hàm nào của client giả bị lỗi.
 internal enum FakeGhnOperation
 {
     GetProvinces,
@@ -8,6 +8,7 @@ internal enum FakeGhnOperation
     CalculateFee,
     GetLeadTime,
     CreateOrder,
+    PreviewOrder,
     CancelOrder,
     GetOrderDetail,
 }

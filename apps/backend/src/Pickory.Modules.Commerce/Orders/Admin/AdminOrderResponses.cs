@@ -52,6 +52,8 @@ public sealed record AdminOrderDetailResponse(
     int ShippingFee,
     int ShippingDiscount,
     int Total,
+    // `ghn`, `cached` hoặc `fallback`. Chỉ API của nhân viên trả trường này.
+    string ShippingFeeSource,
     IReadOnlyList<AdminOrderStatusHistoryResponse> StatusHistory,
     AdminOrderShipmentResponse? Shipment,
     AdminOrderParcelResponse? SuggestedParcel,

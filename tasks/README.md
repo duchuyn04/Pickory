@@ -17,7 +17,7 @@ Spec của module nằm ở `spec/SPEC-<module>.md`. Thứ tự build theo `spec
 | `catalog/` | `catalog` (mã `CAT`, `UI-C`) | Xong. Còn 3 mục chờ người dùng tự test. `CAT-14` (tìm theo từ khóa, thêm ngày 2026-10-14) chưa bắt đầu |
 | `shipping/` | `shipping` (mã `SHIP`, `UI-S`) | Xong, đã review với người dùng |
 | `rest-routes/` | Đổi route cũ đặt theo hành động sang REST (mã `REST`) | Xong. Còn mục review với người dùng ở Checkpoint R1 và Checkpoint cuối |
-| `commerce/` | `commerce` (mã `COM`) | Đang ở Phase 7. COM-E2E0 tới COM-E2E4 xong. COM-E2E5 chuyển sang CBW-E2E1. Còn COM-24 |
+| `commerce/` | `commerce` (mã `COM`) | Đang ở Phase 7. COM-E2E0 tới COM-E2E4 xong. COM-E2E5 chuyển sang CBW-E2E1. Còn COM-24: ma trận quyền, coverage 97.9% và sandbox GHN đã đạt, còn chờ khóa SePay |
 | `activity-tracking/` | `activity-tracking` (mã `ACT`) | Chưa bắt đầu. Ngày 2026-10-18 chỉ giữ phần đo chuyển đổi |
 | `smart-search/` | `smart-search` (mã `SRCH`) | Đã bỏ ngày 2026-10-14. Chỉ giữ để tra cứu lịch sử |
 | `recommendations/` | `recommendations` (mã `REC`) | Đã bỏ ngày 2026-10-14. Chỉ giữ để tra cứu lịch sử |

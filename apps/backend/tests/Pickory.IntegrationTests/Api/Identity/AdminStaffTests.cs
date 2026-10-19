@@ -693,9 +693,10 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
             SendAsync(HttpMethod.Put, $"/api/admin/staff/{secondAdmin.Id}/roles", new { roleCodes = new[] { "sales" } }, firstSession),
             SendAsync(HttpMethod.Put, $"/api/admin/staff/{firstAdmin.Id}/roles", new { roleCodes = new[] { "sales" } }, secondSession));
 
-        // Đúng một request thành công. Request còn lại nhận 409 hoặc 400, tùy thời điểm xung đột.
+        // Đúng một request thành công, request thua nhận 409 hoặc 400 khi hai giao dịch va nhau ở DB.
+        // Mã 403 xảy ra khi request kia đã hạ quyền người gửi trước lúc kiểm quyền.
         Assert.Single(responses, response => response.StatusCode == HttpStatusCode.OK);
-        Assert.Contains(responses, response => response.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.BadRequest);
+        Assert.Contains(responses, response => response.StatusCode is HttpStatusCode.Conflict or HttpStatusCode.BadRequest or HttpStatusCode.Forbidden);
         await using var identity = _database.CreateIdentityContext();
         var activeAdmins = await identity.UserRoles.CountAsync(value =>
             value.Role!.Code == "admin" && value.User!.LockedAt == null && value.User.DeletedAt == null);

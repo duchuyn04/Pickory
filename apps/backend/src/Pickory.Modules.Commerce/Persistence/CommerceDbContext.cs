@@ -27,6 +27,7 @@ public sealed class CommerceDbContext(DbContextOptions<CommerceDbContext> option
             postgres.MapEnum<OrderStatus>("OrderStatus");
             postgres.MapEnum<PaymentStatus>("PaymentStatus");
             postgres.MapEnum<PaymentMethod>("PaymentMethod");
+            postgres.MapEnum<ShippingFeeSource>("ShippingFeeSource");
         });
     }
 
@@ -45,6 +46,7 @@ public sealed class CommerceDbContext(DbContextOptions<CommerceDbContext> option
         ]);
         modelBuilder.HasPostgresEnum("PaymentStatus", ["unpaid", "paid", "refund_pending", "refunded"]);
         modelBuilder.HasPostgresEnum("PaymentMethod", ["cod", "sepay"]);
+        modelBuilder.HasPostgresEnum("ShippingFeeSource", ["ghn", "cached", "fallback"]);
 
         // Mỗi bảng có lớp cấu hình riêng trong `Configurations/`. Chỉ quét assembly của module để không nhận bảng module khác.
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(CommerceDbContext).Assembly);

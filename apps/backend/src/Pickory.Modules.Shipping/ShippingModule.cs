@@ -10,6 +10,7 @@ using Pickory.Modules.Shipping.Addresses;
 using Pickory.Modules.Shipping.Configuration;
 using Pickory.Modules.Shipping.Contracts;
 using Pickory.Modules.Shipping.Contracts.Addresses;
+using Pickory.Modules.Shipping.FallbackFees;
 using Pickory.Modules.Shipping.Features.AdminSettings;
 using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Shipping.Persistence;
@@ -59,6 +60,12 @@ public static class ShippingModule
         services.AddScoped<ShippingSettingsValidator>();
         services.AddScoped<ShippingSettingsStore>();
 
+        // Kho phí dự phòng cũng dùng `ShippingDbContext` theo request. `QuoteAsync` đọc kho này khi GHN không phản hồi.
+        services.AddScoped<FallbackFeeStore>();
+
+        // Kho phí GHN đã tính, dùng khi GHN không phản hồi. Vòng đời scoped vì kho giữ `ShippingDbContext` của request.
+        services.AddScoped<QuoteCacheStore>();
+
         // Cổng công khai cho module `commerce`. Vòng đời scoped vì dịch vụ giữ `ShippingDbContext` của request.
         services.AddScoped<IShippingService, ShippingService>();
 
@@ -96,11 +103,12 @@ public static class ShippingModule
     public static Task<int> RunShippingCommandAsync(IServiceProvider services) =>
         ShippingCommandLine.RunSyncAddressesAsync(services, Console.Out, Console.Error, CancellationToken.None);
 
-    // Route đổi trạng thái GHN giả cho Playwright. `Program.cs` chỉ gọi hàm này khi API chạy bằng lệnh `e2e:start`.
-    // Hàm tự bỏ qua khi có `GHN_TOKEN` hoặc client GHN không phải bản giả, nên host thường không bao giờ có route này.
+    // Route đổi trạng thái đơn và bật lỗi báo phí của GHN giả, dành cho Playwright.
+    // Hàm bỏ qua khi có `GHN_TOKEN` hoặc client GHN thật, và `Program.cs` chỉ gọi hàm khi API chạy bằng `e2e:start`.
     public static IEndpointRouteBuilder MapShippingE2eEndpoints(this IEndpointRouteBuilder endpoints)
     {
         GhnE2eStatusEndpoint.Map(endpoints);
+        GhnE2eFailureEndpoint.Map(endpoints);
         return endpoints;
     }
 
@@ -110,6 +118,7 @@ public static class ShippingModule
         var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("Shipping");
         AddressEndpoints.Map(moduleRoutes);
         ShippingSettingsEndpoints.Map(moduleRoutes);
+        FallbackFeeEndpoints.Map(moduleRoutes);
         GhnWebhookEndpoint.Map(moduleRoutes);
         return endpoints;
     }

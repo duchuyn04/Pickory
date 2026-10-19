@@ -117,6 +117,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         requiredPermission: 'shipping-settings:manage',
       },
       {
+        label: 'Phí ship dự phòng',
+        path: '/admin/shipping/fallback-fee',
+        icon: 'receipt',
+        requiredPermission: 'shipping-settings:manage',
+      },
+      {
         label: 'Cấu hình bán hàng',
         path: '/admin/commerce/settings',
         icon: 'receipt',

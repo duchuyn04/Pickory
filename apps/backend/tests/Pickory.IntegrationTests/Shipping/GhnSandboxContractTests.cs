@@ -1,5 +1,12 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Pickory.IntegrationTests.Infrastructure;
+using Pickory.Modules.Shipping;
+using Pickory.Modules.Shipping.Contracts.Addresses;
+using Pickory.Modules.Shipping.Contracts.Errors;
+using Pickory.Modules.Shipping.Contracts.Parcels;
+using Pickory.Modules.Shipping.Contracts.Shipments;
+using Pickory.Modules.Shipping.Entities;
 using Pickory.Modules.Shipping.Ghn;
 using Xunit;
 using Xunit.Abstractions;
@@ -168,6 +175,238 @@ public sealed class GhnSandboxContractTests
                 }
             }
         }
+    }
+
+    // Địa chỉ lấy hàng giống cấu hình dev của admin (ADR 0003, SHIP-11). Đường phố khớp phường nên GHN không báo `From address conflict`.
+    private const string PickupProvinceName = "Hà Nội";
+    private const string PickupWardName = "Phường Hoàn Kiếm";
+    private const string PickupStreetLine = "12 Tràng Tiền";
+    private const string PickupSenderName = "Kho Pickory Test";
+    private const string PickupSenderPhone = "0901234567";
+
+    [LiveGhnFact]
+    // SHIP-11: tạo rồi hủy đơn bằng đúng request mà `ShippingService` dựng, và đơn trên sandbox phải mang địa chỉ lấy hàng của cấu hình.
+    public async Task Sandbox_CreateThenCancelOrder_WithShippingServiceRequest_KeepsConfiguredPickupAddress()
+    {
+        var client = CreateSandboxClient();
+        var (receiverProvince, receiverWard) = await PickActiveWardAsync(client);
+        var pickupWard = await FindPickupWardAsync(client);
+
+        // Dựng request bằng hàm của `ShippingService`, không tự ghép tay, để test không lệch với code thật.
+        var clientOrderCode = $"ship11-{DateTimeOffset.UtcNow:yyyyMMddHHmmssfff}";
+        var shipmentRequest = new CreateShipmentRequest(
+            clientOrderCode,
+            new ShippingRecipient(
+                "Pickory Test",
+                "0900000000",
+                new ShippingAddress(receiverProvince.Code, receiverProvince.Name, receiverWard.Code, receiverWard.Name, "1 Duong Thu")),
+            new Parcel(500, 15, 10, 5),
+            [new ShipmentLine("Hang thu", 1)],
+            CodAmount: 0,
+            InsuredValue: 0,
+            Note: "Don thu SHIP-11");
+        var receiverCatalogWard = new AddressWard
+        {
+            Code = receiverWard.Code,
+            ProvinceCode = receiverProvince.Code,
+            Name = receiverWard.Name,
+            Province = new AddressProvince { Code = receiverProvince.Code, Name = receiverProvince.Name },
+        };
+        var settings = new ShippingSettings
+        {
+            Id = "singleton",
+            SenderName = PickupSenderName,
+            SenderPhone = PickupSenderPhone,
+            ProvinceName = PickupProvinceName,
+            WardName = pickupWard.Name,
+            Line = PickupStreetLine,
+        };
+        var createRequest = ShippingService.BuildCreateOrderRequest(shipmentRequest, "0900000000", receiverCatalogWard, settings, clientOrderCode);
+
+        string? createdOrderCode = null;
+        try
+        {
+            var created = await client.CreateOrderAsync(createRequest, CancellationToken.None);
+            createdOrderCode = created.OrderCode;
+            Assert.False(string.IsNullOrWhiteSpace(created.OrderCode));
+
+            // Đọc chi tiết thô vì `GhnOrderDetail` không mang các trường địa chỉ lấy hàng.
+            var pickup = await ReadPickupAddressAsync(created.OrderCode);
+            Assert.Equal(PickupSenderName, pickup.GetProperty("from_name").GetString());
+            Assert.Equal(PickupSenderPhone, pickup.GetProperty("from_phone").GetString());
+            // GHN ghi địa chỉ hai cấp vào `from_address_v2` và mã phường vào `from_ward_id_v2`. Thiếu cờ thì hai trường này là rỗng và 0.
+            Assert.Equal(PickupStreetLine, pickup.GetProperty("from_address_v2").GetString());
+            Assert.Equal(pickupWard.Id, pickup.GetProperty("from_ward_id_v2").GetInt64());
+            Assert.True(pickup.GetProperty("is_new_from_address").GetBoolean());
+
+            await client.CancelOrderAsync(created.OrderCode, GhnCancelReason.Other, "Test hợp đồng SHIP-11", CancellationToken.None);
+
+            var detailAfterCancel = await client.GetOrderDetailAsync(created.OrderCode, CancellationToken.None);
+            Assert.Equal("cancel", detailAfterCancel.Status);
+            createdOrderCode = null;
+        }
+        finally
+        {
+            // Hủy trong `finally` để test lỗi giữa chừng không để lại đơn sống trên sandbox.
+            try
+            {
+                // Tạo đơn hết thời gian chờ thì `createdOrderCode` còn `null`, nhưng GHN có thể đã tạo đơn. Tra theo mã khách, vì API này chỉ trả đơn chưa hủy.
+                var orderCodeToCancel = createdOrderCode ?? await FindLiveOrderCodeByClientCodeAsync(clientOrderCode);
+                if (orderCodeToCancel is not null)
+                {
+                    await client.CancelOrderAsync(orderCodeToCancel, GhnCancelReason.Other, "Dọn đơn test SHIP-11", CancellationToken.None);
+                }
+            }
+            catch (Exception cleanupError)
+            {
+                _output.WriteLine($"Không dọn được đơn {createdOrderCode ?? clientOrderCode}: {cleanupError.Message}");
+            }
+        }
+    }
+
+    [LiveGhnFact]
+    // SHIP-12: API xem trước nhận địa chỉ hợp lệ, từ chối địa chỉ nhận có tên đường không thuộc phường, và không tạo đơn nào.
+    public async Task Sandbox_PreviewOrder_AcceptsValidAddressAndRejectsMismatchedStreetWithoutCreatingOrder()
+    {
+        var client = CreateSandboxClient();
+        var pickupWard = await FindPickupWardAsync(client);
+        var (province, validWard) = await FindWardByNameAsync(client, "Hồ Chí Minh", "Phường Thủ Đức");
+        var (_, mismatchedWard) = await FindWardByNameAsync(client, "Hồ Chí Minh", "Phường Bến Thành");
+        var stamp = $"{DateTimeOffset.UtcNow:yyyyMMddHHmmssfff}";
+
+        // Địa chỉ hợp lệ: phố `1 Duong Thu` thuộc `Phường Thủ Đức` theo kết quả thử của ADR 0003.
+        var validCode = $"ship12-valid-{stamp}";
+        var validRequest = BuildShippingServiceRequest(validCode, province, validWard, "1 Duong Thu", pickupWard, PickupStreetLine);
+        var preview = await client.PreviewOrderAsync(validRequest, CancellationToken.None);
+        Assert.True(preview.TotalFee > 0);
+
+        // Địa chỉ nhận bị từ chối: phố `1 Nguyen Hue` không thuộc `Phường Bến Thành`. GHN báo `To address conflict`.
+        var mismatchedCode = $"ship12-to-{stamp}";
+        var mismatchedRequest = BuildShippingServiceRequest(mismatchedCode, province, mismatchedWard, "1 Nguyen Hue", pickupWard, PickupStreetLine);
+        var toRejection = await Assert.ThrowsAsync<ShippingRejectedException>(
+            () => client.PreviewOrderAsync(mismatchedRequest, CancellationToken.None));
+        Assert.Equal(ShippingRejectionKind.ToAddressMismatch, toRejection.Kind);
+        Assert.Contains("tên đường không khớp với phường/xã", toRejection.Message);
+
+        // Địa chỉ lấy hàng bị từ chối: cùng phố `1 Nguyen Hue` đặt ở `Phường Hoàn Kiếm`. GHN báo `From address conflict`.
+        var pickupCode = $"ship12-from-{stamp}";
+        var pickupRequest = BuildShippingServiceRequest(pickupCode, province, validWard, "1 Duong Thu", pickupWard, "1 Nguyen Hue");
+        var fromRejection = await Assert.ThrowsAsync<ShippingRejectedException>(
+            () => client.PreviewOrderAsync(pickupRequest, CancellationToken.None));
+        Assert.Equal(ShippingRejectionKind.FromAddressMismatch, fromRejection.Kind);
+
+        // API xem trước không được tạo đơn. Tra theo từng mã khách để chắc không có đơn sống nào cần hủy.
+        foreach (var clientOrderCode in new[] { validCode, mismatchedCode, pickupCode })
+        {
+            var leftover = await FindLiveOrderCodeByClientCodeAsync(clientOrderCode);
+            if (leftover is not null)
+            {
+                await client.CancelOrderAsync(leftover, GhnCancelReason.Other, "Dọn đơn test SHIP-12", CancellationToken.None);
+            }
+
+            Assert.Null(leftover);
+        }
+    }
+
+    // Dựng request bằng hàm của `ShippingService`, giống test SHIP-11, để request xem trước không lệch với request thật.
+    private static GhnCreateOrderRequest BuildShippingServiceRequest(
+        string clientOrderCode,
+        GhnProvince receiverProvince,
+        GhnWard receiverWard,
+        string receiverLine,
+        GhnWard pickupWard,
+        string pickupLine)
+    {
+        var shipmentRequest = new CreateShipmentRequest(
+            clientOrderCode,
+            new ShippingRecipient(
+                "Pickory Test",
+                "0900000000",
+                new ShippingAddress(receiverProvince.Code, receiverProvince.Name, receiverWard.Code, receiverWard.Name, receiverLine)),
+            new Parcel(500, 15, 10, 5),
+            [new ShipmentLine("Hang thu", 1)],
+            CodAmount: 0,
+            InsuredValue: 0,
+            Note: "Don thu SHIP-12");
+        var receiverCatalogWard = new AddressWard
+        {
+            Code = receiverWard.Code,
+            ProvinceCode = receiverProvince.Code,
+            Name = receiverWard.Name,
+            Province = new AddressProvince { Code = receiverProvince.Code, Name = receiverProvince.Name },
+        };
+        var settings = new ShippingSettings
+        {
+            Id = "singleton",
+            SenderName = PickupSenderName,
+            SenderPhone = PickupSenderPhone,
+            ProvinceName = PickupProvinceName,
+            WardName = pickupWard.Name,
+            Line = pickupLine,
+        };
+        return ShippingService.BuildCreateOrderRequest(shipmentRequest, "0900000000", receiverCatalogWard, settings, clientOrderCode);
+    }
+
+    // Tìm phường theo tên trong tỉnh có tên chứa `provinceName`. Thiếu phường là lỗi môi trường, nên báo rõ thay vì bỏ qua.
+    private static async Task<(GhnProvince Province, GhnWard Ward)> FindWardByNameAsync(
+        GhnHttpClient client, string provinceName, string wardName)
+    {
+        var provinces = await client.GetProvincesAsync(CancellationToken.None);
+        var province = provinces.FirstOrDefault(candidate => candidate.Name.Contains(provinceName) && candidate.Status == 1);
+        Assert.NotNull(province);
+        var wards = await client.GetWardsAsync(province.Code, 0, 500, CancellationToken.None);
+        var ward = wards.FirstOrDefault(candidate => candidate.Name == wardName && candidate.Status == 1);
+        Assert.NotNull(ward);
+        return (province, ward);
+    }
+
+    // Tìm phường lấy hàng theo tên trong danh mục thật. Thiếu phường là lỗi môi trường, nên báo rõ thay vì bỏ qua.
+    private static async Task<GhnWard> FindPickupWardAsync(GhnHttpClient client)
+    {
+        var provinces = await client.GetProvincesAsync(CancellationToken.None);
+        var province = provinces.FirstOrDefault(candidate => candidate.Name == PickupProvinceName && candidate.Status == 1);
+        Assert.NotNull(province);
+        var wards = await client.GetWardsAsync(province.Code, 0, 500, CancellationToken.None);
+        var ward = wards.FirstOrDefault(candidate => candidate.Name == PickupWardName && candidate.Status == 1);
+        Assert.NotNull(ward);
+        return ward;
+    }
+
+    // Gọi thẳng API chi tiết đơn của GHN bằng token của sandbox, rồi trả phần `data` để test đọc các trường `from_*`.
+    private static async Task<JsonElement> ReadPickupAddressAsync(string orderCode)
+    {
+        var data = await GetRawOrderDataAsync($"/shiip/public-api/v2/shipping-order/detail?order_code={Uri.EscapeDataString(orderCode)}");
+        return data ?? throw new InvalidOperationException($"GHN không trả chi tiết cho đơn {orderCode}.");
+    }
+
+    // Tra đơn chưa hủy theo mã khách (ADR 0003, tiêu chí 3). Trả `null` khi GHN không có đơn nào mang mã đó.
+    private static async Task<string?> FindLiveOrderCodeByClientCodeAsync(string clientOrderCode)
+    {
+        var data = await GetRawOrderDataAsync(
+            $"/shiip/public-api/v2/shipping-order/detail-by-client-code?client_order_code={Uri.EscapeDataString(clientOrderCode)}");
+        return data is { } order && order.TryGetProperty("order_code", out var orderCode) ? orderCode.GetString() : null;
+    }
+
+    // GET thẳng lên GHN bằng token của sandbox. Trả `null` khi GHN từ chối, vì lúc đó không có đơn để đọc.
+    private static async Task<JsonElement?> GetRawOrderDataAsync(string pathAndQuery)
+    {
+        var token = PickoryWebApplicationFactory.ResolveEnvironmentValue("GHN_TOKEN");
+        var shopId = PickoryWebApplicationFactory.ResolveEnvironmentValue("GHN_SHOP_ID");
+        var apiBase = PickoryWebApplicationFactory.ResolveEnvironmentValue("GHN_API_BASE") ?? "https://dev-online-gateway.ghn.vn";
+        using var httpClient = new HttpClient { BaseAddress = new Uri(apiBase), Timeout = TimeSpan.FromSeconds(60) };
+        using var request = new HttpRequestMessage(HttpMethod.Get, pathAndQuery);
+        request.Headers.TryAddWithoutValidation("Token", token);
+        request.Headers.TryAddWithoutValidation("ShopId", shopId);
+        using var response = await httpClient.SendAsync(request);
+        if (!response.IsSuccessStatusCode)
+        {
+            return null;
+        }
+
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.TryGetProperty("data", out var data) && data.ValueKind == JsonValueKind.Object
+            ? data.Clone()
+            : null;
     }
 
     [LiveGhnFact]

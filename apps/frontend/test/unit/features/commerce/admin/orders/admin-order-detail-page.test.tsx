@@ -52,6 +52,7 @@ function fullOrder() {
     shippingFee: 30000,
     shippingDiscount: 10000,
     total: 520000,
+    shippingFeeSource: 'ghn',
     statusHistory: [
       {
         fromStatus: 'pending_confirmation',
@@ -108,6 +109,30 @@ function text() {
   return harness.container.textContent ?? '';
 }
 
+// Thẻ có tiêu đề cho trước, ví dụ thẻ "Vận đơn".
+function sectionOf(title: string): HTMLElement {
+  const heading = [...harness.container.querySelectorAll('.order-section-title')].find(
+    (element) => element.textContent === title,
+  );
+  const section = heading?.closest('section');
+  if (!section) throw new Error(`Không thấy thẻ ${title}`);
+  return section;
+}
+
+// Dòng nhãn và giá trị trong một thẻ, tìm theo chữ của nhãn.
+function rowIn(container: HTMLElement, label: string): HTMLElement {
+  const term = [...container.querySelectorAll('dt')].find(
+    (element) => element.textContent === label,
+  );
+  const row = term?.parentElement;
+  if (!row) throw new Error(`Không thấy dòng ${label}`);
+  return row;
+}
+
+function feeRow(label: string): HTMLElement {
+  return rowIn(sectionOf('Thanh toán'), label);
+}
+
 describe('màn chi tiết đơn hàng của nhân viên', () => {
   it('hiện đủ các thẻ khi đơn có đầy đủ dữ liệu', async () => {
     await open(fullOrder());
@@ -155,6 +180,72 @@ describe('màn chi tiết đơn hàng của nhân viên', () => {
     expect(page).not.toContain('Vận đơn');
     expect(page).not.toContain('Mã giao dịch hoàn tiền');
     expect(page).not.toContain('Hạn thanh toán');
+  });
+
+  it('đơn dùng phí GHN thì trang giữ như cũ, chỉ đổi nhãn phí vận đơn thành Phí GHN thực tế', async () => {
+    await open(fullOrder());
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    const page = text();
+    expect(page).not.toContain('Phí ship dự phòng');
+    expect(page).not.toContain('Theo bảng phí dự phòng');
+    expect(page).not.toContain('Theo phí GHN đã lưu');
+    expect(page).not.toContain('Khách đã trả');
+    expect(page).toContain('Phí GHN thực tế');
+  });
+
+  it('đơn dùng phí dự phòng có nhãn cạnh dòng Phí vận chuyển và câu giải thích', async () => {
+    await open({ ...fullOrder(), shippingFeeSource: 'fallback' });
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    const row = feeRow('Phí vận chuyển');
+    expect(row.textContent).toContain('Phí ship dự phòng');
+    expect(row.textContent).toContain('Theo bảng phí dự phòng');
+    expect(row.querySelector('.badge')?.textContent).toBe('Phí ship dự phòng');
+    // Các dòng tiền khác không có nhãn.
+    expect(feeRow('Tạm tính').textContent).not.toContain('Phí ship dự phòng');
+  });
+
+  it('đơn dùng phí GHN đã lưu có cùng nhãn và câu giải thích riêng', async () => {
+    await open({ ...fullOrder(), shippingFeeSource: 'cached' });
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    const row = feeRow('Phí vận chuyển');
+    expect(row.textContent).toContain('Phí ship dự phòng');
+    expect(row.textContent).toContain('Theo phí GHN đã lưu');
+    expect(row.textContent).not.toContain('Theo bảng phí dự phòng');
+  });
+
+  it('có vận đơn và nguồn phí khác GHN thì hiện Phí GHN thực tế cạnh Khách đã trả', async () => {
+    // Phí GHN thực tế 41.000 đ. Khách trả 30.000 đ trừ giảm 10.000 đ là 20.000 đ.
+    await open({
+      ...fullOrder(),
+      shippingFeeSource: 'fallback',
+      shipment: { id: 'ship-1', trackingCode: 'GHN123456', status: 'in_transit', fee: 41000 },
+    });
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    const shipmentCard = sectionOf('Vận đơn');
+    expect(rowIn(shipmentCard, 'Phí GHN thực tế').textContent).toContain('41.000');
+    expect(rowIn(shipmentCard, 'Khách đã trả').textContent).toContain('20.000');
+  });
+
+  it('có vận đơn và nguồn phí GHN thì không có dòng Khách đã trả', async () => {
+    await open(fullOrder());
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    const shipmentCard = sectionOf('Vận đơn');
+    expect(shipmentCard.textContent).toContain('Phí GHN thực tế');
+    expect(shipmentCard.textContent).not.toContain('Khách đã trả');
+  });
+
+  it('chưa có vận đơn thì đơn dùng phí dự phòng vẫn có nhãn nhưng không có thẻ Vận đơn', async () => {
+    await open({ ...minimalOrder(), shippingFeeSource: 'fallback' });
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    expect(text()).toContain('Phí ship dự phòng');
+    expect(text()).not.toContain('Vận đơn');
+    expect(text()).not.toContain('Khách đã trả');
   });
 
   it('lịch sử theo thời gian tăng dần, hiện Hệ thống khi actorId null và mã rút gọn khi có', async () => {

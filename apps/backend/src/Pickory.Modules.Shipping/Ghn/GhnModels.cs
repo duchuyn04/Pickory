@@ -82,7 +82,7 @@ internal sealed record GhnCreateOrderRequest(
     public string? Note { get; init; }
 
     // Địa chỉ lấy hàng hai cấp theo tài liệu GHN `/en/docs/order/create`, để `null` thì GHN dùng địa chỉ của shop.
-    // Sandbox xác nhận tạo đơn không gửi các trường này vẫn chạy và GHN dùng địa chỉ của shop (ADR 0003).
+    // GHN chỉ lưu tên tỉnh và tên phường khi `IsNewFromAddress` là `true` (ADR 0003, SHIP-11).
     public string? FromName { get; init; }
     public string? FromPhone { get; init; }
     public string? FromAddress { get; init; }
@@ -98,6 +98,9 @@ internal sealed record GhnCreateOrderRequest(
 internal sealed record GhnOrderItem(string Name, int Quantity, int Weight, int Length, int Width, int Height);
 
 internal sealed record GhnCreatedOrder(string OrderCode, int TotalFee, string? ExpectedDeliveryTime);
+
+// Kết quả xem trước của GHN. `order_code` luôn rỗng vì GHN không tạo đơn, nên không đọc trường này.
+internal sealed record GhnOrderPreview(int TotalFee);
 
 internal sealed record GhnOrderDetail(string OrderCode, string? ClientOrderCode, string Status, string? UpdatedDate);
 

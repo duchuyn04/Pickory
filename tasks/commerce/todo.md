@@ -584,16 +584,152 @@ Quy ước:
 ### COM-24: Nghiệm thu commerce
 **Mô tả:** Kiểm toàn module trước khi sang `activity-tracking`.
 **Tiêu chí nghiệm thu:**
-- [ ] Ma trận quyền có mọi endpoint back-office của `commerce`
-- [ ] Coverage dòng của `Pickory.Modules.Commerce` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
+- [x] Ma trận quyền có mọi endpoint back-office của `commerce`
+  Ngày 2026-10-19, 15 route `/api/admin/` của `commerce` đều có dòng trong ma trận. Xem mục 1.
+- [x] Coverage dòng của `Pickory.Modules.Commerce` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
+  Coverage gộp là 97.9%. Xem mục 2.
 - [ ] Khi có khóa SePay: một giao dịch thật chuyển đơn sang `paid`, trang chờ chuyển trang trong 5 giây
-- [ ] Khi có token GHN: tạo rồi hủy 1 vận đơn sandbox từ trang đơn
-- [ ] Không có khóa: ghi rõ hai tiêu chí còn mở và lý do
+  `.env` chưa có `SEPAY_WEBHOOK_API_KEY`, chờ người dùng cấp khóa.
+- [x] Khi có token GHN: tạo rồi hủy 1 vận đơn sandbox từ trang đơn
+  Ngày 2026-10-19, đơn `PK6PQBUJTR` tạo vận đơn `L8R86V` rồi hủy từ trang đơn admin. Sandbox ghi vận đơn ở `cancel`. Xem mục 4.
+- [x] Không có khóa: ghi rõ hai tiêu chí còn mở và lý do
+  Chỉ còn một tiêu chí mở: SePay thiếu khóa. Sandbox GHN đã đạt ngày 2026-10-19. Xem mục 4.
 **Kiểm tra:** `dotnet test`, script gộp coverage, kiểm tay khi có khóa
 **Phụ thuộc:** COM-E2E4, SHIP-09 (chỉ phần sandbox GHN) · **Quy mô:** S
 
+**Bằng chứng (2026-10-19):**
+
+#### 1. Bảng Traceability
+
+| Success Criteria | Bằng chứng | Trạng thái |
+| --- | --- | --- |
+| Khách vãng lai đặt được đơn COD và đơn SePay từ đầu đến cuối, nhận email xác nhận | Tích hợp `OrderConfirmationEmailTests`: `PlaceOrder_Success_SendsOneEmailToContactWithLinkAndResponseToken`, `PlaceOrder_SameKeyAgain_DoesNotSendASecondEmail`. E2E `commerce-cod.spec.ts`, `commerce-sepay.spec.ts` | Đạt |
+| Tiền SePay về thì trang chờ chuyển sang thành công trong 5 giây | E2E `commerce-sepay.spec.ts` bắn webhook giả lập rồi đo thời gian. Vitest `payment-page.test.tsx`: `chuyển sang trang thành công khi ngân hàng đã xác nhận` | Chờ khóa |
+| Gửi cùng webhook SePay 3 lần thì đơn chỉ ghi nhận thanh toán 1 lần | `SepayWebhookTests.SameTransactionThreeTimes_AcknowledgesEveryRequestButPaysOnce` | Đạt |
+| Đơn SePay quá 30 phút bị hủy, tồn kho được trả lại | `ExpiredPaymentTests.DeadlineBoundary_ExpiresOnlyDueOrdersAndEmitsAfterCommit`, `ExpiredPaymentWorkerTests.Worker_ExpiresAtOneMinuteButNotAtFiftyNineSeconds` | Đạt |
+| Thiếu tiền, thừa tiền, sai nội dung hiện trong màn đối soát và khớp tay được | `AdminPaymentReconciliationTests`: `Attach_UnderpaidAmount_FlagsOrderWithoutPaying`, `Attach_OverpaidAmount_PaysOrderAndFlagsOverpaid`, `Attach_FullAmountToPendingPaymentOrder_ConfirmsLikeWebhook`. E2E `admin-payments.spec.ts` | Đạt |
+| Đơn trên hạn mức COD không chọn được COD; tạm tính trên ngưỡng thì phí ship khách trả bằng 0 | `CheckoutPreviewTests`: `Preview_CodTotalOneDongAboveLimit_Returns422CodNotAllowed`, `Preview_SubtotalExactlyAtThreshold_CustomerShippingFeeIsZero`. E2E `commerce-checkout.spec.ts`, `commerce-sepay.spec.ts` | Đạt |
+| Sales tạo vận đơn GHN (sandbox) từ trang đơn; trạng thái giao hàng tự cập nhật | Giả lập: `AdminOrderShipmentTests.CreateShipment_CodOrder_SendsCodAmountAndMovesOrderToShipping`, `ShipmentDelivered_MovesOrderToDelivered`. E2E `commerce-fulfillment.spec.ts`. Sandbox: tạo rồi hủy vận đơn `L8R86V` từ trang đơn, xem mục 4 | Đạt |
+| `support` xem được đơn nhưng gọi API hủy hoặc tạo vận đơn nhận 403 | `PermissionMatrixTests.Support_HasAccessOnlyWhenAuthorized`, `AdminOrderShipmentTests.ShipmentRoutes_WithoutPermission_AreRejectedAndNothingChanges`, `AdminOrderActionTests.Confirm_WithoutPermission_IsRejectedAndOrderUnchanged`. E2E `commerce-fulfillment.spec.ts` | Đạt |
+| Chỉ người đã nhận hàng đánh giá được; review bị ẩn biến mất khỏi trang sản phẩm và điểm trung bình được tính lại | `ProductReviewTests`: `Create_WithOrderNotDelivered_Returns403`, `Mine_WithDeliveredOrder_IsEligible`. `AdminReviewModerationTests.Hide_RemovesFromPublicListAndRecomputesSummary`. E2E `commerce-review-moderation.spec.ts` | Đạt |
+| Dịch vụ chatbot lỗi, khách vẫn mua hàng | CBW-E2E1 của `tasks/chatbot-widget/` | Chờ CBW-E2E1 |
+| Coverage ít nhất 80% | Mục 2: coverage dòng gộp 97.9% | Đạt |
+
+#### 2. Coverage
+
+- Cách đo giống shipping: coverage dòng của assembly `Pickory.Modules.Commerce`, gộp hai lệnh `dotnet test ... --collect:"XPlat Code Coverage"` cho `tests/Pickory.UnitTests` và `tests/Pickory.IntegrationTests`.
+- Script Python gộp hai file `coverage.cobertura.xml`. Một dòng tính là đã chạy khi ít nhất một lượt chạm tới dòng đó.
+- Phép đo bỏ `Persistence/Migrations/`, vì đó là code sinh tự động.
+- Chung: 5165/5274 dòng = **97.9%** (riêng test đơn vị 22.8%, riêng test tích hợp 96.2%).
+- Theo thư mục cấp 1:
+  - `Addresses/`: 97.3% (215/221)
+  - `Carts/`: 99.6% (459/461)
+  - `Checkout/`: 100% (211/211)
+  - `Configuration/`: 100% (8/8)
+  - `Entities/`: 94.6% (87/92)
+  - `Invoices/`: 100% (17/17)
+  - `Orders/`: 96.7% (1948/2014)
+  - `Payments/`: 97.4% (563/578)
+  - `Persistence/`: 96.9% (217/224)
+  - `Pricing/`: 100% (32/32)
+  - `Reading/`: 100% (145/145)
+  - `Reports/`: 99.6% (244/245)
+  - `Reviews/`: 100% (686/686)
+  - `Settings/`: 100% (219/219)
+  - gốc module: 93.3% (56/60)
+  - `obj/`: 95.1% (58/61). Đây là code do trình biên dịch sinh ra, gồm `RegexGenerator.g.cs` của module.
+- Một file dưới 60%. Không thêm test, vì tổng đã vượt 80% và file không chứa luật nghiệp vụ:
+  - `Persistence/CommerceDbContextFactory.cs` (0%): chỉ dùng khi chạy lệnh migration.
+
+#### 3. Lệnh tổng (trong `apps/backend`)
+
+- `dotnet test tests/Pickory.UnitTests`: 1567 test đạt, 0 bỏ qua, 0 lỗi.
+- `dotnet test tests/Pickory.IntegrationTests`: 2056 test đạt, 10 bỏ qua (test live GHN và test live AI), 1 lỗi ở lượt chạy đầu.
+- Test lỗi là `AdminStaffTests.TwoLastAdmins_DemotingEachOtherConcurrentlyKeepsOneAdmin`, thuộc `identity`. Test này đạt khi chạy riêng. Lượt đầu chạy 44 phút 41 giây và gặp tình huống tranh chấp thời gian.
+- `PermissionMatrixTests`: 255 test đạt khi chạy riêng.
+- Bộ lệnh frontend và `pnpm test:e2e` nằm ngoài lượt đo này. Reviewer chạy bộ này.
+
+#### 4. Sandbox GHN từ trang đơn
+
+Kết quả ngày 2026-10-19: đạt sau SHIP-11.
+
+- Lần chạy đầu thất bại với đơn `PKLVLHLKP6`. Đơn có địa chỉ nhận `1 Nguyen Hue` ở `Phường Bến Thành`, và GHN từ chối cặp đường và phường này. Lúc đó GHN ghi nhãn `From address conflict`.
+- SHIP-11 tìm ra nguyên nhân bằng bảy biến thể request. Chi tiết nằm ở mục "Bổ sung SHIP-11" của `docs/adr/0003-ghn-shipping-integration.md`.
+- Lần chạy lại dùng đơn COD mới `PK6PQBUJTR`. Người nhận là `COM-24 sandbox`, địa chỉ `1 Duong Thu`, `Phường Thủ Đức`, Hồ Chí Minh. Stack dev chạy với `.env` ở gốc repo và DB dev.
+- Bấm `Tạo vận đơn`: GHN nhận đơn. Trang hiện mã vận đơn `L8R86V`, trạng thái vận đơn `Chờ lấy hàng` và phí 53.900 đ. Đơn chuyển sang `Đang giao hàng`.
+- Bấm `Hủy vận đơn` trên cùng trang: trang hiện `Đã hủy vận đơn.` và đơn về `Đã xác nhận`.
+- Phía GHN: chi tiết đơn `L8R86V` ở trạng thái `cancel`. Địa chỉ lấy hàng trên đơn là `Kho Pickory`, `12 Tràng Tiền`, `from_ward_id_v2` là `1003445`.
+- Hai đơn thử `PKLVLHLKP6` và `PK6PQBUJTR` còn trong DB dev ở trạng thái `confirmed`, không có vận đơn.
+- Ảnh chụp: `ghn-created.png` và `ghn-cancelled.png` trong thư mục trao đổi.
+
+Cách chạy lại:
+
+1. Kiểm tra `.env` có `GHN_TOKEN` và `GHN_SHOP_ID` của sandbox.
+2. Chạy `dotnet run --project src/Pickory.Api` trong `apps/backend`.
+3. Chạy `pnpm dev` trong `apps/frontend`.
+4. Đăng nhập `/admin/login` bằng tài khoản admin dev.
+5. Đặt một đơn COD ở trang khách, với tên người nhận `COM-24 sandbox`.
+6. Nhập địa chỉ có đường thuộc đúng phường, hoặc đường giả như `1 Duong Thu`. GHN từ chối đường thật nằm sai phường.
+7. Mở đơn ở `/admin/orders/<mã đơn>`, bấm `Xác nhận đơn`, rồi bấm `Tạo vận đơn`.
+8. Đọc mã vận đơn hiện trên trang. Bấm `Hủy vận đơn` trên cùng trang.
+9. Kiểm tra phía GHN: vận đơn phải ở trạng thái `cancel`.
+10. Tắt API và frontend.
+
 ## Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt, trừ dòng ghi chờ khóa
-- [ ] Coverage dòng của `Pickory.Modules.Commerce` ít nhất 80%, bỏ `Persistence/Migrations/`
+  Dòng chatbot chờ CBW-E2E1. Dòng SePay chờ khóa.
+- [x] Coverage dòng của `Pickory.Modules.Commerce` ít nhất 80%, bỏ `Persistence/Migrations/`
+  Coverage gộp là 97.9% (5165/5274 dòng), đo ngày 2026-10-19.
 - [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
 - [ ] Review với người dùng, rồi mới bắt đầu `activity-tracking`
+
+---
+
+## Phase 8: Sửa sau nghiệm thu (thêm ngày 2026-10-19)
+
+### COM-26: Kiểm địa chỉ nhận với GHN khi khách đặt đơn
+**Mô tả:** Khách gõ tên đường không thuộc phường đã chọn. GHN từ chối địa chỉ đó khi nhân viên tạo vận đơn, và đơn bị kẹt. Task này chặn lỗi ngay lúc đặt đơn, bằng hàm kiểm địa chỉ nhận của SHIP-12.
+- Người dùng duyệt cách làm ngày 2026-10-19.
+- Task chỉ bắt đầu khi SHIP-12 có hàm kiểm địa chỉ nhận. SHIP-12 dừng ở phần thông báo thì task này cũng dừng.
+
+**Tiêu chí nghiệm thu:**
+- [x] GHN từ chối địa chỉ nhận: `POST /api/orders` trả lỗi gắn với ô địa chỉ, không tạo đơn, không giữ hàng, không gửi email
+  `PlaceOrderTests.PlaceOrder_GhnRejectsStreet_Returns422OnAddressLineAndChangesNothing` kiểm 422 `ADDRESS_NOT_DELIVERABLE`, `details` ở `address.line`, 0 đơn, tồn kho và movement không đổi, giỏ còn nguyên, 0 thư.
+- [x] GHN không gọi được hoặc hết thời gian chờ: khách vẫn đặt đơn được. API ghi log cảnh báo
+  `PlaceOrderTests.PlaceOrder_GhnPreviewFails_StillCreatesOrderAndLogsWarningWithKey` (2 chế độ lỗi) kiểm đơn tạo được và log cảnh báo có khóa đặt đơn, không có dữ liệu khách.
+- [x] Gửi lại cùng khóa đặt đơn vẫn trả đơn cũ, không gọi kiểm địa chỉ lần nữa
+  `PlaceOrderTests.PlaceOrder_SameKeyAfterOrderCreated_ReturnsOrderWithoutSecondPreviewCall` kiểm số lời gọi xem trước không tăng.
+- [x] Trang thanh toán hiện lỗi dưới ô địa chỉ và giữ dữ liệu khách đã nhập. Khách sửa địa chỉ thì đặt được đơn
+  Vitest `checkout-page.test.tsx` (lỗi, `aria-invalid`, focus, dữ liệu giữ nguyên) và `checkout-rules.test.ts`. Backend: `PlaceOrder_GhnRejectsStreet_ThenCorrectedAddressWithSameKey_CreatesOrder`.
+- [x] E2E: khách nhập địa chỉ bị GHN giả từ chối thấy lỗi ở ô địa chỉ. Khách sửa lại thì thấy trang thành công
+  `e2e/commerce-checkout.spec.ts`, test "GHN từ chối địa chỉ thì lỗi hiện dưới ô địa chỉ, khách sửa lại rồi đặt được đơn".
+- [x] Spec E2E xanh ở chế độ ẩn và `--headed`. Console 0 lỗi và 0 cảnh báo
+  `commerce-checkout.spec.ts` và `commerce-cod.spec.ts`: 9 đạt ở chế độ ẩn, 9 đạt ở `--headed`. Test mới chạy lặp 5 lần đều đạt. Chỉ response 422 của `POST /api/orders` được phép trong console.
+- [x] `dotnet test` và bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test`) sạch
+  Reviewer chạy ngày 2026-10-19. Backend: `dotnet build` 0 lỗi 0 cảnh báo, `Pickory.UnitTests` 1606 đạt, `Pickory.ArchitectureTests` 14 đạt, toàn bộ `Pickory.IntegrationTests` 2074 đạt, 12 bỏ qua, 1 lỗi. Test lỗi là `AdminStaffTests.TwoLastAdmins_DemotingEachOtherConcurrentlyKeepsOneAdmin` của `identity`: lỗi khi chạy toàn bộ, đạt cả 3 lần chạy riêng. Frontend: `pnpm typecheck` và `pnpm lint` sạch, `pnpm test` 1596 đạt, `pnpm test:e2e --headed` 110 đạt, 1 lỗi. Test lỗi là `UI-C6` trong `catalog-images.spec.ts`: lỗi một lần, đạt khi chạy lại bằng `--last-failed`.
+**Kiểm tra:** test tích hợp đặt đơn; Vitest form thanh toán; E2E
+**Phụ thuộc:** SHIP-12 · **Quy mô:** M
+
+### COM-27: Đơn dùng phí vận chuyển dự phòng
+**Mô tả:** Khi GHN không phản hồi, shipping trả phí đã lưu hoặc phí dự phòng (SHIP-14). Đơn ghi lại nguồn phí để admin biết. Khách thấy phí như bình thường, không có nhãn nào khác. Task cần thêm cột vào bảng đơn, người dùng duyệt ngày 2026-10-19.
+**Tiêu chí nghiệm thu:**
+- [x] Đơn lưu nguồn phí vận chuyển: GHN, phí đã lưu hoặc dự phòng
+  `PlaceOrderFeeSourceTests`: `PlaceOrder_GhnAnswers_StoresGhnSource`, `..._GhnDownAndFallbackEnabled_...FallbackSource` và `..._GhnDownWithSavedFee_StoresCachedSourceAndTheSavedFee`. Cột `orders.shippingFeeSource` (enum Postgres `ShippingFeeSource`), migration `AddOrderShippingFeeSource`.
+- [x] Khách đặt được đơn khi GHN không phản hồi và phí dự phòng đang bật. Tổng tiền dùng phí dự phòng và vẫn áp ngưỡng miễn phí ship
+  `PlaceOrderFeeSourceTests`: đơn COD thành công với phí và tổng tiền đúng theo bảng, và `..._SubtotalAboveFreeShippingThreshold_AppliesDiscountLikeGhnFee` kiểm giảm phí đúng bằng phí theo bảng. Bảng tắt thì `..._FallbackDisabled_Returns503AndCreatesNoOrder`.
+- [x] Trang thanh toán và trang đơn của khách không có nhãn hay câu nào về phí dự phòng. Trang thanh toán không hiện ngày giao dự kiến khi không có
+  `PlaceOrderFeeSourceTests.CustomerRoutes_ForFallbackOrder_NeverExposeTheFeeSource` kiểm JSON của xem trước, đặt đơn, đơn của tôi, chi tiết đơn, tra cứu đơn và email không có trường hay chữ nguồn phí. `checkout-page.test.tsx` kiểm trang thanh toán không hiện ngày giao hay chữ dự phòng khi `expectedDeliveryDate` là `null`. E2E kiểm trang đặt hàng, trang thành công và trang xem đơn bằng link trong thư.
+- [x] Trang đơn admin có nhãn "Phí ship dự phòng" khi nguồn phí khác GHN
+  `admin-order-detail-page.test.tsx` (nguồn `fallback`, `cached` và `ghn`) và E2E `commerce-fallback-fee.spec.ts`. Ảnh chụp ở `com-27/` trong thư mục trao đổi.
+- [x] Nhân viên tạo vận đơn cho đơn dùng phí dự phòng: trang đơn admin hiện phí GHN thật bên cạnh phí khách đã trả
+  `admin-order-detail-page.test.tsx`: thẻ Vận đơn hiện "Phí GHN thực tế" cạnh "Khách đã trả" (phí vận chuyển trừ giảm phí) khi nguồn khác `ghn`, và không có dòng "Khách đã trả" khi nguồn là `ghn`. Chưa có E2E tạo vận đơn cho đơn dùng phí dự phòng.
+- [x] Đơn đặt trước khi có cột mới hiện là nguồn GHN
+  `CommerceOrderFeeSourceMigrationTests` chèn một đơn khi schema còn ở migration trước, áp migration mới rồi đọc nguồn `ghn`. `AdminOrderDetailTests.Detail_OrderWithoutExplicitSource_IsGhn` kiểm API trả `ghn`.
+- [x] E2E: GHN giả không phản hồi lúc báo phí, phí dự phòng đang bật. Khách đặt đơn COD thành công, và admin thấy nhãn trên trang đơn
+  `e2e/commerce-fallback-fee.spec.ts`. Spec đặt giá sản phẩm riêng nên khóa phí đã lưu không trùng spec khác, và nguồn phí là bảng dự phòng. Spec tự dọn trong `afterAll`: tắt lỗi báo phí và lưu bảng ở trạng thái tắt.
+- [x] Spec E2E xanh ở chế độ ẩn và `--headed`. Console 0 lỗi và 0 cảnh báo
+  `commerce-fallback-fee.spec.ts`, `commerce-cod.spec.ts` và `admin-orders.spec.ts`: 3 đạt ở chế độ ẩn và 3 đạt ở `--headed`. Console của trang khách và trang xem đơn 0 lỗi và 0 cảnh báo. Chạy chung với `commerce-fulfillment.spec.ts` cũng đạt, nên spec không để lại trạng thái lỗi.
+- [x] `dotnet test` và bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test`) sạch
+  Reviewer chạy ngày 2026-10-19 sau lần dọn cuối. Backend: `dotnet build` 0 lỗi, 0 cảnh báo; `Pickory.UnitTests` 1701 đạt; `Pickory.ArchitectureTests` 14 đạt; `Pickory.IntegrationTests` toàn bộ 2246 đạt, 12 bỏ qua, 1 lỗi (49 phút 10 giây). Test lỗi là `AdminStaffTests.TwoLastAdmins_DemotingEachOtherConcurrentlyKeepsOneAdmin` của `identity`: lỗi khi chạy toàn bộ, đạt cả 3 lần chạy riêng. Frontend: `pnpm lint` và `pnpm typecheck` sạch, `pnpm test` 130 file 1682 test đạt, `pnpm build` đạt, `pnpm test:e2e --headed` toàn bộ 113 đạt, 0 lỗi (10,9 phút, có `commerce-fallback-fee.spec.ts`).
+**Kiểm tra:** test tích hợp đặt đơn; Vitest; E2E
+**Phụ thuộc:** SHIP-14, COM-26 · **Quy mô:** M

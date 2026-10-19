@@ -24,18 +24,22 @@ internal static class GhnE2eStatusEndpoint
     // Body chỉ có một chuỗi nhỏ. Giới hạn này chặn body lớn bất thường.
     private const int MaxBodyBytes = 4 * 1024;
 
-    public static void Map(IEndpointRouteBuilder endpoints)
+    // Điều kiện chung của mọi route E2E dùng client GHN giả. Mỗi route gọi hàm này trước khi tự map.
+    public static bool CanMapFakeGhnRoutes(IServiceProvider services)
     {
-        var services = endpoints.ServiceProvider;
-
-        // Có `GHN_TOKEN` thì API đang gọi GHN thật. Đổi trạng thái giả khi đó không có nghĩa, nên không map route.
+        // Có `GHN_TOKEN` thì API đang gọi GHN thật. Đổi trạng thái hay bật lỗi giả khi đó không có nghĩa, nên không map route.
         if (!string.IsNullOrWhiteSpace(services.GetRequiredService<AppConfig>().GhnToken))
         {
-            return;
+            return false;
         }
 
-        // Thiếu `FakeGhnClient` trong DI nghĩa là client thật đang được dùng. Không có đối tượng để đổi trạng thái thì không map route.
-        if (services.GetService<FakeGhnClient>() is null)
+        // Thiếu `FakeGhnClient` trong DI nghĩa là client thật đang được dùng. Không có đối tượng để điều khiển thì không map route.
+        return services.GetService<FakeGhnClient>() is not null;
+    }
+
+    public static void Map(IEndpointRouteBuilder endpoints)
+    {
+        if (!CanMapFakeGhnRoutes(endpoints.ServiceProvider))
         {
             return;
         }

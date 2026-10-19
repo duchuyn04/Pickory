@@ -57,6 +57,25 @@ Biến ý định mua thành đơn hàng đã giao: giỏ hàng, checkout, đơn
 - Phí lấy từ `shipping.quote`.
 - Tạm tính ≥ ngưỡng miễn phí (mặc định 500.000 đ, cấu hình được) thì phí khách trả = 0, shop chịu.
 - `shipping` lỗi khi preview: hiện thông báo "Chưa tính được phí vận chuyển, thử lại", không cho đặt đơn với phí ước đoán.
+- Ngoại lệ: GHN không phản hồi mà `shipping` trả phí đã lưu hoặc phí dự phòng (xem "Nguồn phí vận chuyển"). Khi đó khách thấy và đặt đơn với phí đó như bình thường.
+
+### Nguồn phí vận chuyển
+
+`shipping.quote` trả thêm `source` cho biết phí đến từ đâu: `ghn` (GHN vừa tính), `cached` (phí GHN đã lưu dưới 24 giờ) hoặc `fallback` (bảng phí dự phòng). Quy tắc của `commerce`:
+
+1. Checkout mang nguồn phí từ `quote` sang đặt đơn. Đặt đơn ghi nguồn phí vào cột `shippingFeeSource` của đơn.
+2. Ngưỡng miễn phí ship áp cho mọi nguồn như phí GHN. `OrderPricing.Calculate` không đổi.
+3. Khách không thấy nguồn phí. Xem trước thanh toán, đặt đơn, đơn của tôi, chi tiết đơn, tra cứu đơn và email xác nhận không có trường hay chữ nào về nguồn phí.
+4. Trang thanh toán không hiện ngày giao dự kiến khi `shipping` không trả ngày giao. Phí đã lưu và phí dự phòng không có ngày giao.
+5. Chỉ API đơn của nhân viên (`GET /api/admin/orders/:code`) trả `shippingFeeSource`, với 3 giá trị `ghn`, `cached`, `fallback`.
+6. GHN không phản hồi và không có phí đã lưu hay phí dự phòng: giữ lỗi `SHIPPING_UNAVAILABLE`, không tạo đơn.
+
+Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `null`, mặc định `ghn`. Đơn đặt trước khi có cột nhận `ghn`, vì trước đó chỉ có phí GHN.
+
+**Trang đơn của nhân viên:**
+- Mục "Thanh toán": nguồn khác `ghn` thì cạnh dòng "Phí vận chuyển" có nhãn "Phí ship dự phòng". Dưới nhãn có một dòng chữ nhỏ: `cached` là "Theo phí GHN đã lưu", `fallback` là "Theo bảng phí dự phòng".
+- Mục "Vận đơn": nhãn phí là "Phí GHN thực tế". Nguồn khác `ghn` thì thêm dòng "Khách đã trả", bằng phí vận chuyển trừ giảm phí vận chuyển của đơn. Nhân viên so được phí GHN thực tế với số khách đã trả.
+- Nguồn `ghn`: trang giữ như cũ, chỉ nhãn phí của vận đơn đổi thành "Phí GHN thực tế".
 
 **Hạn mức COD:** đơn có tổng tiền trên hạn mức (mặc định 20.000.000 đ, cấu hình được) chỉ được chọn chuyển khoản, vì giá trị cao dễ bị đặt ảo.
 
@@ -207,7 +226,7 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
-| GET | `/api/admin/orders[/:code]` | `orders:read` | Danh sách, lọc theo trạng thái, thanh toán, ngày, cờ |
+| GET | `/api/admin/orders[/:code]` | `orders:read` | Danh sách, lọc theo trạng thái, thanh toán, ngày, cờ. Chi tiết có `shippingFeeSource` |
 | POST | `/api/admin/orders/:code/confirmation` | `orders:update-status` | Xác nhận đơn |
 | POST | `/api/admin/orders/:code/shipment` | `orders:fulfill` | Tạo vận đơn (sửa được kích thước kiện) |
 | DELETE | `/api/admin/orders/:code/shipment` | `orders:fulfill` | Hủy vận đơn |
@@ -240,7 +259,8 @@ model Order {
   paymentStatus     PaymentStatus
   flags             String[]      // underpaid, overpaid, invoice_requested, ...
   subtotal          Int
-  shippingFee       Int           // phí GHN báo
+  shippingFee       Int           // phí GHN báo, hoặc phí đã lưu, hoặc phí dự phòng
+  shippingFeeSource ShippingFeeSource @default(ghn) // ghn | cached | fallback, chỉ nhân viên thấy
   shippingDiscount  Int           // phần shop chịu
   total             Int
   paymentDeadline   DateTime?
@@ -287,9 +307,11 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, sepayAccountNum
   - Gộp giỏ khi đăng nhập; gắn đơn vãng lai sau khi xác thực email.
   - Ma trận quyền cho mọi endpoint back-office.
   - `onShipmentStatusChanged` cập nhật đúng trạng thái đơn.
+  - Nguồn phí: GHN không phản hồi thì đơn ghi `fallback` hoặc `cached` với phí và tổng tiền đúng, ngưỡng miễn phí ship vẫn áp, bảng tắt thì giữ `SHIPPING_UNAVAILABLE`. API của khách không có trường nguồn phí, và đơn có sẵn trước migration nhận `ghn`.
 - `shipping` và `catalog` dùng implementation thật trong integration test, GHN dùng HTTP mock.
 - E2E:
   - Khách vãng lai mua COD.
+  - GHN giả không phản hồi lúc báo phí, bảng phí dự phòng bật: khách đặt COD bình thường, admin thấy nhãn "Phí ship dự phòng" trên trang đơn.
   - Khách mua SePay (bắn webhook giả lập), trang tự chuyển khi đã thanh toán.
   - Sales xác nhận và tạo vận đơn.
   - Khách đánh giá sau khi giao, support ẩn đánh giá.

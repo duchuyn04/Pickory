@@ -169,6 +169,7 @@ public sealed class AdminOrderService(
             order.ShippingFee,
             order.ShippingDiscount,
             order.Total,
+            OrderLabels.ToLabel(order.ShippingFeeSource),
             history,
             shipment is null
                 ? null

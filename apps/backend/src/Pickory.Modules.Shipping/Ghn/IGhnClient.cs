@@ -15,6 +15,10 @@ internal interface IGhnClient
 
     Task<GhnCreatedOrder> CreateOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken);
 
+    // Gửi cùng thân với `CreateOrderAsync` tới API xem trước của GHN, và GHN không tạo đơn.
+    // GHN từ chối địa chỉ thì ném `ShippingRejectedException`, còn lỗi mạng hoặc 5xx không được thử lại.
+    Task<GhnOrderPreview> PreviewOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken);
+
     // Hủy thành công thì trả bình thường. GHN báo đơn không hủy được thì ném `ShippingRejectedException`.
     Task CancelOrderAsync(string orderCode, string reasonCode, string? reason, CancellationToken cancellationToken);
 

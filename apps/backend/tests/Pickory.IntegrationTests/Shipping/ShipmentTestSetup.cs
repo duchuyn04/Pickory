@@ -58,6 +58,15 @@ internal static class ShipmentTestSetup
             setters => setters.SetProperty(row => row.DefaultServiceTypeId, serviceTypeId));
     }
 
+    // Đổi tên phường lấy hàng trong cấu hình, để dựng địa chỉ lấy hàng mà GHN giả không nhận.
+    public static async Task UpdateSenderWardNameAsync(WebApplicationFactory<Program> factory, string wardName)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
+        await shipping.Settings.ExecuteUpdateAsync(
+            setters => setters.SetProperty(row => row.WardName, wardName));
+    }
+
     public static async Task DeleteSettingsAsync(WebApplicationFactory<Program> factory)
     {
         await using var scope = factory.Services.CreateAsyncScope();

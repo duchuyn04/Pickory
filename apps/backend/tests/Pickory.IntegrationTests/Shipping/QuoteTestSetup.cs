@@ -8,6 +8,7 @@ using Pickory.Modules.Shipping.Contracts.Addresses;
 using Pickory.Modules.Shipping.Contracts.Parcels;
 using Pickory.Modules.Shipping.Contracts.Quotes;
 using Pickory.Modules.Shipping.Entities;
+using Pickory.Modules.Shipping.FallbackFees;
 using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Shipping.Persistence;
 using Pickory.Modules.Shipping.Settings;
@@ -25,7 +26,7 @@ internal static class QuoteTestSetup
     public static readonly Parcel SampleParcel = new(1500, 30, 20, 12);
 
     // Mã lấy theo danh mục của `FakeGhnClient`, vì bản giả từ chối phường ngoài danh mục như GHN.
-    // Phường 1003646 đang dùng, phường 1003649 đã tắt, phường 1004001 thuộc tỉnh 1000002.
+    // Phường 1003646 đang dùng, phường 1003649 đã tắt, phường 1004001 thuộc tỉnh 1000000.
     public static readonly ShippingAddress ActiveAddress =
         new("1000001", "Hồ Chí Minh", "1003646", "Phường Bến Nghé", "12 Phố Test");
 
@@ -36,7 +37,19 @@ internal static class QuoteTestSetup
         // Test xóa cả bảng, nên phải chắc context trỏ tới DB test chứ không phải DB dev.
         DotnetSchemaIntegrationTests.AssertTestConnection(shipping);
         await shipping.Settings.ExecuteDeleteAsync();
+        // Phí đã lưu và bảng phí dự phòng của test trước có thể làm test sau nhận phí lạ khi GHN lỗi. Xóa cả hai.
+        await shipping.QuoteCache.ExecuteDeleteAsync();
+        await shipping.FallbackFees.ExecuteDeleteAsync();
         await AddressTestDatabase.ClearAsync(shipping);
+    }
+
+    // Xóa riêng phí đã lưu. Test GHN lỗi dùng sau một lần báo phí thành công, để lần báo lỗi không nhận phí vừa lưu.
+    public static async Task ClearQuoteCacheAsync(WebApplicationFactory<Program> factory)
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
+        DotnetSchemaIntegrationTests.AssertTestConnection(shipping);
+        await shipping.QuoteCache.ExecuteDeleteAsync();
     }
 
     public static async Task SeedCatalogAsync(WebApplicationFactory<Program> factory)
@@ -44,11 +57,11 @@ internal static class QuoteTestSetup
         await using var scope = factory.Services.CreateAsyncScope();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
         shipping.AddressProvinces.AddRange(
-            AddressTestDatabase.Province("1000002", "Hà Nội", isActive: true, SyncedAt),
+            AddressTestDatabase.Province("1000000", "Hà Nội", isActive: true, SyncedAt),
             AddressTestDatabase.Province("1000001", "Hồ Chí Minh", isActive: true, SyncedAt));
         await shipping.SaveChangesAsync();
         shipping.AddressWards.AddRange(
-            AddressTestDatabase.Ward("1004001", "1000002", "Phường Ba Đình", isActive: true, SyncedAt),
+            AddressTestDatabase.Ward("1004001", "1000000", "Phường Ba Đình", isActive: true, SyncedAt),
             AddressTestDatabase.Ward("1003646", "1000001", "Phường Bến Nghé", isActive: true, SyncedAt),
             AddressTestDatabase.Ward("1003649", "1000001", "Phường đã tắt", isActive: false, SyncedAt));
         await shipping.SaveChangesAsync();
@@ -72,7 +85,7 @@ internal static class QuoteTestSetup
             Id = "singleton",
             SenderName = "Kho Pickory",
             SenderPhone = "0912345678",
-            ProvinceCode = "1000002",
+            ProvinceCode = "1000000",
             ProvinceName = "Hà Nội",
             WardCode = "1004001",
             WardName = "Phường Ba Đình",
@@ -83,12 +96,14 @@ internal static class QuoteTestSetup
         await shipping.SaveChangesAsync();
     }
 
-    // Dựng dịch vụ với client GHN và bộ phát sự kiện do test chọn. Bộ phát mặc định bỏ qua mọi sự kiện.
+    // Dựng dịch vụ với client GHN, bộ phát sự kiện và kho phí đã lưu do test chọn.
+    // Mặc định bộ phát bỏ qua mọi sự kiện và kho là kho thật của ứng dụng.
     public static ShippingService CreateService(
         IServiceProvider scopedServices,
         IGhnClient ghnClient,
         ILogger<ShippingService> logger,
-        IEventDispatcher? eventDispatcher = null)
+        IEventDispatcher? eventDispatcher = null,
+        QuoteCacheStore? quoteCache = null)
     {
         // Bộ cập nhật trạng thái dùng cùng bộ phát với dịch vụ, để test thấy mọi sự kiện ở một chỗ.
         var dispatcher = eventDispatcher ?? new RecordingEventDispatcher();
@@ -103,6 +118,8 @@ internal static class QuoteTestSetup
                 dispatcher,
                 TimeProvider.System,
                 NullLogger<ShipmentStatusUpdater>.Instance),
+            quoteCache ?? scopedServices.GetRequiredService<QuoteCacheStore>(),
+            scopedServices.GetRequiredService<FallbackFeeStore>(),
             logger);
     }
 
@@ -114,10 +131,11 @@ internal static class QuoteTestSetup
         ShippingAddress? to = null,
         Parcel? parcel = null,
         int codAmount = 0,
-        int insuredValue = 0)
+        int insuredValue = 0,
+        Func<IServiceProvider, QuoteCacheStore>? createQuoteCache = null)
     {
         await using var scope = factory.Services.CreateAsyncScope();
-        var service = CreateService(scope.ServiceProvider, ghnClient, logger);
+        var service = CreateService(scope.ServiceProvider, ghnClient, logger, quoteCache: createQuoteCache?.Invoke(scope.ServiceProvider));
         return await service.QuoteAsync(
             to ?? ActiveAddress, parcel ?? SampleParcel, codAmount, insuredValue, CancellationToken.None);
     }

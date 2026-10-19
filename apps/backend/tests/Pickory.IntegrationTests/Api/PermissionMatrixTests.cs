@@ -73,6 +73,8 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "PUT", "/api/admin/ai/settings", [Permissions.AiSettingsManage] },
         { "GET", "/api/admin/shipping/settings", [Permissions.ShippingSettingsManage] },
         { "PUT", "/api/admin/shipping/settings", [Permissions.ShippingSettingsManage] },
+        { "GET", "/api/admin/shipping/fallback-fee", [Permissions.ShippingSettingsManage] },
+        { "PUT", "/api/admin/shipping/fallback-fee", [Permissions.ShippingSettingsManage] },
         { "GET", "/api/admin/commerce/settings", [Permissions.CommerceSettingsManage] },
         { "PUT", "/api/admin/commerce/settings", [Permissions.CommerceSettingsManage] },
         { "GET", "/api/admin/orders", [Permissions.OrdersRead] },

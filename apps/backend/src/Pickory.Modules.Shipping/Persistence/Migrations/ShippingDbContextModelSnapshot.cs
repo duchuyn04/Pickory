@@ -201,6 +201,107 @@ namespace Pickory.Modules.Shipping.Persistence.Migrations
                     b.ToTable("shipment_events", (string)null);
                 });
 
+            modelBuilder.Entity("Pickory.Modules.Shipping.Entities.ShippingFallbackFee", b =>
+                {
+                    b.Property<string>("Id")
+                        .HasColumnType("text")
+                        .HasColumnName("id");
+
+                    b.Property<int?>("CrossRegionBaseFee")
+                        .HasColumnType("integer")
+                        .HasColumnName("crossRegionBaseFee");
+
+                    b.Property<int?>("CrossRegionBaseWeightGrams")
+                        .HasColumnType("integer")
+                        .HasColumnName("crossRegionBaseWeightGrams");
+
+                    b.Property<int?>("CrossRegionStepFee")
+                        .HasColumnType("integer")
+                        .HasColumnName("crossRegionStepFee");
+
+                    b.Property<bool>("Enabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("enabled");
+
+                    b.Property<int?>("SameProvinceBaseFee")
+                        .HasColumnType("integer")
+                        .HasColumnName("sameProvinceBaseFee");
+
+                    b.Property<int?>("SameProvinceBaseWeightGrams")
+                        .HasColumnType("integer")
+                        .HasColumnName("sameProvinceBaseWeightGrams");
+
+                    b.Property<int?>("SameProvinceStepFee")
+                        .HasColumnType("integer")
+                        .HasColumnName("sameProvinceStepFee");
+
+                    b.Property<int?>("SameRegionBaseFee")
+                        .HasColumnType("integer")
+                        .HasColumnName("sameRegionBaseFee");
+
+                    b.Property<int?>("SameRegionBaseWeightGrams")
+                        .HasColumnType("integer")
+                        .HasColumnName("sameRegionBaseWeightGrams");
+
+                    b.Property<int?>("SameRegionStepFee")
+                        .HasColumnType("integer")
+                        .HasColumnName("sameRegionStepFee");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("updatedAt");
+
+                    b.HasKey("Id")
+                        .HasName("shipping_fallback_fee_pkey");
+
+                    b.ToTable("shipping_fallback_fee", (string)null);
+                });
+
+            modelBuilder.Entity("Pickory.Modules.Shipping.Entities.ShippingQuoteCache", b =>
+                {
+                    b.Property<string>("ReceiverWardCode")
+                        .HasColumnType("text")
+                        .HasColumnName("receiverWardCode");
+
+                    b.Property<string>("PickupWardCode")
+                        .HasColumnType("text")
+                        .HasColumnName("pickupWardCode");
+
+                    b.Property<int>("ServiceTypeId")
+                        .HasColumnType("integer")
+                        .HasColumnName("serviceTypeId");
+
+                    b.Property<long>("ChargeableWeightGrams")
+                        .HasColumnType("bigint")
+                        .HasColumnName("chargeableWeightGrams");
+
+                    b.Property<int>("InsuredValue")
+                        .HasColumnType("integer")
+                        .HasColumnName("insuredValue");
+
+                    b.Property<int>("CodAmount")
+                        .HasColumnType("integer")
+                        .HasColumnName("codAmount");
+
+                    b.Property<int>("Fee")
+                        .HasColumnType("integer")
+                        .HasColumnName("fee");
+
+                    b.Property<DateTime>("SavedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("savedAt");
+
+                    b.HasKey("ReceiverWardCode", "PickupWardCode", "ServiceTypeId", "ChargeableWeightGrams", "InsuredValue", "CodAmount")
+                        .HasName("shipping_quote_cache_pkey");
+
+                    b.HasIndex("SavedAt")
+                        .HasDatabaseName("shipping_quote_cache_savedAt_idx");
+
+                    b.ToTable("shipping_quote_cache", (string)null);
+                });
+
             modelBuilder.Entity("Pickory.Modules.Shipping.Entities.ShippingSettings", b =>
                 {
                     b.Property<string>("Id")

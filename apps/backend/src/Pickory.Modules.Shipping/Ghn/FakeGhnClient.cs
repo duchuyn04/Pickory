@@ -10,10 +10,20 @@ internal sealed class FakeGhnClient : IGhnClient
     // Mã đơn giả có dạng `FAKE000001`, tăng dần để test đoán được và đếm được số đơn đã tạo.
     private const string OrderCodePrefix = "FAKE";
 
+    // Phần đầu thông báo lỗi tỉnh và phường lấy hàng của sandbox (HTTP 400).
+    private const string PickupPlaceNamePrefix = "Fail when get place name of from ward code: ";
+
+    // Dòng địa chỉ nhận (`to_address`) chứa chuỗi này thì bản giả báo `To address conflict`.
+    // Test của `commerce` dùng chuỗi này để giả lập tên đường không thuộc phường đã chọn.
+    public const string RejectedAddressMarker = "#ghn-tu-choi";
+
+    // Luật riêng của bản giả, sandbox không có lỗi này.
+    private const string PickupFlagRequiredMessage = "from_* cần is_new_from_address true (luật riêng của bản giả)";
+
     private static readonly GhnProvince[] Provinces =
     [
         new(1000001, "Hồ Chí Minh", 1),
-        new(1000002, "Hà Nội", 1),
+        new(1000000, "Hà Nội", 1),
         // Đơn vị bị tắt, để job đồng bộ có dữ liệu thử nhánh "không còn dùng".
         new(1000099, "Tỉnh đã giải thể", 2),
     ];
@@ -24,8 +34,8 @@ internal sealed class FakeGhnClient : IGhnClient
         new(1003647, "Phường Bến Thành", 1000001, 1),
         new(1003648, "Phường Sài Gòn", 1000001, 1),
         new(1003649, "Phường đã sáp nhập", 1000001, 2),
-        new(1004001, "Phường Ba Đình", 1000002, 1),
-        new(1004002, "Phường Hoàn Kiếm", 1000002, 1),
+        new(1004001, "Phường Ba Đình", 1000000, 1),
+        new(1004002, "Phường Hoàn Kiếm", 1000000, 1),
     ];
 
     // Thời điểm giao cố định của bản giả, để test đoán được ngày giao. Giá trị là 12:00 giờ Việt Nam ngày 15/10/2026.
@@ -87,6 +97,15 @@ internal sealed class FakeGhnClient : IGhnClient
         }
     }
 
+    // Tắt lỗi của riêng một hàm, giữ nguyên lỗi của các hàm khác. Route E2E dùng để Playwright tắt lỗi báo phí.
+    public void ClearFailure(FakeGhnOperation operation)
+    {
+        lock (_gate)
+        {
+            _failures.Remove(operation);
+        }
+    }
+
     public void ClearFailures()
     {
         lock (_gate)
@@ -140,6 +159,10 @@ internal sealed class FakeGhnClient : IGhnClient
             throw CreateException(failure.Value);
         }
 
+        // Kiểm trước khi tạo đơn, vì GHN từ chối địa chỉ sai ngay ở bước tạo và không để lại đơn nào.
+        RequireDeliverableToAddress(request);
+        RequireValidPickupAddress(request);
+
         GhnCreatedOrder created;
         lock (_gate)
         {
@@ -172,6 +195,16 @@ internal sealed class FakeGhnClient : IGhnClient
         }
 
         return Task.FromResult(created);
+    }
+
+    public Task<GhnOrderPreview> PreviewOrderAsync(GhnCreateOrderRequest request, CancellationToken cancellationToken)
+    {
+        ThrowIfFailing(FakeGhnOperation.PreviewOrder);
+
+        // Cùng luật địa chỉ với tạo đơn, nhưng không tạo đơn và không đổi bộ đếm, giống API xem trước của GHN.
+        RequireDeliverableToAddress(request);
+        RequireValidPickupAddress(request);
+        return Task.FromResult(new GhnOrderPreview(ComputeFee(request.Weight, request.InsuranceValue).Total));
     }
 
     public Task CancelOrderAsync(string orderCode, string reasonCode, string? reason, CancellationToken cancellationToken)
@@ -223,7 +256,52 @@ internal sealed class FakeGhnClient : IGhnClient
         }
     }
 
-    // GHN không kiểm tỉnh với phường (ADR 0003), nên bản giả chỉ kiểm cờ và mã phường để lỗi giống GHN.
+    // Bản giả không có danh mục đường phố, nên dùng chuỗi đánh dấu để giả lập tên đường không thuộc phường.
+    // Lỗi đi qua cùng bước dịch với adapter thật, để test thấy đúng câu tiếng Việt mà người dùng thấy.
+    private static void RequireDeliverableToAddress(GhnCreateOrderRequest request)
+    {
+        if (request.ToAddress.Contains(RejectedAddressMarker, StringComparison.Ordinal))
+        {
+            throw GhnRejections.Create("To address conflict");
+        }
+    }
+
+    // Luật địa chỉ lấy hàng của bản giả. Hai lỗi tỉnh và phường lấy nguyên văn từ sandbox ngày 2026-10-19 (ADR 0003, mục "Bổ sung SHIP-11").
+    private static void RequireValidPickupAddress(GhnCreateOrderRequest request)
+    {
+        // Không gửi địa chỉ lấy hàng thì GHN dùng địa chỉ của shop, nên không có gì để kiểm.
+        var hasPickupAddress = request.FromName is not null
+            || request.FromPhone is not null
+            || request.FromAddress is not null
+            || request.FromProvinceName is not null
+            || request.FromWardName is not null;
+        if (!hasPickupAddress)
+        {
+            return;
+        }
+
+        // Sandbox nhận đơn thiếu cờ địa chỉ mới và âm thầm bỏ phường. Bản giả chặt hơn sandbox để lỗi cấu hình không bị che.
+        if (request.IsNewFromAddress != true)
+        {
+            throw new ShippingRejectedException(PickupFlagRequiredMessage);
+        }
+
+        // Tên tỉnh không có trong danh mục thì sandbox báo `province not found`.
+        var province = Provinces.FirstOrDefault(candidate => candidate.Name == request.FromProvinceName);
+        if (province is null)
+        {
+            throw GhnRejections.Create($"{PickupPlaceNamePrefix}province not found: {request.FromProvinceName}");
+        }
+
+        // Phường không thuộc tỉnh đó thì sandbox báo `ward not found`, kể cả khi phường có ở tỉnh khác.
+        if (!Wards.Any(ward => ward.ParentId == province.Id && ward.Name == request.FromWardName))
+        {
+            throw GhnRejections.Create(
+                $"{PickupPlaceNamePrefix}ward not found: {request.FromWardName} in province {request.FromProvinceName}");
+        }
+    }
+
+    // GHN không kiểm tỉnh với phường của địa chỉ nhận (ADR 0003), nên bản giả chỉ kiểm cờ và mã phường để lỗi giống GHN.
     private static void RequireKnownNewAddress(bool isNewToAddress, long wardId)
     {
         // Thiếu cờ thì GHN đọc mã theo danh mục cũ và báo không thấy phường.

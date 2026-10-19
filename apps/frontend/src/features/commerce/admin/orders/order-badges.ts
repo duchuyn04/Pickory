@@ -26,6 +26,11 @@ const ORDER_FLAG_BADGES: Record<string, string> = {
   shipment_cancelled: 'badge badge-bad',
 };
 
+// Phí đã lưu và phí dự phòng dùng nhãn vàng để nhân viên chú ý. Trang chỉ gọi hàm này khi đơn không dùng phí GHN vừa tính.
+export function substituteFeeBadgeClass(): string {
+  return 'badge badge-warn';
+}
+
 // Mã lạ dùng badge trung tính, để màn vẫn hiện được khi backend thêm trạng thái mới.
 export function orderStatusBadgeClass(status: string): string {
   return ORDER_STATUS_BADGES[status] ?? 'badge';

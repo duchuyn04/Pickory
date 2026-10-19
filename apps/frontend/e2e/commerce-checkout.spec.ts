@@ -647,4 +647,57 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
     await expect(page).toHaveURL(/\/orders\/[^/]+\/success$/);
     expect(issues).toEqual([]);
   });
+
+  test('GHN từ chối địa chỉ thì lỗi hiện dưới ô địa chỉ, khách sửa lại rồi đặt được đơn', async ({
+    page,
+  }) => {
+    // Response 422 của `POST /api/orders` là lỗi test chủ động gây ra, nên chỉ request đó được phép.
+    const issues = collectConsoleIssues(page, [{ urlPattern: /\/api\/orders$/, status: 422 }]);
+    await stubProductImages(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    const reservationsBefore = await countOrderReservations(adminPage, catalog.mouse.skuId);
+    await addToCartFromProductPage(page, catalog.mouse);
+    await openCheckoutFromCart(page);
+
+    // Dòng địa chỉ chứa chuỗi đánh dấu: GHN giả báo `To address conflict` cho dòng này.
+    const rejectedLine = '25 Đường Test #ghn-tu-choi';
+    await fillAddress(page, address, rejectedLine);
+    await fillContact(page);
+    await expect(placeOrderButton(page)).toBeEnabled();
+
+    await placeOrderButton(page).click();
+
+    // Câu lỗi nằm dưới ô dòng địa chỉ, ô đó nhận focus và được đánh dấu lỗi.
+    const lineInput = page.locator('#checkout-address-line');
+    await expect(page.locator('#checkout-address-line-error')).toHaveText(
+      'Đơn vị vận chuyển không nhận địa chỉ này. Kiểm tra tên đường có thuộc phường/xã đã chọn không.',
+    );
+    await expect(lineInput).toHaveAttribute('aria-invalid', 'true');
+    await expect(lineInput).toBeFocused();
+    // Các ô khác giữ giá trị khách đã nhập, và trang không chuyển đi đâu.
+    await expect(lineInput).toHaveValue(rejectedLine);
+    await expect(page.locator('#checkout-address-province')).toHaveValue(address.provinceName);
+    await expect(page.locator('#checkout-address-ward')).toHaveValue(address.wardName);
+    await expect(page.getByLabel('Họ và tên', { exact: true })).toHaveValue('Nguyễn Văn An');
+    await expect(page.getByLabel('Số điện thoại', { exact: true })).toHaveValue('0912345678');
+    await expect(page.getByLabel('Email', { exact: true })).toHaveValue('an@example.com');
+    await expect(page).toHaveURL(/\/checkout$/);
+    // Đơn bị chặn trước khi giữ hàng, nên kho không có thêm dòng giữ hàng.
+    expect(await countOrderReservations(adminPage, catalog.mouse.skuId)).toBe(reservationsBefore);
+    await checkLayoutAtBothWidths(page, 'checkout-address-rejected');
+
+    // Khách sửa dòng địa chỉ thành địa chỉ không có chuỗi đánh dấu rồi đặt lại.
+    await lineInput.fill('25 Đường Test');
+    await expect(placeOrderButton(page)).toBeEnabled();
+    await placeOrderButton(page).click();
+
+    await expect(page).toHaveURL(/\/orders\/[^/]+\/success$/);
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Đặt hàng thành công' }),
+    ).toBeVisible();
+    expect(await countOrderReservations(adminPage, catalog.mouse.skuId)).toBe(
+      reservationsBefore + 1,
+    );
+    expect(issues).toEqual([]);
+  });
 });

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore.ValueGeneration;
+using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Entities;
 
 namespace Pickory.Modules.Commerce.Persistence.Configurations;
@@ -29,6 +30,8 @@ internal sealed class OrderConfiguration : IEntityTypeConfiguration<Order>
         entity.Property(value => value.ShippingFee).IsRequired();
         entity.Property(value => value.ShippingDiscount).IsRequired();
         entity.Property(value => value.Total).IsRequired();
+        // Giá trị mặc định `ghn` làm đơn đặt trước khi có cột nhận đúng nguồn GHN, vì trước đó chỉ có phí GHN.
+        entity.Property(value => value.ShippingFeeSource).IsRequired().HasDefaultValue(ShippingFeeSource.Ghn);
         entity.Property(value => value.PaymentDeadline).IsRequired(false);
         // Mã giao dịch hoàn tiền dài tối đa 100 ký tự, bằng giới hạn mà route hoàn tiền kiểm.
         entity.Property(value => value.RefundTransactionRef).HasMaxLength(100).IsRequired(false);

@@ -16,6 +16,8 @@ public sealed class ShippingDbContext(DbContextOptions<ShippingDbContext> option
     public DbSet<AddressProvince> AddressProvinces => Set<AddressProvince>();
     public DbSet<AddressWard> AddressWards => Set<AddressWard>();
     public DbSet<ShippingSettings> Settings => Set<ShippingSettings>();
+    public DbSet<ShippingFallbackFee> FallbackFees => Set<ShippingFallbackFee>();
+    public DbSet<ShippingQuoteCache> QuoteCache => Set<ShippingQuoteCache>();
 
     public static void ConfigureOptions(DbContextOptionsBuilder options, string connectionString)
     {

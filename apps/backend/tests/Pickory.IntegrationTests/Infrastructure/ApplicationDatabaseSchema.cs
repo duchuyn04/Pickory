@@ -29,7 +29,7 @@ internal static class ApplicationDatabaseSchema
     // Bảng và enum của shipping không có trong `reference-schema.sql` (bản chụp schema Prisma). Phép so với file đó phải bỏ qua chúng.
     internal static readonly string[] ShippingTables =
     [
-        "address_provinces", "address_wards", "shipment_events", "shipments", "shipping_settings"
+        "address_provinces", "address_wards", "shipment_events", "shipments", "shipping_fallback_fee", "shipping_quote_cache", "shipping_settings"
     ];
 
     internal static readonly string[] ShippingEnums = ["ShipmentStatus", "ShipmentEventSource"];
@@ -41,7 +41,7 @@ internal static class ApplicationDatabaseSchema
         "payment_transactions", "review_reports", "reviews", "saved_addresses"
     ];
 
-    internal static readonly string[] CommerceEnums = ["OrderStatus", "PaymentStatus", "PaymentMethod"];
+    internal static readonly string[] CommerceEnums = ["OrderStatus", "PaymentStatus", "PaymentMethod", "ShippingFeeSource"];
 
     // Khóa metadata thuộc commerce có cùng dạng với khóa của shipping. Khớp theo ranh giới tên, không theo tiền tố.
     internal static bool IsCommerceObject(string key)

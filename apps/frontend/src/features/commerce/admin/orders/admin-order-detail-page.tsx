@@ -24,6 +24,7 @@ import {
   orderFlagBadgeClass,
   orderStatusBadgeClass,
   paymentStatusBadgeClass,
+  substituteFeeBadgeClass,
 } from './order-badges';
 import './admin-orders.css';
 
@@ -44,6 +45,15 @@ function sortHistory(entries: AdminOrderHistoryEntry[]): AdminOrderHistoryEntry[
     (left, right) => new Date(left.createdAt).getTime() - new Date(right.createdAt).getTime(),
   );
 }
+
+// Nhãn nhân viên thấy khi đơn không dùng phí GHN vừa tính. Khách không thấy nhãn này.
+const FALLBACK_FEE_LABEL = 'Phí ship dự phòng';
+
+// Câu giải thích dưới nhãn, theo nguồn của phí.
+const FEE_SOURCE_NOTES: Record<string, string> = {
+  cached: 'Theo phí GHN đã lưu',
+  fallback: 'Theo bảng phí dự phòng',
+};
 
 function orderAddressLine(address: AdminOrderDetail['shippingAddress']): string {
   return [address.line, address.wardName, address.provinceName]
@@ -112,6 +122,9 @@ export function AdminOrderDetailPage() {
   }
 
   const history = sortHistory(order.statusHistory);
+
+  // Phí đã lưu hoặc phí dự phòng khác phí GHN vừa tính. Biến này quyết định cả nhãn và dòng so sánh phí ở thẻ Vận đơn.
+  const usesSubstituteFee = order.shippingFeeSource !== 'ghn';
 
   return (
     <div className="page">
@@ -286,7 +299,15 @@ export function AdminOrderDetailPage() {
               </div>
               <div>
                 <dt>Phí vận chuyển</dt>
-                <dd>{formatProductPrice(order.shippingFee)}</dd>
+                <dd className="order-totals-source">
+                  <span>{formatProductPrice(order.shippingFee)}</span>
+                  {usesSubstituteFee && (
+                    <>
+                      <span className={substituteFeeBadgeClass()}>{FALLBACK_FEE_LABEL}</span>
+                      <span className="cell-sub">{FEE_SOURCE_NOTES[order.shippingFeeSource]}</span>
+                    </>
+                  )}
+                </dd>
               </div>
               {order.shippingDiscount > 0 && (
                 <div>
@@ -320,9 +341,15 @@ export function AdminOrderDetailPage() {
                   <dd>{formatShipmentStatus(order.shipment.status)}</dd>
                 </div>
                 <div>
-                  <dt>Phí</dt>
+                  <dt>Phí GHN thực tế</dt>
                   <dd>{formatProductPrice(order.shipment.fee)}</dd>
                 </div>
+                {usesSubstituteFee && (
+                  <div>
+                    <dt>Khách đã trả</dt>
+                    <dd>{formatProductPrice(order.shippingFee - order.shippingDiscount)}</dd>
+                  </div>
+                )}
               </dl>
             </section>
           )}

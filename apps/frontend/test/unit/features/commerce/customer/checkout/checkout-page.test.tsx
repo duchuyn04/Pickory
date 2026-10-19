@@ -264,6 +264,23 @@ describe('CheckoutPage: preview và tóm tắt tiền', () => {
     expect(submitButton().disabled).toBe(false);
   });
 
+  it('preview không có ngày giao dự kiến thì trang không hiện ngày giao hay chữ phí dự phòng', async () => {
+    // Phí đã lưu và phí dự phòng của shipping không có ngày giao, nên `expectedDeliveryDate` là `null`.
+    stubCheckoutApi({
+      previewReply: () => okReply(buildPreview({ expectedDeliveryDate: null })),
+    });
+    await openCheckout();
+    await fillAddress();
+
+    const pageText = container.textContent ?? '';
+    expect(summaryText()).toContain('30.000 đ');
+    expect(pageText).not.toMatch(/dự kiến/i);
+    expect(pageText).not.toMatch(/ngày giao/i);
+    expect(pageText).not.toMatch(/giao dự kiến/i);
+    expect(pageText).not.toMatch(/dự phòng/i);
+    expect(pageText).not.toMatch(/fallback/i);
+  });
+
   it('gõ số nhà liên tục chỉ gọi preview một lần sau khi ngừng gõ', async () => {
     const api = stubCheckoutApi();
     await openCheckout();
@@ -681,6 +698,32 @@ describe('CheckoutPage: đặt đơn', () => {
     expect(errorText('checkout-contact-phone')).toBe('Số điện thoại không đúng định dạng.');
     expect(errorText('checkout-contact-email')).toBe('Email không đúng định dạng.');
     expect(document.activeElement?.id).toBe('checkout-contact-phone');
+  });
+
+  it('ADDRESS_NOT_DELIVERABLE hiện dưới ô địa chỉ, giữ dữ liệu đã nhập và focus ô đó', async () => {
+    const message =
+      'Đơn vị vận chuyển không nhận địa chỉ này. Kiểm tra tên đường có thuộc phường/xã đã chọn không.';
+    stubCheckoutApi({
+      orderReply: () =>
+        errorReply(422, 'ADDRESS_NOT_DELIVERABLE', message, [{ key: 'address.line', message }]),
+    });
+    await openCheckout();
+    await fillAddress('99 Đường Sai');
+    await fillContact();
+
+    await clickSubmit();
+
+    expect(errorText('checkout-address-line')).toBe(message);
+    const line = field('checkout-address-line');
+    expect(line.getAttribute('aria-invalid')).toBe('true');
+    expect(line.getAttribute('aria-describedby')).toContain('checkout-address-line');
+    expect(document.activeElement?.id).toBe('checkout-address-line');
+    // Khách không phải nhập lại: mọi ô giữ giá trị đã gõ.
+    expect(line.value).toBe('99 Đường Sai');
+    expect(field('checkout-contact-name').value).toBe('Nguyễn Văn An');
+    expect(field('checkout-contact-phone').value).toBe('0912345678');
+    expect(field('checkout-contact-email').value).toBe('an@example.com');
+    expect(locationText()).toBe('/checkout');
   });
 
   it('lỗi khác hiện bằng thông báo lỗi chung', async () => {

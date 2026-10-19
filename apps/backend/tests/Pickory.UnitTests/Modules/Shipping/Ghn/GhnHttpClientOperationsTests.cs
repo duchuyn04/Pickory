@@ -196,6 +196,55 @@ public sealed class GhnHttpClientOperationsTests
     }
 
     [Fact]
+    // SHIP-11: sandbox chỉ lưu tên tỉnh và tên phường lấy hàng khi có `is_new_from_address: true`, nên body phải mang đủ cả sáu trường.
+    public async Task CreateOrder_WithPickupAddress_PostsTwoLevelPickupNamesAndNewAddressFlag()
+    {
+        var harness = new GhnClientHarness();
+        harness.RespondOk("""{"order_code":"LADH94","total_fee":42000}""");
+        var request = CreateRequest with
+        {
+            FromName = "Kho Pickory",
+            FromPhone = "0901234567",
+            FromAddress = "12 Tràng Tiền",
+            FromProvinceName = "Hà Nội",
+            FromWardName = "Phường Hoàn Kiếm",
+            IsNewFromAddress = true,
+        };
+
+        await harness.Client.CreateOrderAsync(request, CancellationToken.None);
+
+        using var body = JsonDocument.Parse(Assert.Single(harness.Handler.Requests).Body);
+        var root = body.RootElement;
+        Assert.Equal("Kho Pickory", root.GetProperty("from_name").GetString());
+        Assert.Equal("0901234567", root.GetProperty("from_phone").GetString());
+        Assert.Equal("12 Tràng Tiền", root.GetProperty("from_address").GetString());
+        Assert.Equal("Hà Nội", root.GetProperty("from_province_name").GetString());
+        Assert.Equal("Phường Hoàn Kiếm", root.GetProperty("from_ward_name").GetString());
+        Assert.True(root.GetProperty("is_new_from_address").GetBoolean());
+        // Địa chỉ lấy hàng hai cấp cũng không có quận hoặc huyện.
+        Assert.False(root.TryGetProperty("from_district_name", out _));
+    }
+
+    [Fact]
+    // Không có địa chỉ lấy hàng thì body không mang trường `from_*`, để GHN dùng địa chỉ của shop.
+    public async Task CreateOrder_WithoutPickupAddress_OmitsEveryPickupField()
+    {
+        var harness = new GhnClientHarness();
+        harness.RespondOk("""{"order_code":"LADH94","total_fee":42000}""");
+
+        await harness.Client.CreateOrderAsync(CreateRequest, CancellationToken.None);
+
+        using var body = JsonDocument.Parse(Assert.Single(harness.Handler.Requests).Body);
+        var root = body.RootElement;
+        Assert.False(root.TryGetProperty("from_name", out _));
+        Assert.False(root.TryGetProperty("from_phone", out _));
+        Assert.False(root.TryGetProperty("from_address", out _));
+        Assert.False(root.TryGetProperty("from_province_name", out _));
+        Assert.False(root.TryGetProperty("from_ward_name", out _));
+        Assert.False(root.TryGetProperty("is_new_from_address", out _));
+    }
+
+    [Fact]
     public async Task CancelOrder_PostsOrderCodesAndReason_AndCompletesWhenCancelled()
     {
         var harness = new GhnClientHarness();
