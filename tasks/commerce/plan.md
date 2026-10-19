@@ -6,7 +6,7 @@ Module `commerce` biến ý định mua thành đơn hàng đã giao. Module g�
 
 `commerce` phụ thuộc `identity`, `catalog` và `shipping`. Bốn module sau dùng dữ liệu của `commerce`: `activity-tracking`, `personalized-content`, `support-desk`, `admin-console`.
 
-Spec gốc: `spec/SPEC.md`, `spec/SPEC-commerce.md`. Spec còn viết interface theo bản Node. Plan này chuyển interface sang .NET theo `tasks/dotnet-migration/plan.md`.
+Spec gốc: `spec/SPEC.md`, `spec/SPEC-commerce.md`. Plan này chuyển interface sang .NET theo `tasks/dotnet-migration/plan.md`. Spec đã cập nhật interface .NET ngày 2026-10-20.
 Danh sách task chi tiết: `tasks/commerce/todo.md`.
 
 ## Phần đã phủ bởi plan cũ
@@ -128,7 +128,7 @@ COM-07 cần COM-06, vì ngưỡng miễn phí ship và hạn mức COD nằm tr
 
 19. **Điểm đánh giá không đi vào `catalog`.** `catalog` không được phụ thuộc `commerce`, vì `commerce` đã phụ thuộc `catalog`. Trang sản phẩm gọi `GET /api/products/{id}/reviews`. Response gồm điểm trung bình, phân bố số sao và trang đánh giá. Người dùng chốt cách này ở Câu hỏi mở 5.
 20. **Audit log.** Mọi thao tác nhân viên trên đơn, thanh toán, đánh giá và cấu hình ghi đúng 1 dòng qua `IAuditLogWriter` trong cùng transaction.
-21. **Tra cứu đơn gửi link qua email, không hiện đơn trên trang.** Người dùng thêm COM-25 và COM-UI11 ngày 2026-10-16. Spec chưa có phần này.
+21. **Tra cứu đơn gửi link qua email, không hiện đơn trên trang.** Người dùng thêm COM-25 và COM-UI11 ngày 2026-10-16. Spec có phần này từ ngày 2026-10-20.
     - Mã đơn có trong nội dung chuyển khoản và mã vận đơn, nên mã đơn không phải bí mật. Trang hiện đơn ngay khi khớp sẽ lộ địa chỉ của khách.
     - Route luôn trả cùng một response. Người tra cứu không biết mã đơn có tồn tại hay email có khớp.
     - DB chỉ lưu một hash token cho mỗi đơn (`AccessTokenHash`) và không giữ token gốc. Module tạo token mới và thay hash cũ, nên không cần đổi schema. Link trong email cũ hết hiệu lực.

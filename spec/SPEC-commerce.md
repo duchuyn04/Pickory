@@ -4,7 +4,7 @@ Module id: `commerce` · Phụ thuộc: `identity`, `catalog`, `shipping` · Quy
 
 ## Objective
 
-Biến ý định mua thành đơn hàng đã giao: giỏ hàng, checkout, đơn hàng, thanh toán COD và chuyển khoản qua SePay, hoàn tiền, đánh giá sau khi mua. Đây là phần tạo ra doanh thu, nên **không được phụ thuộc AI**: API AI lỗi thì luồng mua vẫn chạy đầy đủ.
+Biến ý định mua thành đơn hàng đã giao: giỏ hàng, checkout, đơn hàng, thanh toán COD và chuyển khoản qua SePay, hoàn tiền, đánh giá sau khi mua. Đây là phần tạo ra doanh thu, nên **không được phụ thuộc chatbot**. Dịch vụ chatbot (`chatbot-rag`, nhúng bằng widget) lỗi thì luồng mua vẫn chạy đầy đủ.
 
 **User stories**
 
@@ -45,13 +45,18 @@ Biến ý định mua thành đơn hàng đã giao: giỏ hàng, checkout, đơn
 ### Checkout và đặt đơn
 
 1. Khách nhập liên hệ (tên, SĐT, email bắt buộc), địa chỉ (từ danh mục của `shipping`), ghi chú, phương thức thanh toán, thông tin hóa đơn (tùy chọn).
-2. Frontend gọi `POST /api/checkout/previews` để có tạm tính, phí ship, giảm phí ship, tổng tiền.
-3. Khách bấm đặt: `POST /api/orders` kèm header `Idempotency-Key`. Server làm trong 1 transaction:
-   - Tính lại toàn bộ giá từ `catalog` và phí từ `shipping.quote`. **Không tin số tiền gửi từ frontend.** Tổng khác preview thì trả 409 để khách xem lại.
-   - `stock.reserve(orderId, items)`. Thiếu hàng thì trả 409 kèm danh sách SKU thiếu.
+2. Frontend gọi `POST /api/checkout/previews` để có tạm tính, phí ship, giảm phí ship, tổng tiền. Route giới hạn 20 lần mỗi phút cho mỗi khách.
+3. Khách bấm đặt: `POST /api/orders` kèm header `Idempotency-Key`. Thiếu header thì trả 400 `IDEMPOTENCY_KEY_REQUIRED`. Gửi lại cùng khóa thì trả đơn đã tạo với HTTP 200, không tạo đơn thứ hai. Lần gửi lại không gọi GHN và không giữ hàng.
+4. Server tính lại toàn bộ giá từ `catalog` và phí từ `shipping.quote`. **Không tin số tiền gửi từ frontend.** Tổng khác preview thì trả 409 `ORDER_TOTAL_CHANGED` để khách xem lại.
+5. Server kiểm địa chỉ nhận với GHN qua `shipping`:
+   - GHN từ chối địa chỉ, ví dụ tên đường không thuộc phường đã chọn: trả 422 `ADDRESS_NOT_DELIVERABLE` gắn với ô địa chỉ. Server không tạo đơn, không giữ hàng, không gửi email.
+   - GHN không gọi được hoặc hết thời gian chờ: khách vẫn đặt được đơn. Server ghi log cảnh báo, vì lỗi của GHN không phải lỗi của khách.
+6. Server làm trong 1 transaction. Bước 4 và 5 chạy trước transaction, vì lời gọi GHN có thể chờ mạng và không được giữ khóa DB.
+   - Khóa giỏ. Giỏ đã đổi từ lúc tính tiền thì trả 409 `ORDER_TOTAL_CHANGED`, kể cả khi tổng tiền bằng nhau.
+   - `stock.reserve(orderId, items)`. Thiếu hàng thì trả 409 `INSUFFICIENT_STOCK` kèm danh sách SKU thiếu.
    - Tạo đơn với snapshot: tên sản phẩm, SKU, giá, ảnh, địa chỉ (tên và mã), phí ship.
    - Xóa các dòng đã đặt khỏi giỏ.
-4. Gửi email xác nhận đơn. Email lỗi không làm đặt đơn thất bại.
+7. Gửi email xác nhận đơn. Email lỗi không làm đặt đơn thất bại.
 
 **Phí ship:**
 - Phí lấy từ `shipping.quote`.
@@ -120,6 +125,8 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 - Chuyển trạng thái không hợp lệ trả 409. Mọi chuyển đổi do nhân viên làm đều ghi `recordAudit`.
 - Khách tự hủy được khi đơn ở `pending_payment` hoặc `pending_confirmation`.
 - Nhân viên hủy được tới trước `delivered`. Đơn đang `shipping` thì phải hủy vận đơn GHN thành công trước.
+- GHN tự hủy vận đơn khi đơn đang `shipping`: đơn về `confirmed` và có cờ `shipment_cancelled`. `sales` tạo lại vận đơn hoặc hủy đơn. Khi `sales` tạo vận đơn mới, server gỡ cờ này.
+- Sự kiện của vận đơn cũ đến sau khi đã có vận đơn mới thì bị bỏ qua. Handler so `ShipmentId` của sự kiện với vận đơn hiện tại của đơn.
 - Hủy đơn thì `stock.release(orderId)`. Đơn đã `paid` khi hủy thì chuyển `refund_pending`.
 - `returned` thì hàng **không** tự nhập lại kho. `sales` kiểm hàng rồi nhập lại bằng điều chỉnh tồn kho của `catalog` (loại `return`).
 - Job mỗi phút: đơn `pending_payment` quá 30 phút thì hủy và trả hàng.
@@ -130,7 +137,7 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 
 **Webhook** `POST /api/webhooks/sepay`:
 1. Xác thực header API key do SePay gửi (so sánh constant-time). Sai thì trả 401.
-2. Validate payload bằng Zod. Chỉ xử lý giao dịch tiền vào, đúng số tài khoản đã cấu hình.
+2. Kiểm định dạng payload. Chỉ xử lý giao dịch tiền vào, đúng số tài khoản đã cấu hình. Định dạng chính xác chờ COM-00 (Open Question 1).
 3. **Idempotent theo id giao dịch SePay**: id đã có thì trả thành công, không xử lý lại.
 4. Lưu giao dịch thô vào `payment_transactions` trước, rồi mới khớp đơn.
 5. Tìm mã đơn trong nội dung chuyển khoản (regex `PK[A-Z2-9]{8}`, không phân biệt hoa thường, bỏ qua ký tự ngân hàng tự chèn).
@@ -161,6 +168,14 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 - Khách vãng lai: email xác nhận có link `/orders/<mã>?t=<token>`. Token ngẫu nhiên, DB lưu hash. Link chỉ xem, không sửa thông tin giao hàng.
 - Khi khách xác thực email, các đơn vãng lai có cùng email được gắn vào tài khoản.
 
+**Tra cứu đơn:** khách mất email xác nhận thì nhập mã đơn và email ở trang tra cứu (`POST /api/order-lookups`). Server gửi link qua email và không hiện đơn trên trang. Mã đơn nằm trong nội dung chuyển khoản và mã vận đơn, nên mã đơn không phải bí mật. Trang hiện đơn ngay khi khớp sẽ lộ địa chỉ của khách.
+
+1. Server so mã đơn không phân biệt hoa thường. Server so email không phân biệt hoa thường, sau khi bỏ khoảng trắng hai đầu.
+2. Mã đơn và email liên hệ khớp: server tạo token xem đơn mới, thay hash cũ, rồi gửi link `/orders/<mã>?t=<token mới>` tới email của đơn. Link trong email cũ hết hiệu lực.
+3. Không khớp: server không gửi email và không đổi token của đơn nào.
+4. Khớp hay không khớp, route đều trả 202 với cùng một body. Body không có token, link hay dữ liệu đơn. Gửi email lỗi vẫn trả 202.
+5. Quá 5 lần trong 15 phút cho cùng IP, hoặc cho cùng email, thì trả 429. Giới hạn này chặn dò mã đơn hàng loạt.
+
 ### Sổ địa chỉ
 
 Khách có tài khoản lưu tối đa 10 địa chỉ, chọn 1 địa chỉ mặc định. Địa chỉ dùng mã của danh mục `shipping`.
@@ -170,35 +185,63 @@ Khách có tài khoản lưu tối đa 10 địa chỉ, chọn 1 địa chỉ m�
 - Chỉ khách có tài khoản, đã có đơn `delivered` chứa sản phẩm đó, mới đánh giá được. Mỗi người 1 đánh giá cho mỗi sản phẩm, sửa được trong 30 ngày.
 - Nội dung: số sao 1 đến 5 (bắt buộc), nhận xét tối đa 2.000 ký tự. Không có ảnh trong MVP.
 - Hiện ngay. `support` (quyền `reviews:moderate`) ẩn hoặc hiện lại, bắt buộc chọn lý do. Ghi audit log.
-- Điểm trung bình và phân bố số sao tính lại khi có đánh giá mới hoặc bị ẩn, cung cấp cho `catalog` qua interface đọc để hiện trên trang sản phẩm.
-- Khách báo cáo được review vi phạm; review có từ 3 báo cáo thì đưa lên đầu hàng chờ của `support`.
+- Điểm trung bình và phân bố số sao tính lại khi có đánh giá mới hoặc bị ẩn. Trang sản phẩm đọc điểm từ `GET /api/products/:id/reviews` của `commerce`. `catalog` không đọc điểm từ `commerce`, vì `commerce` đã phụ thuộc `catalog` và hai module không được phụ thuộc vòng. Thẻ sản phẩm trong danh sách chưa hiện số sao.
+- Có đánh giá mới, đánh giá được sửa, bị ẩn hoặc hiện lại thì `commerce` phát `ReviewChangedEvent`. Module nghe dùng sự kiện này để tính lại điểm hoặc xóa cache.
+- Khách báo cáo được review vi phạm. Mỗi khách báo cáo một review tối đa 1 lần (bảng `review_reports`). Review có từ 3 báo cáo thì đưa lên đầu hàng chờ của `support`.
 
 ### Interface public
 
-Đường dẫn và mã TypeScript dưới đây thuộc bản Node. Module này sẽ viết bằng .NET.
+Module khác chỉ dùng kiểu trong project `Pickory.Modules.Commerce.Contracts`. Mỗi hàm trả `Task<...>` và nhận `CancellationToken`.
 
-```ts
-// apps/backend/src/modules/commerce/index.ts
-export const commerceReader: {
-  getRatingSummary(productIds: string[]): Promise<Map<string, RatingSummary>>;   // cho catalog và tool get_review_insights của shopping-assistant
-  getVisibleReviews(productId: string, opts: { limit: number; cursor?: string }): Promise<ReviewPage>; // cho tool get_review_insights
-  getPurchasedProductIds(userId: string): Promise<string[]>;            // từng phục vụ recommendations (đã bỏ ngày 2026-10-14), chưa có bên dùng
-  getOrdersForCustomer(userId: string, limit: number): Promise<OrderSummary[]>; // cho support-desk
-  getOrderByCode(code: string): Promise<OrderDetail | null>;
-};
+```csharp
+// Pickory.Modules.Commerce.Contracts/Reading/ICommerceReader.cs
+public interface ICommerceReader
+{
+    Task<IReadOnlyDictionary<string, RatingSummary>> GetRatingSummaryAsync(
+        IReadOnlyList<string> productIds, CancellationToken cancellationToken);
+    Task<ReviewPage> GetVisibleReviewsAsync(
+        string productId, int limit, string? cursor, CancellationToken cancellationToken);
+    Task<IReadOnlyList<string>> GetPurchasedProductIdsAsync(
+        string userId, CancellationToken cancellationToken);
+    Task<IReadOnlyList<OrderSummary>> GetOrdersForCustomerAsync(   // limit từ 1 đến 50
+        string userId, int limit, CancellationToken cancellationToken);
+    Task<IReadOnlyList<OrderSummary>> GetOrdersForAnonymousAsync(
+        string anonymousId, int limit, CancellationToken cancellationToken);
+    Task<OrderDetail?> GetOrderByCodeAsync(
+        string code, CancellationToken cancellationToken);
+}
 
-// cho admin-console (bổ sung khi viết spec admin-console)
-export const commerceReports: {
-  getDailySales(range: DateRange): Promise<DailySales[]>;           // theo định nghĩa chỉ số trong SPEC-admin-console.md
-  getProductSales(range: DateRange): Promise<ProductSales[]>;
-  pendingCounts(): Promise<{ pendingConfirmation: number; unmatchedPayments: number; codUnreceived: number }>;
-};
-
-export { onOrderPlaced, onOrderPaid, onOrderStatusChanged, onCartItemAdded, onCartItemRemoved } from './events';
-export { commercePermissions } from './permissions';
+// Pickory.Modules.Commerce.Contracts/Reports/ICommerceReports.cs, cho admin-console.
+// Ngày tính theo giờ Việt Nam (UTC+7). Khoảng ngày dài tối đa 366 ngày.
+public interface ICommerceReports
+{
+    Task<IReadOnlyList<DailySales>> GetDailySalesAsync(DateRange range, CancellationToken cancellationToken);
+    Task<IReadOnlyList<ProductSales>> GetProductSalesAsync(DateRange range, CancellationToken cancellationToken);
+    Task<PendingCounts> GetPendingCountsAsync(CancellationToken cancellationToken);
+}
 ```
 
-`commerce` đăng ký `onUserLinked`, `onUserDeleted` (từ `identity`) và `onShipmentStatusChanged` (từ `shipping`).
+**Sự kiện** (`Contracts/Events/`, mỗi sự kiện là `record` cài `IDomainEvent`, phát sau khi transaction commit):
+
+| Sự kiện | Phát khi |
+|---|---|
+| `OrderPlacedEvent` | Đặt đơn thành công |
+| `OrderPaidEvent` | Đơn chuyển sang `paid`: tiền SePay khớp đơn, hoặc `sales` đánh dấu đã nhận tiền COD |
+| `OrderStatusChangedEvent` | Trạng thái đơn đổi |
+| `CartItemAddedEvent` | Thêm sản phẩm vào giỏ, kèm `Source` nếu client gửi |
+| `CartItemRemovedEvent` | Xóa sản phẩm khỏi giỏ |
+| `ReviewChangedEvent` | Đánh giá được tạo, sửa, ẩn hoặc hiện lại (`Created`, `Updated`, `Hidden`, `Shown`) |
+
+Quyền của `commerce` nằm trong `Permissions.cs` của `identity`, nên module không có danh sách quyền riêng.
+
+`commerce` nghe các sự kiện sau:
+
+| Sự kiện | Từ module | Việc làm |
+|---|---|---|
+| `UserLinkedEvent` | `identity` | Gộp giỏ vãng lai vào giỏ tài khoản |
+| `EmailVerifiedEvent` | `identity` | Gắn đơn vãng lai cùng email vào tài khoản |
+| `UserDeletedEvent` | `identity` | Xóa giỏ và sổ địa chỉ, bỏ liên kết tài khoản khỏi đánh giá và đơn |
+| `ShipmentStatusChangedEvent` | `shipping` | Cập nhật trạng thái đơn |
 
 Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh giá (giữ nội dung, bỏ tên). Đơn hàng giữ lại vì nghĩa vụ kế toán, nhưng không còn gắn với tài khoản.
 
@@ -209,15 +252,16 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
 | GET | `/api/cart` | công khai | Giỏ hiện tại, giá mới nhất |
-| POST · PATCH · DELETE | `/api/cart/items[/:skuId]` | công khai | Thêm, đổi số lượng, xóa. Thêm nhận `source` tùy chọn (ví dụ `shopping-assistant`) để đo hiệu quả AI |
+| POST · PATCH · DELETE | `/api/cart/items[/:skuId]` | công khai | Thêm, đổi số lượng, xóa. Thêm nhận `source` tùy chọn (tối đa 64 ký tự) cho biết nơi khách bấm thêm giỏ. Nút trên trang sản phẩm không gửi `source` |
 | POST | `/api/checkout/previews` | công khai | Tạm tính, phí ship, tổng |
 | POST | `/api/orders` | công khai | Đặt đơn, bắt buộc `Idempotency-Key` |
 | GET | `/api/orders` | khách đã đăng nhập | Lịch sử đơn |
 | GET | `/api/orders/:code` | chủ đơn, hoặc có token | Chi tiết đơn |
 | GET | `/api/orders/:code/payment` | chủ đơn, hoặc có token | Cho trang chờ thanh toán hỏi định kỳ |
 | POST | `/api/orders/:code/cancellation` | chủ đơn, hoặc có token | Khách tự hủy |
+| POST | `/api/order-lookups` | công khai | Tra cứu đơn bằng mã đơn và email, gửi link xem đơn qua email, luôn trả 202 |
 | GET · POST · PATCH · DELETE | `/api/me/addresses[/:id]` | khách đã đăng nhập | Sổ địa chỉ |
-| GET | `/api/products/:id/reviews` | công khai | Đánh giá đang hiện |
+| GET | `/api/products/:id/reviews` | công khai | Điểm trung bình, phân bố số sao và trang đánh giá đang hiện |
 | POST · PATCH | `/api/products/:id/reviews[/mine]` | người đã mua | Viết, sửa đánh giá |
 | POST | `/api/reviews/:id/reports` | khách đã đăng nhập | Báo cáo vi phạm |
 | POST | `/api/webhooks/sepay` | SePay (API key) | Nhận giao dịch |
@@ -240,7 +284,9 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 | PATCH | `/api/admin/reviews/:id` | `reviews:moderate` | Ẩn hoặc hiện lại bằng `hidden` và `reason` |
 | GET · PUT | `/api/admin/commerce/settings` | `commerce-settings:manage` | Ngưỡng miễn phí ship, hạn mức COD, tài khoản nhận |
 
-## Data Model (Prisma, rút gọn)
+## Data Model (rút gọn)
+
+Khối dưới viết bằng cú pháp Prisma cho dễ đọc. Code dùng entity EF Core và `IEntityTypeConfiguration<T>` trong `Pickory.Modules.Commerce`. `CommerceDbContext` lưu lịch sử migration ở schema `ef_commerce`.
 
 ```prisma
 model Cart     { /* id, anonymousId?, userId? @unique, updatedAt */ }
@@ -287,12 +333,13 @@ model PaymentTransaction {
 }
 model SavedAddress  { /* userId, label, name, phone, address Json, isDefault */ }
 model Review        { /* productId, userId, orderId, rating, body, hiddenAt?, hiddenReason?, reportCount, createdAt, updatedAt; @@unique([productId, userId]) */ }
-model CommerceSettings { /* freeShippingThreshold, codMaxAmount, sepayAccountNumber, sepayBankCode */ }
+model ReviewReport  { /* reviewId, userId, createdAt; @@unique([reviewId, userId]), mỗi khách báo cáo một review 1 lần */ }
+model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerSku, maxCartLines, sepayAccountNumber, sepayBankCode */ }
 ```
 
 ## Frontend
 
-*Khách hàng* (`features/commerce/`): giỏ hàng (mini cart và trang giỏ), checkout một trang, trang chờ thanh toán VietQR có đếm ngược, trang đặt hàng thành công, đơn hàng của tôi, chi tiết đơn có tiến trình giao hàng, sổ địa chỉ, khối đánh giá trên trang sản phẩm.
+*Khách hàng* (`features/commerce/`): giỏ hàng (mini cart và trang giỏ), checkout một trang, trang chờ thanh toán VietQR có đếm ngược, trang đặt hàng thành công, trang tra cứu đơn, đơn hàng của tôi, chi tiết đơn có tiến trình giao hàng, sổ địa chỉ, khối đánh giá trên trang sản phẩm.
 
 *Back-office* (`features/commerce/admin/`): danh sách đơn có tab theo trạng thái và bộ lọc cờ; chi tiết đơn có các nút thao tác theo quyền và lịch sử trạng thái; màn hình đối soát SePay và COD; hàng chờ kiểm duyệt review; cấu hình.
 
@@ -302,6 +349,8 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, sepayAccountNum
 - Integration:
   - Đặt đơn với giá frontend gửi sai: server dùng giá đúng và trả 409 nếu khác preview.
   - Gửi cùng `Idempotency-Key` 2 lần chỉ tạo 1 đơn.
+  - Kiểm địa chỉ khi đặt đơn: GHN từ chối thì trả `ADDRESS_NOT_DELIVERABLE`, không tạo đơn và không giữ hàng. GHN không gọi được thì đơn vẫn tạo.
+  - Tra cứu đơn: khớp và không khớp trả cùng response, token mới thay token cũ, quá giới hạn trả 429.
   - Webhook SePay đủ 5 trường hợp trong bảng; gửi lại cùng giao dịch không xử lý 2 lần; sai API key trả 401.
   - Job hết hạn hủy đơn và trả hàng; tiền về sau khi hủy được xử lý đúng.
   - Gộp giỏ khi đăng nhập; gắn đơn vãng lai sau khi xác thực email.
@@ -311,6 +360,8 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, sepayAccountNum
 - `shipping` và `catalog` dùng implementation thật trong integration test, GHN dùng HTTP mock.
 - E2E:
   - Khách vãng lai mua COD.
+  - Khách nhập địa chỉ bị GHN giả từ chối thì thấy lỗi ở ô địa chỉ. Khách sửa địa chỉ thì đặt được đơn.
+  - Khách tra cứu đơn bằng mã đơn và email, nhận link mới trong thư, link cũ hết hiệu lực.
   - GHN giả không phản hồi lúc báo phí, bảng phí dự phòng bật: khách đặt COD bình thường, admin thấy nhãn "Phí ship dự phòng" trên trang đơn.
   - Khách mua SePay (bắn webhook giả lập), trang tự chuyển khi đã thanh toán.
   - Sales xác nhận và tạo vận đơn.
@@ -333,12 +384,16 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, sepayAccountNum
 - [ ] Sales tạo vận đơn GHN (sandbox) từ trang đơn; trạng thái giao hàng tự cập nhật vào đơn.
 - [ ] Nhân viên `support` xem được đơn nhưng gọi API hủy hoặc tạo vận đơn nhận 403.
 - [ ] Chỉ người đã nhận hàng mới đánh giá được; review bị ẩn biến mất khỏi trang sản phẩm và điểm trung bình được tính lại.
-- [ ] Tắt API AI, toàn bộ E2E của module vẫn pass.
-- [ ] Coverage `service.ts` ≥ 80%.
+- [ ] Dịch vụ chatbot lỗi (không tải được script của widget), khách vẫn đặt được đơn COD.
+- [ ] Coverage dòng của `Pickory.Modules.Commerce` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`.
 
 ## Open Questions
 
-1. Định dạng chính xác của webhook SePay (tên trường, cách gửi API key, response mong đợi) và URL ảnh QR: cần xác minh theo tài liệu SePay hiện tại trước khi code.
+1. Định dạng chính xác của webhook SePay (tên trường, cách gửi API key, response mong đợi) và URL ảnh QR: cần xác minh theo tài liệu SePay hiện tại.
+   - Chưa chốt: COM-00 đối chiếu tài liệu. Phần cần khóa SePay thật chờ COM-24.
 2. Ngưỡng miễn phí ship 500.000 đ và hạn mức COD 20.000.000 đ có hợp lý không?
-3. Có cần chính sách đổi trả (khách gửi yêu cầu đổi trả trên web) trong MVP không? Mặc định: chưa, khách liên hệ CSKH.
-4. Email thông báo đơn hàng dùng chung dịch vụ email với `identity` (câu hỏi mở bên đó).
+   - Đã chốt (mục 10 phần Câu hỏi mở của `tasks/commerce/plan.md`): giữ hai mức mặc định. Admin sửa được trong cấu hình.
+3. Có cần chính sách đổi trả (khách gửi yêu cầu đổi trả trên web) trong MVP không?
+   - Đã chốt (cùng mục 10): chưa làm. Khách liên hệ chăm sóc khách hàng.
+4. Email thông báo đơn hàng dùng chung dịch vụ email với `identity`.
+   - Đã chốt (2026-10-11): `IEmailSender` và `DevOutboxEmailSender` nằm trong `Pickory.Shared/Email/`, dùng chung cho mọi module.
