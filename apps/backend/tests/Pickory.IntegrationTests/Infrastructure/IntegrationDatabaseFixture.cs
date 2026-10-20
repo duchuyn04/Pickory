@@ -1,6 +1,7 @@
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
+using Pickory.Modules.ActivityTracking.Persistence;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Commerce.Persistence;
@@ -52,7 +53,7 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
             await using var schemasCommand = new NpgsqlCommand("""
                 SELECT nspname FROM pg_namespace
                 WHERE nspname NOT LIKE 'pg_%' AND nspname NOT IN
-                  ('information_schema', 'public', 'ef_identity', 'ef_ai_gateway', 'ef_catalog', 'ef_shipping', 'ef_commerce')
+                  ('information_schema', 'public', 'ef_identity', 'ef_ai_gateway', 'ef_catalog', 'ef_shipping', 'ef_commerce', 'ef_activity_tracking')
                 ORDER BY nspname
                 """, _lockConnection);
             var unexpectedSchemas = new List<string>();
@@ -78,6 +79,7 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
                     DROP SCHEMA IF EXISTS ef_catalog CASCADE;
                     DROP SCHEMA IF EXISTS ef_shipping CASCADE;
                     DROP SCHEMA IF EXISTS ef_commerce CASCADE;
+                    DROP SCHEMA IF EXISTS ef_activity_tracking CASCADE;
                     DROP SCHEMA public CASCADE;
                     CREATE SCHEMA public AUTHORIZATION pg_database_owner;
                     COMMENT ON SCHEMA public IS 'standard public schema';
@@ -107,6 +109,8 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
             await shipping.Database.MigrateAsync();
             await using var commerce = CreateCommerceContext();
             await commerce.Database.MigrateAsync();
+            await using var activityTracking = CreateActivityTrackingContext();
+            await activityTracking.Database.MigrateAsync();
             Initialized = true;
         }
         catch
@@ -211,6 +215,14 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
         var options = new DbContextOptionsBuilder<CommerceDbContext>();
         CommerceDbContext.ConfigureOptions(options, ConnectionString);
         return new CommerceDbContext(options.Options);
+    }
+
+    internal ActivityTrackingDbContext CreateActivityTrackingContext()
+    {
+        // Dùng cùng tùy chọn module để lịch sử không khác ứng dụng thật.
+        var options = new DbContextOptionsBuilder<ActivityTrackingDbContext>();
+        ActivityTrackingDbContext.ConfigureOptions(options, ConnectionString);
+        return new ActivityTrackingDbContext(options.Options);
     }
 
     public async Task DisposeAsync()

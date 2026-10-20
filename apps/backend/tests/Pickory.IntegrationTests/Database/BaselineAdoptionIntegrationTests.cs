@@ -47,9 +47,10 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             {
                 Assert.Single(stamped[adoptedSchema].Split('\n'));
             }
-            // Shipping và commerce không thuộc schema Prisma cũ nên script nhận schema không đụng tới lịch sử của hai module đó.
+            // Shipping, commerce và activity-tracking không thuộc schema Prisma cũ nên script nhận schema không đụng tới lịch sử của ba module đó.
             Assert.Equal(originalHistory["ef_shipping"], stamped["ef_shipping"]);
             Assert.Equal(originalHistory["ef_commerce"], stamped["ef_commerce"]);
+            Assert.Equal(originalHistory["ef_activity_tracking"], stamped["ef_activity_tracking"]);
             // Script chỉ ghi nhận migration mốc. Migration sinh sau mốc còn chờ `db:migrate` áp dụng, nên không được ghi nhận nhầm.
             Assert.Equal(
                 ["20261013101735_EnableUnaccentExtension", "20261019190331_RemoveAiPermissions"],
@@ -109,12 +110,13 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             // Savepoint cho phép kiểm tra trạng thái sau lỗi SQL mà không hủy toàn bộ giao dịch thử.
             await transaction.RollbackToSavepointAsync("before_adoption");
             ApplicationDatabaseSchema.AssertEqual(invalidSchema, await ApplicationDatabaseSchema.ReadAsync(context));
-            // Hai module cũ phải chưa có lịch sử. Lịch sử shipping và commerce không bị xóa ở bước này nên phải còn nguyên.
+            // Hai module cũ phải chưa có lịch sử. Lịch sử của ba module sinh sau không bị xóa ở bước này nên phải còn nguyên.
             var historyAfterFailure = await BaselineMigrationIntegrationTests.ReadHistoryAsync(context);
-            Assert.All(historyAfterFailure.Where(entry => entry.Key is not ("ef_shipping" or "ef_commerce")),
+            Assert.All(historyAfterFailure.Where(entry => entry.Key is not ("ef_shipping" or "ef_commerce" or "ef_activity_tracking")),
                 entry => Assert.Equal("<missing>", entry.Value));
             Assert.Equal(originalHistory["ef_shipping"], historyAfterFailure["ef_shipping"]);
             Assert.Equal(originalHistory["ef_commerce"], historyAfterFailure["ef_commerce"]);
+            Assert.Equal(originalHistory["ef_activity_tracking"], historyAfterFailure["ef_activity_tracking"]);
         }
         finally
         {

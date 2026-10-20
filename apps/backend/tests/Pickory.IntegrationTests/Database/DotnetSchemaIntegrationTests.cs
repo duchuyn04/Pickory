@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Pickory.IntegrationTests.Infrastructure;
+using Pickory.Modules.ActivityTracking.Persistence;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Identity.Persistence;
@@ -27,19 +28,22 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
         var catalog = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
         var commerce = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
+        var activityTracking = scope.ServiceProvider.GetRequiredService<ActivityTrackingDbContext>();
         AssertTestConnection(identity);
         AssertTestConnection(catalog);
         AssertTestConnection(shipping);
         AssertTestConnection(commerce);
+        AssertTestConnection(activityTracking);
 
         // Mỗi module chỉ được sở hữu bảng đã chỉ định, không kéo quan hệ module khác vào model.
         AssertModuleTables(identity, ApplicationDatabaseSchema.IdentityTables);
         AssertModuleTables(catalog, ApplicationDatabaseSchema.CatalogTables);
         AssertModuleTables(shipping, ApplicationDatabaseSchema.ShippingTables);
         AssertModuleTables(commerce, ApplicationDatabaseSchema.CommerceTables);
-        var model = ApplicationDatabaseSchema.ReadModel([identity, catalog, shipping, commerce]);
-        // Mỗi module sở hữu số bảng cố định: identity 9, catalog 8, shipping 7, commerce 10. Ba bảng AI đã gỡ nên tổng là 34.
-        Assert.Equal(34, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
+        AssertModuleTables(activityTracking, ApplicationDatabaseSchema.ActivityTrackingTables);
+        var model = ApplicationDatabaseSchema.ReadModel([identity, catalog, shipping, commerce, activityTracking]);
+        // Mỗi module sở hữu số bảng cố định: identity 9, catalog 8, shipping 7, commerce 10, activity-tracking 1. Ba bảng AI đã gỡ nên tổng là 35.
+        Assert.Equal(35, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
 
         // Metadata thực phải khớp dump, kể cả thứ tự cột, cập nhật khóa ngoại và mô tả extension.
         var actual = await ApplicationDatabaseSchema.ReadAsync(identity);
@@ -54,14 +58,15 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
                 latest, "20261005125646_PrismaBaseline", MigrationsSqlGenerationOptions.NoTransactions));
             var baseline = await ApplicationDatabaseSchema.ReadAsync(identity);
             var baselineWithoutNewModules = baseline.Where(entry => !ApplicationDatabaseSchema.IsShippingObject(entry.Key) &&
-                !ApplicationDatabaseSchema.IsCommerceObject(entry.Key))
+                !ApplicationDatabaseSchema.IsCommerceObject(entry.Key) &&
+                !ApplicationDatabaseSchema.IsActivityTrackingObject(entry.Key))
                 .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
             ApplicationDatabaseSchema.AssertEqual(reference, baselineWithoutNewModules);
             // Rollback khôi phục index mới trước khi so model hiện tại với DB.
             await baselineTransaction.RollbackAsync();
         }
 
-        // Phép so model với DB thật xét cả shipping và commerce, nên đây là nơi kiểm schema của hai module đó.
+        // Phép so model với DB thật xét cả shipping, commerce và activity-tracking, nên đây là nơi kiểm schema của ba module đó.
         // Metadata Entity Framework Core không biểu diễn thứ tự cột vật lý hoặc mô tả extension.
         var modeledActual = actual.Where(entry => !entry.Key.StartsWith("ordinal:", StringComparison.Ordinal) &&
                                                    !entry.Key.StartsWith("extension:", StringComparison.Ordinal) &&

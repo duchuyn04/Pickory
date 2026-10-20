@@ -30,18 +30,18 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 ### ACT-04: Khung module, Contracts, schema
 **Mô tả:** Tạo `Pickory.Modules.ActivityTracking` và `Pickory.Modules.ActivityTracking.Contracts`. Thêm `ActivityTrackingDbContext`, migration đầu tiên và `ActivityTrackingModule.cs`. Contracts có `IActivityMetrics`, `Funnel`, `FunnelStep`, `DateRange`. Module có lớp hằng số cho ba tên chỉ số.
 **Tiêu chí nghiệm thu:**
-- [ ] DB có bảng `daily_counters` với cột `date`, `metric`, `value`. Khóa chính là `(date, metric)`
-- [ ] Không bảng hay cột nào của module chứa `anonymousId` hoặc `userId`
-- [ ] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
-- [ ] `Pickory.ArchitectureTests` chặn `ActivityTracking` tham chiếu module khác ngoài project Contracts
-- [ ] Contracts không tham chiếu project Contracts khác
-- [ ] `Program.cs` chỉ gọi `AddActivityTrackingModule` và `MapActivityTrackingEndpoints`
+- [x] DB có bảng `daily_counters` với cột `date`, `metric`, `value`. Khóa chính là `(date, metric)`
+- [x] Không bảng hay cột nào của module chứa `anonymousId` hoặc `userId`
+- [x] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
+- [x] `Pickory.ArchitectureTests` chặn `ActivityTracking` tham chiếu module khác ngoài project Contracts
+- [x] Contracts không tham chiếu project Contracts khác
+- [x] `Program.cs` chỉ gọi `AddActivityTrackingModule` và `MapActivityTrackingEndpoints`
 **Kiểm tra:** build, test kiến trúc, test tích hợp schema
 **Phụ thuộc:** không · **Quy mô:** M
 
 ### Checkpoint A1
-- [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
-- [ ] Test kiến trúc chặn `ActivityTracking` tham chiếu module khác ngoài Contracts
+- [x] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
+- [x] Test kiến trúc chặn `ActivityTracking` tham chiếu module khác ngoài Contracts
 - [ ] Review với người dùng
 
 ---

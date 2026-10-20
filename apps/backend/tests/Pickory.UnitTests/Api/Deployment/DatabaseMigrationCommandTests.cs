@@ -20,14 +20,14 @@ public sealed class DatabaseMigrationCommandTests
     }
 
     [Fact]
-    // Danh sách bước thật gồm bốn module còn lại theo thứ tự phụ thuộc, rồi bước dọn dấu vết module AI đã gỡ ở cuối.
+    // Danh sách bước thật gồm năm module theo thứ tự phụ thuộc, rồi bước dọn dấu vết module AI đã gỡ ở cuối.
     public void CreateSteps_ListsRemainingModulesInDependencyOrderThenAiCleanup()
     {
         var services = new ServiceCollection().BuildServiceProvider();
 
         var steps = DatabaseMigrationCommand.CreateSteps(services);
 
-        Assert.Equal(["Identity", "Catalog", "Shipping", "Commerce", "AiGatewayCleanup"], steps.Select(step => step.ModuleName));
+        Assert.Equal(["Identity", "Catalog", "Shipping", "Commerce", "ActivityTracking", "AiGatewayCleanup"], steps.Select(step => step.ModuleName));
     }
 
     [Fact]

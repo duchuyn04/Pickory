@@ -41,6 +41,16 @@ internal static class ApplicationDatabaseSchema
 
     internal static readonly string[] CommerceEnums = ["OrderStatus", "PaymentStatus", "PaymentMethod", "ShippingFeeSource"];
 
+    // Bảng của activity-tracking cũng không có trong `reference-schema.sql`, nên phép so với file đó phải bỏ qua nó. Module không có enum.
+    internal static readonly string[] ActivityTrackingTables = ["daily_counters"];
+
+    // Khóa metadata thuộc activity-tracking có cùng dạng với khóa của commerce. Khớp theo ranh giới tên, không theo tiền tố.
+    internal static bool IsActivityTrackingObject(string key)
+    {
+        return ActivityTrackingTables.Any(table => key.EndsWith($":public.{table}", StringComparison.Ordinal) ||
+                                                   key.Contains($":public.{table}.", StringComparison.Ordinal));
+    }
+
     // Khóa metadata thuộc commerce có cùng dạng với khóa của shipping. Khớp theo ranh giới tên, không theo tiền tố.
     internal static bool IsCommerceObject(string key)
     {

@@ -1,4 +1,5 @@
 using System.Reflection;
+using Pickory.Modules.ActivityTracking;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
@@ -43,6 +44,7 @@ namespace Pickory.ArchitectureTests
             typeof(CatalogModule).Assembly,
             typeof(ShippingModule).Assembly,
             typeof(CommerceModule).Assembly,
+            typeof(ActivityTrackingModule).Assembly,
         ];
 
         [Fact]
@@ -164,6 +166,35 @@ namespace Pickory.ArchitectureTests
                 .ToList();
 
             Assert.All(contractReferences, name => Assert.Equal("Pickory.Shared", name));
+        }
+
+        [Fact]
+        // Assembly ActivityTracking thật phải có trong danh sách module mà test duyệt, nếu không luật biên không bao giờ kiểm nó.
+        public void DanhSachModule_GomAssemblyActivityTracking_VaLuatBienChayTrenNo()
+        {
+            var moduleAssemblies = ModuleArchitectureValidator.GetModuleAssemblies();
+            var activityTrackingAssembly = moduleAssemblies.SingleOrDefault(
+                assembly => assembly.GetName().Name == "Pickory.Modules.ActivityTracking");
+
+            Assert.NotNull(activityTrackingAssembly);
+            Assert.DoesNotContain(moduleAssemblies, assembly => assembly.GetName().Name == "Pickory.Modules.ActivityTracking.Contracts");
+            // Cùng luật biên với mọi module: chỉ tham chiếu `Pickory.Shared` và Contracts của module khác.
+            var result = ModuleArchitectureValidator.ValidateModule(activityTrackingAssembly);
+            Assert.True(result.IsSuccessful, $"ActivityTracking có vi phạm: {string.Join("; ", result.Violations)}");
+        }
+
+        [Fact]
+        // Hợp đồng của ActivityTracking không được kéo Contracts của module khác vào. Module khác dùng Contracts này mà không kéo theo dây chuyền.
+        public void ActivityTrackingContracts_KhongThamChieuContractsKhac()
+        {
+            var contractsAssembly = typeof(Pickory.Modules.ActivityTracking.Contracts.Metrics.Funnel).Assembly;
+            var otherModuleReferences = contractsAssembly.GetReferencedAssemblies()
+                .Select(reference => reference.Name ?? string.Empty)
+                .Where(name => name.StartsWith("Pickory.Modules.", StringComparison.Ordinal))
+                .Where(name => name != contractsAssembly.GetName().Name)
+                .ToList();
+
+            Assert.Empty(otherModuleReferences);
         }
 
         [Fact]

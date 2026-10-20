@@ -1,4 +1,5 @@
 using Microsoft.Extensions.DependencyInjection;
+using Pickory.Modules.ActivityTracking;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
@@ -35,6 +36,7 @@ public static class DatabaseMigrationCommand
             new("Catalog", token => CatalogModule.MigrateCatalogDatabaseAsync(services, token)),
             new("Shipping", token => ShippingModule.MigrateShippingDatabaseAsync(services, token)),
             new("Commerce", token => CommerceModule.MigrateCommerceDatabaseAsync(services, token)),
+            new("ActivityTracking", token => ActivityTrackingModule.MigrateActivityTrackingDatabaseAsync(services, token)),
             // Dọn cuối cùng, sau migration của mọi module, để không xóa bảng khi bước trước còn có thể lỗi.
             new(AiGatewayCleanup.StepName, token => AiGatewayCleanup.RunAsync(services.GetRequiredService<AppConfig>(), token)),
         ];

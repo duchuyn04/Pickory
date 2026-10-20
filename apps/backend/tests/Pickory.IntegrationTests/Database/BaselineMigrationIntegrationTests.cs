@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Infrastructure;
+using Pickory.Modules.ActivityTracking.Persistence;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Identity.Persistence;
@@ -16,13 +17,14 @@ namespace Pickory.IntegrationTests.Database;
 public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFactory factory)
     : IClassFixture<PickoryWebApplicationFactory>
 {
-    private static readonly string[] HistorySchemas = ["ef_identity", "ef_catalog", "ef_shipping", "ef_commerce"];
+    private static readonly string[] HistorySchemas = ["ef_identity", "ef_catalog", "ef_shipping", "ef_commerce", "ef_activity_tracking"];
 
     [Theory]
     [InlineData("identity", "ef_identity", "20261019190331_RemoveAiPermissions")]
     [InlineData("catalog", "ef_catalog", "20261013124840_EnableUnaccentExtension")]
     [InlineData("shipping", "ef_shipping", "20261019123657_AddShippingQuoteCache")]
     [InlineData("commerce", "ef_commerce", "20261019144909_AddOrderShippingFeeSource")]
+    [InlineData("activity-tracking", "ef_activity_tracking", "20261020093013_InitialActivityTracking")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(
         string module, string historySchema, string migrationId)
     {
@@ -34,6 +36,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
             "catalog" => scope.ServiceProvider.GetRequiredService<CatalogDbContext>(),
             "shipping" => scope.ServiceProvider.GetRequiredService<ShippingDbContext>(),
             "commerce" => scope.ServiceProvider.GetRequiredService<CommerceDbContext>(),
+            "activity-tracking" => scope.ServiceProvider.GetRequiredService<ActivityTrackingDbContext>(),
             _ => throw new ArgumentOutOfRangeException(nameof(module))
         };
         DotnetSchemaIntegrationTests.AssertTestConnection(context);
@@ -125,6 +128,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
             "catalog" => ApplicationDatabaseSchema.CatalogTables,
             "shipping" => ApplicationDatabaseSchema.ShippingTables,
             "commerce" => ApplicationDatabaseSchema.CommerceTables,
+            "activity-tracking" => ApplicationDatabaseSchema.ActivityTrackingTables,
             _ => throw new ArgumentOutOfRangeException(nameof(module))
         };
         var enums = module switch

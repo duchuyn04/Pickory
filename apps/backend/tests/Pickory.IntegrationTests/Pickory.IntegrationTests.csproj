@@ -21,6 +21,8 @@
     <ProjectReference Include="..\..\src\Pickory.Modules.Shipping.Contracts\Pickory.Modules.Shipping.Contracts.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Modules.Commerce\Pickory.Modules.Commerce.csproj" />
     <ProjectReference Include="..\..\src\Pickory.Modules.Commerce.Contracts\Pickory.Modules.Commerce.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.ActivityTracking\Pickory.Modules.ActivityTracking.csproj" />
+    <ProjectReference Include="..\..\src\Pickory.Modules.ActivityTracking.Contracts\Pickory.Modules.ActivityTracking.Contracts.csproj" />
   </ItemGroup>
 
   <ItemGroup>

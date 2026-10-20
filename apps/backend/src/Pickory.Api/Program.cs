@@ -4,6 +4,7 @@ using Pickory.Api.Benchmark;
 using Pickory.Api.Deployment;
 using Pickory.Api.E2e;
 using Pickory.Api.Middleware;
+using Pickory.Modules.ActivityTracking;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Catalog.Seeding;
 using Pickory.Modules.Commerce;
@@ -91,6 +92,8 @@ builder.Services.AddCatalogModule(databaseConnectionString, config, builder.Envi
 builder.Services.AddShippingModule(databaseConnectionString, config, builder.Environment.IsProduction());
 // Commerce cần biết môi trường để dừng production khi thiếu khóa webhook SePay.
 builder.Services.AddCommerceModule(databaseConnectionString, config, builder.Environment.IsProduction());
+// ActivityTracking chỉ cần chuỗi kết nối, vì module không có biến cấu hình bắt buộc.
+builder.Services.AddActivityTrackingModule(databaseConnectionString);
 
 // Development luôn có tài liệu. Môi trường khác chỉ sinh tài liệu khi `API_DOCS_ENABLED` bật, vì tài liệu liệt kê cả route admin.
 var apiDocumentationMode = ApiDocumentation.SelectMode(
@@ -175,6 +178,7 @@ if (E2eStartup.IsCommand(args))
     app.MapShippingE2eEndpoints();
 }
 app.MapCommerceEndpoints();
+app.MapActivityTrackingEndpoints();
 
 // Lệnh benchmark cần đủ route để đo `GET /api/products`, nên chạy sau khi route đã gắn.
 if (isBenchmarkCommand)
