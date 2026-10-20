@@ -19,10 +19,10 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 ### ACT-02: Hàm tính phễu
 **Mô tả:** `FunnelCalculator` là hàm thuần, nhận tổng của ba chỉ số và trả phễu. Hàm không gọi DB.
 **Tiêu chí nghiệm thu:**
-- [ ] Phễu có ba bước theo thứ tự: `product_view`, `add_to_cart`, `order_placed`
-- [ ] Mỗi bước có số lượt và tỉ lệ so với bước trước. Bước đầu có tỉ lệ `null`
-- [ ] Bước trước có 0 lượt thì tỉ lệ là `null`, không chia cho 0
-- [ ] Tỉ lệ có thể lớn hơn 1, ví dụ 3 lượt đặt đơn từ 2 lượt thêm giỏ. Hàm không cắt tỉ lệ về 1
+- [x] Phễu có ba bước theo thứ tự: `product_view`, `add_to_cart`, `order_placed`
+- [x] Mỗi bước có số lượt và tỉ lệ so với bước trước. Bước đầu có tỉ lệ `null`
+- [x] Bước trước có 0 lượt thì tỉ lệ là `null`, không chia cho 0
+- [x] Tỉ lệ có thể lớn hơn 1, ví dụ 3 lượt đặt đơn từ 2 lượt thêm giỏ. Hàm không cắt tỉ lệ về 1
 **Kiểm tra:** unit test
 **Phụ thuộc:** không · **Quy mô:** XS
 **File:** `apps/backend/src/Pickory.Modules.ActivityTracking/Metrics/FunnelCalculator.cs`

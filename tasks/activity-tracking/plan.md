@@ -82,7 +82,7 @@ ACT-06, ACT-07 và ACT-11 chỉ cần ACT-04, nên ba task chạy song song đư
 Chi tiết từng task ở `tasks/activity-tracking/todo.md`.
 
 ### Phase 1: Nền tảng
-- [ ] ACT-02 · [ ] ACT-04
+- [x] ACT-02 · [ ] ACT-04
 
 ### Checkpoint A1
 - [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
