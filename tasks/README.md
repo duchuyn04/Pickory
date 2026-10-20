@@ -18,11 +18,11 @@ Spec của module nằm ở `spec/SPEC-<module>.md`. Thứ tự build theo `spec
 | `shipping/` | `shipping` (mã `SHIP`, `UI-S`) | Xong, đã review với người dùng |
 | `rest-routes/` | Đổi route cũ đặt theo hành động sang REST (mã `REST`) | Xong. Còn mục review với người dùng ở Checkpoint R1 và Checkpoint cuối |
 | `commerce/` | `commerce` (mã `COM`) | Đang ở Phase 7. COM-E2E0 tới COM-E2E4 xong. COM-E2E5 chuyển sang CBW-E2E1. Còn COM-24: ma trận quyền, coverage 97.9% và sandbox GHN đã đạt, còn chờ khóa SePay |
-| `activity-tracking/` | `activity-tracking` (mã `ACT`) | Chưa bắt đầu. Ngày 2026-10-18 chỉ giữ phần đo chuyển đổi |
+| `activity-tracking/` | `activity-tracking` (mã `ACT`) | Chưa bắt đầu. Ngày 2026-10-20 chỉ còn bộ đếm tổng cho phễu |
 | `smart-search/` | `smart-search` (mã `SRCH`) | Đã bỏ ngày 2026-10-14. Chỉ giữ để tra cứu lịch sử |
 | `recommendations/` | `recommendations` (mã `REC`) | Đã bỏ ngày 2026-10-14. Chỉ giữ để tra cứu lịch sử |
 | `personalized-content/` | `personalized-content` (mã `PCON`) | Đã bỏ ngày 2026-10-14. Chỉ giữ để tra cứu lịch sử |
-| `knowledge-base/` | `knowledge-base` (mã `KB`) | Chưa bắt đầu. Ngày 2026-10-18 bỏ phần AI, giữ `/help` và API tài liệu công khai |
+| `knowledge-base/` | `knowledge-base` (mã `KB`) | Chưa bắt đầu. Ngày 2026-10-18 bỏ phần AI, giữ `/help` và API tài liệu công khai. Ngày 2026-10-20 dời xuống sau `admin-console` |
 | `shopping-assistant/` | `shopping-assistant` (mã `SA`) | Đã bỏ ngày 2026-10-18. Chỉ giữ để tra cứu lịch sử |
 | `chatbot-widget/` | Nhúng widget của `chatbot-rag` (mã `CBW`) | Chưa bắt đầu |
 | `ai-gateway-removal/` | Gỡ `ai-gateway` khỏi Pickory (mã `AIR`) | Chưa bắt đầu |

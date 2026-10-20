@@ -139,7 +139,7 @@ ordersRouter.patch(
 
 - Lần đầu truy cập, server đặt cookie `pk_anon` (UUID v4, httpOnly, Secure, SameSite=Lax, hạn 1 năm).
 - Khi khách đăng nhập hoặc đăng ký thành công, `identity` phát sự kiện `UserLinkedEvent { anonymousId, userId }`.
-- `commerce` (gộp giỏ) và `activity-tracking` (gắn lịch sử) tự đăng ký xử lý sự kiện. `identity` không ghi vào bảng của module khác.
+- `commerce` tự đăng ký xử lý sự kiện để gộp giỏ. `identity` không ghi vào bảng của module khác.
 - MVP dùng event emitter trong process. Handler lỗi được log nhưng không làm đăng nhập thất bại.
 - Nhân viên đăng nhập không phát sự kiện này.
 

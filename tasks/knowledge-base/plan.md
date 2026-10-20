@@ -1,5 +1,16 @@
 # Implementation Plan: knowledge-base
 
+## Thay đổi thứ tự ngày 2026-10-20
+
+Người dùng chốt thứ tự module: `activity-tracking`, `support-desk`, `admin-console`, `knowledge-base`, `chatbot-widget`. Module này làm sau `admin-console`.
+
+- `KB-14` chuyển sang Phase 5 và làm cùng `chatbot-widget`.
+- `KB-E2E1` và `KB-13` không còn kiểm `GET /api/help-documents`.
+- Ba bước E2E của nguồn tài liệu chuyển sang `KB-14`.
+- Module nghiệm thu được trước khi có `KB-14`.
+- `support-desk` đã dựng chân trang. `KB-UI1` thêm link chính sách vào chân trang đó, không dựng chân trang mới.
+- `KB-UI1` thêm link "Liên hệ CSKH" tới `/support` trên trang `/help`.
+
 ## Thay đổi phạm vi ngày 2026-10-18
 
 Người dùng chuyển chatbot sang dự án riêng `chatbot-rag` (`C:\Users\juven\Desktop\chatbot-rag`). Pickory gắn widget của chatbot đó qua module `chatbot-widget` (tiền tố `CBW`).
@@ -68,10 +79,10 @@ KB-01 logic thuần: anchor, trạng thái tài liệu, luật tài liệu công
            └── KB-05 API bản nháp ─────────────────────────── KB-UI2 danh sách, trình soạn
                 ├── KB-06 đăng, gỡ, lưu trữ ───────────────── KB-UI3 lịch sử phiên bản, nút đăng
                 │    ├── KB-10 API công khai ──────────────── KB-UI1 Trung tâm hỗ trợ
-                │    ├── KB-14 nguồn tài liệu cho `chatbot-rag`
+                │    ├── KB-14 nguồn tài liệu cho `chatbot-rag` (Phase 5, làm cùng `chatbot-widget`)
                 │    └── KB-11 dữ liệu mẫu `knowledge:seed`
                 └── KB-09 nhập DOCX và PDF (cần KB-00) ────── KB-UI3
-KB-E2E1 luồng E2E (cần mọi task UI và KB-14)
+KB-E2E1 luồng E2E (cần mọi task UI)
 KB-13 nghiệm thu
 ```
 
@@ -221,12 +232,11 @@ Chi tiết từng task ở `tasks/knowledge-base/todo.md`.
 - [ ] Đăng phiên bản mới không làm request đọc song song thấy tài liệu trống
 - [ ] Review với người dùng
 
-### Phase 3: Trang công khai, nguồn cho chatbot và dữ liệu mẫu
-- [ ] KB-10 · [ ] KB-UI1 · [ ] KB-14 · [ ] KB-11
+### Phase 3: Trang công khai và dữ liệu mẫu
+- [ ] KB-10 · [ ] KB-UI1 · [ ] KB-11 · KB-14 chuyển sang Phase 5
 
 ### Checkpoint K3
 - [ ] Khách đọc `/help` và mở link có anchor cuộn tới đúng heading
-- [ ] `GET /api/help-documents` không trả tài liệu `internal`, `draft`, `archived` hay chưa tới ngày hiệu lực
 - [ ] `knowledge:seed` tạo đủ bộ tài liệu mẫu trên DB sạch
 - [ ] Review với người dùng
 
@@ -237,6 +247,15 @@ Chi tiết từng task ở `tasks/knowledge-base/todo.md`.
 - [ ] Mọi dòng Traceability đạt, trừ dòng ghi "đã bỏ"
 - [ ] Coverage dòng của `Pickory.Modules.KnowledgeBase` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
 - [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+- [ ] Review với người dùng, rồi mới bắt đầu `chatbot-widget` và Phase 5
+
+### Phase 5: Nguồn cho chatbot
+Làm cùng `chatbot-widget` ở sprint cuối.
+- [ ] KB-14
+
+### Checkpoint K5
+- [ ] `GET /api/help-documents` không trả tài liệu `internal`, `draft`, `archived` hay chưa tới ngày hiệu lực
+- [ ] E2E: admin đăng hoặc gỡ tài liệu thì `GET /api/help-documents` đổi theo ngay
 - [ ] Review với người dùng
 
 ## Traceability: Success Criteria → Task

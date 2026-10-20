@@ -20,6 +20,8 @@ Ngày 2026-10-18 người dùng chuyển chatbot sang dự án riêng `chatbot-r
 
 Module chỉ phụ thuộc `identity` (layout trang khách đã có). Module không có bảng DB.
 
+Ngày 2026-10-20 người dùng dời module này xuống cuối, sau `knowledge-base`. KB-14 của `tasks/knowledge-base/todo.md` làm cùng lúc, vì bước nạp tài liệu của CBW-02 cần KB-14.
+
 ## Đồ thị phụ thuộc
 
 ```

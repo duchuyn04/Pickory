@@ -4,7 +4,7 @@ Module id: `catalog` · Phụ thuộc: `identity` · Quy ước chung: `SPEC.md`
 
 ## Objective
 
-Quản lý và hiển thị sản phẩm điện tử: danh mục, thương hiệu, thông số kỹ thuật theo từng danh mục, biến thể (SKU), ảnh và tồn kho. Đây là nguồn dữ liệu sản phẩm duy nhất. `commerce` lấy giá và giữ hàng từ đây; `activity-tracking` và `shopping-assistant` đọc dữ liệu từ đây để AI làm việc trên sản phẩm có thật.
+Quản lý và hiển thị sản phẩm điện tử: danh mục, thương hiệu, thông số kỹ thuật theo từng danh mục, biến thể (SKU), ảnh và tồn kho. Đây là nguồn dữ liệu sản phẩm duy nhất. `commerce` lấy giá và giữ hàng từ đây.
 
 **User stories**
 

@@ -34,7 +34,7 @@ Phân quyền RBAC: quyền khai báo trong code, role lưu trong database, admi
 | `catalog` | Sản phẩm, danh mục, thương hiệu, thông số kỹ thuật, ảnh, tồn kho, tìm theo từ khóa, API CRUD cho admin | identity |
 | `shipping` | Danh mục địa chỉ, tính phí, tạo và hủy vận đơn GHN, theo dõi trạng thái giao hàng. Không biết về đơn hàng, chỉ phát sự kiện | identity |
 | `commerce` | Giỏ hàng, checkout, đơn hàng, thanh toán COD + SePay (VietQR, webhook đối soát), đánh giá sau khi mua | identity, catalog, shipping |
-| `activity-tracking` | Ghi sự kiện (xem, tìm, thêm giỏ, mua) để đo chuyển đổi cho báo cáo. Từ ngày 2026-10-18 không dựng hồ sơ sở thích | identity, catalog, commerce |
+| `activity-tracking` | Đếm tổng lượt xem sản phẩm, thêm giỏ và đặt đơn theo ngày để dựng phễu cho báo cáo. Không lưu dữ liệu theo từng khách | identity, commerce |
 | `knowledge-base` | Kho tri thức: chính sách, FAQ, hướng dẫn chọn mua, tài liệu nội bộ. Soạn Markdown hoặc nhập PDF/DOCX, phiên bản, trang Trung tâm hỗ trợ `/help`, API tài liệu công khai cho `chatbot-rag` nạp | identity |
 | `shopping-assistant` | Đã bỏ ngày 2026-10-18. Chatbot chuyển sang dự án riêng `chatbot-rag` | không có |
 | `chatbot-widget` | Nhúng widget của `chatbot-rag` vào trang khách, cấu hình địa chỉ dịch vụ, giữ trang mua hàng chạy khi dịch vụ chatbot lỗi | identity |
@@ -61,22 +61,33 @@ Người dùng build chatbot RAG ở dự án riêng `chatbot-rag` (`C:\Users\ju
 - `ai-gateway` bị gỡ khỏi Pickory theo `tasks/ai-gateway-removal/` (mã `AIR`). Pickory không gọi API AI nào.
 - `admin-console` bỏ báo cáo hiệu quả AI. `chatbot-rag` có log và số liệu chi phí riêng.
 - `activity-tracking` chỉ giữ phần đo chuyển đổi. Hồ sơ sở thích và bản tóm tắt hồ sơ bị bỏ, vì không còn tính năng AI nào đọc.
+- Ngày 2026-10-20 `activity-tracking` chỉ còn bộ đếm tổng theo ngày. Module không lưu sự kiện theo khách, nên không cần kiểm tra đồng ý hay xóa lịch sử.
 - COM-E2E5 của `commerce` chuyển thành CBW-E2E1: dịch vụ chatbot không gọi được thì khách vẫn mua hàng.
 
 ## Thứ tự build
 
 ```
 identity
-  → catalog, shipping, knowledge-base  (song song)
+  → catalog, shipping  (song song)
   → commerce
-  → activity-tracking, chatbot-widget, ai-gateway-removal  (song song)
+  → activity-tracking, ai-gateway-removal  (song song)
   → support-desk
   → admin-console
+  → knowledge-base
+  → chatbot-widget, KB-14 của knowledge-base  (song song, làm cuối)
 ```
+
+Ngày 2026-10-20 người dùng chốt thứ tự trên:
+
+- `knowledge-base` làm sau `admin-console`, ngay trước phần chatbot.
+- `chatbot-widget` và `KB-14` (nguồn tài liệu cho `chatbot-rag`) làm cuối cùng.
+- `knowledge-base` nghiệm thu không cần `KB-14`.
+- `ai-gateway-removal` vẫn làm sớm. Gỡ code AI cũ trước giúp `support-desk` và `admin-console` xây trên code sạch.
+- `support-desk` làm trước nên dựng chân trang. `knowledge-base` thêm link chính sách vào chân trang đó.
 
 ## Nguyên tắc
 
-- Module nguồn chỉ phát sự kiện, module nghe tự đăng ký. Ví dụ `commerce` phát `onOrderPaid`, `activity-tracking` nghe; `commerce` không gọi `activity-tracking`.
+- Module nguồn chỉ phát sự kiện, module nghe tự đăng ký. Ví dụ `commerce` phát `OrderPlacedEvent`, `activity-tracking` nghe; `commerce` không gọi `activity-tracking`.
 - Pickory không gọi API AI. Chatbot là dịch vụ ngoài `chatbot-rag`, gắn qua `chatbot-widget`.
 - Phần mua bán (`identity`, `catalog`, `commerce`) không phụ thuộc chatbot. Dịch vụ chatbot lỗi thì khách vẫn mua hàng bình thường.
 - API tài liệu công khai cho `chatbot-rag` không bao giờ trả tài liệu loại `internal`. Ai trên mạng cũng hỏi được chatbot.

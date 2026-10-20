@@ -137,7 +137,7 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 - [ ] Tin của nhân viên hiện tên ngắn của nhân viên, khác kiểu với tin của khách
 - [ ] Lỗi 429 `SUPPORT_MESSAGE_RATE_LIMITED` hiện thông báo tiếng Việt và giữ nội dung ô soạn
 - [ ] Mất kết nối `/events` thì trang nối lại và không hiện tin trùng
-- [ ] Chân trang có link "Liên hệ CSKH" tới `/support` (chờ Câu hỏi mở 12)
+- [ ] Chân trang có link "Liên hệ CSKH" tới `/support` (chờ Câu hỏi mở 12). App chưa có chân trang thì task này dựng chân trang, vì `knowledge-base` làm sau
 - [ ] Ô soạn có `label`. Dùng được bằng bàn phím
 - [ ] Ảnh chụp 1280 px và 375 px không tràn ngang
 - [ ] Playwright console có 0 lỗi và 0 cảnh báo

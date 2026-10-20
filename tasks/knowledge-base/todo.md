@@ -4,6 +4,8 @@ Plan và quyết định thiết kế: `tasks/knowledge-base/plan.md`. Spec: `sp
 
 Ngày 2026-10-18 người dùng bỏ phần AI của module: chia chunk, embedding, truy xuất, bộ đánh giá. Chatbot chuyển sang dự án riêng `chatbot-rag`. Xem mục "Thay đổi phạm vi ngày 2026-10-18" của plan. Task bỏ giữ nguyên nội dung để tra cứu, có dòng "Trạng thái: đã bỏ".
 
+Ngày 2026-10-20 KB-14 chuyển sang Phase 5, làm cùng `chatbot-widget` ở sprint cuối. Xem mục "Thay đổi thứ tự ngày 2026-10-20" của plan.
+
 Quy ước:
 - Mỗi task backend phải qua `dotnet build` và `dotnet test` trong `apps/backend` trước khi báo xong.
 - Mỗi task frontend phải qua `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`.
@@ -239,7 +241,7 @@ Trạng thái: đã bỏ ngày 2026-10-18. Route `KB-08` đã bỏ.
 
 ---
 
-## Phase 3: Trang công khai, nguồn cho chatbot và dữ liệu mẫu
+## Phase 3: Trang công khai và dữ liệu mẫu
 
 ### KB-10: API công khai
 **Mô tả:** `GET /api/help?type=` liệt kê tài liệu công khai đã đăng, nhóm theo loại. `GET /api/help/{slug}` trả thông tin tài liệu, khối nội dung và mục lục. Dữ liệu lấy từ phiên bản hiệu lực. Hai route dùng hàm truy vấn tài liệu công khai của quyết định 9.
@@ -255,8 +257,10 @@ Trạng thái: đã bỏ ngày 2026-10-18. Route `KB-08` đã bỏ.
 **File:** `apps/backend/src/Pickory.Modules.KnowledgeBase/Features/HelpCenter/`
 
 ### KB-UI1: Trung tâm hỗ trợ
-**Mô tả:** Trang `/help` liệt kê tài liệu theo loại. Trang `/help/:slug` có mục lục và anchor cho từng heading. Thêm chân trang có link tới các chính sách, vì app chưa có chân trang.
+**Mô tả:** Trang `/help` liệt kê tài liệu theo loại. Trang `/help/:slug` có mục lục và anchor cho từng heading. Thêm link tới các chính sách vào chân trang mà `support-desk` đã dựng.
 **Tiêu chí nghiệm thu:**
+- [ ] Trang `/help` có link "Liên hệ CSKH" tới `/support`
+- [ ] Chân trang dùng lại component của `support-desk`, không có hai chân trang trên cùng trang
 - [ ] Mở `/help/{slug}#{anchor}` cuộn tới đúng heading sau khi nội dung tải xong
 - [ ] Bấm mục trong mục lục cuộn tới heading và cập nhật hash trên URL
 - [ ] Trang dùng component hiện khối của KB-UI2, không dùng `dangerouslySetInnerHTML`
@@ -268,23 +272,6 @@ Trạng thái: đã bỏ ngày 2026-10-18. Route `KB-08` đã bỏ.
 **Kiểm tra:** Vitest; Playwright; ảnh chụp
 **Phụ thuộc:** KB-10, KB-UI2 · **Quy mô:** M
 **File:** `apps/frontend/src/features/knowledge-base/customer/`, `apps/frontend/src/shared/`, `apps/frontend/src/app.tsx`
-
-### KB-14: Nguồn tài liệu cho `chatbot-rag`
-**Mô tả:** `GET /api/help-documents` trả mọi tài liệu công khai đã đăng theo quyết định 21 của plan. `chatbot-rag` gọi route này để nạp tài liệu, nên admin chỉ soạn tài liệu ở Pickory. Route dùng hàm truy vấn tài liệu công khai của `KB-10`.
-**Tiêu chí nghiệm thu:**
-- [ ] Mỗi tài liệu có `id`, `slug`, `title`, `type`, `content`, `url`, `updatedAt`
-- [ ] `content` là Markdown của phiên bản hiệu lực, không phải bản nháp đang sửa
-- [ ] Tài liệu `internal` đã đăng không có trong response, kể cả khi tài liệu đó mới nhất
-- [ ] Tài liệu `draft`, `archived` hoặc chưa tới ngày hiệu lực không có trong response
-- [ ] Câu SQL của route có điều kiện `doc_type`. Test đọc câu SQL do EF Core sinh để chứng minh
-- [ ] Đăng phiên bản mới thì `updatedAt` và `content` đổi ngay sau khi route đăng trả 201
-- [ ] Gỡ tài liệu thì tài liệu biến mất khỏi response ngay
-- [ ] Route không cần phiên và không gọi AI
-- [ ] Kho có 501 tài liệu công khai: response có 500 tài liệu mới nhất, và API ghi một dòng log cảnh báo
-- [ ] Cập nhật bảng API của `spec/SPEC-knowledge-base.md` với route mới
-**Kiểm tra:** test tích hợp; phép thử đột biến bỏ điều kiện `doc_type` phải làm test đỏ
-**Phụ thuộc:** KB-06, KB-10 · **Quy mô:** S
-**File:** `apps/backend/src/Pickory.Modules.KnowledgeBase/Features/HelpDocumentsFeed/`, `spec/SPEC-knowledge-base.md`
 
 ### KB-11: Dữ liệu mẫu `knowledge:seed`
 **Mô tả:** Lệnh `dotnet run --project apps/backend/src/Pickory.Api -- knowledge:seed` ghi bộ tài liệu mẫu theo mục "Dữ liệu ban đầu" của spec rồi đăng qua cùng service của KB-06. Nội dung bám các spec đã duyệt. Nếu người dùng gửi văn bản chính sách thật, dùng văn bản đó (Câu hỏi mở 6 của plan).
@@ -302,7 +289,6 @@ Trạng thái: đã bỏ ngày 2026-10-18. Route `KB-08` đã bỏ.
 
 ### Checkpoint K3
 - [ ] Khách đọc `/help` và mở link có anchor cuộn tới đúng heading
-- [ ] `GET /api/help-documents` không trả tài liệu `internal`, `draft`, `archived` hay chưa tới ngày hiệu lực
 - [ ] `knowledge:seed` tạo đủ bộ tài liệu mẫu trên DB sạch
 - [ ] Review với người dùng
 
@@ -331,18 +317,17 @@ Trạng thái: đã bỏ ngày 2026-10-18. Module không còn truy xuất. `chat
 **Tiêu chí nghiệm thu:**
 - [ ] Admin soạn tài liệu `policy` có 2 heading, đăng, rồi khách mở `/help/{slug}` thấy nội dung
 - [ ] Khách mở `/help/{slug}#{anchor}` của heading thứ hai, trang cuộn tới đúng heading
-- [ ] Sau khi admin đăng, `GET /api/help-documents` có tài liệu với nội dung mới
 - [ ] Admin nhập DOCX tạo trong test, thấy bản nháp giữ heading
-- [ ] Admin gỡ tài liệu, khách mở lại slug thấy "Không tìm thấy tài liệu". `GET /api/help-documents` không còn tài liệu đó
-- [ ] Tài liệu `internal` không có trên `/help` và trong `GET /api/help-documents`
+- [ ] Admin gỡ tài liệu, khách mở lại slug thấy "Không tìm thấy tài liệu"
+- [ ] Tài liệu `internal` không có trên `/help`
 - [ ] Nhân viên `support` mở màn tài liệu thấy chế độ chỉ đọc
 - [ ] Mọi bước: console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** `pnpm test:e2e`, chạy ở chế độ có giao diện và chế độ ẩn
-**Phụ thuộc:** KB-UI1, KB-UI3, KB-11, KB-14 · **Quy mô:** M
+**Phụ thuộc:** KB-UI1, KB-UI3, KB-11 · **Quy mô:** M
 **File:** `apps/frontend/e2e/knowledge-base-*.spec.ts`
 
 ### KB-13: Nghiệm thu knowledge-base
-**Mô tả:** Kiểm toàn module trước khi `chatbot-rag` nạp tài liệu từ `GET /api/help-documents`.
+**Mô tả:** Kiểm toàn module. Nguồn tài liệu cho `chatbot-rag` (KB-14) nghiệm thu riêng ở Phase 5.
 **Tiêu chí nghiệm thu:**
 - [ ] Ma trận quyền có mọi endpoint back-office của `knowledge-base`
 - [ ] Coverage dòng của `Pickory.Modules.KnowledgeBase` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
@@ -355,4 +340,36 @@ Trạng thái: đã bỏ ngày 2026-10-18. Module không còn truy xuất. `chat
 - [ ] Mọi dòng Traceability đạt, trừ dòng ghi "đã bỏ"
 - [ ] Coverage dòng của `Pickory.Modules.KnowledgeBase` ít nhất 80%, bỏ `Persistence/Migrations/`
 - [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+- [ ] Review với người dùng, rồi mới bắt đầu `chatbot-widget` và Phase 5
+
+---
+
+## Phase 5: Nguồn cho chatbot
+
+Làm cùng `chatbot-widget` ở sprint cuối.
+
+### KB-14: Nguồn tài liệu cho `chatbot-rag`
+**Thứ tự:** ngày 2026-10-20 task chuyển xuống sprint cuối, làm cùng `chatbot-widget`. Ba bước E2E của nguồn tài liệu chuyển từ KB-E2E1 sang task này.
+**Mô tả:** `GET /api/help-documents` trả mọi tài liệu công khai đã đăng theo quyết định 21 của plan. `chatbot-rag` gọi route này để nạp tài liệu, nên admin chỉ soạn tài liệu ở Pickory. Route dùng hàm truy vấn tài liệu công khai của `KB-10`.
+**Tiêu chí nghiệm thu:**
+- [ ] Mỗi tài liệu có `id`, `slug`, `title`, `type`, `content`, `url`, `updatedAt`
+- [ ] `content` là Markdown của phiên bản hiệu lực, không phải bản nháp đang sửa
+- [ ] Tài liệu `internal` đã đăng không có trong response, kể cả khi tài liệu đó mới nhất
+- [ ] Tài liệu `draft`, `archived` hoặc chưa tới ngày hiệu lực không có trong response
+- [ ] Câu SQL của route có điều kiện `doc_type`. Test đọc câu SQL do EF Core sinh để chứng minh
+- [ ] Đăng phiên bản mới thì `updatedAt` và `content` đổi ngay sau khi route đăng trả 201
+- [ ] Gỡ tài liệu thì tài liệu biến mất khỏi response ngay
+- [ ] Route không cần phiên và không gọi AI
+- [ ] Kho có 501 tài liệu công khai: response có 500 tài liệu mới nhất, và API ghi một dòng log cảnh báo
+- [ ] Cập nhật bảng API của `spec/SPEC-knowledge-base.md` với route mới
+- [ ] E2E: admin đăng tài liệu trên giao diện, `GET /api/help-documents` có tài liệu với nội dung mới
+- [ ] E2E: admin gỡ tài liệu, `GET /api/help-documents` không còn tài liệu đó
+- [ ] E2E: tài liệu `internal` đã đăng không có trong `GET /api/help-documents`
+**Kiểm tra:** test tích hợp; phép thử đột biến bỏ điều kiện `doc_type` phải làm test đỏ; `pnpm test:e2e`
+**Phụ thuộc:** KB-06, KB-10, KB-E2E1 · **Quy mô:** S
+**File:** `apps/backend/src/Pickory.Modules.KnowledgeBase/Features/HelpDocumentsFeed/`, `spec/SPEC-knowledge-base.md`
+
+### Checkpoint K5
+- [ ] `GET /api/help-documents` không trả tài liệu `internal`, `draft`, `archived` hay chưa tới ngày hiệu lực
+- [ ] E2E: admin đăng hoặc gỡ tài liệu thì `GET /api/help-documents` đổi theo ngay
 - [ ] Review với người dùng

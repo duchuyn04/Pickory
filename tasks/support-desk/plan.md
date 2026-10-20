@@ -232,4 +232,6 @@ Spec chưa cập nhật theo phạm vi mới. Bảng dưới ghi tiêu chí theo
 10. Giới hạn tin của khách. Đã chốt ngày 2026-10-18: 10 tin mỗi phút và 200 tin mỗi ngày theo `anonymous_id` (quyết định 27).
 11. Thông tin khách vãng lai. Đã chốt ngày 2026-10-18: khách không phải nhập tên hay số điện thoại trước khi chat. Nhân viên hỏi trong lúc chat khi cần.
 12. Lối vào `/support`. Đã chốt ngày 2026-10-18: link "Liên hệ CSKH" ở chân trang và trên `/help`. Thanh đầu trang không có link này. Fallback của `chatbot-rag` trỏ tới cùng trang.
+    - Ngày 2026-10-20: `knowledge-base` làm sau module này. Module này dựng chân trang và đặt link ở đó.
+    - Link trên `/help` do KB-UI1 của `tasks/knowledge-base/todo.md` thêm sau.
 13. Ngữ cảnh từ chatbot. Khách mở `/support` từ fallback của `chatbot-rag` thì nhân viên không thấy câu khách đã hỏi bot. Đề xuất: MVP chưa chuyển ngữ cảnh. Việc này mở lại khi `chatbot-rag` có human handoff.
