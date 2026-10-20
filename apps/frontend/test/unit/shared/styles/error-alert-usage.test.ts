@@ -11,8 +11,7 @@ const sharedAlertFiles: Record<string, true> = {
 // Khung từ chối và thông báo lưu thành công có bố cục riêng, không phải lỗi trang.
 const allowedAlerts: Record<string, RegExp> = {
   'shared/forbidden-notice.tsx': /className="card"/,
-  'features/ai-gateway/admin/ai-settings-page.tsx': /className="alert alert-ok(?:\s[^"]*)?"/,
-  // Thông báo lưu thành công của màn cấu hình vận chuyển, cùng mẫu `alert-ok` với màn cấu hình AI.
+  // Thông báo lưu thành công của màn cấu hình vận chuyển, giữ nền xanh `alert-ok`.
   'features/shipping/admin/shipping-settings-page.tsx': /className="alert alert-ok(?:\s[^"]*)?"/,
   // Lỗi cạnh ô nhập giữ `form-error` để `aria-describedby` trỏ đúng thông báo của ô.
   'features/catalog/admin/attribute-editor.tsx': /className="form-error"/,
@@ -84,12 +83,12 @@ describe('thông báo lỗi dùng chung', () => {
     ).toBe(false);
     expect(
       isUnapprovedAlert(
-        'features/ai-gateway/admin/ai-settings-page.tsx',
-        '<p role="alert" className="alert alert-ok ai-settings-note"',
+        'features/shipping/admin/shipping-settings-page.tsx',
+        '<p role="alert" className="alert alert-ok shipping-settings-note"',
       ),
     ).toBe(false);
     expect(
-      isUnapprovedAlert('features/ai-gateway/admin/ai-settings-page.tsx', '<p role="alert"'),
+      isUnapprovedAlert('features/shipping/admin/shipping-settings-page.tsx', '<p role="alert"'),
     ).toBe(true);
   });
 

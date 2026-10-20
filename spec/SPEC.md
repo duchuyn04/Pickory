@@ -115,7 +115,7 @@ apps/
       Pickory.UnitTests/  → theo đường dẫn code được test, ví dụ Shared/Persistence/
       Pickory.IntegrationTests/ → Infrastructure/, Database/, Api/
       Pickory.ArchitectureTests/ → kiểm tra ranh giới module
-    db/reference-schema.sql → schema DB gốc của bản Node, dùng để đối chiếu migration
+    db/reference-schema.sql → schema DB gốc của bản Node, dùng để đối chiếu migration (phần AI đã bỏ khỏi file ngày 2026-10-20)
 spec/                     → CAPABILITY-MAP.md, SPEC.md (file này), SPEC-<module-id>.md
 docs/adr/                 → Architecture Decision Records
 ```

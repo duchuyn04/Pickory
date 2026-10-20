@@ -1,5 +1,4 @@
 using Npgsql;
-using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
@@ -32,9 +31,8 @@ public static class E2eStartup
         await CreateDatabaseIfMissingAsync(target, cancellationToken);
         await ResetSchemasAsync(target, cancellationToken);
 
-        // Dựng schema theo thứ tự của tài liệu migration. Migration AiGateway tạo extension `vector` dùng chung.
+        // Dựng schema theo thứ tự của tài liệu migration.
         await IdentityModule.MigrateIdentityDatabaseAsync(services, cancellationToken);
-        await AiGatewayModule.MigrateAiGatewayDatabaseAsync(services, cancellationToken);
         await CatalogModule.MigrateCatalogDatabaseAsync(services, cancellationToken);
         await ShippingModule.MigrateShippingDatabaseAsync(services, cancellationToken);
         await CommerceModule.MigrateCommerceDatabaseAsync(services, cancellationToken);

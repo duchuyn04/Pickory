@@ -3,8 +3,6 @@ using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Infrastructure;
-using Pickory.Modules.AiGateway.Entities;
-using Pickory.Modules.AiGateway.Persistence;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Identity.Entities;
@@ -246,81 +244,6 @@ public sealed class ModulePersistenceRoundtripTests(PickoryWebApplicationFactory
         context.ChangeTracker.Clear();
         Assert.False(await context.Set<Product>().AnyAsync(row => row.Id == product.Id));
         Assert.False(await context.Set<ImageDeletionJob>().AnyAsync(row => row.Id == job.Id));
-    }
-
-    [Fact]
-    public async Task AiGateway_RoundtripsDoublePrecisionArraysIncludingEmptyAndNullWithoutChangingExistingSettings()
-    {
-        // Context được tiêm chỉ được dùng DB test do resolver hiện có chọn.
-        await using var scope = factory.Services.CreateAsyncScope();
-        var context = scope.ServiceProvider.GetRequiredService<AiGatewayDbContext>();
-        DotnetSchemaIntegrationTests.AssertTestConnection(context);
-        // Giao dịch giữ toàn bộ dữ liệu thử nghiệm để rollback khi assertion lỗi.
-        await using var transaction = await context.Database.BeginTransactionAsync();
-        var uniqueSuffix = Guid.NewGuid().ToString("N");
-        var usage = new AiUsageLog
-        {
-            Feature = "dn01", Provider = "test-provider", Model = "test-model", PromptVersion = "v1",
-            InputTokens = 123, OutputTokens = 45, CachedTokens = 12, CostUsd = 0.0123456789,
-            LatencyMs = 321, Status = "success", ErrorCode = null, ActorKeyHash = uniqueSuffix, CreatedAt = WrittenAt
-        };
-        var settings = new AiSetting
-        {
-            Id = $"dn01-{uniqueSuffix}", MonthlyBudgetUsd = 123.456789,
-            ChatDailyLimitUser = 20, ChatDailyLimitAnon = 5, CreatedAt = WrittenAt, UpdatedAt = WrittenAt
-        };
-        var embedding = new AiEmbeddingCache
-        {
-            Key = $"embedding-{uniqueSuffix}", Model = "test-embedding",
-            Embedding = [0.123456789012345, -0.987654321012345, 0, 1], CreatedAt = WrittenAt
-        };
-        var emptyEmbedding = new AiEmbeddingCache
-        {
-            Key = $"empty-{uniqueSuffix}", Model = "test-embedding", Embedding = [], CreatedAt = WrittenAt
-        };
-        var nullEmbedding = new AiEmbeddingCache
-        {
-            Key = $"null-{uniqueSuffix}", Model = "test-embedding", Embedding = null, CreatedAt = WrittenAt
-        };
-
-        // ID riêng của cấu hình tránh thay đổi bản ghi `singleton` có sẵn.
-        context.Set<AiUsageLog>().Add(usage);
-        context.Set<AiSetting>().Add(settings);
-        context.Set<AiEmbeddingCache>().AddRange(embedding, emptyEmbedding, nullEmbedding);
-        // Ghi vào DB thật để phát hiện sai kiểu cột hoặc giá trị mảng.
-        await context.SaveChangesAsync();
-        AssertPersistedIds(usage.Id, embedding.Id, emptyEmbedding.Id, nullEmbedding.Id);
-        // `Clear` buộc lần đọc tiếp theo kiểm tra dữ liệu đã lưu.
-        context.ChangeTracker.Clear();
-        usage = await AssertFreshValuesAsync(context, usage);
-        settings = await AssertFreshValuesAsync(context, settings);
-        embedding = await AssertFreshValuesAsync(context, embedding);
-        await AssertFreshValuesAsync(context, emptyEmbedding);
-        await AssertFreshValuesAsync(context, nullEmbedding);
-
-        // Độ chính xác double cùng giá trị null phải được giữ nguyên sau cập nhật.
-        usage.CostUsd = 0.987654321;
-        usage.PromptVersion = null;
-        usage.ErrorCode = "test-error";
-        usage.Status = "error";
-        settings.MonthlyBudgetUsd = 456.789012;
-        settings.ChatDailyLimitAnon = 0;
-        settings.UpdatedAt = ChangedAt;
-        embedding.Embedding = [-0.123456789012345, 0.987654321012345];
-        // Cập nhật trong DB thật để kiểm tra bộ chuyển đổi khi giá trị thay đổi.
-        await context.SaveChangesAsync();
-        // `Clear` buộc lần đọc tiếp theo kiểm tra dữ liệu đã lưu.
-        context.ChangeTracker.Clear();
-        await AssertFreshValuesAsync(context, usage);
-        await AssertFreshValuesAsync(context, settings);
-        await AssertFreshValuesAsync(context, embedding);
-
-        // Rollback loại bỏ dữ liệu kiểm thử nhưng không đổi ngân sách có sẵn.
-        await transaction.RollbackAsync();
-        // `Clear` loại bỏ các bản ghi đã bị rollback khỏi bộ nhớ của EF.
-        context.ChangeTracker.Clear();
-        Assert.False(await context.Set<AiSetting>().AnyAsync(row => row.Id == settings.Id));
-        Assert.False(await context.Set<AiUsageLog>().AnyAsync(row => row.Id == usage.Id));
     }
 
     private static void AssertPersistedIds(params string[] identifiers)

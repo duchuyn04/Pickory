@@ -17,12 +17,9 @@ const adminScreens = [
   { path: '/admin/staff', heading: 'Quản lý Nhân viên', name: 'staff' },
   { path: '/admin/roles', heading: 'Quản lý Role & Phân quyền', name: 'roles' },
   { path: '/admin/audit-logs', heading: 'Nhật ký thao tác (Audit Logs)', name: 'audit-logs' },
-  { path: '/admin/ai', heading: 'Cấu hình và sử dụng AI', name: 'ai' },
 ];
 
-test('DS-04: màn admin identity và AI không tràn trang ở 1280px và 375px', async ({
-  page,
-}, testInfo) => {
+test('DS-04: màn admin identity không tràn trang ở 1280px và 375px', async ({ page }, testInfo) => {
   test.setTimeout(120000);
   // Ghi lỗi console và lỗi trang. Mọi màn trong spec phải có 0 lỗi và 0 cảnh báo.
   const consoleIssues: string[] = [];

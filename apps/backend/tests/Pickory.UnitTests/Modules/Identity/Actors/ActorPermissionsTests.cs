@@ -15,8 +15,8 @@ public class ActorPermissionsTests
         var permissions = ActorPermissions.Merge(["sales", "admin"], []);
 
         Assert.Equal(Permissions.All, permissions);
-        // Số 28 khóa kích thước danh mục. Quyền bị thêm hoặc bớt ngoài ý muốn làm test này thất bại.
-        Assert.Equal(28, permissions.Count);
+        // Số 26 khóa kích thước danh mục sau khi gỡ hai quyền AI. Quyền bị thêm hoặc bớt ngoài ý muốn làm test này thất bại.
+        Assert.Equal(26, permissions.Count);
     }
 
     [Fact]

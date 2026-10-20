@@ -41,10 +41,6 @@ export default defineConfig({
         DEV_OUTBOX_DIR: e2eEnvironment.outboxDirectory,
         // Xóa token GHN để API dùng `FakeGhnClient`. Spec đặt hàng cần phí vận chuyển cố định và không gọi mạng.
         GHN_TOKEN: '',
-        // Xóa khóa AI để luồng identity không gọi provider thật.
-        LLM_API_KEY: '',
-        LLM_MODEL: '',
-        EMBEDDING_API_KEY: '',
         SEPAY_WEBHOOK_API_KEY: e2eEnvironment.sepayWebhookApiKey,
         // Webhook GHN cần bí mật để test gọi được `POST /api/webhooks/ghn`. Thiếu biến này webhook luôn trả 401.
         GHN_WEBHOOK_SECRET: e2eEnvironment.ghnWebhookSecret,

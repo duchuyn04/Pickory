@@ -38,10 +38,11 @@ Quy ước:
 - Giữ nhãn nhóm `ai-gateway` của `permission-grid.tsx` tới AIR-05, vì API vẫn trả hai quyền AI.
 **Tiêu chí nghiệm thu:**
 - [ ] Mở `/admin/ai` khi đã đăng nhập admin hiện trang không tìm thấy của back-office
-- [ ] Menu back-office của admin không còn mục "Cấu hình AI"
-- [ ] `rg -n "ai-settings|/admin/ai" apps/frontend/src apps/frontend/e2e` không còn kết quả
-- [ ] Menu của `sales` trong `staff-invite.spec.ts` không còn "Cấu hình AI"
-- [ ] Console 0 lỗi và 0 cảnh báo ở hai spec trên
+  - Chưa đạt như câu chữ. Back-office chưa có trang không tìm thấy. Route không khớp chỉ cho trang trắng (còn banner cookie) và React Router ghi cảnh báo `No routes matched location`. Test `removed-ai-route.test.tsx` kiểm màn AI không hiện và không có request `/api/admin/ai`. Cần người dùng quyết định có làm trang không tìm thấy cho back-office không.
+- [x] Menu back-office của admin không còn mục "Cấu hình AI"
+- [x] `rg -n "ai-settings|/admin/ai" apps/frontend/src apps/frontend/e2e` không còn kết quả
+- [x] Menu của `sales` trong `staff-invite.spec.ts` không còn "Cấu hình AI"
+- [x] Console 0 lỗi và 0 cảnh báo ở hai spec trên
 **Kiểm tra:** `pnpm lint && pnpm typecheck && pnpm test`; `npx playwright test e2e/admin-screens.spec.ts e2e/staff-invite.spec.ts`
 **Phụ thuộc:** không · **Quy mô:** S
 
@@ -52,16 +53,18 @@ Quy ước:
 - `Deployment/DatabaseMigrationCommand.cs`: xóa bước `AiGateway`.
 - Sửa `DatabaseMigrationCommandTests.cs` theo danh sách bước mới.
 **Tiêu chí nghiệm thu:**
-- [ ] `GET /api/admin/ai/settings` với phiên admin trả 404
-- [ ] Lệnh `db:migrate` trên DB trống chạy xong, và các module còn lại không cần extension `vector`
-- [ ] `e2e:start` dựng DB và mở API thành công
-- [ ] `rg -n "AiGateway" apps/backend/src/Pickory.Api --glob "*.cs"` không còn kết quả
+- [x] `GET /api/admin/ai/settings` với phiên admin trả 404
+- [x] Lệnh `db:migrate` trên DB trống chạy xong, và các module còn lại không cần extension `vector`
+- [x] `e2e:start` dựng DB và mở API thành công
+- [x] `rg -n "AiGateway" apps/backend/src/Pickory.Api --glob "*.cs"` không còn kết quả
 **Kiểm tra:** `dotnet build`; `dotnet test` cho `Pickory.UnitTests` và `Pickory.ArchitectureTests`; integration test có `--filter "FullyQualifiedName~Deployment|FullyQualifiedName~ApiIntegrationTests"`
 **Phụ thuộc:** AIR-01 · **Quy mô:** S
 
 ### Checkpoint R1
 - [ ] Không còn màn `/admin/ai`. API khởi động không đăng ký module AI
+  - Chờ AIR-01 đạt đủ tiêu chí. Phần API đã đạt.
 - [ ] `dotnet test` và `pnpm test` xanh
+  - `pnpm test` xanh. Unit và architecture xanh. Các test AI từng đỏ đã bị xóa hoặc sửa ở AIR-03. Integration chạy toàn bộ chưa xong, xem ghi chú ở AIR-03.
 
 ---
 
@@ -76,9 +79,10 @@ Quy ước:
 - Sửa `Pickory.ArchitectureTests/ModuleBoundaryTests.cs`: bỏ assembly của module AI.
 - Xóa tham chiếu project AI trong ba file `.csproj` của test.
 **Tiêu chí nghiệm thu:**
-- [ ] `rg -n "AiGateway" apps/backend/tests --glob "*.cs" --glob "*.csproj"` không còn kết quả
-- [ ] Test dùng chung vẫn kiểm đủ các schema còn lại. Số schema và số bảng kỳ vọng khớp DB sau AIR-02
+- [x] `rg -n "AiGateway" apps/backend/tests --glob "*.cs" --glob "*.csproj"` không còn kết quả
+- [x] Test dùng chung vẫn kiểm đủ các schema còn lại. Số schema và số bảng kỳ vọng khớp DB sau AIR-02
 - [ ] Unit, architecture và integration test xanh
+  - Unit và architecture xanh. Reviewer chạy toàn bộ ngày 2026-10-20: 2165 pass, 1 fail, 8 skip. Test fail là `OpenApiDocumentationTests` còn kiểm tag AI, đã sửa. Chạy lại riêng nhóm test liên quan: 17 pass. Lượt chạy lại toàn bộ bị dừng vì máy thiếu RAM, cần chạy lại khi máy rảnh.
 **Kiểm tra:** `dotnet test` cho ba project test, integration chạy toàn bộ
 **Phụ thuộc:** AIR-02 · **Quy mô:** L
 
@@ -89,9 +93,9 @@ Quy ước:
 - Xóa `Microsoft.Extensions.AI.OpenAI`, `OpenAI`, `Pgvector.EntityFrameworkCore` khỏi `Directory.Packages.props`, nếu không project nào còn dùng.
 - Không xóa `PiiRedactor` trước khi AIR-00 chốt Câu hỏi mở 3.
 **Tiêu chí nghiệm thu:**
-- [ ] `rg -n "AiGateway|AiFeature|IAiGateway" apps/backend --glob "*.cs" --glob "*.csproj" --glob "*.sln" --glob "*.props"` không còn kết quả
-- [ ] `dotnet build` 0 warning, 0 error
-- [ ] Unit và architecture test xanh
+- [x] `rg -n "AiGateway|AiFeature|IAiGateway" apps/backend --glob "*.cs" --glob "*.csproj" --glob "*.sln" --glob "*.props"` không còn kết quả
+- [x] `dotnet build` 0 warning, 0 error
+- [x] Unit và architecture test xanh
 **Kiểm tra:** `dotnet build`; `dotnet test` cho `Pickory.UnitTests` và `Pickory.ArchitectureTests`
 **Phụ thuộc:** AIR-03 · **Quy mô:** M
 
@@ -104,17 +108,19 @@ Quy ước:
 - Thêm migration dữ liệu của `identity`: xóa dòng `role_permissions` có mã `ai-usage:read` hoặc `ai-settings:manage`. Migration không đổi cấu trúc bảng.
 - Sửa `PermissionMatrixTests.cs` và test ma trận quyền ở frontend nếu có.
 **Tiêu chí nghiệm thu:**
-- [ ] `GET` danh mục quyền của admin không còn nhóm `ai-gateway`
-- [ ] Role `sales` mới seed không có quyền AI
-- [ ] DB có sẵn dòng quyền AI: sau migration, bảng `role_permissions` không còn dòng đó, và API khởi động không cảnh báo quyền lạ
-- [ ] Màn sửa role không còn nhóm "Cấu hình AI"
+- [x] `GET` danh mục quyền của admin không còn nhóm `ai-gateway`
+- [x] Role `sales` mới seed không có quyền AI
+- [x] DB có sẵn dòng quyền AI: sau migration, bảng `role_permissions` không còn dòng đó, và API khởi động không cảnh báo quyền lạ
+- [x] Màn sửa role không còn nhóm "Cấu hình AI"
 - [ ] `rg -n "ai-usage|ai-settings|AiUsageRead|AiSettingsManage" apps --glob "!**/bin/**" --glob "!**/obj/**" --glob "!**/node_modules/**"` chỉ còn file migration của task này
+  - Ngoài file migration còn 3 file test giữ mã quyền cũ để chứng minh quyền đã gỡ: `RemoveAiPermissionsMigrationTests.cs`, `PermissionCatalogTests.cs`, `DefaultRolesTests.cs`. Cần reviewer xác nhận chấp nhận các file này.
 **Kiểm tra:** test tích hợp migration dữ liệu; integration `--filter "FullyQualifiedName~Identity|FullyQualifiedName~PermissionMatrixTests"`; `pnpm test`
 **Phụ thuộc:** AIR-04, AIR-00 · **Quy mô:** M
 
 ### Checkpoint R2
-- [ ] Solution không còn project AI. Không còn quyền AI trong code và trong role mặc định
+- [x] Solution không còn project AI. Không còn quyền AI trong code và trong role mặc định
 - [ ] Build 0 warning. Unit, architecture và integration test xanh
+  - Build 0 warning, unit và architecture xanh. Integration chạy toàn bộ chưa xong, xem ghi chú ở AIR-03.
 
 ---
 
@@ -126,10 +132,10 @@ Quy ước:
 - `DROP SCHEMA IF EXISTS ef_ai_gateway CASCADE`.
 Bước dọn chạy sau migration của mọi module. Xử lý extension `vector` theo Câu hỏi mở 1.
 **Tiêu chí nghiệm thu:**
-- [ ] DB có ba bảng AI: sau `db:migrate`, ba bảng và schema `ef_ai_gateway` không còn
-- [ ] Chạy `db:migrate` lần hai trên cùng DB thành công và không đổi gì thêm
-- [ ] DB trống: `db:migrate` chạy xong, không lỗi
-- [ ] Bảng của module khác giữ nguyên dữ liệu
+- [x] DB có ba bảng AI: sau `db:migrate`, ba bảng và schema `ef_ai_gateway` không còn
+- [x] Chạy `db:migrate` lần hai trên cùng DB thành công và không đổi gì thêm
+- [x] DB trống: `db:migrate` chạy xong, không lỗi
+- [x] Bảng của module khác giữ nguyên dữ liệu
 **Kiểm tra:** test tích hợp dựng DB có bảng AI giả rồi chạy lệnh; `dotnet test` cho `DatabaseMigrationCommandTests`
 **Phụ thuộc:** AIR-04, AIR-00 · **Quy mô:** S
 
@@ -140,9 +146,11 @@ Bước dọn chạy sau migration của mọi module. Xử lý extension `vecto
 - `.env.example`: xóa khối biến AI.
 - `apps/frontend/playwright.config.ts`: xóa `LLM_API_KEY`, `LLM_MODEL`, `EMBEDDING_API_KEY` (chờ AIR-00).
 **Tiêu chí nghiệm thu:**
-- [ ] API khởi động khi môi trường vẫn còn biến AI cũ, và bỏ qua các biến đó
+- [x] API khởi động khi môi trường vẫn còn biến AI cũ, và bỏ qua các biến đó
 - [ ] `rg -n "LLM_|EMBEDDING_|AI_MONTHLY|AI_CHAT|AI_LIVE" apps .env.example --glob "!**/bin/**" --glob "!**/obj/**" --glob "!**/node_modules/**"` không còn kết quả
-- [ ] Unit test xanh. `pnpm test:e2e` xanh sau khi sửa `playwright.config.ts`
+  - Mã nguồn và `.env.example` sạch. Còn đúng một file: test `AppConfigLegacyAiVariablesTests.cs`, giữ tên biến cũ để chứng minh API bỏ qua chúng. Cần reviewer xác nhận.
+- [x] Unit test xanh. `pnpm test:e2e` xanh sau khi sửa `playwright.config.ts`
+  - Reviewer chạy ngày 2026-10-20: `pnpm test:e2e` 113 passed ở chế độ ẩn và 113 passed với `--headed`. Unit test 1621 pass.
 **Kiểm tra:** `dotnet test` cho `Pickory.UnitTests`; `pnpm test:e2e`
 **Phụ thuộc:** AIR-04 · **Quy mô:** S
 
@@ -154,9 +162,9 @@ Bước dọn chạy sau migration của mọi module. Xử lý extension `vecto
 - `docs/adr/0001-ai-frameworks.md`, `docs/adr/0002-ai-gateway-provider-findings.md`: thêm dòng trạng thái "Đã thay thế ngày 2026-10-18". Ghi lý do và trỏ tới dự án `chatbot-rag`. Không xóa nội dung cũ.
 - `docs/testing/identity-manual-test-cases.md`: đánh dấu ca kiểm màn AI là đã bỏ, không xóa ID.
 **Tiêu chí nghiệm thu:**
-- [ ] Tài liệu deploy không còn yêu cầu biến AI hay extension `vector`
-- [ ] Hai ADR có dòng trạng thái mới
-- [ ] Không em dash, không en dash trong file đã sửa
+- [x] Tài liệu deploy không còn yêu cầu biến AI hay extension `vector`
+- [x] Hai ADR có dòng trạng thái mới
+- [x] Không em dash, không en dash trong file đã sửa
 **Kiểm tra:** đọc lại diff; `grep -c` hai ký tự gạch trên từng file
 **Phụ thuộc:** AIR-07, AIR-00 · **Quy mô:** M
 
@@ -167,12 +175,15 @@ Bước dọn chạy sau migration của mọi module. Xử lý extension `vecto
 ### AIR-09: Nghiệm thu gỡ ai-gateway
 **Mô tả:** Kiểm toàn bộ repo sau khi gỡ.
 **Tiêu chí nghiệm thu:**
-- [ ] `dotnet build` 0 warning, 0 error
+- [x] `dotnet build` 0 warning, 0 error
 - [ ] `Pickory.UnitTests`, `Pickory.ArchitectureTests`, toàn bộ `Pickory.IntegrationTests` xanh
-- [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test` xanh
-- [ ] `pnpm test:e2e` xanh, chạy ở chế độ ẩn và `--headed`
+  - Unit (1621) và architecture (14) xanh. Reviewer chạy toàn bộ ngày 2026-10-20: 2165 pass, 1 fail, 8 skip. Test fail là `OpenApiDocumentationTests` còn kiểm tag AI, đã sửa. Chạy lại riêng nhóm test liên quan: 17 pass. Lượt chạy lại toàn bộ bị dừng vì máy thiếu RAM, cần chạy lại khi máy rảnh.
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm test` xanh
+- [x] `pnpm test:e2e` xanh, chạy ở chế độ ẩn và `--headed`
+  - Reviewer chạy ngày 2026-10-20: 113 passed ở chế độ ẩn (8,9 phút) và 113 passed với `--headed` (9,8 phút).
 - [ ] `rg -in "aigateway|ai-gateway|ai-usage|ai-settings|LLM_API_KEY" apps .env.example render.yaml` không còn kết quả, trừ migration dữ liệu của AIR-05 và bước dọn của AIR-06
-- [ ] `db:migrate` chạy được trên bản sao DB dev có dữ liệu thật
+  - Ngoài hai ngoại lệ đã nêu, còn các file test giữ tên cũ để chứng minh đã gỡ: `PermissionCatalogTests.cs`, `DefaultRolesTests.cs`, `RemoveAiPermissionsMigrationTests.cs`, `AppConfigLegacyAiVariablesTests.cs`, `permission-grid.test.tsx`, `AiGatewayCleanupTests.cs`, `DatabaseMigrationCommandTests.cs`. Cần reviewer xác nhận.
+- [x] `db:migrate` chạy được trên bản sao DB dev có dữ liệu thật
 - [ ] Review với người dùng
 **Kiểm tra:** các lệnh trên, ghi kết quả thật vào báo cáo
 **Phụ thuộc:** AIR-05, AIR-06, AIR-08 · **Quy mô:** S

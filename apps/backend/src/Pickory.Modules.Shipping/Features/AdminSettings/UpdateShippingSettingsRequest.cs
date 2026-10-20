@@ -6,7 +6,7 @@ using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.Shipping.Features.AdminSettings;
 
-// Đọc body của `PUT /api/admin/shipping/settings` theo luật chặt, giống `UpdateSettingsRequest` của AI gateway.
+// Đọc body của `PUT /api/admin/shipping/settings` theo luật chặt.
 // Binder mặc định bỏ qua trường lạ và nhận số dạng chuỗi, nên lớp này đọc JSON thủ công.
 internal static class UpdateShippingSettingsRequest
 {

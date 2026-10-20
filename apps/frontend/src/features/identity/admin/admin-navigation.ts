@@ -105,12 +105,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         requiredPermission: 'roles:manage',
       },
       {
-        label: 'Cấu hình AI',
-        path: '/admin/ai',
-        icon: 'sparkles',
-        requiredPermission: 'ai-usage:read',
-      },
-      {
         label: 'Vận chuyển',
         path: '/admin/shipping/settings',
         icon: 'truck',

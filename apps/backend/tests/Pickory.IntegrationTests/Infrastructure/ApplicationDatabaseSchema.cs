@@ -24,8 +24,6 @@ internal static class ApplicationDatabaseSchema
         "product_slug_history", "products", "skus"
     ];
 
-    internal static readonly string[] AiGatewayTables = ["ai_embedding_cache", "ai_settings", "ai_usage_logs"];
-
     // Bảng và enum của shipping không có trong `reference-schema.sql` (bản chụp schema Prisma). Phép so với file đó phải bỏ qua chúng.
     internal static readonly string[] ShippingTables =
     [

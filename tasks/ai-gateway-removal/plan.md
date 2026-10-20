@@ -89,7 +89,7 @@ AIR-05, AIR-06, AIR-08 └── AIR-09 nghiệm thu
 
 Dòng tiến độ:
 
-- [x] AIR-00 · [ ] AIR-01 · [ ] AIR-02 · [ ] AIR-03 · [ ] AIR-04 · [ ] AIR-05 · [ ] AIR-06 · [ ] AIR-07 · [ ] AIR-08 · [ ] AIR-09
+- [x] AIR-00 · [ ] AIR-01 · [x] AIR-02 · [ ] AIR-03 · [x] AIR-04 · [ ] AIR-05 · [x] AIR-06 · [ ] AIR-07 · [x] AIR-08 · [ ] AIR-09
 
 ### Phase 0: Duyệt
 - AIR-00: người dùng duyệt các việc sau:
@@ -108,7 +108,7 @@ Dòng tiến độ:
 - AIR-03, AIR-04, AIR-05.
 
 ### Checkpoint R2
-- [ ] Solution không còn project AI. Không còn quyền AI trong code và trong role mặc định.
+- [x] Solution không còn project AI. Không còn quyền AI trong code và trong role mặc định.
 - [ ] Build 0 warning. Unit, architecture và integration test xanh.
 
 ### Phase 3: Dọn DB, cấu hình và tài liệu

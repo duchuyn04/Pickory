@@ -19,14 +19,14 @@ public sealed class DotEnvFileTests : IDisposable
             "PORT=3000",
             "  WEB_ORIGIN = http://localhost:5173  ",
             "khong-co-dau-bang",
-            "LLM_API_KEY=",
+            "GHN_TOKEN=",
         ];
 
         var values = DotEnvFile.Parse(lines);
 
         Assert.Equal("3000", values["PORT"]);
         Assert.Equal("http://localhost:5173", values["WEB_ORIGIN"]);
-        Assert.Equal(string.Empty, values["LLM_API_KEY"]);
+        Assert.Equal(string.Empty, values["GHN_TOKEN"]);
         Assert.Equal(3, values.Count);
     }
 

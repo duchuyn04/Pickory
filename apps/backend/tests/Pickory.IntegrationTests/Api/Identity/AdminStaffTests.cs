@@ -446,7 +446,7 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
             HttpMethod.Post, "/api/admin/staff/invitations", new { email = IdentityTestData.NewEmail("stronger"), name = "Mạnh hơn", roleCodes = new[] { "sales" } }, session);
 
         await RegisterTests.AssertErrorAsync(
-            response, HttpStatusCode.Forbidden, "FORBIDDEN", "Bạn không thể mời nhân viên với role chứa quyền \"ai-usage:read\" vì chính bạn không sở hữu quyền này.");
+            response, HttpStatusCode.Forbidden, "FORBIDDEN", "Bạn không thể mời nhân viên với role chứa quyền \"customers:read\" vì chính bạn không sở hữu quyền này.");
     }
 
     [Fact]
@@ -532,7 +532,7 @@ public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory
         var unlockResponse = await SendAsync(HttpMethod.Patch, $"/api/admin/staff/{target.Id}", new { locked = false }, session);
 
         // Kiểm tra quyền chạy trước nhánh "đã khóa". Thông báo nêu quyền thiếu đầu tiên theo thứ tự chữ cái.
-        const string expectedMessage = "Bạn không có quyền quản lý nhân viên sở hữu quyền \"ai-usage:read\".";
+        const string expectedMessage = "Bạn không có quyền quản lý nhân viên sở hữu quyền \"customers:read\".";
         await RegisterTests.AssertErrorAsync(lockResponse, HttpStatusCode.Forbidden, "FORBIDDEN", expectedMessage);
         await RegisterTests.AssertErrorAsync(replaceResponse, HttpStatusCode.Forbidden, "FORBIDDEN", expectedMessage);
         await RegisterTests.AssertErrorAsync(relockResponse, HttpStatusCode.Forbidden, "FORBIDDEN", expectedMessage);

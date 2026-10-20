@@ -1,7 +1,6 @@
 using System.Net;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
-using Pickory.Modules.AiGateway.Persistence;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Commerce.Persistence;
@@ -93,7 +92,6 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
                         WHERE n.nspname = 'public')
                      + (SELECT count(*) FROM pg_type t JOIN pg_namespace n ON n.oid = t.typnamespace
                         WHERE n.nspname = 'public')
-                     + (SELECT count(*) FROM pg_extension WHERE extname = 'vector')
                 """, _lockConnection);
             if (Convert.ToInt64(await emptyCommand.ExecuteScalarAsync()) != 0)
             {
@@ -103,8 +101,6 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
             // Cấu hình module thật bảo đảm Entity Framework Core tạo đủ schema cùng lịch sử riêng.
             await using var identity = CreateIdentityContext();
             await identity.Database.MigrateAsync();
-            await using var aiGateway = CreateAiGatewayContext();
-            await aiGateway.Database.MigrateAsync();
             await using var catalog = CreateCatalogContext();
             await catalog.Database.MigrateAsync();
             await using var shipping = CreateShippingContext();
@@ -191,14 +187,6 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
         var options = new DbContextOptionsBuilder<IdentityDbContext>();
         IdentityDbContext.ConfigureOptions(options, ConnectionString);
         return new IdentityDbContext(options.Options);
-    }
-
-    public AiGatewayDbContext CreateAiGatewayContext()
-    {
-        // Dùng cùng tùy chọn module để extension và lịch sử không khác ứng dụng thật.
-        var options = new DbContextOptionsBuilder<AiGatewayDbContext>();
-        AiGatewayDbContext.ConfigureOptions(options, ConnectionString);
-        return new AiGatewayDbContext(options.Options);
     }
 
     public CatalogDbContext CreateCatalogContext()

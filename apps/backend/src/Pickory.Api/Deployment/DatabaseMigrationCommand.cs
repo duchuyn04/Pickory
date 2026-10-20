@@ -1,8 +1,9 @@
-using Pickory.Modules.AiGateway;
+using Microsoft.Extensions.DependencyInjection;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
 using Pickory.Modules.Shipping;
+using Pickory.Shared.Configuration;
 
 namespace Pickory.Api.Deployment;
 
@@ -21,16 +22,22 @@ public static class DatabaseMigrationCommand
 
     public static Task<int> RunAsync(IServiceProvider services, TextWriter output, TextWriter error, CancellationToken cancellationToken)
     {
-        // Thứ tự giống `E2eStartup`. Migration AiGateway tạo extension `vector` mà các module sau dùng chung.
-        DatabaseMigrationStep[] steps =
+        return RunStepsAsync(CreateSteps(services), output, error, cancellationToken);
+    }
+
+    // Tách danh sách bước ra khỏi lệnh chạy để test kiểm được thứ tự module mà không cần DB.
+    public static DatabaseMigrationStep[] CreateSteps(IServiceProvider services)
+    {
+        // Thứ tự giống `E2eStartup`, để DB dựng bằng `db:migrate` giống DB của E2E.
+        return
         [
             new("Identity", token => IdentityModule.MigrateIdentityDatabaseAsync(services, token)),
-            new("AiGateway", token => AiGatewayModule.MigrateAiGatewayDatabaseAsync(services, token)),
             new("Catalog", token => CatalogModule.MigrateCatalogDatabaseAsync(services, token)),
             new("Shipping", token => ShippingModule.MigrateShippingDatabaseAsync(services, token)),
             new("Commerce", token => CommerceModule.MigrateCommerceDatabaseAsync(services, token)),
+            // Dọn cuối cùng, sau migration của mọi module, để không xóa bảng khi bước trước còn có thể lỗi.
+            new(AiGatewayCleanup.StepName, token => AiGatewayCleanup.RunAsync(services.GetRequiredService<AppConfig>(), token)),
         ];
-        return RunStepsAsync(steps, output, error, cancellationToken);
     }
 
     // Trả mã thoát của tiến trình. Mã 1 làm Render hủy lần triển khai, nên bản API đang chạy được giữ.

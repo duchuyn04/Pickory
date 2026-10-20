@@ -5,7 +5,6 @@ using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Pickory.IntegrationTests.Api.Identity;
 using Pickory.IntegrationTests.Infrastructure;
-using Pickory.Modules.AiGateway.Persistence;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Shared.Persistence;
 using Xunit;
@@ -21,14 +20,12 @@ public sealed class DatabaseConnectionCountTests(PickoryWebApplicationFactory fa
     private const int PoolLimit = 3;
     private const int RequestsPerRoute = 12;
 
-    // Tuyến đọc chạm đủ bốn module: Catalog, Shipping, AiGateway và Identity (qua phiên nhân viên).
+    // Tuyến đọc chạm đủ ba module: Catalog, Shipping và Identity (qua phiên nhân viên).
     private static readonly string[] Routes =
     [
         "/api/products?pageSize=24",
         "/api/categories",
         "/api/addresses/provinces",
-        "/api/admin/ai/usage",
-        "/api/admin/ai/settings",
         "/api/me",
     ];
 
@@ -101,24 +98,6 @@ public sealed class DatabaseConnectionCountTests(PickoryWebApplicationFactory fa
         Assert.True(peak <= PoolLimit, $"API mở tối đa {peak} kết nối, vượt giới hạn {PoolLimit}.");
         // Xếp hàng chờ kết nối không được làm request lỗi. Mọi tuyến đọc phải trả 200.
         Assert.All(responses, response => Assert.Equal(HttpStatusCode.OK, response.StatusCode));
-    }
-
-    [Fact]
-    // Worker nền và gateway AI tạo `DbContext` qua factory, không qua request. Các context này cũng phải chịu giới hạn.
-    public async Task AiGatewayContextFactory_UnderParallelLoad_NeverOpensMoreConnectionsThanThePoolLimit()
-    {
-        var peak = await MeasurePeakAsync(async limited =>
-        {
-            var contextFactory = limited.Services.GetRequiredService<IDbContextFactory<AiGatewayDbContext>>();
-            var queries = Enumerable.Range(0, 12).Select(async _ =>
-            {
-                await using var context = await contextFactory.CreateDbContextAsync();
-                await context.Database.ExecuteSqlRawAsync("SELECT pg_sleep(0.1)");
-            });
-            await Task.WhenAll(queries);
-        });
-
-        Assert.True(peak <= PoolLimit, $"API mở tối đa {peak} kết nối, vượt giới hạn {PoolLimit}.");
     }
 
     [Fact]

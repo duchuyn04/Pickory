@@ -7,7 +7,7 @@ namespace Pickory.Modules.Catalog.Descriptions;
 // Tài liệu chỉ có `doc`, `paragraph`, `heading` cấp 1 đến 3 và `text` với mark `bold` hoặc `italic`.
 public static class DescriptionSchema
 {
-    // Giới hạn text bảo vệ bộ nhớ và chi phí tạo embedding cho tìm kiếm.
+    // Giới hạn text bảo vệ bộ nhớ và kích thước bản ghi JSON lưu trong DB.
     public const int MaxTextLength = 20_000;
 
     // Giới hạn số nút giữ cây hiển thị và bản ghi JSON ở kích thước vừa phải.

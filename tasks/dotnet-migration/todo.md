@@ -65,12 +65,12 @@ Kế hoạch đầy đủ ở `tasks/dotnet-migration/plan.md`. Mỗi task phả
 Không dùng migration `Down` để hoàn tác ghi nhận mốc. Migration `Down` xóa bảng ứng dụng.
 
 1. So schema DB đích với `apps/backend/db/reference-schema.sql`.
-   Lệnh ghi nhận chỉ kiểm tra tên bảng, enum và extension.
+   Lệnh ghi nhận chỉ kiểm tra tên bảng và enum.
    Lệnh không kiểm tra mọi cột hoặc index.
 2. Đặt `DATABASE_URL` tới DB đã có schema đúng.
 3. Chạy `psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f apps/backend/db/adopt-existing-schema.sql` trong Bash.
    Dùng `$env:DATABASE_URL` thay cho `"$DATABASE_URL"` khi chạy PowerShell.
-4. Kiểm tra ba bảng lịch sử trong `ef_identity`, `ef_ai_gateway` và `ef_catalog`.
+4. Kiểm tra hai bảng lịch sử trong `ef_identity` và `ef_catalog`.
    Mỗi bảng có một bản ghi `PrismaBaseline`.
 
 **Tạo schema trên DB trống:**

@@ -4,7 +4,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Infrastructure;
-using Pickory.Modules.AiGateway.Persistence;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Identity.Persistence;
@@ -17,11 +16,10 @@ namespace Pickory.IntegrationTests.Database;
 public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFactory factory)
     : IClassFixture<PickoryWebApplicationFactory>
 {
-    private static readonly string[] HistorySchemas = ["ef_identity", "ef_ai_gateway", "ef_catalog", "ef_shipping", "ef_commerce"];
+    private static readonly string[] HistorySchemas = ["ef_identity", "ef_catalog", "ef_shipping", "ef_commerce"];
 
     [Theory]
-    [InlineData("identity", "ef_identity", "20261013101735_EnableUnaccentExtension")]
-    [InlineData("ai_gateway", "ef_ai_gateway", "20261005125642_PrismaBaseline")]
+    [InlineData("identity", "ef_identity", "20261019190331_RemoveAiPermissions")]
     [InlineData("catalog", "ef_catalog", "20261013124840_EnableUnaccentExtension")]
     [InlineData("shipping", "ef_shipping", "20261019123657_AddShippingQuoteCache")]
     [InlineData("commerce", "ef_commerce", "20261019144909_AddOrderShippingFeeSource")]
@@ -33,7 +31,6 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
         DbContext context = module switch
         {
             "identity" => scope.ServiceProvider.GetRequiredService<IdentityDbContext>(),
-            "ai_gateway" => scope.ServiceProvider.GetRequiredService<AiGatewayDbContext>(),
             "catalog" => scope.ServiceProvider.GetRequiredService<CatalogDbContext>(),
             "shipping" => scope.ServiceProvider.GetRequiredService<ShippingDbContext>(),
             "commerce" => scope.ServiceProvider.GetRequiredService<CommerceDbContext>(),
@@ -125,7 +122,6 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
         var tables = module switch
         {
             "identity" => ApplicationDatabaseSchema.IdentityTables,
-            "ai_gateway" => ApplicationDatabaseSchema.AiGatewayTables,
             "catalog" => ApplicationDatabaseSchema.CatalogTables,
             "shipping" => ApplicationDatabaseSchema.ShippingTables,
             "commerce" => ApplicationDatabaseSchema.CommerceTables,
@@ -142,8 +138,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
         // Ranh giới tên ngăn `users` vô tình khớp bảng có tiền tố tương tự.
         return tables.Any(table => key.EndsWith($":public.{table}", StringComparison.Ordinal) ||
                                    key.Contains($":public.{table}.", StringComparison.Ordinal)) ||
-               enums.Any(name => key.EndsWith($":public.{name}", StringComparison.Ordinal)) ||
-               (module == "ai_gateway" && key == "extension:vector");
+               enums.Any(name => key.EndsWith($":public.{name}", StringComparison.Ordinal));
     }
 
     internal static async Task<Dictionary<string, string>> ReadHistoryAsync(DbContext context)

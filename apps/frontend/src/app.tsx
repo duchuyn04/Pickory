@@ -1,5 +1,4 @@
 import { lazy, Suspense } from 'react';
-import { AiSettingsPage } from './features/ai-gateway/admin/ai-settings-page';
 import { FallbackFeePage } from './features/shipping/admin/fallback-fee-page';
 import { ShippingSettingsPage } from './features/shipping/admin/shipping-settings-page';
 import { CommerceSettingsPage } from './features/commerce/admin/commerce-settings-page';
@@ -138,7 +137,6 @@ export function App() {
             path="conversations"
             element={<AdminPlaceholderPage title="Chăm sóc khách hàng" />}
           />
-          <Route path="ai" element={<AiSettingsPage />} />
           <Route path="shipping/settings" element={<ShippingSettingsPage />} />
           <Route path="shipping/fallback-fee" element={<FallbackFeePage />} />
           <Route path="commerce/settings" element={<CommerceSettingsPage />} />

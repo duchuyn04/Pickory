@@ -19,6 +19,15 @@ function visibleItems(actor: ActorData) {
   return filterNavGroupsByPermission(ADMIN_NAV_GROUPS, actor).flatMap((group) => group.items);
 }
 
+describe('menu back-office sau khi gỡ màn cấu hình AI', () => {
+  it('không còn mục Cấu hình AI hay đường dẫn /admin/ai', () => {
+    const items = ADMIN_NAV_GROUPS.flatMap((group) => group.items);
+
+    expect(items.map((item) => item.label)).not.toContain('Cấu hình AI');
+    expect(items.map((item) => item.path)).not.toContain('/admin/ai');
+  });
+});
+
 describe('mục menu Cấu hình bán hàng', () => {
   it('chỉ hiện với người có quyền commerce-settings:manage', () => {
     const manager = { ...baseActor, permissions: ['commerce-settings:manage'] };

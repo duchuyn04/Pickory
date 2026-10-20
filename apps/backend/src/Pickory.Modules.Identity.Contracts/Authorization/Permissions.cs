@@ -39,10 +39,6 @@ public static class Permissions
     public const string KnowledgeRead = "knowledge:read";
     public const string KnowledgeWrite = "knowledge:write";
 
-    // ai-gateway
-    public const string AiUsageRead = "ai-usage:read";
-    public const string AiSettingsManage = "ai-settings:manage";
-
     // admin-console
     public const string ReportsRead = "reports:read";
     public const string ReportsExport = "reports:export";
@@ -74,8 +70,6 @@ public static class Permissions
         ShippingSettingsManage,
         KnowledgeRead,
         KnowledgeWrite,
-        AiUsageRead,
-        AiSettingsManage,
         ReportsRead,
         ReportsExport,
     ];

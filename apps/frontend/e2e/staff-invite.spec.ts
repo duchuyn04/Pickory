@@ -5,6 +5,17 @@ import { readPasswordSetupLink } from './outbox';
 test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng quyền', async ({
   page,
 }, testInfo) => {
+  // Ghi lỗi console và lỗi trang. Cả luồng mời và đăng nhập phải có 0 lỗi và 0 cảnh báo.
+  const consoleIssues: string[] = [];
+  page.on('console', (message) => {
+    // Bỏ qua lỗi tải `favicon.ico`. Chromium có giao diện tự gọi tệp này, còn ứng dụng chưa có favicon.
+    if (message.location().url.endsWith('/favicon.ico')) return;
+    if (message.type() === 'error' || message.type() === 'warning') {
+      consoleIssues.push(`[${message.type()}] ${message.text()}`);
+    }
+  });
+  page.on('pageerror', (error) => consoleIssues.push(`[pageerror] ${error.message}`));
+
   await test.step('Admin đăng nhập và gửi lời mời sales', async () => {
     // Dùng UI đăng nhập thật để kiểm tra phiên admin đã seed.
     await page.goto('/admin/login');
@@ -59,7 +70,6 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
       'Tồn kho',
       'Danh mục',
       'Thương hiệu',
-      'Cấu hình AI',
     ];
     // `sales` không có quyền mặc định cho các trang này. Thấy mục nào ở đây nghĩa là menu hiện trang của quyền `sales` không có.
     const salesHiddenMenuLabels = [
@@ -87,4 +97,6 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
 
   // Lưu menu thực tế ngoài Git để có bằng chứng quyền của `sales`.
   await page.screenshot({ path: testInfo.outputPath('sales-menu.png'), fullPage: true });
+
+  expect(consoleIssues).toEqual([]);
 });

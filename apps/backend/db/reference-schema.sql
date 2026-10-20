@@ -20,20 +20,6 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- Name: vector; Type: EXTENSION; Schema: -; Owner: -
---
-
-CREATE EXTENSION IF NOT EXISTS vector WITH SCHEMA public;
-
-
---
--- Name: EXTENSION vector; Type: COMMENT; Schema: -; Owner: -
---
-
-COMMENT ON EXTENSION vector IS 'vector data type and ivfflat and hnsw access methods';
-
-
---
 -- Name: EmailTokenPurpose; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -95,55 +81,6 @@ CREATE TABLE public._prisma_migrations (
     rolled_back_at timestamp with time zone,
     started_at timestamp with time zone DEFAULT now() NOT NULL,
     applied_steps_count integer DEFAULT 0 NOT NULL
-);
-
-
---
--- Name: ai_embedding_cache; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.ai_embedding_cache (
-    id text NOT NULL,
-    key text NOT NULL,
-    model text NOT NULL,
-    embedding double precision[],
-    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
-);
-
-
---
--- Name: ai_settings; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.ai_settings (
-    id text DEFAULT 'singleton'::text NOT NULL,
-    "monthlyBudgetUsd" double precision NOT NULL,
-    "chatDailyLimitUser" integer NOT NULL,
-    "chatDailyLimitAnon" integer NOT NULL,
-    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    "updatedAt" timestamp(3) without time zone NOT NULL
-);
-
-
---
--- Name: ai_usage_logs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.ai_usage_logs (
-    id text NOT NULL,
-    feature text NOT NULL,
-    provider text NOT NULL,
-    model text NOT NULL,
-    "promptVersion" text,
-    "inputTokens" integer DEFAULT 0 NOT NULL,
-    "outputTokens" integer DEFAULT 0 NOT NULL,
-    "cachedTokens" integer DEFAULT 0 NOT NULL,
-    "costUsd" double precision DEFAULT 0 NOT NULL,
-    "latencyMs" integer NOT NULL,
-    status text NOT NULL,
-    "errorCode" text,
-    "actorKeyHash" text,
-    "createdAt" timestamp(3) without time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
 
@@ -416,30 +353,6 @@ ALTER TABLE ONLY public._prisma_migrations
 
 
 --
--- Name: ai_embedding_cache ai_embedding_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ai_embedding_cache
-    ADD CONSTRAINT ai_embedding_cache_pkey PRIMARY KEY (id);
-
-
---
--- Name: ai_settings ai_settings_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ai_settings
-    ADD CONSTRAINT ai_settings_pkey PRIMARY KEY (id);
-
-
---
--- Name: ai_usage_logs ai_usage_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE ONLY public.ai_usage_logs
-    ADD CONSTRAINT ai_usage_logs_pkey PRIMARY KEY (id);
-
-
---
 -- Name: audit_logs audit_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -573,48 +486,6 @@ ALTER TABLE ONLY public.user_roles
 
 ALTER TABLE ONLY public.users
     ADD CONSTRAINT users_pkey PRIMARY KEY (id);
-
-
---
--- Name: ai_embedding_cache_key_key; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE UNIQUE INDEX ai_embedding_cache_key_key ON public.ai_embedding_cache USING btree (key);
-
-
---
--- Name: ai_embedding_cache_model_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ai_embedding_cache_model_idx ON public.ai_embedding_cache USING btree (model);
-
-
---
--- Name: ai_usage_logs_actorKeyHash_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "ai_usage_logs_actorKeyHash_idx" ON public.ai_usage_logs USING btree ("actorKeyHash");
-
-
---
--- Name: ai_usage_logs_createdAt_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX "ai_usage_logs_createdAt_idx" ON public.ai_usage_logs USING btree ("createdAt");
-
-
---
--- Name: ai_usage_logs_feature_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ai_usage_logs_feature_idx ON public.ai_usage_logs USING btree (feature);
-
-
---
--- Name: ai_usage_logs_status_idx; Type: INDEX; Schema: public; Owner: -
---
-
-CREATE INDEX ai_usage_logs_status_idx ON public.ai_usage_logs USING btree (status);
 
 
 --

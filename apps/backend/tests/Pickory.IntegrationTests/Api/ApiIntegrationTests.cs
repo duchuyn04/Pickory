@@ -1,7 +1,9 @@
 using System.Net;
 using System.Text;
 using System.Text.Json;
+using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Hosting;
+using Pickory.IntegrationTests.Api.Identity;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Shared.Configuration;
 using Xunit;
@@ -14,10 +16,12 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
 {
     private readonly HttpClient _client;
     private readonly PickoryWebApplicationFactory _factory;
+    private readonly IntegrationDatabaseFixture _database;
 
-    public ApiIntegrationTests(PickoryWebApplicationFactory factory)
+    public ApiIntegrationTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
     {
         _factory = factory;
+        _database = database;
         _client = factory.CreateClient();
     }
 
@@ -198,6 +202,21 @@ public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
 
         Assert.Equal("PAYLOAD_TOO_LARGE", error.GetProperty("code").GetString());
         Assert.Equal("Kích thước dữ liệu vượt quá giới hạn 1 MB cho phép.", error.GetProperty("message").GetString());
+    }
+
+    [Theory]
+    [InlineData("/api/admin/ai/settings")]
+    [InlineData("/api/admin/ai/usage")]
+    // Module AI đã gỡ khỏi host. Admin đã đăng nhập gọi route cũ nhận 404, không nhận 200 hay 403.
+    public async Task RouteQuanTriAiDaGo_VoiPhienAdmin_TraVeHttp404(string path)
+    {
+        var (_, adminSession) = await IdentityTestData.CreateStaffSessionAsync(_database, "admin");
+        // Client không tự giữ cookie, nên request chỉ mang đúng phiên admin vừa tạo.
+        var client = _factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+
+        var response = await client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, path, $"pk_session={adminSession}"));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

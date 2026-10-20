@@ -16,7 +16,6 @@ const MODULE_GROUP_NAMES: Record<string, string> = {
   'support-desk': 'Hỗ trợ khách hàng (CSKH)',
   shipping: 'Vận chuyển',
   'knowledge-base': 'Cơ sở tri thức',
-  'ai-gateway': 'Cấu hình AI',
   'admin-console': 'Báo cáo & Tổng hợp',
 };
 

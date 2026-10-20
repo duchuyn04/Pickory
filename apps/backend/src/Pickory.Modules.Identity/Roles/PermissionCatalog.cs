@@ -44,10 +44,6 @@ public static class PermissionCatalog
         new(Permissions.KnowledgeRead, "knowledge-base", "Xem cơ sở tri thức", "Xem mọi tài liệu kể cả nội bộ"),
         new(Permissions.KnowledgeWrite, "knowledge-base", "Soạn tài liệu tri thức", "Soạn thảo, nhập và đăng tài liệu"),
 
-        // ai-gateway
-        new(Permissions.AiUsageRead, "ai-gateway", "Xem sử dụng AI", "Xem thống kê chi phí và lượt gọi AI"),
-        new(Permissions.AiSettingsManage, "ai-gateway", "Cấu hình AI", "Sửa ngân sách và hạn mức AI"),
-
         // admin-console
         new(Permissions.ReportsRead, "admin-console", "Xem báo cáo", "Xem dashboard và báo cáo tổng hợp"),
         new(Permissions.ReportsExport, "admin-console", "Xuất dữ liệu báo cáo", "Xuất báo cáo, đơn hàng ra file Excel/CSV"),

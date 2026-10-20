@@ -4,7 +4,6 @@ using Pickory.Api.Benchmark;
 using Pickory.Api.Deployment;
 using Pickory.Api.E2e;
 using Pickory.Api.Middleware;
-using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Catalog.Seeding;
 using Pickory.Modules.Commerce;
@@ -86,7 +85,6 @@ var databaseConnectionString = PostgresConnectionString.WithMaxPoolSize(
 
 // Mỗi module tự đăng ký dữ liệu và dịch vụ. `Program.cs` không phụ thuộc vào phần bên trong module.
 builder.Services.AddIdentityModule(databaseConnectionString);
-builder.Services.AddAiGatewayModule(databaseConnectionString);
 // Catalog cần biết môi trường để dừng production khi thiếu khóa Cloudinary.
 builder.Services.AddCatalogModule(databaseConnectionString, config, builder.Environment.IsProduction());
 // Shipping cần biết môi trường để dừng production khi thiếu biến GHN.
@@ -169,7 +167,6 @@ app.MapGet("/api/health", () => Results.Ok(new ApiResponse<object>(new { status 
 
 // Mỗi module tự gắn route của mình để `Program.cs` không cần biết danh sách endpoint.
 app.MapIdentityEndpoints();
-app.MapAiGatewayEndpoints();
 app.MapCatalogEndpoints();
 app.MapShippingEndpoints();
 // Route đổi trạng thái GHN giả chỉ dành cho Playwright. Host thường không gọi hàm này nên request tới route nhận 404.

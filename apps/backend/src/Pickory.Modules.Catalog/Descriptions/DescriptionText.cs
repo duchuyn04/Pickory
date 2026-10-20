@@ -10,7 +10,7 @@ public static partial class DescriptionText
     [GeneratedRegex(@"\n\s*\n+")]
     private static partial Regex ParagraphBreak();
 
-    // Text thuần dùng để tạo embedding. Mark bị bỏ, mỗi khối cách nhau một dòng trống.
+    // Text thuần dùng để dựng mô tả của trang khi sản phẩm chưa có mô tả ngắn. Mark bị bỏ, mỗi khối cách nhau một dòng trống.
     public static string ToPlainText(JsonNode document)
     {
         var blocks = new List<string>();

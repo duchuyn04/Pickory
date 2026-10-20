@@ -225,7 +225,7 @@ describe('descriptionSchema', () => {
   });
 
   it('từ chối tài liệu vượt quá 20.000 ký tự text', () => {
-    // Giới hạn dung lượng text để bảo vệ bộ nhớ và tốc độ xử lý embedding.
+    // Giới hạn dung lượng text để bảo vệ bộ nhớ và kích thước bản ghi JSON lưu trong DB.
     const longText = 'a'.repeat(DESCRIPTION_MAX_TEXT_LENGTH + 1);
     const doc = {
       type: 'doc',
@@ -291,7 +291,7 @@ describe('descriptionSchema', () => {
 
 describe('descriptionToPlainText và plainTextToDescription', () => {
   it('descriptionToPlainText giữ thứ tự, cách nhau một dòng trống và bỏ mark', () => {
-    // Tạo text sạch cho tác vụ AI embedding mà không dính cấu trúc định dạng.
+    // Tạo text thuần, không dính cấu trúc định dạng.
     const doc = {
       type: 'doc' as const,
       content: [

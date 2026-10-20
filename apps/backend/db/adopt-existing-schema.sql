@@ -1,7 +1,7 @@
 -- Dừng ngay khi SQL thất bại để `psql` không ghi nhận mốc sau một lỗi.
 \set ON_ERROR_STOP on
 
--- Giữ ba lịch sử trong cùng giao dịch để lỗi không để lại mốc áp dụng một phần.
+-- Giữ hai lịch sử trong cùng giao dịch để lỗi không để lại mốc áp dụng một phần.
 BEGIN;
 -- Khóa giao dịch ngăn hai lệnh ghi nhận cùng sửa lịch sử của DB.
 SELECT pg_advisory_xact_lock(731001, 1);
@@ -16,7 +16,6 @@ BEGIN
     FROM unnest(ARRAY[
         'users', 'roles', 'role_permissions', 'user_roles', 'sessions',
         'oauth_accounts', 'email_tokens', 'consent_records', 'audit_logs',
-        'ai_usage_logs', 'ai_settings', 'ai_embedding_cache',
         'categories', 'brands', 'products', 'skus', 'product_images',
         'product_slug_history', 'inventory_movements', 'image_deletion_jobs'
     ]) AS expected(table_name)
@@ -51,15 +50,6 @@ BEGIN
     ) THEN
         RAISE EXCEPTION 'Enum hiện có không khớp schema mốc. Không ghi nhận migration.';
     END IF;
-
-    -- Kiểm tra `vector` tại đúng schema vì lệnh ghi nhận không được tự tạo extension.
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_catalog.pg_extension extension
-        JOIN pg_catalog.pg_namespace namespace ON namespace.oid = extension.extnamespace
-        WHERE extension.extname = 'vector' AND namespace.nspname = 'public'
-    ) THEN
-        RAISE EXCEPTION 'Thiếu extension vector trong public. Không ghi nhận migration mốc.';
-    END IF;
 END
 $baseline$;
 
@@ -75,18 +65,6 @@ INSERT INTO ef_identity."__EFMigrationsHistory" ("MigrationId", "ProductVersion"
 VALUES ('20261005125639_PrismaBaseline', '10.0.12')
 ON CONFLICT ("MigrationId") DO NOTHING;
 
--- Giữ lịch sử AiGateway riêng để module không đọc migration của Identity.
-CREATE SCHEMA IF NOT EXISTS ef_ai_gateway;
-CREATE TABLE IF NOT EXISTS ef_ai_gateway."__EFMigrationsHistory" (
-    "MigrationId" character varying(150) NOT NULL,
-    "ProductVersion" character varying(32) NOT NULL,
-    CONSTRAINT "PK___EFMigrationsHistory" PRIMARY KEY ("MigrationId")
-);
--- Bỏ qua mốc đã ghi để lần chạy lại giữ nguyên lịch sử AiGateway.
-INSERT INTO ef_ai_gateway."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
-VALUES ('20261005125642_PrismaBaseline', '10.0.12')
-ON CONFLICT ("MigrationId") DO NOTHING;
-
 -- Giữ lịch sử Catalog riêng để module chỉ theo dõi migration thuộc Catalog.
 CREATE SCHEMA IF NOT EXISTS ef_catalog;
 CREATE TABLE IF NOT EXISTS ef_catalog."__EFMigrationsHistory" (
@@ -99,5 +77,5 @@ INSERT INTO ef_catalog."__EFMigrationsHistory" ("MigrationId", "ProductVersion")
 VALUES ('20261005125646_PrismaBaseline', '10.0.12')
 ON CONFLICT ("MigrationId") DO NOTHING;
 
--- Công bố ba mốc cùng lúc sau khi tất cả điều kiện đã đạt.
+-- Công bố hai mốc cùng lúc sau khi tất cả điều kiện đã đạt.
 COMMIT;

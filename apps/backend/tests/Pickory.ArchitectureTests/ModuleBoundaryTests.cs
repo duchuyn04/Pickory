@@ -1,5 +1,4 @@
 using System.Reflection;
-using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
@@ -41,7 +40,6 @@ namespace Pickory.ArchitectureTests
         private static readonly Assembly[] KnownModules =
         [
             typeof(IdentityModule).Assembly,
-            typeof(AiGatewayModule).Assembly,
             typeof(CatalogModule).Assembly,
             typeof(ShippingModule).Assembly,
             typeof(CommerceModule).Assembly,

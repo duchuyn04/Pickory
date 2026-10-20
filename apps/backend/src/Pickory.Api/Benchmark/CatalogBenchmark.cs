@@ -3,7 +3,6 @@ using System.Runtime.InteropServices;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Npgsql;
-using Pickory.Modules.AiGateway;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Catalog.Products;
 using Pickory.Modules.Catalog.Seeding;
@@ -26,9 +25,8 @@ public static class CatalogBenchmark
     {
         // Tên DB đã được kiểm trước khi dựng ứng dụng. Từ đây mọi thao tác ghi chỉ chạm vào DB benchmark.
         await CreateDatabaseIfMissingAsync(config.DatabaseUrl);
-        // Dựng schema theo thứ tự của tài liệu migration. Migration AiGateway tạo extension `vector` dùng chung.
+        // Dựng schema theo thứ tự của tài liệu migration.
         await IdentityModule.MigrateIdentityDatabaseAsync(app.Services, CancellationToken.None);
-        await AiGatewayModule.MigrateAiGatewayDatabaseAsync(app.Services, CancellationToken.None);
         await CatalogModule.MigrateCatalogDatabaseAsync(app.Services, CancellationToken.None);
         await ShippingModule.MigrateShippingDatabaseAsync(app.Services, CancellationToken.None);
 

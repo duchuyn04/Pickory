@@ -5,7 +5,6 @@ using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Pickory.IntegrationTests.Infrastructure;
-using Pickory.Modules.AiGateway.Persistence;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Identity.Persistence;
@@ -26,23 +25,21 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
         await using var scope = factory.Services.CreateAsyncScope();
         var identity = scope.ServiceProvider.GetRequiredService<IdentityDbContext>();
         var catalog = scope.ServiceProvider.GetRequiredService<CatalogDbContext>();
-        var aiGateway = scope.ServiceProvider.GetRequiredService<AiGatewayDbContext>();
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
         var commerce = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
         AssertTestConnection(identity);
         AssertTestConnection(catalog);
-        AssertTestConnection(aiGateway);
         AssertTestConnection(shipping);
         AssertTestConnection(commerce);
 
         // Mỗi module chỉ được sở hữu bảng đã chỉ định, không kéo quan hệ module khác vào model.
         AssertModuleTables(identity, ApplicationDatabaseSchema.IdentityTables);
         AssertModuleTables(catalog, ApplicationDatabaseSchema.CatalogTables);
-        AssertModuleTables(aiGateway, ApplicationDatabaseSchema.AiGatewayTables);
         AssertModuleTables(shipping, ApplicationDatabaseSchema.ShippingTables);
         AssertModuleTables(commerce, ApplicationDatabaseSchema.CommerceTables);
-        var model = ApplicationDatabaseSchema.ReadModel([identity, catalog, aiGateway, shipping, commerce]);
-        Assert.Equal(37, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
+        var model = ApplicationDatabaseSchema.ReadModel([identity, catalog, shipping, commerce]);
+        // Mỗi module sở hữu số bảng cố định: identity 9, catalog 8, shipping 7, commerce 10. Ba bảng AI đã gỡ nên tổng là 34.
+        Assert.Equal(34, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
 
         // Metadata thực phải khớp dump, kể cả thứ tự cột, cập nhật khóa ngoại và mô tả extension.
         var actual = await ApplicationDatabaseSchema.ReadAsync(identity);

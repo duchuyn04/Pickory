@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-// Giới hạn độ dài text để bảo vệ bộ nhớ và hiệu năng của tác vụ AI embedding.
+// Giới hạn độ dài text để bảo vệ bộ nhớ và kích thước bản ghi JSON lưu trong DB.
 export const DESCRIPTION_MAX_TEXT_LENGTH = 20_000;
 
 // Giới hạn tổng số nút để tránh phình to cây DOM và tài liệu JSON lưu trữ.

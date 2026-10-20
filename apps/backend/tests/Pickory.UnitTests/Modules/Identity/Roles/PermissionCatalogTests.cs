@@ -15,6 +15,15 @@ public class PermissionCatalogTests
     }
 
     [Fact]
+    // Module AI đã gỡ. Danh mục không còn nhóm `ai-gateway`, và hai mã quyền AI không còn là quyền hợp lệ.
+    public void Entries_HaveNoAiGroupAndAiPermissionsAreUnknown()
+    {
+        Assert.DoesNotContain(PermissionCatalog.Entries, entry => entry.Group == "ai-gateway");
+        Assert.False(Permissions.IsKnown("ai-usage:read"));
+        Assert.False(Permissions.IsKnown("ai-settings:manage"));
+    }
+
+    [Fact]
     // Nhóm, tên và mô tả giữ nguyên bản Node. Frontend gom quyền theo `group` và hiển thị `name`.
     public void Entries_KeepNodeMetadata()
     {

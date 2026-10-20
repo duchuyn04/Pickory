@@ -107,7 +107,6 @@ describe('AdminLayout', () => {
       'Thương hiệu',
       'Nhân viên',
       'Quản lý Role',
-      'Cấu hình AI',
       'Vận chuyển',
       'Phí ship dự phòng',
       'Cấu hình bán hàng',

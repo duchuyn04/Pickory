@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Pickory.Api.Deployment;
 using Xunit;
 
@@ -19,6 +20,17 @@ public sealed class DatabaseMigrationCommandTests
     }
 
     [Fact]
+    // Danh sách bước thật gồm bốn module còn lại theo thứ tự phụ thuộc, rồi bước dọn dấu vết module AI đã gỡ ở cuối.
+    public void CreateSteps_ListsRemainingModulesInDependencyOrderThenAiCleanup()
+    {
+        var services = new ServiceCollection().BuildServiceProvider();
+
+        var steps = DatabaseMigrationCommand.CreateSteps(services);
+
+        Assert.Equal(["Identity", "Catalog", "Shipping", "Commerce", "AiGatewayCleanup"], steps.Select(step => step.ModuleName));
+    }
+
+    [Fact]
     // Mọi bước chạy theo đúng thứ tự. Lệnh trả mã 0 để Render triển khai tiếp.
     public async Task RunStepsAsync_RunsStepsInOrderAndReturnsZero()
     {
@@ -26,8 +38,8 @@ public sealed class DatabaseMigrationCommandTests
         DatabaseMigrationStep[] steps =
         [
             CreateRecordingStep("Identity", executedModules),
-            CreateRecordingStep("AiGateway", executedModules),
             CreateRecordingStep("Catalog", executedModules),
+            CreateRecordingStep("Shipping", executedModules),
         ];
         var output = new StringWriter();
         var error = new StringWriter();
@@ -35,8 +47,8 @@ public sealed class DatabaseMigrationCommandTests
         var exitCode = await DatabaseMigrationCommand.RunStepsAsync(steps, output, error, CancellationToken.None);
 
         Assert.Equal(0, exitCode);
-        Assert.Equal(["Identity", "AiGateway", "Catalog"], executedModules);
-        Assert.Contains("Migration Catalog đã áp xong.", output.ToString());
+        Assert.Equal(["Identity", "Catalog", "Shipping"], executedModules);
+        Assert.Contains("Migration Shipping đã áp xong.", output.ToString());
         Assert.Empty(error.ToString());
     }
 
@@ -48,8 +60,8 @@ public sealed class DatabaseMigrationCommandTests
         DatabaseMigrationStep[] steps =
         [
             CreateRecordingStep("Identity", executedModules),
-            new("AiGateway", _ => throw new InvalidOperationException("extension vector không tạo được")),
-            CreateRecordingStep("Catalog", executedModules),
+            new("Catalog", _ => throw new InvalidOperationException("không tạo được bảng sản phẩm")),
+            CreateRecordingStep("Shipping", executedModules),
         ];
         var output = new StringWriter();
         var error = new StringWriter();
@@ -58,8 +70,8 @@ public sealed class DatabaseMigrationCommandTests
 
         Assert.Equal(1, exitCode);
         Assert.Equal(["Identity"], executedModules);
-        Assert.Equal("Migration AiGateway thất bại: extension vector không tạo được", error.ToString().Trim());
-        Assert.DoesNotContain("Catalog", output.ToString());
+        Assert.Equal("Migration Catalog thất bại: không tạo được bảng sản phẩm", error.ToString().Trim());
+        Assert.DoesNotContain("Shipping", output.ToString());
     }
 
     [Fact]

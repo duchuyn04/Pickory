@@ -35,27 +35,6 @@ public record AppConfig
 
     public string GoogleClientSecret { get; init; } = "mock_google_client_secret";
 
-    // Không có model chat mặc định. Người vận hành phải xác nhận ID model trước khi dùng khóa thật.
-    public string LlmModel { get; init; } = string.Empty;
-
-    public string LlmBaseUrl { get; init; } = "https://api.deepseek.com";
-
-    public string LlmApiKey { get; init; } = string.Empty;
-
-    public string EmbeddingApiKey { get; init; } = string.Empty;
-
-    public string EmbeddingModel { get; init; } = "text-embedding-3-small";
-
-    // Ba giá trị sau chỉ khởi tạo bảng `ai_settings`. Thay đổi sau đó lưu trong DB.
-    public double AiMonthlyBudgetUsd { get; init; } = 30;
-
-    public int AiChatDailyLimitUser { get; init; } = 50;
-
-    public int AiChatDailyLimitAnon { get; init; } = 15;
-
-    // Bật test gọi API AI thật. Test thường không gọi provider thật để không tốn tiền.
-    public bool AiLiveTests { get; init; }
-
     // Khóa Cloudinary để ký yêu cầu tải ảnh và xóa ảnh. Chuỗi rỗng nghĩa là chưa cấu hình.
     public string CloudinaryCloudName { get; init; } = string.Empty;
 
@@ -171,27 +150,6 @@ public record AppConfig
         var googleClientId = configuration["GOOGLE_CLIENT_ID"];
         var googleClientSecret = configuration["GOOGLE_CLIENT_SECRET"];
 
-        var llmBaseUrl = configuration["LLM_BASE_URL"];
-        if (string.IsNullOrWhiteSpace(llmBaseUrl))
-        {
-            llmBaseUrl = "https://api.deepseek.com";
-        }
-        else if (!IsValidAbsoluteUrl(llmBaseUrl))
-        {
-            // API không gửi khóa provider tới địa chỉ không hợp lệ.
-            throw new InvalidOperationException("Biến môi trường LLM_BASE_URL phải là một URL tuyệt đối hợp lệ.");
-        }
-
-        var llmApiKey = configuration["LLM_API_KEY"] ?? string.Empty;
-        var llmModel = (configuration["LLM_MODEL"] ?? string.Empty).Trim();
-        // Có khóa mà thiếu model thì dừng khởi động. Thông báo không chứa khóa để khóa không lọt vào log.
-        if (!string.IsNullOrEmpty(llmApiKey) && llmModel.Length == 0)
-        {
-            throw new InvalidOperationException("LLM_MODEL bắt buộc khi có LLM_API_KEY.");
-        }
-
-        var embeddingModel = configuration["EMBEDDING_MODEL"];
-
         var cloudinaryCloudName = (configuration["CLOUDINARY_CLOUD_NAME"] ?? string.Empty).Trim();
         var cloudinaryApiKey = (configuration["CLOUDINARY_API_KEY"] ?? string.Empty).Trim();
         var cloudinaryApiSecret = (configuration["CLOUDINARY_API_SECRET"] ?? string.Empty).Trim();
@@ -228,15 +186,6 @@ public record AppConfig
             TrustProxy = trustProxy,
             GoogleClientId = string.IsNullOrWhiteSpace(googleClientId) ? "mock_google_client_id" : googleClientId,
             GoogleClientSecret = string.IsNullOrWhiteSpace(googleClientSecret) ? "mock_google_client_secret" : googleClientSecret,
-            LlmModel = llmModel,
-            LlmBaseUrl = llmBaseUrl,
-            LlmApiKey = llmApiKey,
-            EmbeddingApiKey = configuration["EMBEDDING_API_KEY"] ?? string.Empty,
-            EmbeddingModel = string.IsNullOrWhiteSpace(embeddingModel) ? "text-embedding-3-small" : embeddingModel,
-            AiMonthlyBudgetUsd = ReadNonNegativeNumber(configuration, "AI_MONTHLY_BUDGET_USD", 30),
-            AiChatDailyLimitUser = ReadPositiveInteger(configuration, "AI_CHAT_DAILY_LIMIT_USER", 50),
-            AiChatDailyLimitAnon = ReadPositiveInteger(configuration, "AI_CHAT_DAILY_LIMIT_ANON", 15),
-            AiLiveTests = ReadLiveTestsFlag(configuration),
             CloudinaryCloudName = cloudinaryCloudName,
             CloudinaryApiKey = cloudinaryApiKey,
             CloudinaryApiSecret = cloudinaryApiSecret,
@@ -249,26 +198,6 @@ public record AppConfig
             ApiDocsInteractive = ReadZeroOrOneFlag(configuration, "API_DOCS_INTERACTIVE"),
             SepayWebhookApiKey = (configuration["SEPAY_WEBHOOK_API_KEY"] ?? string.Empty).Trim(),
         };
-    }
-
-    private static double ReadNonNegativeNumber(IConfiguration configuration, string key, double defaultValue)
-    {
-        var rawValue = configuration[key];
-        if (string.IsNullOrWhiteSpace(rawValue))
-        {
-            return defaultValue;
-        }
-
-        // Ngân sách âm hoặc vô hạn làm phép chia tỉ lệ ngân sách sai, nên API dừng khởi động.
-        var isValid = double.TryParse(rawValue, NumberStyles.Float, CultureInfo.InvariantCulture, out var value)
-            && double.IsFinite(value)
-            && value >= 0;
-        if (!isValid)
-        {
-            throw new InvalidOperationException($"Biến môi trường {key} phải là số hữu hạn không âm.");
-        }
-
-        return value;
     }
 
     // Biến tùy chọn. Rỗng nghĩa là không giới hạn thêm. Giá trị ngoài khoảng làm API dừng khi khởi động.
@@ -290,28 +219,6 @@ public record AppConfig
         }
 
         return value;
-    }
-
-    private static int ReadPositiveInteger(IConfiguration configuration, string key, int defaultValue)
-    {
-        var rawValue = configuration[key];
-        if (string.IsNullOrWhiteSpace(rawValue))
-        {
-            return defaultValue;
-        }
-
-        // Hạn mức là số lượt chat. Giá trị lẻ hoặc bằng 0 không có nghĩa, nên API dừng khởi động.
-        if (!int.TryParse(rawValue, NumberStyles.Integer, CultureInfo.InvariantCulture, out var value) || value <= 0)
-        {
-            throw new InvalidOperationException($"Biến môi trường {key} phải là số nguyên dương.");
-        }
-
-        return value;
-    }
-
-    private static bool ReadLiveTestsFlag(IConfiguration configuration)
-    {
-        return ReadZeroOrOneFlag(configuration, "AI_LIVE_TESTS");
     }
 
     private static bool ReadZeroOrOneFlag(IConfiguration configuration, string key)

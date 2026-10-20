@@ -35,17 +35,15 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             // Schema ứng dụng đã có. DB chưa có lịch sử Entity Framework Core của bất kỳ module nào.
             await context.Database.ExecuteSqlRawAsync("""
                 DROP SCHEMA ef_identity CASCADE;
-                DROP SCHEMA ef_ai_gateway CASCADE;
                 DROP SCHEMA ef_catalog CASCADE;
                 """);
             var script = DatabaseSqlFiles.Load("adopt-existing-schema.sql", removeTransaction: true);
             await context.Database.ExecuteSqlRawAsync(script);
             var stamped = await BaselineMigrationIntegrationTests.ReadHistoryAsync(context);
             Assert.Contains("20261005125639_PrismaBaseline|", stamped["ef_identity"]);
-            Assert.Contains("20261005125642_PrismaBaseline|", stamped["ef_ai_gateway"]);
             Assert.Contains("20261005125646_PrismaBaseline|", stamped["ef_catalog"]);
-            // Ba module có schema Prisma cũ chỉ có một dòng lịch sử sau khi nhận schema. Module sinh sau có thể có nhiều migration.
-            foreach (var adoptedSchema in new[] { "ef_identity", "ef_ai_gateway", "ef_catalog" })
+            // Hai module có schema Prisma cũ chỉ có một dòng lịch sử sau khi nhận schema. Module sinh sau có thể có nhiều migration.
+            foreach (var adoptedSchema in new[] { "ef_identity", "ef_catalog" })
             {
                 Assert.Single(stamped[adoptedSchema].Split('\n'));
             }
@@ -54,7 +52,7 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             Assert.Equal(originalHistory["ef_commerce"], stamped["ef_commerce"]);
             // Script chỉ ghi nhận migration mốc. Migration sinh sau mốc còn chờ `db:migrate` áp dụng, nên không được ghi nhận nhầm.
             Assert.Equal(
-                ["20261013101735_EnableUnaccentExtension"],
+                ["20261013101735_EnableUnaccentExtension", "20261019190331_RemoveAiPermissions"],
                 await context.Database.GetPendingMigrationsAsync());
 
             // Lần nhận schema thứ hai phải giữ nguyên lịch sử đã ghi, không thêm dòng hoặc đổi phiên bản.
@@ -82,9 +80,8 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
     }
 
     [Theory]
-    [InlineData("DROP TABLE public.ai_embedding_cache", "thiếu bảng")]
+    [InlineData("DROP TABLE public.image_deletion_jobs", "thiếu bảng")]
     [InlineData("ALTER TYPE public.\"UserKind\" RENAME VALUE 'staff' TO 'unknown'", "Enum")]
-    [InlineData("DROP EXTENSION vector", "vector")]
     public async Task Adoption_RefusesIncompleteOrIncompatibleSchemaWithoutStampingHistory(string invalidation, string expectedError)
     {
         // Lưu schema trước giao dịch để chứng minh lỗi điều kiện tiên quyết không để lại thay đổi.
@@ -97,7 +94,6 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             // Xóa lịch sử trước khi gây sai lệch để phát hiện việc ghi nhận baseline không hợp lệ.
             await context.Database.ExecuteSqlRawAsync("""
                 DROP SCHEMA ef_identity CASCADE;
-                DROP SCHEMA ef_ai_gateway CASCADE;
                 DROP SCHEMA ef_catalog CASCADE;
                 """);
             await context.Database.ExecuteSqlRawAsync(invalidation);
@@ -113,7 +109,7 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             // Savepoint cho phép kiểm tra trạng thái sau lỗi SQL mà không hủy toàn bộ giao dịch thử.
             await transaction.RollbackToSavepointAsync("before_adoption");
             ApplicationDatabaseSchema.AssertEqual(invalidSchema, await ApplicationDatabaseSchema.ReadAsync(context));
-            // Ba module cũ phải chưa có lịch sử. Lịch sử shipping và commerce không bị xóa ở bước này nên phải còn nguyên.
+            // Hai module cũ phải chưa có lịch sử. Lịch sử shipping và commerce không bị xóa ở bước này nên phải còn nguyên.
             var historyAfterFailure = await BaselineMigrationIntegrationTests.ReadHistoryAsync(context);
             Assert.All(historyAfterFailure.Where(entry => entry.Key is not ("ef_shipping" or "ef_commerce")),
                 entry => Assert.Equal("<missing>", entry.Value));

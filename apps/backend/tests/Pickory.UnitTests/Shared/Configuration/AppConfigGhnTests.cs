@@ -75,7 +75,7 @@ public sealed class AppConfigGhnTests
     [InlineData("true")]
     [InlineData("yes")]
     [InlineData("2")]
-    // Chỉ nhận `0` hoặc `1`, giống `AI_LIVE_TESTS`. Giá trị như `true` bị từ chối để không bật test gọi GHN thật do gõ nhầm.
+    // Chỉ nhận `0` hoặc `1`. Giá trị như `true` bị từ chối để không bật test gọi GHN thật do gõ nhầm.
     public void Load_WithInvalidGhnLiveTests_Throws(string rawValue)
     {
         var exception = Assert.Throws<InvalidOperationException>(() => Load(("GHN_LIVE_TESTS", rawValue)));

@@ -27,7 +27,6 @@ public static class DefaultRoles
             Permissions.PaymentsRead,
             Permissions.PaymentsReconcile,
             Permissions.KnowledgeRead,
-            Permissions.AiUsageRead,
             Permissions.ReportsRead,
         ]),
         new(SupportCode, "Nhân viên CSKH", IsSystem: false,

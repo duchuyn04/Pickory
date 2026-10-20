@@ -47,8 +47,6 @@ internal static class DatabaseSqlFiles
                 $"COMMENT ON SCHEMA {delimitedSchema} IS 'standard public schema';";
             // Schema tham chiếu giữ metadata mặc định của PostgreSQL, không sao chép từ DB đang kiểm tra.
             await context.Database.ExecuteSqlRawAsync(createSchemaSql);
-            // Tạo extension từ dump để sai metadata hiện tại không trở thành giá trị tham chiếu.
-            await context.Database.ExecuteSqlRawAsync("DROP EXTENSION IF EXISTS vector CASCADE;");
             // Chỉ thay định danh schema cố định để PostgreSQL dựng bản tham chiếu cách ly.
             var referenceSql = Load("reference-schema.sql").Replace("public.", $"\"{schema}\".", StringComparison.Ordinal);
             // PostgreSQL diễn giải toàn bộ SQL tham chiếu; bài kiểm thử không phân tích cấu trúc từng bảng.
@@ -57,7 +55,7 @@ internal static class DatabaseSqlFiles
         }
         finally
         {
-            // Rollback loại bỏ schema tham chiếu và khôi phục extension kể cả khi đọc metadata lỗi.
+            // Rollback loại bỏ schema tham chiếu kể cả khi đọc metadata lỗi.
             await transaction.RollbackAsync();
         }
     }
