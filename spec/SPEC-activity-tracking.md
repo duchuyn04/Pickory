@@ -76,13 +76,26 @@ User story: Là admin hoặc `sales` (`reports:read`), tôi xem phễu theo kho�
 | POST | `/api/events` | công khai | Nhận một lượt xem sản phẩm |
 | GET | `/api/admin/analytics/funnel?from=&to=` | `reports:read` | Phễu trong khoảng ngày |
 
+Route phễu `GET /api/admin/analytics/funnel`:
+
+- `from` và `to` có dạng `yyyy-MM-dd`. Hai ngày tính theo giờ `Asia/Ho_Chi_Minh` và tính cả hai đầu.
+- API trả 400 `VALIDATION_ERROR` khi query có một trong các lỗi sau:
+  - thiếu `from` hoặc `to`;
+  - ngày sai dạng `yyyy-MM-dd`;
+  - một tham số gửi nhiều lần;
+  - `from` sau `to`;
+  - khoảng dài hơn 366 ngày.
+- Response có dạng `{ data: { from, to, steps: [{ metric, count, conversionRate }] } }`.
+- `conversionRate` là số thập phân từ 0, ví dụ `0.25` là 25%. Bước đầu có `conversionRate` là `null`.
+- Bước có bước trước bằng 0 cũng có `conversionRate` là `null`.
+
 ## Data Model
 
 ```prisma
 model DailyCounter {
   date   DateTime @db.Date
   metric String   // product_view, add_to_cart, order_placed
-  value  Int
+  value  BigInt
   @@id([date, metric])
   @@map("daily_counters")
 }

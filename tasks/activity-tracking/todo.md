@@ -117,12 +117,12 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 ### ACT-11: `IActivityMetrics` và API phễu
 **Mô tả:** `IActivityMetrics.GetFunnelAsync` đọc `daily_counters` trong khoảng ngày và gọi `FunnelCalculator`. `GET /api/admin/analytics/funnel` yêu cầu quyền `reports:read`. Tham số `from` và `to` là ngày theo giờ `Asia/Ho_Chi_Minh`, tính cả hai đầu.
 **Tiêu chí nghiệm thu:**
-- [ ] Bộ dữ liệu dựng sẵn cho ra đúng số lượt và tỉ lệ đã tính tay
-- [ ] Ngày nằm ngoài khoảng `from` đến `to` không được cộng vào phễu
-- [ ] Khoảng không có dữ liệu trả ba bước với 0 lượt và tỉ lệ `null`
-- [ ] Thiếu `from` hoặc `to`, `from` sau `to`, hoặc khoảng hơn 366 ngày: API trả 400 `VALIDATION_ERROR`
-- [ ] Người thiếu `reports:read` nhận 403. Endpoint có trong ma trận quyền
-- [ ] Response theo dạng `{ data }`
+- [x] Bộ dữ liệu dựng sẵn cho ra đúng số lượt và tỉ lệ đã tính tay
+- [x] Ngày nằm ngoài khoảng `from` đến `to` không được cộng vào phễu
+- [x] Khoảng không có dữ liệu trả ba bước với 0 lượt và tỉ lệ `null`
+- [x] Thiếu `from` hoặc `to`, `from` sau `to`, hoặc khoảng hơn 366 ngày: API trả 400 `VALIDATION_ERROR`
+- [x] Người thiếu `reports:read` nhận 403. Endpoint có trong ma trận quyền
+- [x] Response theo dạng `{ data }`
 **Kiểm tra:** test tích hợp với bộ dữ liệu dựng sẵn; ma trận quyền
 **Phụ thuộc:** ACT-02, ACT-04 · **Quy mô:** S
 **File:** `apps/backend/src/Pickory.Modules.ActivityTracking/Features/AdminAnalytics/`, `apps/backend/src/Pickory.Modules.ActivityTracking/Metrics/ActivityMetrics.cs`

@@ -114,6 +114,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
         Assert.Equal("Commerce", FirstTag(paths, "/api/checkout/previews", "post"));
         Assert.Equal("Commerce", FirstTag(paths, "/api/admin/commerce/settings", "get"));
         Assert.Equal("ActivityTracking", FirstTag(paths, "/api/events", "post"));
+        Assert.Equal("ActivityTracking", FirstTag(paths, "/api/admin/analytics/funnel", "get"));
     }
 
     [Fact]

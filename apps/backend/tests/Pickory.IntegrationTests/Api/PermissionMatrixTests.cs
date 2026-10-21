@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Api.Identity;
 using Pickory.IntegrationTests.Infrastructure;
+using Pickory.Modules.ActivityTracking;
 using Pickory.Modules.Catalog;
 using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity.Contracts.Authorization;
@@ -104,6 +105,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "POST", "/api/admin/skus/dummy-id/movements", [Permissions.InventoryWrite] },
         { "GET", "/api/admin/skus/dummy-id/movements", [Permissions.ProductsRead] },
         { "GET", "/api/admin/inventory/low-stock", [Permissions.ProductsRead] },
+        { "GET", "/api/admin/analytics/funnel", [Permissions.ReportsRead] },
     };
     [Theory]
     [MemberData(nameof(BackofficeEndpoints))]
@@ -257,6 +259,18 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
                 Permissions.RefundsManage,
                 Permissions.ReviewsModerate,
             ]);
+    }
+
+    [Fact]
+    // ACT-11: route back-office của activity-tracking phải có trong ma trận, kể cả route thêm sau này.
+    public void BackofficeEndpoints_CoversAllActivityTrackingAdminEndpoints()
+    {
+        // Activity-tracking chỉ dùng quyền `reports:read` cho số liệu phễu. Quyền này nằm trong danh sách chung của identity.
+        AssertMatrixMatchesModuleAdminEndpoints(
+            "activity-tracking",
+            typeof(ActivityTrackingModule).Assembly,
+            "Pickory.Modules.ActivityTracking",
+            [Permissions.ReportsRead]);
     }
 
     // Đối chiếu hai chiều giữa route `/api/admin/` của một module và các dòng ma trận dùng quyền của module đó.

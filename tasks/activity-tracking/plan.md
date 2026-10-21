@@ -100,7 +100,7 @@ Chi tiết từng task ở `tasks/activity-tracking/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Phễu
-- [ ] ACT-11
+- [x] ACT-11
 
 ### Checkpoint A3
 - [ ] API phễu trả đúng số và tỉ lệ với bộ dữ liệu dựng sẵn

@@ -5,8 +5,11 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
+using Pickory.Modules.ActivityTracking.Contracts.Metrics;
 using Pickory.Modules.ActivityTracking.Counters;
+using Pickory.Modules.ActivityTracking.Features.AdminAnalytics;
 using Pickory.Modules.ActivityTracking.Features.CollectEvents;
+using Pickory.Modules.ActivityTracking.Metrics;
 using Pickory.Modules.ActivityTracking.Persistence;
 using Pickory.Modules.Commerce.Contracts.Events;
 using Pickory.Shared.Events;
@@ -38,6 +41,8 @@ public static class ActivityTrackingModule
         services.AddScoped<IDomainEventHandler<CartItemAddedEvent>, CartItemAddedCounterHandler>();
         // Handler đếm đặt đơn nghe `OrderPlacedEvent` của mọi cách thanh toán. Module không nghe `OrderPaidEvent`, vì đơn COD đã được đếm lúc đặt đơn.
         services.AddScoped<IDomainEventHandler<OrderPlacedEvent>, OrderPlacedCounterHandler>();
+        // Cổng số liệu cho `admin-console`. Vòng đời scoped vì cổng giữ `ActivityTrackingDbContext` của request.
+        services.AddScoped<IActivityMetrics, ActivityMetrics>();
         return services;
     }
 
@@ -49,12 +54,13 @@ public static class ActivityTrackingModule
         await scope.ServiceProvider.GetRequiredService<ActivityTrackingDbContext>().Database.MigrateAsync(cancellationToken);
     }
 
-    // Hàm để `Program.cs` gọi một lần. Route phễu của ACT-11 sẽ thêm vào đây mà không phải sửa `Program.cs`.
+    // Hàm để `Program.cs` gọi một lần. Route mới của module thêm vào đây mà không phải sửa `Program.cs`.
     public static IEndpointRouteBuilder MapActivityTrackingEndpoints(this IEndpointRouteBuilder endpoints)
     {
         // Nhóm không thêm tiền tố. Nhóm chỉ gắn tag `ActivityTracking` cho mọi route của module trong tài liệu OpenAPI.
         var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("ActivityTracking");
         CollectEventsEndpoints.Map(moduleRoutes);
+        AdminAnalyticsEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }
