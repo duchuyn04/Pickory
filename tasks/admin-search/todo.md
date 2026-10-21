@@ -114,3 +114,89 @@ Quy ước:
 - [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI1 · **Quy mô:** M
+
+---
+
+## Phase 3: Trải nghiệm danh sách
+
+Người dùng yêu cầu ngày 2026-10-20. Phase này chỉ sửa frontend. Quyết định thiết kế: mục 14 đến 19 của `tasks/admin-search/plan.md`.
+
+### FLT-UI5: Ô tìm kiếm có nút xóa, phím Enter và phím Esc
+**Mô tả:** `SearchInput` thêm nút xóa từ khóa. Phím Enter gửi từ khóa ngay. Phím Esc xóa ô. Cả 8 màn đang dùng `SearchInput` nhận thay đổi này.
+**Tiêu chí nghiệm thu:**
+- [ ] Nút xóa chỉ hiện khi ô có chữ. Bấm nút thì ô rỗng, `onSearch('')` chạy ngay một lần, và con trỏ quay về ô
+- [ ] Phím Enter gọi `onSearch` ngay với từ khóa hiện tại. Lần gọi đang hẹn giờ bị hủy, nên API không nhận hai request
+- [ ] Phím Esc xóa ô có chữ và gọi `onSearch('')` ngay. Ô đã rỗng thì Esc không gọi `onSearch`
+- [ ] Nút xóa có tên truy cập `Xóa từ khóa` và dùng được bằng bàn phím
+- [ ] Trình duyệt không hiện thêm nút xóa riêng của ô `type="search"`
+- [ ] Test hiện có của `SearchInput` và 8 màn dùng nó vẫn đạt
+**Kiểm tra:** Vitest; Playwright `--headed`
+**Phụ thuộc:** FLT-UI1 · **Quy mô:** S
+
+### FLT-UI6: Màn sản phẩm giữ bảng cũ, tô đậm chữ khớp, hiện bộ lọc đang áp dụng
+**Mô tả:** Màn `/admin/products` giữ bảng cũ trong lúc tải kết quả mới. Màn tô đậm phần tên và mã SKU khớp từ khóa. Màn có thanh bộ lọc đang áp dụng.
+**Tiêu chí nghiệm thu:**
+- [ ] Đổi từ khóa hoặc bộ lọc thì bảng cũ vẫn hiện, mờ đi, và có `aria-busy="true"` cho tới khi có kết quả mới
+- [ ] Ô tìm hiện dấu hiệu đang tải trong lúc chờ kết quả. Lần tải đầu tiên vẫn hiện `Đang tải sản phẩm...`
+- [ ] Gõ `dien thoai` thì chữ `Điện thoại` trong tên được bọc trong `<mark>`. Phép so khớp không phân biệt dấu và hoa thường
+- [ ] Mã SKU khớp từ khóa cũng được tô đậm. Từ khóa rỗng thì bảng không có `<mark>`
+- [ ] Thanh bộ lọc hiện một nhãn cho mỗi bộ lọc đang bật: từ khóa, trạng thái, danh mục, sắp hết hàng
+- [ ] Bấm nút X trên một nhãn thì chỉ bộ lọc đó bị xóa khỏi URL. Danh sách quay về trang 1
+- [ ] Nút `Xóa bộ lọc` xóa mọi bộ lọc. Thanh bộ lọc ẩn khi không có bộ lọc nào
+- [ ] Thanh bộ lọc hiện số kết quả, ví dụ `12 sản phẩm khớp "iphone"`
+- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+**Kiểm tra:** Vitest; Playwright `--headed`
+**Phụ thuộc:** FLT-UI5 · **Quy mô:** M
+
+### FLT-UI7: Màn sản phẩm hiện ảnh đầu tiên
+**Mô tả:** Bảng ở `/admin/products` thêm ảnh nhỏ của từng sản phẩm, đặt trước tên. Ảnh lấy từ trường `images` mà `GET /api/admin/products` đã trả. Backend không đổi.
+**Tiêu chí nghiệm thu:**
+- [ ] Mỗi dòng hiện ảnh có `position` nhỏ nhất trong `images` của sản phẩm đó
+- [ ] Ảnh Cloudinary đi qua `withCloudinaryTransform` với chiều rộng 200. Trình duyệt không tải ảnh gốc
+- [ ] Ảnh có `alt` lấy từ `alt` của ảnh. `alt` rỗng thì dùng tên sản phẩm
+- [ ] Ảnh có kích thước cố định và `loading="lazy"`. Bảng không bị xô dòng khi ảnh tải xong
+- [ ] Sản phẩm không có ảnh hiện khung giữ chỗ cùng kích thước, có biểu tượng ảnh và tên truy cập `Chưa có ảnh`
+- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+**Kiểm tra:** Vitest; Playwright `--headed`
+**Phụ thuộc:** không · **Quy mô:** S
+
+### FLT-UI8: Hàm STT dùng chung và màn sản phẩm, tồn kho, biến động kho
+**Mô tả:** Thêm hàm thuần tính số thứ tự (STT) của một dòng. Màn `/admin/products`, `/admin/inventory` và màn biến động kho của SKU thêm cột `STT` ở đầu bảng.
+**Tiêu chí nghiệm thu:**
+- [ ] Hàm trả `(page - 1) * limit + index + 1`. Trang 1 bắt đầu từ 1. Trang 2 với `limit` 20 bắt đầu từ 21
+- [ ] Ba màn đọc `page` và `limit` từ response, không từ hằng số trong màn
+- [ ] Cột `STT` là cột đầu tiên, có tiêu đề `STT`, căn phải
+- [ ] Test E2E hiện có của ba màn vẫn đạt sau khi bảng thêm cột
+- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+**Kiểm tra:** Vitest; Playwright `--headed`
+**Phụ thuộc:** FLT-UI7 · **Quy mô:** M
+
+### FLT-UI9: STT cho màn danh mục, thương hiệu và vai trò
+**Mô tả:** Ba màn lọc trên dữ liệu đã tải, nên STT đánh theo danh sách đang hiện. Màn danh mục đánh STT theo cây.
+**Tiêu chí nghiệm thu:**
+- [ ] Màn thương hiệu và vai trò đánh STT 1, 2, 3 theo thứ tự đang hiện. Lọc xong thì STT đánh lại từ 1
+- [ ] Màn danh mục đánh danh mục gốc 1, 2, 3. Danh mục con đánh theo cha: 1.1, 1.2
+- [ ] Lọc danh mục xong thì STT đánh lại theo cây đang hiện
+- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+**Kiểm tra:** Vitest; Playwright `--headed`
+**Phụ thuộc:** FLT-UI8 · **Quy mô:** M
+
+### FLT-UI10: STT cho màn khách hàng, nhân viên và nhật ký thao tác
+**Mô tả:** Màn `/admin/customers`, `/admin/staff` và `/admin/audit-logs` thêm cột `STT` bằng hàm của FLT-UI8.
+**Tiêu chí nghiệm thu:**
+- [ ] Ba màn dùng hàm STT của FLT-UI8 với `page` và `limit` từ response
+- [ ] Cột `STT` là cột đầu tiên, có tiêu đề `STT`, căn phải
+- [ ] Test E2E hiện có của ba màn vẫn đạt sau khi bảng thêm cột
+- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+**Kiểm tra:** Vitest; Playwright `--headed`
+**Phụ thuộc:** FLT-UI8 · **Quy mô:** M
+
+### FLT-UI11: STT cho màn đơn hàng, đối soát và đánh giá
+**Mô tả:** Màn `/admin/orders`, `/admin/payments` và `/admin/reviews` thêm cột `STT` bằng hàm của FLT-UI8.
+**Tiêu chí nghiệm thu:**
+- [ ] Ba màn dùng hàm STT của FLT-UI8 với `page` và `limit` từ response
+- [ ] Cột `STT` là cột đầu tiên, có tiêu đề `STT`, căn phải
+- [ ] Test E2E hiện có của ba màn vẫn đạt sau khi bảng thêm cột
+- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+**Kiểm tra:** Vitest; Playwright `--headed`
+**Phụ thuộc:** FLT-UI8 · **Quy mô:** M

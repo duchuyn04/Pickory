@@ -10,6 +10,15 @@ Tìm kiếm ở backend hiện so sánh không phân biệt hoa thường, nhưn
 
 Danh sách task chi tiết: `tasks/admin-search/todo.md`.
 
+Ngày 2026-10-20 người dùng thêm Phase 3 cho trải nghiệm danh sách. Phase 3 chỉ sửa frontend:
+
+- Ô tìm kiếm có nút xóa, phím Enter và phím Esc.
+- Màn sản phẩm giữ bảng cũ trong lúc tải, tô đậm chữ khớp, hiện bộ lọc đang áp dụng.
+- Màn sản phẩm hiện ảnh đầu tiên của từng sản phẩm.
+- Mọi màn danh sách admin có cột số thứ tự (STT).
+
+Phase 3 chạy trên nhánh `feat/admin-list-ux`, tách từ `feat/activity-tracking`. Nhánh này có đủ màn đơn hàng, đối soát và đánh giá của `commerce`.
+
 ## Phạm vi
 
 Người dùng chọn bốn nhóm màn:
@@ -39,7 +48,18 @@ FLT-UI1 hook và component dùng chung cho bộ lọc
  ├── FLT-UI2 màn khách hàng và nhân viên (cần FLT-02, FLT-03)
  ├── FLT-UI3 màn sản phẩm, tồn kho, biến động kho (cần FLT-04)
  └── FLT-UI4 màn danh mục, thương hiệu, vai trò (chỉ frontend)
+
+Phase 3 (chỉ frontend)
+FLT-UI5 ô tìm kiếm: nút xóa, Enter, Esc
+ └── FLT-UI6 màn sản phẩm: giữ bảng cũ, tô đậm, thanh bộ lọc
+FLT-UI7 màn sản phẩm: ảnh đầu tiên
+ └── FLT-UI8 hàm STT, màn sản phẩm, tồn kho, biến động kho
+      ├── FLT-UI9 STT màn danh mục, thương hiệu, vai trò
+      ├── FLT-UI10 STT màn khách hàng, nhân viên, nhật ký thao tác
+      └── FLT-UI11 STT màn đơn hàng, đối soát, đánh giá
 ```
+
+FLT-UI6, FLT-UI7 và FLT-UI8 cùng sửa `products-page.tsx`. Ba task chạy lần lượt, không chạy song song.
 
 ## Architecture Decisions
 
@@ -63,6 +83,12 @@ FLT-UI1 hook và component dùng chung cho bộ lọc
 11. **Ô tìm kiếm chờ 300 ms.** Ô tìm kiếm gửi request sau 300 ms kể từ lần gõ cuối. Mỗi phím gõ không tạo một request.
 12. **Tìm ở trình duyệt cho danh sách nhỏ.** Danh mục, thương hiệu và vai trò lọc ngay trên dữ liệu đã tải. Hàm `normalizeForSearch` chuyển từ `features/shipping/address-search.ts` sang `apps/frontend/src/shared/`.
 13. **Route theo REST mức tài nguyên.** Plan chỉ thêm tham số query vào route `GET` có sẵn. Plan không thêm route mới.
+14. **STT tính ở frontend.** STT không phải cột trong DB. Màn có phân trang tính `(page - 1) * limit + index + 1` từ `page` và `limit` của response. Trang 2 tiếp số của trang 1.
+15. **STT của danh sách lọc ở trình duyệt.** Màn thương hiệu và vai trò đánh số theo danh sách đang hiện. Màn danh mục đánh gốc 1, 2 và con 1.1, 1.2. Lọc xong thì số đánh lại.
+16. **Giữ bảng cũ khi tải.** Màn sản phẩm dùng `placeholderData: keepPreviousData` của TanStack Query. Bảng không nháy sang trạng thái rỗng giữa hai lần tìm.
+17. **Phím tắt của ô tìm kiếm.** Enter gửi từ khóa ngay và hủy lần gửi đang hẹn giờ. Esc xóa ô. Nút xóa thay nút riêng của trình duyệt, để mọi trình duyệt có cùng giao diện.
+18. **Tô đậm không dấu.** Màn so khớp từng ký tự sau khi bỏ dấu, rồi bọc đoạn khớp của chuỗi gốc trong `<mark>`. Cách này giữ đúng vị trí ký tự có dấu.
+19. **Ảnh đầu tiên lấy từ response có sẵn.** `GET /api/admin/products` đã trả `images` sắp theo `position`. Màn dùng ảnh đầu, cỡ 200 px qua Cloudinary. Backend không đổi.
 
 ## Task List
 
@@ -82,4 +108,12 @@ Chi tiết từng task ở `tasks/admin-search/todo.md`.
 ### Checkpoint S2
 - [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test`) sạch
 - [x] Mở lại link có bộ lọc cho cùng danh sách
+- [ ] Review với người dùng
+
+### Phase 3: Trải nghiệm danh sách
+- [ ] FLT-UI5 · [ ] FLT-UI6 · [ ] FLT-UI7 · [ ] FLT-UI8 · [ ] FLT-UI9 · [ ] FLT-UI10 · [ ] FLT-UI11
+
+### Checkpoint S3
+- [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test`) sạch
+- [ ] Toàn bộ E2E `--headed` đạt sau khi các bảng thêm cột `STT`
 - [ ] Review với người dùng
