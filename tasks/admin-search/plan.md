@@ -111,9 +111,9 @@ Chi tiết từng task ở `tasks/admin-search/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Trải nghiệm danh sách
-- [x] FLT-UI5 · [x] FLT-UI6 · [x] FLT-UI7 · [x] FLT-UI8 · [x] FLT-UI9 · [x] FLT-UI10 · [ ] FLT-UI11
+- [x] FLT-UI5 · [x] FLT-UI6 · [x] FLT-UI7 · [x] FLT-UI8 · [x] FLT-UI9 · [x] FLT-UI10 · [x] FLT-UI11
 
 ### Checkpoint S3
-- [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test`) sạch
-- [ ] Toàn bộ E2E `--headed` đạt sau khi các bảng thêm cột `STT`
+- [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test`) sạch
+- [x] Toàn bộ E2E `--headed` đạt sau khi các bảng thêm cột `STT`
 - [ ] Review với người dùng

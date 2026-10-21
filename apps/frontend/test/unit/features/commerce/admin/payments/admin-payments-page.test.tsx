@@ -46,8 +46,12 @@ function matchedTransaction(id: string) {
   });
 }
 
-function page(items: unknown[], total = items.length) {
-  return { items, total, page: 1, limit: 20 };
+function page(
+  items: unknown[],
+  total = items.length,
+  paging: { page: number; limit: number } = { page: 1, limit: 20 },
+) {
+  return { items, total, ...paging };
 }
 
 function codOrder(code: string) {
@@ -82,6 +86,9 @@ interface Scenario {
   permissions?: string[];
   transactions?: unknown[];
   codOrders?: unknown[];
+  // Phân trang response của từng bảng. Hai bảng có thể trả `page` và `limit` khác nhau.
+  transactionsPaging?: { page: number; limit: number };
+  codPaging?: { page: number; limit: number };
   // Response cho `PATCH` giao dịch. Mặc định trả giao dịch đã khớp.
   onPatch?: (init?: RequestInit) => unknown;
   // Response cho `GET /api/admin/orders/{mã}` khi tìm mã đơn.
@@ -98,6 +105,8 @@ function open(scenario: Scenario = {}) {
     permissions = RECONCILER,
     transactions = [transaction('tx-1'), matchedTransaction('tx-2')],
     codOrders = [codOrder('PK-COD-1')],
+    transactionsPaging,
+    codPaging,
     onPatch,
     onLookup,
     onCodReceipt,
@@ -105,11 +114,15 @@ function open(scenario: Scenario = {}) {
   harness = createHarness(actorWith(permissions), (requested, init) => {
     const method = init?.method ?? 'GET';
     const path = new URL(requested, 'http://localhost').pathname;
-    if (path === TRANSACTIONS_PATH && method === 'GET') return page(transactions);
+    if (path === TRANSACTIONS_PATH && method === 'GET') {
+      return page(transactions, transactions.length, transactionsPaging);
+    }
     if (path.startsWith(`${TRANSACTIONS_PATH}/`) && method === 'PATCH') {
       return onPatch ? onPatch(init) : transaction('tx-1', { matchStatus: 'matched' });
     }
-    if (path === '/api/admin/orders' && method === 'GET') return page(codOrders);
+    if (path === '/api/admin/orders' && method === 'GET') {
+      return page(codOrders, codOrders.length, codPaging);
+    }
     if (path.endsWith('/cod-receipt') && method === 'PUT') {
       return onCodReceipt ? onCodReceipt() : { code: 'PK-COD-1' };
     }
@@ -448,5 +461,123 @@ describe('màn đối soát: tab trên URL', () => {
     await waitFor(() => tab('SePay') !== undefined, 'dải tab');
 
     expect(tab('COD')).toBeUndefined();
+  });
+});
+
+describe('màn đối soát có cột STT', () => {
+  const transactionList = [transaction('tx-1'), transaction('tx-2')];
+  const codList = [codOrder('PK-COD-1'), codOrder('PK-COD-2')];
+
+  function rowNumbers() {
+    return [...harness.container.querySelectorAll('tbody tr')].map(
+      (row) => row.firstElementChild!.textContent,
+    );
+  }
+
+  describe('tab SePay', () => {
+    it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+      await open({ transactions: transactionList });
+      await waitForRows();
+
+      const headerCell = harness.container.querySelector('thead th')!;
+      expect(headerCell.textContent).toBe('STT');
+      expect(headerCell.getAttribute('scope')).toBe('col');
+      expect(headerCell.classList.contains('num')).toBe(true);
+      expect(headerCell.classList.contains('col-row-number')).toBe(true);
+      const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+      expect(firstCell.tagName).toBe('TD');
+      expect(firstCell.classList.contains('num')).toBe(true);
+      expect(harness.container.querySelector('tbody tr th[scope="row"]')).not.toBeNull();
+    });
+
+    it('response page 2, limit 20 thì STT là 21 và 22', async () => {
+      await open({ transactions: transactionList, transactionsPaging: { page: 2, limit: 20 } });
+      await waitForRows();
+
+      expect(rowNumbers()).toEqual(['21', '22']);
+    });
+
+    it('response page 3, limit 5 thì STT bắt đầu từ 11, không theo hằng số của màn', async () => {
+      await open({ transactions: transactionList, transactionsPaging: { page: 3, limit: 5 } });
+      await waitForRows();
+
+      expect(rowNumbers()).toEqual(['11', '12']);
+    });
+  });
+
+  describe('tab COD', () => {
+    it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+      await open({ url: '/admin/payments?tab=cod', codOrders: codList });
+      await waitForRows();
+
+      const headerCell = harness.container.querySelector('thead th')!;
+      expect(headerCell.textContent).toBe('STT');
+      expect(headerCell.getAttribute('scope')).toBe('col');
+      expect(headerCell.classList.contains('num')).toBe(true);
+      expect(headerCell.classList.contains('col-row-number')).toBe(true);
+      const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+      expect(firstCell.tagName).toBe('TD');
+      expect(firstCell.classList.contains('num')).toBe(true);
+      expect(harness.container.querySelector('tbody tr th[scope="row"]')).not.toBeNull();
+    });
+
+    it('response page 2, limit 20 thì STT là 21 và 22', async () => {
+      await open({
+        url: '/admin/payments?tab=cod',
+        codOrders: codList,
+        codPaging: { page: 2, limit: 20 },
+      });
+      await waitForRows();
+
+      expect(rowNumbers()).toEqual(['21', '22']);
+    });
+
+    it('response page 3, limit 5 thì STT bắt đầu từ 11, không theo hằng số của màn', async () => {
+      await open({
+        url: '/admin/payments?tab=cod',
+        codOrders: codList,
+        codPaging: { page: 3, limit: 5 },
+      });
+      await waitForRows();
+
+      expect(rowNumbers()).toEqual(['11', '12']);
+    });
+
+    it('sau khi xem tab SePay, bảng COD vẫn đánh số theo response COD', async () => {
+      // React Query giữ dữ liệu giao dịch trong bộ nhớ khi chuyển tab. Bảng COD không được lấy `page` và `limit` của dữ liệu đó.
+      await open({
+        transactions: transactionList,
+        transactionsPaging: { page: 3, limit: 5 },
+        codOrders: codList,
+        codPaging: { page: 2, limit: 20 },
+      });
+      await waitForRows();
+      expect(rowNumbers()).toEqual(['11', '12']);
+
+      await act(async () => tab('COD')!.click());
+      await waitFor(() => harness.container.querySelector('table.cod-table') !== null, 'bảng COD');
+
+      expect(rowNumbers()).toEqual(['21', '22']);
+    });
+
+    it('quay lại tab SePay, bảng giao dịch vẫn đánh số theo response giao dịch', async () => {
+      await open({
+        url: '/admin/payments?tab=cod',
+        transactions: transactionList,
+        transactionsPaging: { page: 3, limit: 5 },
+        codOrders: codList,
+        codPaging: { page: 2, limit: 20 },
+      });
+      await waitForRows();
+      expect(rowNumbers()).toEqual(['21', '22']);
+
+      await act(async () => tab('SePay')!.click());
+      await waitFor(
+        () => harness.container.querySelector('table.payment-table') !== null,
+        'bảng giao dịch',
+      );
+
+      expect(rowNumbers()).toEqual(['11', '12']);
+    });
   });
 });

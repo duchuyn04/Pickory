@@ -207,3 +207,47 @@ describe('màn danh sách đơn hàng của nhân viên', () => {
     expect(orderRequests()).toHaveLength(0);
   });
 });
+
+describe('màn danh sách đơn hàng có cột STT', () => {
+  // Response mang `page` và `limit` riêng, để test phân biệt STT theo response với STT theo URL hay hằng số.
+  function pagedOrders(count: number, paging: { page: number; limit: number }) {
+    const items = Array.from({ length: count }, (_, index) => orderRow(`PK-${index + 1}`));
+    return { items, total: 100, ...paging };
+  }
+
+  function rowNumbers() {
+    return [...harness.container.querySelectorAll('tbody tr')].map(
+      (row) => row.firstElementChild!.textContent,
+    );
+  }
+
+  it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+    await open('/admin/orders', () => pagedOrders(2, { page: 1, limit: 20 }));
+    await waitFor(() => rowNumbers().length > 0, 'danh sách đơn hàng');
+
+    const headerCell = harness.container.querySelector('thead th')!;
+    expect(headerCell.textContent).toBe('STT');
+    expect(headerCell.getAttribute('scope')).toBe('col');
+    expect(headerCell.classList.contains('num')).toBe(true);
+    expect(headerCell.classList.contains('col-row-number')).toBe(true);
+    const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+    expect(firstCell.tagName).toBe('TD');
+    expect(firstCell.classList.contains('num')).toBe(true);
+    // Mã đơn vẫn là tiêu đề dòng.
+    expect(harness.container.querySelector('tbody tr th[scope="row"]')).not.toBeNull();
+  });
+
+  it('response page 2, limit 20 thì STT là 21 và 22', async () => {
+    await open('/admin/orders?page=2', () => pagedOrders(2, { page: 2, limit: 20 }));
+    await waitFor(() => rowNumbers().length > 0, 'danh sách đơn hàng');
+
+    expect(rowNumbers()).toEqual(['21', '22']);
+  });
+
+  it('response page 3, limit 5 thì STT bắt đầu từ 11, không theo hằng số của màn', async () => {
+    await open('/admin/orders', () => pagedOrders(2, { page: 3, limit: 5 }));
+    await waitFor(() => rowNumbers().length > 0, 'danh sách đơn hàng');
+
+    expect(rowNumbers()).toEqual(['11', '12']);
+  });
+});

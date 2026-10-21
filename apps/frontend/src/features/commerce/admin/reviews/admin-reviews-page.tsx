@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { ErrorAlert } from '../../../../shared/error-alert';
 import { ForbiddenNotice } from '../../../../shared/forbidden-notice';
 import { Pager } from '../../../../shared/pager';
+import { rowNumber } from '../../../../shared/row-number';
 import { TabList, tabId } from '../../../../shared/tab-list';
 import { useListFilters } from '../../../../shared/use-list-filters';
 import { formatVietnamDateTime } from '../../../../shared/vietnam-time';
@@ -123,6 +124,9 @@ export function AdminReviewsPage() {
               <table className="tbl review-table">
                 <thead>
                   <tr>
+                    <th scope="col" className="num col-row-number">
+                      STT
+                    </th>
                     <th scope="col">Sản phẩm</th>
                     <th scope="col">Người viết</th>
                     <th scope="col">Đánh giá</th>
@@ -136,72 +140,77 @@ export function AdminReviewsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {reviews?.items.map((review) => (
-                    <tr key={review.id}>
-                      <th scope="row" data-label="Sản phẩm" className="wrap-anywhere">
-                        <div className="review-cell">
-                          {review.productName ?? MISSING_PRODUCT_LABEL}
-                        </div>
-                      </th>
-                      <td data-label="Người viết">
-                        <div className="review-cell">
-                          <span className="wrap-anywhere">{review.authorName}</span>
-                          <span className="cell-sub">
-                            {formatVietnamDateTime(review.createdAt)}
-                          </span>
-                        </div>
-                      </td>
-                      <td data-label="Đánh giá" className="review-cell-body">
-                        <div className="review-cell">
-                          <StarRating rating={review.rating} />
-                          {/* Nhận xét do khách nhập, nên chỉ render bằng text node của React. */}
-                          {review.body !== null && <p className="review-text">{review.body}</p>}
-                        </div>
-                      </td>
-                      <td data-label="Báo cáo" className="num">
-                        <div className="review-cell">
-                          {review.reportCount}
-                          {isPriorityReview(review.reportCount) && (
-                            <span className="badge badge-bad review-priority">Ưu tiên</span>
-                          )}
-                        </div>
-                      </td>
-                      <td data-label="Trạng thái">
-                        <div className="review-cell">
-                          {review.hidden ? (
-                            <>
-                              <span className="badge">Đã ẩn</span>
-                              <span className="cell-sub">
-                                {formatReasonLabel(review.hiddenReason)}
-                              </span>
-                              {review.hiddenAt !== null && (
+                  {reviews &&
+                    reviews.items.map((review, index) => (
+                      <tr key={review.id}>
+                        {/* STT theo `page` và `limit` của response đang hiện. `data-label` cho dạng thẻ ở màn hẹp hiện nhãn STT. */}
+                        <td data-label="STT" className="num col-row-number">
+                          <div className="review-cell">{rowNumber(reviews, index)}</div>
+                        </td>
+                        <th scope="row" data-label="Sản phẩm" className="wrap-anywhere">
+                          <div className="review-cell">
+                            {review.productName ?? MISSING_PRODUCT_LABEL}
+                          </div>
+                        </th>
+                        <td data-label="Người viết">
+                          <div className="review-cell">
+                            <span className="wrap-anywhere">{review.authorName}</span>
+                            <span className="cell-sub">
+                              {formatVietnamDateTime(review.createdAt)}
+                            </span>
+                          </div>
+                        </td>
+                        <td data-label="Đánh giá" className="review-cell-body">
+                          <div className="review-cell">
+                            <StarRating rating={review.rating} />
+                            {/* Nhận xét do khách nhập, nên chỉ render bằng text node của React. */}
+                            {review.body !== null && <p className="review-text">{review.body}</p>}
+                          </div>
+                        </td>
+                        <td data-label="Báo cáo" className="num">
+                          <div className="review-cell">
+                            {review.reportCount}
+                            {isPriorityReview(review.reportCount) && (
+                              <span className="badge badge-bad review-priority">Ưu tiên</span>
+                            )}
+                          </div>
+                        </td>
+                        <td data-label="Trạng thái">
+                          <div className="review-cell">
+                            {review.hidden ? (
+                              <>
+                                <span className="badge">Đã ẩn</span>
                                 <span className="cell-sub">
-                                  {formatVietnamDateTime(review.hiddenAt)}
+                                  {formatReasonLabel(review.hiddenReason)}
                                 </span>
-                              )}
-                            </>
-                          ) : (
-                            <span className="badge badge-ok">Đang hiện</span>
-                          )}
-                        </div>
-                      </td>
-                      <td data-label="Thao tác" className="num">
-                        <div className="review-cell">
-                          <button
-                            type="button"
-                            className={review.hidden ? 'btn btn-sm' : 'btn btn-sm btn-danger'}
-                            // Tên truy cập kèm người viết và sản phẩm, để trình đọc màn hình phân biệt các nút.
-                            aria-label={`${review.hidden ? 'Hiện lại' : 'Ẩn'} đánh giá của ${review.authorName} về ${review.productName ?? MISSING_PRODUCT_LABEL}`}
-                            onClick={() =>
-                              setOpenDialog({ review, action: review.hidden ? 'show' : 'hide' })
-                            }
-                          >
-                            {review.hidden ? 'Hiện lại' : 'Ẩn'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                                {review.hiddenAt !== null && (
+                                  <span className="cell-sub">
+                                    {formatVietnamDateTime(review.hiddenAt)}
+                                  </span>
+                                )}
+                              </>
+                            ) : (
+                              <span className="badge badge-ok">Đang hiện</span>
+                            )}
+                          </div>
+                        </td>
+                        <td data-label="Thao tác" className="num">
+                          <div className="review-cell">
+                            <button
+                              type="button"
+                              className={review.hidden ? 'btn btn-sm' : 'btn btn-sm btn-danger'}
+                              // Tên truy cập kèm người viết và sản phẩm, để trình đọc màn hình phân biệt các nút.
+                              aria-label={`${review.hidden ? 'Hiện lại' : 'Ẩn'} đánh giá của ${review.authorName} về ${review.productName ?? MISSING_PRODUCT_LABEL}`}
+                              onClick={() =>
+                                setOpenDialog({ review, action: review.hidden ? 'show' : 'hide' })
+                              }
+                            >
+                              {review.hidden ? 'Hiện lại' : 'Ẩn'}
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

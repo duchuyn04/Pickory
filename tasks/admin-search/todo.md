@@ -194,9 +194,9 @@ Người dùng yêu cầu ngày 2026-10-20. Phase này chỉ sửa frontend. Quy
 ### FLT-UI11: STT cho màn đơn hàng, đối soát và đánh giá
 **Mô tả:** Màn `/admin/orders`, `/admin/payments` và `/admin/reviews` thêm cột `STT` bằng hàm của FLT-UI8.
 **Tiêu chí nghiệm thu:**
-- [ ] Ba màn dùng hàm STT của FLT-UI8 với `page` và `limit` từ response
-- [ ] Cột `STT` là cột đầu tiên, có tiêu đề `STT`, căn phải
-- [ ] Test E2E hiện có của ba màn vẫn đạt sau khi bảng thêm cột
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Ba màn dùng hàm STT của FLT-UI8 với `page` và `limit` từ response
+- [x] Cột `STT` là cột đầu tiên, có tiêu đề `STT`, căn phải
+- [x] Test E2E hiện có của ba màn vẫn đạt sau khi bảng thêm cột
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI8 · **Quy mô:** M
