@@ -8,6 +8,8 @@ using Npgsql;
 using Pickory.Modules.ActivityTracking.Counters;
 using Pickory.Modules.ActivityTracking.Features.CollectEvents;
 using Pickory.Modules.ActivityTracking.Persistence;
+using Pickory.Modules.Commerce.Contracts.Events;
+using Pickory.Shared.Events;
 using Pickory.Shared.Persistence;
 
 namespace Pickory.Modules.ActivityTracking;
@@ -32,6 +34,10 @@ public static class ActivityTrackingModule
         services.AddScoped<DailyCounterWriter>();
         // Bộ đếm tần suất nằm trong bộ nhớ, nên phải là singleton để mọi request dùng chung một bộ đếm.
         services.AddSingleton<ProductViewRateLimiter>();
+        // Handler đếm thêm giỏ nghe sự kiện của Commerce. Vòng đời scoped vì handler giữ `DailyCounterWriter`, và bộ phát tạo một scope cho mỗi lần phát.
+        services.AddScoped<IDomainEventHandler<CartItemAddedEvent>, CartItemAddedCounterHandler>();
+        // Handler đếm đặt đơn nghe `OrderPlacedEvent` của mọi cách thanh toán. Module không nghe `OrderPaidEvent`, vì đơn COD đã được đếm lúc đặt đơn.
+        services.AddScoped<IDomainEventHandler<OrderPlacedEvent>, OrderPlacedCounterHandler>();
         return services;
     }
 

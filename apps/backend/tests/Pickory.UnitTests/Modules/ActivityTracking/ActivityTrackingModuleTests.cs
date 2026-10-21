@@ -3,6 +3,8 @@ using Pickory.Modules.ActivityTracking;
 using Pickory.Modules.ActivityTracking.Counters;
 using Pickory.Modules.ActivityTracking.Features.CollectEvents;
 using Pickory.Modules.ActivityTracking.Persistence;
+using Pickory.Modules.Commerce.Contracts.Events;
+using Pickory.Shared.Events;
 using Xunit;
 
 namespace Pickory.UnitTests.Modules.ActivityTracking;
@@ -55,5 +57,41 @@ public sealed class ActivityTrackingModuleTests
         // Bộ đếm tần suất nằm trong bộ nhớ, nên mọi request phải dùng chung một instance.
         var descriptor = Assert.Single(services, row => row.ServiceType == typeof(ProductViewRateLimiter));
         Assert.Equal(ServiceLifetime.Singleton, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void AddActivityTrackingModule_RegistersCartItemAddedCounterHandlerAsScoped()
+    {
+        var services = new ServiceCollection();
+
+        services.AddActivityTrackingModule(ConnectionString);
+
+        // Handler giữ `DailyCounterWriter` scoped, nên vòng đời phải là scoped. Bộ phát tạo một scope cho mỗi lần phát.
+        var descriptor = Assert.Single(services, row => row.ServiceType == typeof(IDomainEventHandler<CartItemAddedEvent>));
+        Assert.Equal(typeof(CartItemAddedCounterHandler), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void AddActivityTrackingModule_RegistersOrderPlacedCounterHandlerAsScoped()
+    {
+        var services = new ServiceCollection();
+
+        services.AddActivityTrackingModule(ConnectionString);
+
+        var descriptor = Assert.Single(services, row => row.ServiceType == typeof(IDomainEventHandler<OrderPlacedEvent>));
+        Assert.Equal(typeof(OrderPlacedCounterHandler), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
+    [Fact]
+    public void AddActivityTrackingModule_DoesNotRegisterHandlerForOrderPaidEvent()
+    {
+        var services = new ServiceCollection();
+
+        services.AddActivityTrackingModule(ConnectionString);
+
+        // Đơn COD phát `OrderPlacedEvent` rồi mới phát `OrderPaidEvent`. Module nghe cả hai sẽ đếm đơn COD hai lần.
+        Assert.DoesNotContain(services, row => row.ServiceType == typeof(IDomainEventHandler<OrderPaidEvent>));
     }
 }

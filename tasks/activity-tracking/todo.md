@@ -79,12 +79,12 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 ### ACT-07: Nghe sự kiện thêm giỏ và đặt đơn
 **Mô tả:** Hai handler nghe sự kiện của `commerce` và cộng bộ đếm qua `DailyCounterWriter` của ACT-06.
 **Tiêu chí nghiệm thu:**
-- [ ] `CartItemAddedEvent` cộng 1 vào `add_to_cart`, kể cả khi `Quantity` lớn hơn 1
-- [ ] Thêm SKU đã có trong giỏ cũng cộng 1
-- [ ] `OrderPlacedEvent` của đơn COD cộng 1 vào `order_placed`
-- [ ] `OrderPlacedEvent` của đơn SePay cộng 1 vào `order_placed`
-- [ ] `OrderPaidEvent` không đổi bộ đếm nào
-- [ ] Ghi bộ đếm lỗi: luồng thêm giỏ và đặt đơn của `commerce` vẫn thành công
+- [x] `CartItemAddedEvent` cộng 1 vào `add_to_cart`, kể cả khi `Quantity` lớn hơn 1
+- [x] Thêm SKU đã có trong giỏ cũng cộng 1
+- [x] `OrderPlacedEvent` của đơn COD cộng 1 vào `order_placed`
+- [x] `OrderPlacedEvent` của đơn SePay cộng 1 vào `order_placed`
+- [x] `OrderPaidEvent` không đổi bộ đếm nào
+- [x] Ghi bộ đếm lỗi: luồng thêm giỏ và đặt đơn của `commerce` vẫn thành công
 **Kiểm tra:** test tích hợp gọi API giỏ và đặt đơn thật, rồi đọc `daily_counters`
 **Phụ thuộc:** ACT-04, ACT-06 · **Quy mô:** S
 **File:** `apps/backend/src/Pickory.Modules.ActivityTracking/Counters/{CartItemAddedCounterHandler.cs, OrderPlacedCounterHandler.cs}`
