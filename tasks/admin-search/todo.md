@@ -151,12 +151,12 @@ Người dùng yêu cầu ngày 2026-10-20. Phase này chỉ sửa frontend. Quy
 ### FLT-UI7: Màn sản phẩm hiện ảnh đầu tiên
 **Mô tả:** Bảng ở `/admin/products` thêm ảnh nhỏ của từng sản phẩm, đặt trước tên. Ảnh lấy từ trường `images` mà `GET /api/admin/products` đã trả. Backend không đổi.
 **Tiêu chí nghiệm thu:**
-- [ ] Mỗi dòng hiện ảnh có `position` nhỏ nhất trong `images` của sản phẩm đó
-- [ ] Ảnh Cloudinary đi qua `withCloudinaryTransform` với chiều rộng 200. Trình duyệt không tải ảnh gốc
-- [ ] Ảnh có `alt` lấy từ `alt` của ảnh. `alt` rỗng thì dùng tên sản phẩm
-- [ ] Ảnh có kích thước cố định và `loading="lazy"`. Bảng không bị xô dòng khi ảnh tải xong
-- [ ] Sản phẩm không có ảnh hiện khung giữ chỗ cùng kích thước, có biểu tượng ảnh và tên truy cập `Chưa có ảnh`
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Mỗi dòng hiện ảnh có `position` nhỏ nhất trong `images` của sản phẩm đó
+- [x] Ảnh Cloudinary đi qua `withCloudinaryTransform` với chiều rộng 200. Trình duyệt không tải ảnh gốc
+- [x] Ảnh có `alt` lấy từ `alt` của ảnh. `alt` rỗng thì dùng tên sản phẩm
+- [x] Ảnh có kích thước cố định và `loading="lazy"`. Bảng không bị xô dòng khi ảnh tải xong
+- [x] Sản phẩm không có ảnh hiện khung giữ chỗ cùng kích thước, có biểu tượng ảnh và tên truy cập `Chưa có ảnh`
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** không · **Quy mô:** S
 

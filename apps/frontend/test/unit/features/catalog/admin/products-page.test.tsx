@@ -27,6 +27,7 @@ function product(id: string) {
     status: 'active',
     minPrice: 100000,
     variants: [{ id: `sku-${id}`, code: `AO-${id}` }],
+    images: [],
   };
 }
 
@@ -383,5 +384,104 @@ describe('thanh bộ lọc đang áp dụng', () => {
       'sản phẩm',
     );
     expect(harness.container.textContent!.match(/12 sản phẩm/g)).toHaveLength(1);
+  });
+});
+
+describe('màn sản phẩm hiện ảnh đầu tiên', () => {
+  function cloudinaryImage(id: string, position: number, alt: string) {
+    return {
+      id,
+      publicId: `pickory/products/${id}`,
+      alt,
+      skuId: null,
+      position,
+      url: `https://res.cloudinary.com/demo/image/upload/pickory/products/${id}.jpg`,
+    };
+  }
+
+  function productWithImages(images: unknown[]) {
+    return { ...product('1'), images };
+  }
+
+  function thumbnails() {
+    return [...harness.container.querySelectorAll<HTMLImageElement>('tbody img')];
+  }
+
+  it('ảnh đi qua biến đổi Cloudinary rộng 200, không dùng URL gốc, và có kích thước cố định, lazy', async () => {
+    const original = cloudinaryImage('a', 0, 'Mặt trước');
+    harness = await open('/admin/products', [productWithImages([original])]);
+
+    const [thumbnail] = thumbnails();
+    expect(thumbnails()).toHaveLength(1);
+    expect(thumbnail!.src).toContain('w_200');
+    expect(thumbnail!.src).not.toBe(original.url);
+    expect(thumbnail!.getAttribute('loading')).toBe('lazy');
+    expect(thumbnail!.getAttribute('decoding')).toBe('async');
+    expect(thumbnail!.getAttribute('width')).toBe('48');
+    expect(thumbnail!.getAttribute('height')).toBe('48');
+  });
+
+  it('response trả mảng không theo thứ tự thì chọn ảnh có position nhỏ nhất', async () => {
+    const images = [
+      cloudinaryImage('hai', 2, 'Ảnh hai'),
+      cloudinaryImage('khong', 0, 'Ảnh không'),
+      cloudinaryImage('mot', 1, 'Ảnh một'),
+    ];
+    harness = await open('/admin/products', [productWithImages(images)]);
+
+    expect(thumbnails()).toHaveLength(1);
+    expect(thumbnails()[0]!.src).toContain('khong.jpg');
+    expect(thumbnails()[0]!.alt).toBe('Ảnh không');
+  });
+
+  it('alt lấy từ ảnh, bỏ khoảng trắng hai đầu', async () => {
+    harness = await open('/admin/products', [
+      productWithImages([cloudinaryImage('a', 0, '  Mặt trước  ')]),
+    ]);
+
+    expect(thumbnails()[0]!.alt).toBe('Mặt trước');
+  });
+
+  it.each(['', '   '])('alt %j thì dùng tên sản phẩm', async (alt) => {
+    harness = await open('/admin/products', [productWithImages([cloudinaryImage('a', 0, alt)])]);
+
+    expect(thumbnails()[0]!.alt).toBe('Áo 1');
+  });
+
+  it('sản phẩm không có ảnh thì có khung giữ chỗ tên Chưa có ảnh và không có thẻ img', async () => {
+    harness = await open('/admin/products', [productWithImages([])]);
+
+    const placeholder = harness.container.querySelector<HTMLElement>(
+      'tbody [role="img"][aria-label="Chưa có ảnh"]',
+    );
+    expect(placeholder).not.toBeNull();
+    expect(thumbnails()).toHaveLength(0);
+    // Biểu tượng bên trong chỉ để nhìn, nên ẩn với trình đọc màn hình.
+    expect(placeholder!.querySelector('svg')!.getAttribute('aria-hidden')).toBe('true');
+  });
+
+  it('mỗi dòng có ảnh hoặc khung giữ chỗ, không dòng nào có cả hai', async () => {
+    harness = await open('/admin/products', [
+      { ...productWithImages([cloudinaryImage('a', 0, 'Ảnh a')]), id: 'p1' },
+      { ...productWithImages([]), id: 'p2' },
+    ]);
+
+    const rows = [...harness.container.querySelectorAll('tbody tr')];
+    expect(rows).toHaveLength(2);
+    expect(rows[0]!.querySelectorAll('img')).toHaveLength(1);
+    expect(rows[0]!.querySelectorAll('[role="img"]')).toHaveLength(0);
+    expect(rows[1]!.querySelectorAll('img')).toHaveLength(0);
+    expect(rows[1]!.querySelectorAll('[role="img"]')).toHaveLength(1);
+  });
+
+  it('tên và mã SKU vẫn tô đậm khi dòng có ảnh', async () => {
+    harness = await open('/admin/products?search=ao', [
+      productWithImages([cloudinaryImage('a', 0, 'Ảnh a')]),
+    ]);
+
+    const marks = [...harness.container.querySelectorAll('tbody mark')].map(
+      (mark) => mark.textContent,
+    );
+    expect(marks).toEqual(['Áo', 'AO']);
   });
 });

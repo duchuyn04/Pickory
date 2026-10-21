@@ -17,6 +17,7 @@ import {
   type ProductStatus,
 } from './product-status';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { ProductThumbnail } from './product-thumbnail';
 import './products.css';
 
 interface PagedProducts {
@@ -233,12 +234,18 @@ export function ProductsPage() {
                   {products.items.map((product) => (
                     <tr key={product.id}>
                       <th scope="row">
-                        <HighlightMatch text={product.name} keyword={keyword} />
-                        {/* Mã SKU nằm dưới tên như bản mẫu, để bảng ít cột và vừa màn rộng. */}
-                        <span className="cell-sub wrap-anywhere">
-                          {/* Tô trên cả chuỗi mã đã nối, vì mã SKU có thể khớp từ khóa ở bất kỳ biến thể nào. */}
-                          <HighlightMatch text={skuCodesOf(product)} keyword={keyword} />
-                        </span>
+                        {/* Ảnh bên trái, khối tên và mã SKU bên phải. Ô `th` giữ nguyên là ô bảng, nên flex nằm ở thẻ con. */}
+                        <div className="product-cell">
+                          <ProductThumbnail images={product.images} productName={product.name} />
+                          <div className="product-cell-text">
+                            <HighlightMatch text={product.name} keyword={keyword} />
+                            {/* Mã SKU nằm dưới tên như bản mẫu, để bảng ít cột và vừa màn rộng. */}
+                            <span className="cell-sub wrap-anywhere">
+                              {/* Tô trên cả chuỗi mã đã nối, vì mã SKU có thể khớp từ khóa ở bất kỳ biến thể nào. */}
+                              <HighlightMatch text={skuCodesOf(product)} keyword={keyword} />
+                            </span>
+                          </div>
+                        </div>
                       </th>
                       <td>
                         {categoriesQuery.data?.find(

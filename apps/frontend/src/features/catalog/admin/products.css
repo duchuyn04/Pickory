@@ -62,6 +62,34 @@
   min-width: 220px;
 }
 
+/* Ô sản phẩm: ảnh nhỏ bên trái, tên và mã SKU xếp dọc bên phải. `min-width: 0` cho chữ dài ngắt dòng thay vì đẩy bảng rộng ra. */
+.product-cell {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.product-cell-text {
+  min-width: 0;
+}
+
+/* Ảnh và khung giữ chỗ cùng cỡ 48px, bằng `width` và `height` của thẻ `img`. `contain` giữ ảnh dọc hay ngang không méo. */
+.product-thumb {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  object-fit: contain;
+}
+
+.product-thumb-empty {
+  display: inline-grid;
+  place-items: center;
+  color: var(--color-ink-muted);
+}
+
 /* Mỗi trục tùy chọn nằm trên một hàng: tên, giá trị và nút bỏ trục. */
 .product-option {
   display: flex;
