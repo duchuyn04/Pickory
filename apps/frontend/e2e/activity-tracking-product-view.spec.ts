@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { trackEventRequests } from './activity-tracking-fixtures';
 import { e2eEnvironment } from './environment';
 import {
   collectConsoleIssues,
@@ -8,28 +9,6 @@ import {
   stubProductImages,
   type SeededCatalog,
 } from './catalog-product-seed';
-
-interface EventRequest {
-  body: string | null;
-  status: number | null;
-}
-
-// Ghi mọi request `POST /api/events` của trang, kể cả request không có response (bị chặn hoặc mất mạng).
-function trackEventRequests(page: Page): EventRequest[] {
-  const events: EventRequest[] = [];
-  const byRequest = new Map<unknown, EventRequest>();
-  page.on('request', (request) => {
-    if (request.method() !== 'POST' || new URL(request.url()).pathname !== '/api/events') return;
-    const entry: EventRequest = { body: request.postData(), status: null };
-    byRequest.set(request, entry);
-    events.push(entry);
-  });
-  page.on('response', (response) => {
-    const entry = byRequest.get(response.request());
-    if (entry) entry.status = response.status();
-  });
-  return events;
-}
 
 // Chờ thêm 1 giây sau khi trang đã hiện. Lần chạy thứ hai của StrictMode hoặc request thừa sẽ lộ ra trong khoảng này.
 async function waitForLateRequests(page: Page) {

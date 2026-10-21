@@ -138,12 +138,12 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 ### ACT-E2E1: Luồng E2E của activity-tracking
 **Mô tả:** Playwright chạy luồng đếm trong `apps/frontend/e2e/activity-tracking.spec.ts`. Spec tự tạo sản phẩm qua API admin, như spec checkout của `commerce`.
 **Tiêu chí nghiệm thu:**
-- [ ] Spec tạo 1 sản phẩm đang bán qua API admin, rồi đọc phễu hôm nay bằng `GET /api/admin/analytics/funnel`
-- [ ] Khách bấm đồng ý trên banner, xem sản phẩm, thêm giỏ, đặt đơn COD
-- [ ] Phễu hôm nay tăng đúng 1 ở mỗi bước xem, thêm giỏ, đặt đơn
-- [ ] Khách chưa đồng ý làm cùng luồng: phễu vẫn tăng đúng 1 ở mỗi bước
-- [ ] Console 0 lỗi và 0 cảnh báo trong cả luồng
-- [ ] Suite đạt ở chế độ có giao diện và chế độ ẩn
+- [x] Spec tạo 1 sản phẩm đang bán qua API admin, rồi đọc phễu hôm nay bằng `GET /api/admin/analytics/funnel`
+- [x] Khách bấm đồng ý trên banner, xem sản phẩm, thêm giỏ, đặt đơn COD
+- [x] Phễu hôm nay tăng đúng 1 ở mỗi bước xem, thêm giỏ, đặt đơn
+- [x] Khách chưa đồng ý làm cùng luồng: phễu vẫn tăng đúng 1 ở mỗi bước
+- [x] Console 0 lỗi và 0 cảnh báo trong cả luồng
+- [x] Suite đạt ở chế độ có giao diện và chế độ ẩn
 **Kiểm tra:** `pnpm test:e2e`
 **Phụ thuộc:** ACT-UI1, ACT-07, ACT-11 · **Quy mô:** M
 
