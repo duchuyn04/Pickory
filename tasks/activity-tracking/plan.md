@@ -107,7 +107,7 @@ Chi tiết từng task ở `tasks/activity-tracking/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 4: E2E và nghiệm thu
-- [x] ACT-E2E1 · [ ] ACT-13
+- [x] ACT-E2E1 · [x] ACT-13
 
 ### Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt

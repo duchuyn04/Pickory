@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Pickory.IntegrationTests.Infrastructure;
@@ -130,6 +131,85 @@ public sealed class ActivityTrackingPersistenceTests(PickoryWebApplicationFactor
         Assert.NotEmpty(names);
         Assert.DoesNotContain(names, name => name.Contains("anonymousid", StringComparison.OrdinalIgnoreCase));
         Assert.DoesNotContain(names, name => name.Contains("userid", StringComparison.OrdinalIgnoreCase));
+    }
+
+    [Fact]
+    // ACT-13: cùng luật riêng tư với test model, nhưng đọc schema thật của các bảng trong model.
+    // Test bắt được cột mà migration thêm lệch khỏi model.
+    public async Task Database_HasNoTableOrColumnNamedAfterAnonymousIdOrUserId()
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<ActivityTrackingDbContext>();
+        DotnetSchemaIntegrationTests.AssertTestConnection(context);
+
+        var schema = await ReadModuleSchemaAsync(context);
+
+        // Mọi bảng của module phải đọc được từ DB. Danh sách rỗng sẽ làm phép kiểm bên dưới xanh giả.
+        Assert.NotEmpty(schema.ExpectedTables);
+        Assert.Equal(schema.ExpectedTables.Order(), schema.FoundTables.Order());
+        // Cột `value` của `daily_counters` chắc chắn có. Truy vấn cột trả rỗng, ví dụ do thiếu quyền đọc, sẽ làm test đỏ thay vì xanh giả.
+        Assert.Contains("value", schema.ColumnNames);
+        Assert.Empty(FindCustomerIdentifierNames(schema.Names));
+    }
+
+    // Tên bảng và tên cột của module trong DB thật. Gồm bảng của model và bảng lịch sử migration của module.
+    private sealed record ModuleSchema(
+        IReadOnlyList<string> ExpectedTables,
+        IReadOnlyList<string> FoundTables,
+        IReadOnlyList<string> ColumnNames,
+        IReadOnlyList<string> Names);
+
+    private static async Task<ModuleSchema> ReadModuleSchemaAsync(ActivityTrackingDbContext context)
+    {
+        var expectedTables = context.Model.GetEntityTypes()
+            // Entity không có bảng bị bỏ qua, vì không có cột nào để kiểm.
+            .Where(entityType => entityType.GetTableName() is not null)
+            .Select(entityType => (Schema: entityType.GetSchema() ?? "public", Table: entityType.GetTableName()!))
+            .ToList();
+        // Bảng lịch sử migration nằm ở schema riêng. Bảng này cũng không được chứa mã khách, nên phải kiểm cùng bảng của model.
+        var history = context.GetService<IDbContextOptions>().Extensions.OfType<RelationalOptionsExtension>().Single();
+        expectedTables.Add((history.MigrationsHistoryTableSchema ?? "public", history.MigrationsHistoryTableName ?? "__EFMigrationsHistory"));
+        // Nhiều entity có thể dùng chung một bảng. `Distinct` gộp để so sánh bảng kỳ vọng với DB không báo lặp.
+        expectedTables = expectedTables.Distinct().ToList();
+
+        // Tên bảng đến từ model và cấu hình của module, không từ người dùng. Vẫn nhân đôi dấu nháy để câu SQL luôn đúng cú pháp.
+        var tableFilter = string.Join(
+            " OR ",
+            expectedTables.Select(table =>
+                $"(table_schema = '{table.Schema.Replace("'", "''")}' AND table_name = '{table.Table.Replace("'", "''")}')"));
+
+        // Truy vấn bảng đọc từ DB để so với bảng kỳ vọng. Bảng thiếu trong DB làm test đỏ.
+        var foundTables = await ReadRowsAsync(context, $"""
+            SELECT table_schema || '.' || table_name
+            FROM information_schema.tables
+            WHERE {tableFilter}
+            ORDER BY table_schema, table_name
+            """);
+
+        // Đọc cột bằng truy vấn riêng. Ghép `schema.bảng:cột` rồi tách chuỗi sẽ cắt sai khi tên chứa dấu `.` hoặc `:`.
+        var columnNames = await ReadRowsAsync(context, $"""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE {tableFilter}
+            ORDER BY table_schema, table_name, ordinal_position
+            """);
+
+        // Tên cần kiểm gồm tên bảng kỳ vọng và tên cột đọc từ DB. `Distinct` bỏ tên lặp giữa các bảng.
+        var names = expectedTables.Select(table => table.Table).Concat(columnNames).Distinct().ToList();
+        return new ModuleSchema(
+            expectedTables.Select(table => $"{table.Schema}.{table.Table}").ToList(), foundTables, columnNames, names);
+    }
+
+    // Bỏ dấu `_` và không phân biệt hoa thường, để `anonymous_id` và `UserId` đều bị bắt.
+    private static List<string> FindCustomerIdentifierNames(IEnumerable<string> names)
+    {
+        return names
+            .Where(name =>
+            {
+                var normalized = name.Replace("_", string.Empty).ToLowerInvariant();
+                return normalized.Contains("anonymousid") || normalized.Contains("userid");
+            })
+            .ToList();
     }
 
     private static async Task<List<string>> ReadRowsAsync(ActivityTrackingDbContext context, string sql)

@@ -150,12 +150,61 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 ### ACT-13: Nghiệm thu activity-tracking
 **Mô tả:** Kiểm toàn module trước khi sang `support-desk`.
 **Tiêu chí nghiệm thu:**
-- [ ] Ma trận quyền có mọi endpoint back-office của `activity-tracking`
-- [ ] Test tích hợp đọc schema: không bảng hay cột nào của module chứa `anonymousId` hoặc `userId`
-- [ ] Coverage dòng của `Pickory.Modules.ActivityTracking` ít nhất 80%, gộp unit và tích hợp, không tính `Persistence/Migrations/`
-- [ ] Mọi dòng Traceability trong plan đạt hoặc ghi rõ lý do còn mở
+- [x] Ma trận quyền có mọi endpoint back-office của `activity-tracking`
+- [x] Test tích hợp đọc schema: không bảng hay cột nào của module chứa `anonymousId` hoặc `userId`
+- [x] Coverage dòng của `Pickory.Modules.ActivityTracking` ít nhất 80%, gộp unit và tích hợp, không tính `Persistence/Migrations/`
+- [x] Mọi dòng Traceability trong plan đạt hoặc ghi rõ lý do còn mở
 **Kiểm tra:** `dotnet test`, script gộp coverage
 **Phụ thuộc:** ACT-E2E1 · **Quy mô:** S
+
+**Bằng chứng (2026-10-22):**
+
+#### 1. Bảng Traceability
+
+| Success Criteria | Bằng chứng | Trạng thái |
+| --- | --- | --- |
+| Xem sản phẩm, thêm giỏ, đặt đơn: phễu hôm nay tăng đúng 1 ở mỗi bước | Tích hợp `CollectEventsTests.Post_ValidBody_Returns204AndIncrementsCounterByOneEachTime`; `CommerceCounterHandlersTests.AddToCart_WithQuantityThree_IncrementsAddToCartByOne`, `PlaceOrder_Cod_IncrementsOrderPlacedByOneAndKeepsAddToCart`. E2E `activity-tracking.spec.ts`: test "khách bấm Đồng ý, xem sản phẩm, thêm giỏ, đặt COD thì phễu tăng đúng 1 ở mỗi bước" | Đạt |
+| Khách chưa đồng ý: phễu cũng tăng đúng 1 ở mỗi bước | E2E `activity-tracking.spec.ts`: test "khách chưa chọn banner làm cùng luồng thì phễu vẫn tăng đúng 1 ở mỗi bước" (banner còn hiện ở cuối luồng) | Đạt |
+| DB không có bảng hay cột nào của module chứa `anonymousId` hoặc `userId` | `ActivityTrackingPersistenceTests.Database_HasNoTableOrColumnNamedAfterAnonymousIdOrUserId` đọc `information_schema.tables` và `information_schema.columns` của DB thật, gồm bảng lịch sử migration của module. Thêm `Model_HasNoTableOrColumnNamedAfterAnonymousIdOrUserId` (đọc model) và `DailyCounters_HasExactlyThreeNotNullColumnsWithExpectedTypes` | Đạt |
+| API phễu trả đúng số và tỉ lệ với bộ dữ liệu dựng sẵn | Đơn vị `FunnelCalculatorTests.Calculate_RateIsCountOverPreviousStepCount`, `Calculate_FirstStepHasNoConversionRate`. Tích hợp `ActivityMetricsTests.GetFunnelAsync_SeededRange_ReturnsCountsAndRatesCalculatedByHand`, `AdminFunnelEndpointTests.Get_SeededRange_Returns200WithDataEnvelopeAndHandCalculatedNumbers` | Đạt |
+| Coverage ít nhất 80% | Mục 2: coverage dòng gộp 96.0% | Đạt |
+
+Ghi chú cho dòng 3 của bảng:
+
+- Test đọc các bảng có trong model và bảng lịch sử migration của module. Bảng thừa do migration tạo ngoài model không bị bắt.
+- Đã thử thêm tạm cột `anonymousId` vào `daily_counters` trong một transaction.
+- `FindCustomerIdentifierNames` trả đúng tên cột đó.
+- Sau đó test rollback transaction.
+
+#### 2. Coverage
+
+- Cách đo giống shipping: coverage dòng của assembly `Pickory.Modules.ActivityTracking`, gộp hai lệnh `dotnet test ... --collect:"XPlat Code Coverage"` cho `tests/Pickory.UnitTests` và `tests/Pickory.IntegrationTests`.
+- Phần tích hợp chỉ chạy bộ lọc `FullyQualifiedName~ActivityTracking` (72 test). Bộ lọc chạy một phần test, nên số đo là cận dưới của coverage thật. Bộ đầy đủ không thể thấp hơn.
+- Script Python gộp hai file `coverage.cobertura.xml`. Một dòng tính là đã chạy khi ít nhất một file có số lần chạy lớn hơn 0.
+- Phép đo bỏ `Persistence/Migrations/`, vì đó là code sinh tự động.
+- Chung: 261/272 dòng = 96.0% (riêng test đơn vị 58.5%, riêng test tích hợp 94.5%).
+- Theo thư mục cấp 1:
+  - `Counters/`: 100% (19/19)
+  - `Entities/`: 100% (3/3)
+  - `Features/`: 100% (157/157)
+  - `Metrics/`: 100% (40/40)
+  - `Persistence/`: 77.4% (24/31)
+  - gốc module (`ActivityTrackingModule.cs`): 81.8% (18/22)
+- Một file dưới 60%. Không thêm test, vì tổng đã vượt 80% và file không chứa luật nghiệp vụ:
+  - `Persistence/ActivityTrackingDbContextFactory.cs` (0%): chỉ dùng khi chạy lệnh migration.
+
+#### 3. Lệnh tổng (trong `apps/backend`)
+
+- `dotnet build Pickory.sln`: 0 lỗi, 0 cảnh báo.
+- `dotnet test tests/Pickory.UnitTests`: 1709 test đạt, 0 lỗi.
+- `dotnet test tests/Pickory.ArchitectureTests`: 18 test đạt, 0 lỗi.
+- `dotnet test tests/Pickory.IntegrationTests --filter "FullyQualifiedName~ActivityTracking|FullyQualifiedName~PermissionMatrixTests"`: 327 test đạt, 0 lỗi.
+- E2E: reviewer chạy toàn bộ với `--headed` ngày 2026-10-22 cho ACT-E2E1: 128/128 đạt. 91 request `POST /api/events` đều trả 204.
+
+#### 4. Ma trận quyền
+
+- `PermissionMatrixTests.BackofficeEndpoints_CoversAllActivityTrackingAdminEndpoints` đối chiếu hai chiều route `/api/admin/` của module với ma trận. Module có một route: `GET /api/admin/analytics/funnel` với `reports:read`.
+- Bỏ tạm `.RequirePermission(Permissions.ReportsRead)` làm 3 dòng ma trận của route này đỏ: `Guest_Receives401Unauthorized`, `Customer_Receives403Forbidden`, `Support_HasAccessOnlyWhenAuthorized`. Code đã hoàn tác.
 
 ## Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt
