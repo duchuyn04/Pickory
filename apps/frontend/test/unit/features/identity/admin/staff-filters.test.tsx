@@ -86,7 +86,11 @@ describe('màn nhân viên có bộ lọc và phân trang', () => {
     await harness.render('/admin/staff');
     await waitFor(() => harness.container.querySelectorAll('tbody tr').length === 3, 'ba dòng');
 
-    const statusBadge = (email: string) => rowOf(email).querySelectorAll('td')[1]?.textContent;
+    // Đọc ô theo tiêu đề cột, không theo vị trí, nên thêm hay bớt cột không làm lệch phép kiểm.
+    const statusColumn = Array.from(harness.container.querySelectorAll('thead th')).findIndex(
+      (header) => header.textContent === 'Trạng thái',
+    );
+    const statusBadge = (email: string) => rowOf(email).children[statusColumn]?.textContent;
     expect(statusBadge('s1@pickory.local')).toBe('Đã mời');
     expect(statusBadge('s2@pickory.local')).toBe('Đã khóa');
     expect(statusBadge('s3@pickory.local')).toBe('Hoạt động');
@@ -132,5 +136,67 @@ describe('màn nhân viên có bộ lọc và phân trang', () => {
     expect(harness.container.querySelector('[role="status"]')!.textContent).toContain(
       'Không có kết quả phù hợp với bộ lọc.',
     );
+  });
+});
+
+describe('màn nhân viên có cột STT', () => {
+  function pagedResponse(count: number, paging: { page: number; limit: number }) {
+    const items = Array.from({ length: count }, (_, index) => staff(`s${index + 1}`, 'active'));
+    return (url: string) => {
+      if (url.startsWith('/api/admin/staff')) return { items, total: 100, ...paging };
+      if (url === '/api/admin/roles') return roles;
+      return [];
+    };
+  }
+
+  function rowNumbers() {
+    return [...harness.container.querySelectorAll('tbody tr')].map(
+      (row) => row.firstElementChild!.textContent,
+    );
+  }
+
+  it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+    harness = createHarness(actorWith(['staff:read']), pagedResponse(2, { page: 1, limit: 20 }));
+    await harness.render('/admin/staff');
+    await waitFor(() => rowNumbers().length > 0, 'danh sách nhân viên');
+
+    const headerCell = harness.container.querySelector('thead th')!;
+    expect(headerCell.textContent).toBe('STT');
+    expect(headerCell.getAttribute('scope')).toBe('col');
+    expect(headerCell.classList.contains('num')).toBe(true);
+    expect(headerCell.classList.contains('col-row-number')).toBe(true);
+    const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+    expect(firstCell.tagName).toBe('TD');
+    expect(firstCell.classList.contains('num')).toBe(true);
+    expect(harness.container.querySelector('tbody tr th[scope="row"]')).not.toBeNull();
+  });
+
+  it('response page 2, limit 20 thì STT là 21 và 22', async () => {
+    harness = createHarness(actorWith(['staff:read']), pagedResponse(2, { page: 2, limit: 20 }));
+    await harness.render('/admin/staff?page=2');
+    await waitFor(() => rowNumbers().length > 0, 'danh sách nhân viên');
+
+    expect(rowNumbers()).toEqual(['21', '22']);
+  });
+
+  it('response page 3, limit 5 thì STT bắt đầu từ 11, không theo hằng số của màn', async () => {
+    harness = createHarness(actorWith(['staff:read']), pagedResponse(2, { page: 3, limit: 5 }));
+    await harness.render('/admin/staff');
+    await waitFor(() => rowNumbers().length > 0, 'danh sách nhân viên');
+
+    expect(rowNumbers()).toEqual(['11', '12']);
+  });
+
+  it.each([
+    ['người chỉ xem', ['staff:read'], 4],
+    ['người quản lý', ['staff:read', 'staff:manage'], 5],
+  ])('ô rỗng của %s trải hết các cột của bảng', async (_name, permissions, columns) => {
+    harness = createHarness(actorWith(permissions), respondWith([]));
+    await harness.render('/admin/staff');
+    await waitFor(() => harness.container.querySelector('td.empty-state') !== null, 'ô rỗng');
+
+    const emptyCell = harness.container.querySelector<HTMLTableCellElement>('td.empty-state')!;
+    expect(emptyCell.colSpan).toBe(columns);
+    expect(harness.container.querySelectorAll('thead th')).toHaveLength(columns);
   });
 });

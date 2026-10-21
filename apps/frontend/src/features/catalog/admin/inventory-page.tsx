@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
 import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
 import { Pager } from '../../../shared/pager';
+import { rowNumber } from '../../../shared/row-number';
 import { SearchInput } from '../../../shared/search-input';
 import { useListFilters } from '../../../shared/use-list-filters';
 import { LOW_STOCK_THRESHOLD } from '../../../shared/catalog/inventory';
@@ -87,6 +88,9 @@ export function InventoryPage() {
             <table className="tbl inventory-table">
               <thead>
                 <tr>
+                  <th scope="col" className="num col-row-number">
+                    STT
+                  </th>
                   <th scope="col">SKU</th>
                   <th scope="col">Tùy chọn</th>
                   <th scope="col" className="num">
@@ -99,10 +103,12 @@ export function InventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {lowStock.items.map((sku) => {
+                {lowStock.items.map((sku, index) => {
                   const badge = stockBadge(sku.stock);
                   return (
                     <tr key={sku.skuId}>
+                      {/* STT theo `page` và `limit` của response, không theo `PAGE_SIZE`. Response là nguồn của các dòng đang hiện, nên STT không lệch với dữ liệu. */}
+                      <td className="num col-row-number">{rowNumber(lowStock, index)}</td>
                       <th scope="row">
                         {/* Mã SKU là liên kết để ở màn hẹp, nơi cột thao tác nằm ngoài vùng nhìn, vẫn mở được trang SKU. */}
                         <Link

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
+import { rowNumber } from '../../../shared/row-number';
 import { useCan } from '../hooks/use-actor';
 import { ErrorAlert } from '../../../shared/error-alert';
 import './identity-admin.css';
@@ -200,6 +201,9 @@ export function AuditLogPage() {
             <table className="tbl identity-table audit-table">
               <thead>
                 <tr>
+                  <th scope="col" className="num col-row-number">
+                    STT
+                  </th>
                   <th scope="col">Thời gian</th>
                   <th scope="col">Hành động</th>
                   <th scope="col">Người thực hiện</th>
@@ -209,8 +213,10 @@ export function AuditLogPage() {
               </thead>
               <tbody>
                 {data?.items && data.items.length > 0 ? (
-                  data.items.map((log) => (
+                  data.items.map((log, index) => (
                     <tr key={log.id}>
+                      {/* STT theo `page` và `limit` của response, không theo `limit=50` mà màn xin. */}
+                      <td className="num col-row-number">{rowNumber(data, index)}</td>
                       <td className="audit-time">
                         {new Date(log.createdAt).toLocaleString('vi-VN')}
                       </td>
@@ -257,7 +263,7 @@ export function AuditLogPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="empty-state">
+                    <td colSpan={6} className="empty-state">
                       Chưa có dòng nhật ký nào phù hợp.
                     </td>
                   </tr>

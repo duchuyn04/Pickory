@@ -153,3 +153,62 @@ describe('màn khách hàng có bộ lọc và phân trang', () => {
     expect(queryOf(customerRequests().at(-1)!)).toEqual({});
   });
 });
+
+describe('màn khách hàng có cột STT', () => {
+  function pagedResponse(count: number, paging: { page: number; limit: number }) {
+    const items = Array.from({ length: count }, (_, index) => customer(`c${index + 1}`));
+    return { items, total: 100, ...paging };
+  }
+
+  function rowNumbers() {
+    return [...harness.container.querySelectorAll('tbody tr')].map(
+      (row) => row.firstElementChild!.textContent,
+    );
+  }
+
+  it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+    harness = createHarness(reader, () => pagedResponse(2, { page: 1, limit: 20 }));
+    await harness.render('/admin/customers');
+    await waitFor(() => rowNumbers().length > 0, 'danh sách khách hàng');
+
+    const headerCell = harness.container.querySelector('thead th')!;
+    expect(headerCell.textContent).toBe('STT');
+    expect(headerCell.getAttribute('scope')).toBe('col');
+    expect(headerCell.classList.contains('num')).toBe(true);
+    expect(headerCell.classList.contains('col-row-number')).toBe(true);
+    const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+    expect(firstCell.tagName).toBe('TD');
+    expect(firstCell.classList.contains('num')).toBe(true);
+    // Ô tên khách vẫn là tiêu đề dòng.
+    expect(harness.container.querySelector('tbody tr th[scope="row"]')).not.toBeNull();
+  });
+
+  it('response page 2, limit 20 thì STT là 21 và 22', async () => {
+    harness = createHarness(reader, () => pagedResponse(2, { page: 2, limit: 20 }));
+    await harness.render('/admin/customers?page=2');
+    await waitFor(() => rowNumbers().length > 0, 'danh sách khách hàng');
+
+    expect(rowNumbers()).toEqual(['21', '22']);
+  });
+
+  it('response page 3, limit 5 thì STT bắt đầu từ 11, không theo hằng số của màn', async () => {
+    harness = createHarness(reader, () => pagedResponse(2, { page: 3, limit: 5 }));
+    await harness.render('/admin/customers');
+    await waitFor(() => rowNumbers().length > 0, 'danh sách khách hàng');
+
+    expect(rowNumbers()).toEqual(['11', '12']);
+  });
+
+  it.each([
+    ['người chỉ xem', reader, 5],
+    ['người quản lý', actorWith(['customers:read', 'customers:manage']), 6],
+  ])('ô rỗng của %s trải hết các cột của bảng', async (_name, actor, columns) => {
+    harness = createHarness(actor, () => ({ items: [], total: 0, page: 1, limit: 20 }));
+    await harness.render('/admin/customers');
+    await waitFor(() => harness.container.querySelector('td.empty-state') !== null, 'ô rỗng');
+
+    const emptyCell = harness.container.querySelector<HTMLTableCellElement>('td.empty-state')!;
+    expect(emptyCell.colSpan).toBe(columns);
+    expect(harness.container.querySelectorAll('thead th')).toHaveLength(columns);
+  });
+});

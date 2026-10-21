@@ -137,3 +137,88 @@ describe('màn thương hiệu có ô tìm kiếm', () => {
     );
   });
 });
+
+describe('màn danh mục đánh số theo cây đang hiện', () => {
+  // Cặp số và tên của từng dòng trên cây, theo thứ tự trong trang.
+  function numberedNames() {
+    return [...harness.container.querySelectorAll('.category-node-main')].map((line) => [
+      line.querySelector('.category-number')!.textContent,
+      line.querySelector('strong')!.textContent,
+    ]);
+  }
+
+  it('hai gốc, gốc đầu có hai con: số là 1, 1.1, 1.2, 2', async () => {
+    harness = await openCategories('/admin/categories');
+
+    expect(numberedNames()).toEqual([
+      ['1', 'Điện thoại'],
+      ['1.1', 'Android'],
+      ['1.2', 'iPhone'],
+      ['2', 'Laptop'],
+    ]);
+  });
+
+  it('từ khóa chỉ khớp con thứ hai của gốc đầu thì gốc hiện 1 và con đó hiện 1.1', async () => {
+    harness = await openCategories('/admin/categories?search=iphone');
+
+    expect(numberedNames()).toEqual([
+      ['1', 'Điện thoại'],
+      ['1.1', 'iPhone'],
+    ]);
+  });
+
+  it('lọc giữ gốc thứ hai và bỏ gốc đầu thì gốc thứ hai hiện 1', async () => {
+    harness = await openCategories('/admin/categories?search=laptop');
+
+    expect(numberedNames()).toEqual([['1', 'Laptop']]);
+  });
+
+  it('số nằm trong phần tử riêng trước tên, và tên nút Sửa, Xóa không có số', async () => {
+    harness = await openCategories('/admin/categories');
+
+    const firstLine = harness.container.querySelector('.category-node-main')!;
+    expect(firstLine.firstElementChild!.classList.contains('category-number')).toBe(true);
+    const editButton = harness.container.querySelector('button[aria-label^="Sửa"]')!;
+    expect(editButton.getAttribute('aria-label')).toBe('Sửa Điện thoại');
+  });
+});
+
+describe('màn thương hiệu có cột STT', () => {
+  const brands = [
+    { id: '1', name: 'Apple', slug: 'apple', logoPublicId: null },
+    { id: '2', name: 'Asus', slug: 'asus', logoPublicId: null },
+    { id: '3', name: 'Samsung', slug: 'samsung', logoPublicId: null },
+  ];
+
+  function rowNumbers() {
+    return [...harness.container.querySelectorAll('tbody tr')].map(
+      (row) => row.firstElementChild!.textContent,
+    );
+  }
+
+  it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+    harness = await openBrands('/admin/brands', brands);
+
+    const headerCell = harness.container.querySelector('thead th')!;
+    expect(headerCell.textContent).toBe('STT');
+    expect(headerCell.getAttribute('scope')).toBe('col');
+    expect(headerCell.classList.contains('num')).toBe(true);
+    expect(headerCell.classList.contains('col-row-number')).toBe(true);
+    const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+    expect(firstCell.tagName).toBe('TD');
+    expect(firstCell.classList.contains('num')).toBe(true);
+  });
+
+  it('ba dòng có STT 1, 2, 3', async () => {
+    harness = await openBrands('/admin/brands', brands);
+
+    expect(rowNumbers()).toEqual(['1', '2', '3']);
+  });
+
+  it('từ khóa chỉ giữ dòng thứ ba ban đầu thì dòng còn lại có STT 1', async () => {
+    harness = await openBrands('/admin/brands?search=samsung', brands);
+
+    expect(rowNumbers()).toEqual(['1']);
+    expect(harness.container.querySelector('tbody tr strong')!.textContent).toBe('Samsung');
+  });
+});

@@ -45,14 +45,20 @@ function hiddenReview(id: string) {
   });
 }
 
-function page(items: unknown[], total = items.length) {
-  return { items, total, page: 1, limit: 20 };
+function page(
+  items: unknown[],
+  total = items.length,
+  paging: { page: number; limit: number } = { page: 1, limit: 20 },
+) {
+  return { items, total, ...paging };
 }
 
 interface Scenario {
   url?: string;
   permissions?: string[];
   reviews?: unknown[];
+  // Phân trang mà response trả về, độc lập với tham số trên URL.
+  reviewsPaging?: { page: number; limit: number };
   // Response cho `PATCH`. Mặc định trả dòng đã ẩn.
   onPatch?: (init?: RequestInit) => unknown;
 }
@@ -64,12 +70,14 @@ function open(scenario: Scenario = {}) {
     url = '/admin/reviews',
     permissions = MODERATOR,
     reviews = [review('a')],
+    reviewsPaging,
     onPatch,
   } = scenario;
   harness = createHarness(actorWith(permissions), (requested, init) => {
     const method = init?.method ?? 'GET';
     const path = new URL(requested, 'http://localhost').pathname;
-    if (path === REVIEWS_PATH && method === 'GET') return page(reviews);
+    if (path === REVIEWS_PATH && method === 'GET')
+      return page(reviews, reviews.length, reviewsPaging);
     if (path.startsWith(`${REVIEWS_PATH}/`) && method === 'PATCH') {
       return onPatch ? onPatch(init) : hiddenReview('a');
     }
@@ -293,5 +301,56 @@ describe('AdminReviewsPage', () => {
     const before = reviewCalls().length;
     await clickButton(harness.container, 'Thử lại');
     await waitFor(() => reviewCalls().length > before, 'tải lại sau Thử lại');
+  });
+});
+
+describe('màn đánh giá có cột STT', () => {
+  const reviewList = [review('a'), review('b')];
+
+  function rowNumbers() {
+    return [...harness.container.querySelectorAll('tbody tr')].map(
+      (row) => row.firstElementChild!.textContent,
+    );
+  }
+
+  async function waitForRows() {
+    await waitFor(() => harness.container.querySelectorAll('tbody tr').length > 0, 'danh sách');
+  }
+
+  it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+    await open({ reviews: reviewList });
+    await waitForRows();
+
+    const headerCell = harness.container.querySelector('thead th')!;
+    expect(headerCell.textContent).toBe('STT');
+    expect(headerCell.getAttribute('scope')).toBe('col');
+    expect(headerCell.classList.contains('num')).toBe(true);
+    expect(headerCell.classList.contains('col-row-number')).toBe(true);
+    const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+    expect(firstCell.tagName).toBe('TD');
+    expect(firstCell.classList.contains('num')).toBe(true);
+    expect(harness.container.querySelector('tbody tr th[scope="row"]')).not.toBeNull();
+  });
+
+  it('ô STT có data-label STT như các ô khác, để dạng thẻ ở màn hẹp hiện nhãn', async () => {
+    await open({ reviews: reviewList });
+    await waitForRows();
+
+    const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+    expect(firstCell.getAttribute('data-label')).toBe('STT');
+  });
+
+  it('response page 2, limit 20 thì STT là 21 và 22', async () => {
+    await open({ reviews: reviewList, reviewsPaging: { page: 2, limit: 20 } });
+    await waitForRows();
+
+    expect(rowNumbers()).toEqual(['21', '22']);
+  });
+
+  it('response page 3, limit 5 thì STT bắt đầu từ 11, không theo hằng số của màn', async () => {
+    await open({ reviews: reviewList, reviewsPaging: { page: 3, limit: 5 } });
+    await waitForRows();
+
+    expect(rowNumbers()).toEqual(['11', '12']);
   });
 });

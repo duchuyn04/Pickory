@@ -1,0 +1,10 @@
+/*
+ * Chữ khớp từ khóa tìm kiếm. Nền vàng nhạt của token cảnh báo giữ chữ màu thường,
+ * nên tương phản của chữ không giảm so với chữ không tô.
+ */
+.search-match {
+  padding: 0 1px;
+  border-radius: 2px;
+  background: var(--color-warning-soft);
+  color: inherit;
+}

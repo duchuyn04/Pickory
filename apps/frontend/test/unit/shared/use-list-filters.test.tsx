@@ -181,4 +181,52 @@ describe('useListFilters', () => {
     expect(location.pathname).toBe('/admin/staff');
     expect(new URLSearchParams(location.search).has('page')).toBe(false);
   });
+
+  describe('clearFilters', () => {
+    it('xóa mọi bộ lọc đã khai báo cùng page trong một lần ghi URL', async () => {
+      await renderAt(['/admin/staff?search=an&status=active&page=3']);
+
+      await act(async () => filters.clearFilters());
+
+      expect(location.search).toBe('');
+      expect(filters.values).toEqual({ search: '', status: '' });
+      expect(filters.page).toBe(1);
+    });
+
+    it('xóa cả page khi URL chỉ có page, để về trang 1', async () => {
+      await renderAt(['/admin/staff?page=4']);
+
+      await act(async () => filters.clearFilters());
+
+      expect(new URLSearchParams(location.search).has('page')).toBe(false);
+    });
+
+    it('giữ tham số ngoài danh sách', async () => {
+      await renderAt(['/admin/staff?role=admin&search=an&page=2']);
+
+      await act(async () => filters.clearFilters());
+
+      expect(location.search).toBe('?role=admin');
+    });
+
+    it('thay mục lịch sử hiện tại, nút Back về màn trước danh sách', async () => {
+      await renderAt(['/dashboard', '/admin/staff?search=an']);
+
+      await act(async () => filters.clearFilters());
+      await act(async () => goBack());
+
+      expect(location.pathname).toBe('/dashboard');
+    });
+
+    it('ghi liền sau setFilter chưa kịp vẽ lại vẫn xóa cả bộ lọc vừa đặt', async () => {
+      await renderAt(['/admin/staff']);
+
+      await act(async () => {
+        filters.setFilter('status', 'active');
+        filters.clearFilters();
+      });
+
+      expect(location.search).toBe('');
+    });
+  });
 });

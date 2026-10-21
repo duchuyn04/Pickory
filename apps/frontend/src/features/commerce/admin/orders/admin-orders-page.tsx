@@ -4,6 +4,7 @@ import { ErrorAlert } from '../../../../shared/error-alert';
 import { FilteredEmptyState } from '../../../../shared/filtered-empty-state';
 import { ForbiddenNotice } from '../../../../shared/forbidden-notice';
 import { Pager } from '../../../../shared/pager';
+import { rowNumber } from '../../../../shared/row-number';
 import { SearchInput } from '../../../../shared/search-input';
 import { TabList, tabId } from '../../../../shared/tab-list';
 import { useListFilters } from '../../../../shared/use-list-filters';
@@ -170,6 +171,9 @@ export function AdminOrdersPage() {
               <table className="tbl order-table">
                 <thead>
                   <tr>
+                    <th scope="col" className="num col-row-number">
+                      STT
+                    </th>
                     <th scope="col">Mã đơn</th>
                     <th scope="col">Ngày đặt</th>
                     <th scope="col">Người nhận</th>
@@ -185,42 +189,45 @@ export function AdminOrdersPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((order) => (
-                    <tr key={order.code}>
-                      <th scope="row">
-                        {/* Mã đơn là liên kết, nên bảng dùng được bằng phím Tab và Enter. */}
-                        <Link className="wrap-anywhere" to={`/admin/orders/${order.code}`}>
-                          {order.code}
-                        </Link>
-                      </th>
-                      <td className="order-time">{formatVietnamDateTime(order.createdAt)}</td>
-                      <td>
-                        {order.recipientName || 'Chưa có tên'}
-                        <span className="cell-sub">{order.recipientPhone || 'Chưa có'}</span>
-                      </td>
-                      <td className="num">{order.lineCount}</td>
-                      <td className="num">{formatProductPrice(order.total)}</td>
-                      <td>
-                        <span className={orderStatusBadgeClass(order.status)}>
-                          {formatOrderStatus(order.status)}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={paymentStatusBadgeClass(order.paymentStatus)}>
-                          {formatPaymentStatus(order.paymentStatus)}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="row-actions">
-                          {order.flags.map((flag) => (
-                            <span key={flag} className={orderFlagBadgeClass(flag)}>
-                              {formatOrderFlag(flag)}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {data &&
+                    items.map((order, index) => (
+                      <tr key={order.code}>
+                        {/* STT theo `page` và `limit` của response đang hiện, không theo URL. */}
+                        <td className="num col-row-number">{rowNumber(data, index)}</td>
+                        <th scope="row">
+                          {/* Mã đơn là liên kết, nên bảng dùng được bằng phím Tab và Enter. */}
+                          <Link className="wrap-anywhere" to={`/admin/orders/${order.code}`}>
+                            {order.code}
+                          </Link>
+                        </th>
+                        <td className="order-time">{formatVietnamDateTime(order.createdAt)}</td>
+                        <td>
+                          {order.recipientName || 'Chưa có tên'}
+                          <span className="cell-sub">{order.recipientPhone || 'Chưa có'}</span>
+                        </td>
+                        <td className="num">{order.lineCount}</td>
+                        <td className="num">{formatProductPrice(order.total)}</td>
+                        <td>
+                          <span className={orderStatusBadgeClass(order.status)}>
+                            {formatOrderStatus(order.status)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={paymentStatusBadgeClass(order.paymentStatus)}>
+                            {formatPaymentStatus(order.paymentStatus)}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="row-actions">
+                            {order.flags.map((flag) => (
+                              <span key={flag} className={orderFlagBadgeClass(flag)}>
+                                {formatOrderFlag(flag)}
+                              </span>
+                            ))}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

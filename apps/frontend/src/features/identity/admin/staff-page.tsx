@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
 import { Pager } from '../../../shared/pager';
+import { rowNumber } from '../../../shared/row-number';
 import { SearchInput } from '../../../shared/search-input';
 import { useListFilters } from '../../../shared/use-list-filters';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
@@ -206,6 +207,9 @@ export function StaffPage() {
             <table className="tbl identity-table">
               <thead>
                 <tr>
+                  <th scope="col" className="num col-row-number">
+                    STT
+                  </th>
                   <th scope="col">Nhân viên</th>
                   <th scope="col">Vai trò</th>
                   <th scope="col">Trạng thái</th>
@@ -217,9 +221,11 @@ export function StaffPage() {
                 </tr>
               </thead>
               <tbody>
-                {staffList.length > 0 ? (
-                  staffList.map((staff) => (
+                {staffPage && staffList.length > 0 ? (
+                  staffList.map((staff, index) => (
                     <tr key={staff.id}>
+                      {/* STT theo `page` và `limit` của response đang hiện, không theo URL. */}
+                      <td className="num col-row-number">{rowNumber(staffPage, index)}</td>
                       <th scope="row">
                         {staff.name || 'Chưa có tên'}
                         <span className="cell-sub wrap-anywhere">{staff.email}</span>
@@ -268,7 +274,7 @@ export function StaffPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={canManageStaff ? 4 : 3} className="empty-state">
+                    <td colSpan={canManageStaff ? 5 : 4} className="empty-state">
                       Chưa có nhân viên nào trong hệ thống.
                     </td>
                   </tr>

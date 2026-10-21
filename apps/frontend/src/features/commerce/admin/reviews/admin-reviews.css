@@ -122,6 +122,11 @@
     text-align: left;
   }
 
+  /* Cột STT dùng `width: 1%` để hẹp trên bảng. Ở dạng thẻ, ô là lưới hai cột, nên phải bỏ bề rộng này để ô STT rộng như các ô khác. */
+  .review-table tbody td.col-row-number {
+    width: auto;
+  }
+
   .review-cell {
     min-width: 0;
   }

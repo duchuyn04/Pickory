@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
 import { Pager } from '../../../shared/pager';
+import { rowNumber } from '../../../shared/row-number';
 import { SearchInput } from '../../../shared/search-input';
 import { useListFilters } from '../../../shared/use-list-filters';
 import { useCan } from '../hooks/use-actor';
@@ -160,6 +161,9 @@ export function CustomersPage() {
             <table className="tbl identity-table">
               <thead>
                 <tr>
+                  <th scope="col" className="num col-row-number">
+                    STT
+                  </th>
                   <th scope="col">Khách hàng</th>
                   <th scope="col">Số điện thoại</th>
                   <th scope="col">Xác thực email</th>
@@ -173,8 +177,10 @@ export function CustomersPage() {
               </thead>
               <tbody>
                 {data?.items && data.items.length > 0 ? (
-                  data.items.map((cust) => (
+                  data.items.map((cust, index) => (
                     <tr key={cust.id}>
+                      {/* STT theo `page` và `limit` của response đang hiện, không theo URL. */}
+                      <td className="num col-row-number">{rowNumber(data, index)}</td>
                       <th scope="row">
                         {cust.name || 'Chưa có tên'}
                         <span className="cell-sub wrap-anywhere">{cust.email}</span>
@@ -210,7 +216,7 @@ export function CustomersPage() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={canManageCustomers ? 5 : 4} className="empty-state">
+                    <td colSpan={canManageCustomers ? 6 : 5} className="empty-state">
                       Không tìm thấy khách hàng nào phù hợp.
                     </td>
                   </tr>

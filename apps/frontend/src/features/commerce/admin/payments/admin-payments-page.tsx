@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { ErrorAlert } from '../../../../shared/error-alert';
 import { ForbiddenNotice } from '../../../../shared/forbidden-notice';
 import { Pager } from '../../../../shared/pager';
+import { rowNumber } from '../../../../shared/row-number';
 import { TabList, tabId } from '../../../../shared/tab-list';
 import { useListFilters } from '../../../../shared/use-list-filters';
 import { formatVietnamDateTime } from '../../../../shared/vietnam-time';
@@ -160,6 +161,9 @@ export function AdminPaymentsPage() {
                 <table className="tbl payment-table">
                   <thead>
                     <tr>
+                      <th scope="col" className="num col-row-number">
+                        STT
+                      </th>
                       <th scope="col">Nhận lúc</th>
                       <th scope="col">Mã giao dịch</th>
                       <th scope="col" className="num">
@@ -176,64 +180,69 @@ export function AdminPaymentsPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {transactions?.items.map((transaction) => (
-                      <tr key={transaction.id}>
-                        <td className="payment-time">
-                          {formatVietnamDateTime(transaction.receivedAt)}
-                        </td>
-                        <th scope="row" className="wrap-anywhere">
-                          {transaction.providerTxId}
-                        </th>
-                        <td className="num">{formatProductPrice(transaction.amount)}</td>
-                        <td className="payment-content wrap-anywhere">{transaction.content}</td>
-                        <td>
-                          <span className={MATCH_STATUS_BADGES[transaction.matchStatus] ?? 'badge'}>
-                            {MATCH_STATUS_LABELS[transaction.matchStatus] ??
-                              transaction.matchStatus}
-                          </span>
-                        </td>
-                        <td>
-                          {transaction.order && (
-                            <>
-                              {/* Mã đơn là liên kết sang chi tiết, kèm cờ cho biết khoản tiền thiếu hay thừa. */}
-                              <Link to={`/admin/orders/${transaction.order.code}`}>
-                                {transaction.order.code}
-                              </Link>
-                              <div className="row-actions">
-                                {transaction.order.flags.map((flag) => (
-                                  <span key={flag} className={orderFlagBadgeClass(flag)}>
-                                    {formatOrderFlag(flag)}
-                                  </span>
-                                ))}
-                              </div>
-                            </>
-                          )}
-                        </td>
-                        {canReconcile && (
-                          <td className="num">
-                            {/* Chỉ giao dịch chưa khớp mới gắn hoặc bỏ qua được. */}
-                            {transaction.matchStatus === 'unmatched' && (
-                              <div className="row-actions">
-                                <button
-                                  type="button"
-                                  className="btn btn-sm btn-primary"
-                                  onClick={() => setOpenDialog({ kind: 'attach', transaction })}
-                                >
-                                  Gắn vào đơn
-                                </button>
-                                <button
-                                  type="button"
-                                  className="btn btn-sm"
-                                  onClick={() => setOpenDialog({ kind: 'ignore', transaction })}
-                                >
-                                  Bỏ qua
-                                </button>
-                              </div>
+                    {transactions &&
+                      transactions.items.map((transaction, index) => (
+                        <tr key={transaction.id}>
+                          {/* STT theo `page` và `limit` của response giao dịch, không lấy của bảng COD. */}
+                          <td className="num col-row-number">{rowNumber(transactions, index)}</td>
+                          <td className="payment-time">
+                            {formatVietnamDateTime(transaction.receivedAt)}
+                          </td>
+                          <th scope="row" className="wrap-anywhere">
+                            {transaction.providerTxId}
+                          </th>
+                          <td className="num">{formatProductPrice(transaction.amount)}</td>
+                          <td className="payment-content wrap-anywhere">{transaction.content}</td>
+                          <td>
+                            <span
+                              className={MATCH_STATUS_BADGES[transaction.matchStatus] ?? 'badge'}
+                            >
+                              {MATCH_STATUS_LABELS[transaction.matchStatus] ??
+                                transaction.matchStatus}
+                            </span>
+                          </td>
+                          <td>
+                            {transaction.order && (
+                              <>
+                                {/* Mã đơn là liên kết sang chi tiết, kèm cờ cho biết khoản tiền thiếu hay thừa. */}
+                                <Link to={`/admin/orders/${transaction.order.code}`}>
+                                  {transaction.order.code}
+                                </Link>
+                                <div className="row-actions">
+                                  {transaction.order.flags.map((flag) => (
+                                    <span key={flag} className={orderFlagBadgeClass(flag)}>
+                                      {formatOrderFlag(flag)}
+                                    </span>
+                                  ))}
+                                </div>
+                              </>
                             )}
                           </td>
-                        )}
-                      </tr>
-                    ))}
+                          {canReconcile && (
+                            <td className="num">
+                              {/* Chỉ giao dịch chưa khớp mới gắn hoặc bỏ qua được. */}
+                              {transaction.matchStatus === 'unmatched' && (
+                                <div className="row-actions">
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-primary"
+                                    onClick={() => setOpenDialog({ kind: 'attach', transaction })}
+                                  >
+                                    Gắn vào đơn
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm"
+                                    onClick={() => setOpenDialog({ kind: 'ignore', transaction })}
+                                  >
+                                    Bỏ qua
+                                  </button>
+                                </div>
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>
@@ -258,6 +267,9 @@ export function AdminPaymentsPage() {
               <table className="tbl cod-table">
                 <thead>
                   <tr>
+                    <th scope="col" className="num col-row-number">
+                      STT
+                    </th>
                     <th scope="col">Mã đơn</th>
                     <th scope="col">Ngày đặt</th>
                     <th scope="col">Người nhận</th>
@@ -272,32 +284,35 @@ export function AdminPaymentsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {codOrders?.items.map((order) => (
-                    <tr key={order.code}>
-                      <th scope="row">
-                        <Link className="wrap-anywhere" to={`/admin/orders/${order.code}`}>
-                          {order.code}
-                        </Link>
-                      </th>
-                      <td className="payment-time">{formatVietnamDateTime(order.createdAt)}</td>
-                      <td>
-                        {order.recipientName || 'Chưa có tên'}
-                        <span className="cell-sub">{order.recipientPhone || 'Chưa có'}</span>
-                      </td>
-                      <td className="num">{formatProductPrice(order.total)}</td>
-                      {canReconcile && (
-                        <td className="num">
-                          <button
-                            type="button"
-                            className="btn btn-sm btn-primary"
-                            onClick={() => setOpenDialog({ kind: 'cod', orderCode: order.code })}
-                          >
-                            Đã nhận tiền COD
-                          </button>
+                  {codOrders &&
+                    codOrders.items.map((order, index) => (
+                      <tr key={order.code}>
+                        {/* STT theo `page` và `limit` của response đơn COD, không lấy của bảng giao dịch. */}
+                        <td className="num col-row-number">{rowNumber(codOrders, index)}</td>
+                        <th scope="row">
+                          <Link className="wrap-anywhere" to={`/admin/orders/${order.code}`}>
+                            {order.code}
+                          </Link>
+                        </th>
+                        <td className="payment-time">{formatVietnamDateTime(order.createdAt)}</td>
+                        <td>
+                          {order.recipientName || 'Chưa có tên'}
+                          <span className="cell-sub">{order.recipientPhone || 'Chưa có'}</span>
                         </td>
-                      )}
-                    </tr>
-                  ))}
+                        <td className="num">{formatProductPrice(order.total)}</td>
+                        {canReconcile && (
+                          <td className="num">
+                            <button
+                              type="button"
+                              className="btn btn-sm btn-primary"
+                              onClick={() => setOpenDialog({ kind: 'cod', orderCode: order.code })}
+                            >
+                              Đã nhận tiền COD
+                            </button>
+                          </td>
+                        )}
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>

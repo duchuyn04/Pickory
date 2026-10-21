@@ -8,6 +8,8 @@ export interface ListFilters<Name extends string = string> {
   values: Record<Name, string>;
   page: number;
   setFilter: (name: Name, value: string) => void;
+  // Xóa mọi bộ lọc đã khai báo cùng số trang trong một lần ghi URL. Tham số lạ còn nguyên.
+  clearFilters: () => void;
   setPage: (page: number) => void;
 }
 
@@ -70,6 +72,16 @@ export function useListFilters<const Name extends string>(
     writeParams(next, true);
   };
 
+  const clearFilters = () => {
+    const next = new URLSearchParams(lastWrittenParams.current ?? searchParams);
+    // Xóa từng bộ lọc của màn này. Tham số ngoài danh sách không thuộc bộ lọc nên giữ lại.
+    for (const name of filterNames) next.delete(name);
+    // Danh sách thay đổi hoàn toàn. Về trang 1 để không đứng ở trang không còn tồn tại.
+    next.delete(PAGE_PARAM);
+    // Thay mục lịch sử hiện tại, giống `setFilter`. Nút Back không phải đi qua từng trạng thái bộ lọc.
+    writeParams(next, true);
+  };
+
   const setPage = (page: number) => {
     const next = new URLSearchParams(lastWrittenParams.current ?? searchParams);
     // Trang 1 là mặc định nên không ghi. Link trang đầu giữ ngắn gọn.
@@ -82,5 +94,11 @@ export function useListFilters<const Name extends string>(
     writeParams(next, false);
   };
 
-  return { values, page: parsePage(currentParams.get(PAGE_PARAM)), setFilter, setPage };
+  return {
+    values,
+    page: parsePage(currentParams.get(PAGE_PARAM)),
+    setFilter,
+    clearFilters,
+    setPage,
+  };
 }

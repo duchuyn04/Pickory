@@ -84,3 +84,53 @@ describe('màn role có ô tìm kiếm', () => {
     expect(harness.container.textContent).not.toContain('Không có kết quả phù hợp với bộ lọc.');
   });
 });
+
+describe('màn role có cột STT', () => {
+  function rowNumbers() {
+    return [...harness.container.querySelectorAll('tbody tr')].map(
+      (row) => row.firstElementChild!.textContent,
+    );
+  }
+
+  it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+    await open('/admin/roles');
+    await waitFor(() => rowNumbers().length > 0, 'danh sách role');
+
+    const headerCell = harness.container.querySelector('thead th')!;
+    expect(headerCell.textContent).toBe('STT');
+    expect(headerCell.getAttribute('scope')).toBe('col');
+    expect(headerCell.classList.contains('num')).toBe(true);
+    expect(headerCell.classList.contains('col-row-number')).toBe(true);
+    const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+    expect(firstCell.tagName).toBe('TD');
+    expect(firstCell.classList.contains('num')).toBe(true);
+    // Ô role vẫn là tiêu đề dòng.
+    expect(harness.container.querySelector('tbody tr th[scope="row"]')).not.toBeNull();
+  });
+
+  it('ba dòng có STT 1, 2, 3', async () => {
+    await open('/admin/roles');
+    await waitFor(() => rowNumbers().length > 0, 'danh sách role');
+
+    expect(rowNumbers()).toEqual(['1', '2', '3']);
+  });
+
+  it('từ khóa chỉ giữ dòng thứ ba ban đầu thì dòng còn lại có STT 1', async () => {
+    await open('/admin/roles?search=support');
+    await waitFor(() => rowNumbers().length > 0, 'danh sách role');
+
+    expect(rowNumbers()).toEqual(['1']);
+    expect(roleCodes()).toEqual(['support']);
+  });
+
+  it('chưa có role nào thì ô rỗng trải hết sáu cột', async () => {
+    await open('/admin/roles', []);
+    await waitFor(
+      () => harness.container.textContent!.includes('Chưa có vai trò nào trong hệ thống.'),
+      'thông báo rỗng cũ',
+    );
+
+    const emptyCell = harness.container.querySelector<HTMLTableCellElement>('td.empty-state')!;
+    expect(emptyCell.colSpan).toBe(6);
+  });
+});

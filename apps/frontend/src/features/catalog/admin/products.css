@@ -37,6 +37,22 @@
   margin: 0 14px 14px;
 }
 
+/* Bảng cũ mờ đi trong lúc chờ kết quả mới. Chuyển mờ ngắn để bảng không chớp. */
+.product-list-body {
+  transition: opacity var(--duration-fast) var(--ease-out-soft);
+}
+
+.product-list-body.is-stale {
+  opacity: 0.6;
+}
+
+/* Người dùng đã tắt hiệu ứng chuyển động thì bảng đổi độ mờ ngay, không chuyển dần. */
+@media (prefers-reduced-motion: reduce) {
+  .product-list-body {
+    transition: none;
+  }
+}
+
 /* Bảng giữ bề rộng tối thiểu và cuộn ngang trên điện thoại, để tên và mã SKU không bị ép xuống dòng từng chữ. */
 .product-list-table {
   min-width: 640px;
@@ -44,6 +60,34 @@
 
 .product-list-table th[scope='row'] {
   min-width: 220px;
+}
+
+/* Ô sản phẩm: ảnh nhỏ bên trái, tên và mã SKU xếp dọc bên phải. `min-width: 0` cho chữ dài ngắt dòng thay vì đẩy bảng rộng ra. */
+.product-cell {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.product-cell-text {
+  min-width: 0;
+}
+
+/* Ảnh và khung giữ chỗ cùng cỡ 48px, bằng `width` và `height` của thẻ `img`. `contain` giữ ảnh dọc hay ngang không méo. */
+.product-thumb {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  object-fit: contain;
+}
+
+.product-thumb-empty {
+  display: inline-grid;
+  place-items: center;
+  color: var(--color-ink-muted);
 }
 
 /* Mỗi trục tùy chọn nằm trên một hàng: tên, giá trị và nút bỏ trục. */

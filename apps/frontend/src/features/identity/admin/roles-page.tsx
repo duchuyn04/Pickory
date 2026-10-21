@@ -168,6 +168,9 @@ export function RolesPage() {
               <table className="tbl identity-table">
                 <thead>
                   <tr>
+                    <th scope="col" className="num col-row-number">
+                      STT
+                    </th>
                     <th scope="col">Role</th>
                     <th scope="col">Loại</th>
                     <th scope="col" className="num">
@@ -183,8 +186,10 @@ export function RolesPage() {
                 </thead>
                 <tbody>
                   {roles.length > 0 ? (
-                    visibleRoles.map((role) => (
+                    visibleRoles.map((role, index) => (
                       <tr key={role.id}>
+                        {/* Danh sách không phân trang, và STT theo danh sách đang hiện. Lọc xong thì số đánh lại từ 1. */}
+                        <td className="num col-row-number">{index + 1}</td>
                         <th scope="row">
                           {role.name}
                           <span className="cell-sub mono">{role.code}</span>
@@ -234,7 +239,7 @@ export function RolesPage() {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={5} className="empty-state">
+                      <td colSpan={6} className="empty-state">
                         Chưa có vai trò nào trong hệ thống.
                       </td>
                     </tr>

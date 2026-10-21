@@ -127,6 +127,88 @@
   padding: var(--space-1) var(--space-2);
 }
 
+/* Khung ô tìm kiếm. Nút xóa nằm đè lên mép phải của ô, nên khung làm mốc định vị cho nút. */
+.search-input-control {
+  position: relative;
+}
+
+/* Ô chừa lề phải 40px (nút 28px, cách mép 4px, cách chữ 8px) để chữ dài không chạy dưới nút. */
+.field .search-input-field {
+  padding-right: 40px;
+}
+
+/* Ẩn nút xóa riêng của Chromium và Safari. Ô đã có nút xóa của ứng dụng, hai nút cạnh nhau gây rối. */
+.search-input-field::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Nút xóa vuông 28px, vượt mức tối thiểu 24px của vùng bấm. Tên truy cập nằm ở `aria-label`. */
+.search-input-clear {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.search-input-clear:hover {
+  background: var(--color-neutral-soft);
+  color: var(--color-dark);
+}
+
+/* Vòng focus xanh nằm sát nút. Lề ngoài 0 để vòng không chạm viền ô. */
+.search-input-clear:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+}
+
+/* Vòng xoay 16px nằm sát mép phải khi ô chưa có nút xóa. Không nhận chuột, để bấm xuyên xuống ô tìm. */
+.search-input-spinner {
+  position: absolute;
+  top: calc(50% - 8px);
+  right: var(--space-2);
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-ink-muted);
+  border-radius: 50%;
+  animation: search-input-spin var(--duration-slow) linear infinite;
+  pointer-events: none;
+}
+
+/* Ô có nút xóa thì vòng xoay lùi sang trái nút (nút 28px, cách mép 4px, cách vòng xoay 4px). */
+.search-input-control.has-keyword .search-input-spinner {
+  right: 36px;
+}
+
+/* Ô vừa có chữ vừa đang tải thì chừa thêm 20px cho vòng xoay. Chữ dài không chạy dưới vòng xoay. */
+.search-input-control.is-busy.has-keyword .search-input-field {
+  padding-right: 60px;
+}
+
+@keyframes search-input-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Người dùng đã tắt hiệu ứng chuyển động thì vòng xoay đứng yên. Vòng vẫn hiện để báo đang tải. */
+@media (prefers-reduced-motion: reduce) {
+  .search-input-spinner {
+    animation: none;
+  }
+}
+
 /* Ô sai luôn đi kèm chữ lỗi trong `.form-error`, không chỉ dựa vào màu viền. */
 [aria-invalid='true'] {
   border-color: var(--color-danger) !important;
@@ -290,6 +372,12 @@
 .tbl .num {
   font-variant-numeric: tabular-nums;
   text-align: right;
+}
+
+/* Cột STT hẹp vừa số: `width: 1%` co cột về bề rộng nội dung, `nowrap` giữ số không xuống dòng. Chữ số đều và căn phải đến từ `.num`. */
+.tbl .col-row-number {
+  width: 1%;
+  white-space: nowrap;
 }
 
 .tbl tbody tr:hover td,

@@ -31,7 +31,7 @@ interface RenderOptions {
   routePath: string;
   // URL ban đầu, gồm cả query string.
   url: string;
-  // Trả phần `data` của response. Trả `undefined` thì dùng mảng rỗng.
+  // Trả phần `data` của response, hoặc một `Promise` để test giữ response lại. Trả `undefined` thì dùng mảng rỗng.
   respond: (url: URL, init?: RequestInit) => unknown;
 }
 
@@ -57,7 +57,9 @@ export async function renderCatalogPage(options: RenderOptions): Promise<Catalog
     vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = new URL(String(input), 'http://localhost');
       if ((init?.method ?? 'GET') === 'GET') requestedUrls.push(`${url.pathname}${url.search}`);
-      return new Response(JSON.stringify({ data: options.respond(url, init) ?? [] }));
+      // Chờ kết quả của `respond`. Nếu là `Promise` do test điều khiển, response chỉ về khi test cho phép.
+      const data = await options.respond(url, init);
+      return new Response(JSON.stringify({ data: data ?? [] }));
     }),
   );
 

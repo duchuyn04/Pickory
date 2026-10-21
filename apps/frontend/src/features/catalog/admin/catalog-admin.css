@@ -40,6 +40,22 @@
   border-bottom: 1px solid var(--color-border);
 }
 
+/* Số và khối tên nằm cùng một hàng. `baseline` đặt số ngang dòng tên, không ngang giữa khối tên và dòng slug. */
+.category-node-main {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+  min-width: 0;
+}
+
+/* Số có bề rộng tối thiểu cố định, nên tên của các dòng cùng cấp thẳng hàng. Chữ số đều nhờ `tabular-nums`. */
+.category-number {
+  flex: none;
+  min-width: 4ch;
+  color: var(--color-ink-muted);
+  font-variant-numeric: tabular-nums;
+}
+
 .category-node-text {
   display: flex;
   flex-direction: column;
