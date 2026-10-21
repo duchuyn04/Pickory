@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ApiError, apiRequest } from '../../../shared/api';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { useTrackProductView } from '../../activity-tracking/use-track-product-view';
 import type { ProductDetail } from './catalog-api';
 import { ProductView } from './product-view';
 import './category-page.css';
@@ -62,6 +63,12 @@ function ProductContent({ slug }: { slug: string }) {
     navigate(`/p/${currentSlug}${location.search}`, { replace: true });
   }, [currentSlug, slug, location.search, navigate]);
 
+  // Chỉ có sản phẩm khi query không lỗi và dữ liệu mang đúng slug này. Query lỗi vẫn có thể giữ `data` cũ trong cache, nhưng trang lúc đó hiện lỗi.
+  const shownProduct = !product.isError && product.data?.slug === slug ? product.data : undefined;
+
+  // Chỉ đếm khi sản phẩm đang hiện thật. Trang 404, trang lỗi và khung chuyển slug cũ không phải lượt xem.
+  useTrackProductView(shownProduct !== undefined);
+
   if (product.isError && product.error.code === 'PRODUCT_NOT_FOUND') {
     return <ProductNotFound />;
   }
@@ -73,7 +80,7 @@ function ProductContent({ slug }: { slug: string }) {
     );
   }
   // Đang chuyển sang slug mới thì giữ khung tải, để khách không thấy trang nhấp nháy.
-  if (!product.data || product.data.slug !== slug) return <ProductSkeleton />;
+  if (!shownProduct) return <ProductSkeleton />;
 
-  return <ProductView product={product.data} />;
+  return <ProductView product={shownProduct} />;
 }

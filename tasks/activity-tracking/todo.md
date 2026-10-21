@@ -65,13 +65,13 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 ### ACT-UI1: Trang sản phẩm gửi lượt xem
 **Mô tả:** `trackProductView()` gửi `POST /api/events` bằng `fetch` với `keepalive`. Trang sản phẩm gọi hàm này một lần sau khi tải xong sản phẩm.
 **Tiêu chí nghiệm thu:**
-- [ ] Mở `/p/:slug` gửi đúng 1 request `POST /api/events` với body `{ "type": "product_view" }`
-- [ ] React StrictMode chạy effect hai lần ở bản dev: trang vẫn chỉ gửi 1 request
-- [ ] Đổi biến thể trên cùng trang không gửi thêm request
-- [ ] Chuyển sang sản phẩm khác qua link nội bộ gửi thêm đúng 1 request
-- [ ] Sản phẩm không tồn tại (trang 404) không gửi request
-- [ ] API lỗi hoặc mất mạng: trang không hiện lỗi cho khách và vẫn dùng được
-- [ ] Playwright: console 0 lỗi và 0 cảnh báo trên trang sản phẩm
+- [x] Mở `/p/:slug` gửi đúng 1 request `POST /api/events` với body `{ "type": "product_view" }`
+- [x] React StrictMode chạy effect hai lần ở bản dev: trang vẫn chỉ gửi 1 request
+- [x] Đổi biến thể trên cùng trang không gửi thêm request
+- [x] Chuyển sang sản phẩm khác qua link nội bộ gửi thêm đúng 1 request
+- [x] Sản phẩm không tồn tại (trang 404) không gửi request
+- [x] API lỗi hoặc mất mạng: trang không hiện lỗi cho khách và vẫn dùng được
+- [x] Playwright: console 0 lỗi và 0 cảnh báo trên trang sản phẩm
 **Kiểm tra:** Vitest; Playwright kiểm request
 **Phụ thuộc:** ACT-06 · **Quy mô:** S
 **File:** `apps/frontend/src/features/activity-tracking/track-product-view.ts`, `apps/frontend/src/features/catalog/customer/product-page.tsx`, test trong `apps/frontend/test/unit/features/activity-tracking/`
