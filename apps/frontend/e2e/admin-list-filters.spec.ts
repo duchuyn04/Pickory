@@ -72,8 +72,13 @@ test('FLT-UI2: màn khách hàng và nhân viên giữ bộ lọc trên URL, kh�
     if (await emptyNotice.isVisible()) {
       await expect(page.locator('table.identity-table')).toHaveCount(0);
     } else {
-      // Cột trạng thái là ô thứ ba của mỗi dòng.
-      const statusCells = page.locator('table.identity-table tbody tr td:nth-child(3)');
+      // Tìm cột trạng thái theo tiêu đề. Cách này không lệch khi thêm hay bớt cột.
+      const headers = await page.locator('table.identity-table thead th').allInnerTexts();
+      const statusColumn = headers.findIndex((header) => header.trim() === 'Trạng thái') + 1;
+      expect(statusColumn).toBeGreaterThan(0);
+      const statusCells = page.locator(
+        `table.identity-table tbody tr > :nth-child(${statusColumn})`,
+      );
       expect(await statusCells.count()).toBeGreaterThan(0);
       for (const text of await statusCells.allInnerTexts()) {
         expect(text.trim()).toBe('Đã mời');
