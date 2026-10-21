@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
+import { treeRowNumber } from '../../../shared/row-number';
 import { SearchInput } from '../../../shared/search-input';
 import { useListFilters } from '../../../shared/use-list-filters';
 import {
@@ -264,18 +265,22 @@ export function CategoriesPage() {
             // Danh sách không phân trang nên nút Về trang 1 không hiện. Prop bắt buộc nên truyền hàm rỗng.
             <FilteredEmptyState page={1} onFirstPage={() => undefined} />
           ) : (
-            visibleTree.roots.map((root) => {
+            visibleTree.roots.map((root, rootIndex) => {
               const children = visibleTree.childrenByParent[root.id] || [];
 
               return (
                 <div key={root.id} className="category-node">
                   <div className="category-node-head">
-                    <div className="category-node-text">
-                      <strong>{root.name}</strong>
-                      <span className="cell-sub wrap-anywhere">
-                        Vị trí {root.position} · {root.attributes?.length || 0} thuộc tính riêng ·
-                        slug: <code>{root.slug}</code>
-                      </span>
+                    <div className="category-node-main">
+                      {/* Số theo cây đang hiện (`visibleTree`), nên lọc xong thì số đánh lại từ 1. Gốc giữ làm khung cho con khớp vẫn có số. */}
+                      <span className="category-number">{treeRowNumber(rootIndex)}</span>
+                      <div className="category-node-text">
+                        <strong>{root.name}</strong>
+                        <span className="cell-sub wrap-anywhere">
+                          Vị trí {root.position} · {root.attributes?.length || 0} thuộc tính riêng ·
+                          slug: <code>{root.slug}</code>
+                        </span>
+                      </div>
                     </div>
 
                     {canWrite && (
@@ -310,18 +315,24 @@ export function CategoriesPage() {
 
                   {children.length > 0 && (
                     <div className="category-children">
-                      {children.map((child) => (
+                      {children.map((child, childIndex) => (
                         <div
                           key={child.id}
                           data-testid="category-child-card"
                           className="category-child"
                         >
-                          <div className="category-node-text">
-                            <strong>{child.name}</strong>
-                            <span className="cell-sub wrap-anywhere">
-                              Vị trí {child.position} · {child.attributes?.length || 0} thuộc tính
-                              riêng · slug: <code>{child.slug}</code>
+                          <div className="category-node-main">
+                            {/* Số con gồm số của gốc đang hiện, ví dụ `1.2`. */}
+                            <span className="category-number">
+                              {treeRowNumber(rootIndex, childIndex)}
                             </span>
+                            <div className="category-node-text">
+                              <strong>{child.name}</strong>
+                              <span className="cell-sub wrap-anywhere">
+                                Vị trí {child.position} · {child.attributes?.length || 0} thuộc tính
+                                riêng · slug: <code>{child.slug}</code>
+                              </span>
+                            </div>
                           </div>
 
                           {canWrite && (

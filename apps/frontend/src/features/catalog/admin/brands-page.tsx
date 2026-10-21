@@ -190,6 +190,9 @@ export function BrandsPage() {
               <table className="tbl">
                 <thead>
                   <tr>
+                    <th scope="col" className="num col-row-number">
+                      STT
+                    </th>
                     <th scope="col">Thương hiệu</th>
                     {canWrite && (
                       <th scope="col" className="num">
@@ -199,8 +202,10 @@ export function BrandsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleBrands.map((brand) => (
+                  {visibleBrands.map((brand, index) => (
                     <tr key={brand.id}>
+                      {/* Danh sách không phân trang, và STT theo danh sách đang hiện. Lọc xong thì số đánh lại từ 1. */}
+                      <td className="num col-row-number">{index + 1}</td>
                       <td>
                         <strong>{brand.name}</strong>
                         {/* Slug và mã logo là chuỗi liền, phải ngắt được để trang không tràn ngang ở 375px. */}

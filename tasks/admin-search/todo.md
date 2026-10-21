@@ -174,10 +174,10 @@ Người dùng yêu cầu ngày 2026-10-20. Phase này chỉ sửa frontend. Quy
 ### FLT-UI9: STT cho màn danh mục, thương hiệu và vai trò
 **Mô tả:** Ba màn lọc trên dữ liệu đã tải, nên STT đánh theo danh sách đang hiện. Màn danh mục đánh STT theo cây.
 **Tiêu chí nghiệm thu:**
-- [ ] Màn thương hiệu và vai trò đánh STT 1, 2, 3 theo thứ tự đang hiện. Lọc xong thì STT đánh lại từ 1
-- [ ] Màn danh mục đánh danh mục gốc 1, 2, 3. Danh mục con đánh theo cha: 1.1, 1.2
-- [ ] Lọc danh mục xong thì STT đánh lại theo cây đang hiện
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Màn thương hiệu và vai trò đánh STT 1, 2, 3 theo thứ tự đang hiện. Lọc xong thì STT đánh lại từ 1
+- [x] Màn danh mục đánh danh mục gốc 1, 2, 3. Danh mục con đánh theo cha: 1.1, 1.2
+- [x] Lọc danh mục xong thì STT đánh lại theo cây đang hiện
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI8 · **Quy mô:** M
 
