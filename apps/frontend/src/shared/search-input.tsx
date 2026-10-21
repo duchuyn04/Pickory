@@ -11,9 +11,17 @@ interface SearchInputProps {
   value: string;
   onSearch: (text: string) => void;
   placeholder?: string;
+  // Màn đang chờ kết quả cho từ khóa này. Bật thì ô hiện vòng xoay và báo cho trình đọc màn hình.
+  busy?: boolean;
 }
 
-export function SearchInput({ label, value, onSearch, placeholder }: SearchInputProps) {
+export function SearchInput({
+  label,
+  value,
+  onSearch,
+  placeholder,
+  busy = false,
+}: SearchInputProps) {
   const inputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(value);
@@ -110,7 +118,12 @@ export function SearchInput({ label, value, onSearch, placeholder }: SearchInput
   return (
     <div className="field">
       <label htmlFor={inputId}>{label}</label>
-      <div className="search-input-control">
+      {/* `has-keyword` cho CSS biết nút xóa đang hiện, để đặt vòng xoay bên trái nút hoặc sát mép phải. */}
+      <div
+        className={['search-input-control', busy ? 'is-busy' : '', hasKeyword ? 'has-keyword' : '']
+          .filter(Boolean)
+          .join(' ')}
+      >
         <input
           ref={inputRef}
           id={inputId}
@@ -121,6 +134,8 @@ export function SearchInput({ label, value, onSearch, placeholder }: SearchInput
           onChange={handleChange}
           onKeyDown={handleKeyDown}
         />
+        {/* Vòng xoay chỉ để nhìn. Trình đọc màn hình nghe chữ trong vùng `aria-live` bên dưới. */}
+        {busy && <span className="search-input-spinner" aria-hidden="true" />}
         {hasKeyword && (
           <button
             type="button"
@@ -131,6 +146,11 @@ export function SearchInput({ label, value, onSearch, placeholder }: SearchInput
             <Icon name="close" />
           </button>
         )}
+        {/* Vùng này luôn có trong DOM, vì trình đọc màn hình chỉ đọc lại khi nội dung vùng đã có sẵn đổi. */}
+        {/* Dùng `aria-live` thay `role="status"`: nhiều màn và test dò `role="status"` để chờ dòng đang tải biến mất. */}
+        <span className="sr" aria-live="polite">
+          {busy ? 'Đang tải kết quả' : ''}
+        </span>
       </div>
     </div>
   );

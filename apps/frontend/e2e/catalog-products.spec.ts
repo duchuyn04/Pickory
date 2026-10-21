@@ -225,11 +225,12 @@ test('UI-C5 và UI-C8: tạo, lọc, xem sản phẩm và soạn mô tả', asyn
   await page.goto('/admin/products');
   await page.getByLabel('Tên hoặc mã SKU').fill('Laptop UI C5');
   await expect(page.getByRole('row', { name: /Laptop UI C5/ })).toBeVisible();
-  await page.getByLabel('Trạng thái').selectOption('draft');
-  await page.getByLabel('Danh mục').selectOption(rootId);
+  // Chỉ khớp đúng tên ô. Nút bỏ lọc trên thanh bộ lọc có tên `Bỏ lọc Trạng thái: ...`, chứa cùng chữ.
+  await page.getByLabel('Trạng thái', { exact: true }).selectOption('draft');
+  await page.getByLabel('Danh mục', { exact: true }).selectOption(rootId);
   await page.getByRole('checkbox', { name: /Sắp hết hàng/ }).check();
   await expect(page.getByRole('row', { name: /Laptop UI C5/ })).toBeVisible();
-  await page.getByLabel('Trạng thái').selectOption('active');
+  await page.getByLabel('Trạng thái', { exact: true }).selectOption('active');
   await expect(page.getByText('Không có kết quả phù hợp với bộ lọc.')).toBeVisible();
 
   await page.setViewportSize({ width: 1280, height: 800 });

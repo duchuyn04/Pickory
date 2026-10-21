@@ -37,6 +37,22 @@
   margin: 0 14px 14px;
 }
 
+/* Bảng cũ mờ đi trong lúc chờ kết quả mới. Chuyển mờ ngắn để bảng không chớp. */
+.product-list-body {
+  transition: opacity var(--duration-fast) var(--ease-out-soft);
+}
+
+.product-list-body.is-stale {
+  opacity: 0.6;
+}
+
+/* Người dùng đã tắt hiệu ứng chuyển động thì bảng đổi độ mờ ngay, không chuyển dần. */
+@media (prefers-reduced-motion: reduce) {
+  .product-list-body {
+    transition: none;
+  }
+}
+
 /* Bảng giữ bề rộng tối thiểu và cuộn ngang trên điện thoại, để tên và mã SKU không bị ép xuống dòng từng chữ. */
 .product-list-table {
   min-width: 640px;

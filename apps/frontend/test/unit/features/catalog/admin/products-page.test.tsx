@@ -148,3 +148,240 @@ describe('màn sản phẩm giữ bộ lọc trên URL', () => {
     expect(new URLSearchParams(harness.currentSearch()).get('page')).toBe('2');
   });
 });
+
+// Nhóm bộ lọc đang áp dụng, nằm giữa hàng lọc và bảng. `null` khi thanh không render.
+function getFilterBar() {
+  return harness.container.querySelector<HTMLElement>('[aria-label="Bộ lọc đang áp dụng"]');
+}
+
+function filterLabels() {
+  return [...getFilterBar()!.querySelectorAll('li')].map(
+    (item) => item.firstElementChild!.textContent,
+  );
+}
+
+function buttonByName(name: string) {
+  return harness.container.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`);
+}
+
+function searchParamsOfUrl() {
+  return new URLSearchParams(harness.currentSearch());
+}
+
+// Nhấn Enter trong ô tìm để gửi từ khóa ngay, không phải chờ 300 ms của bộ đếm gõ.
+async function submitSearch(text: string) {
+  const input = findField(harness.container, searchLabel)!;
+  await typeInto(input, text);
+  await act(async () => {
+    input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true }));
+  });
+}
+
+describe('màn sản phẩm giữ bảng cũ khi tải kết quả mới', () => {
+  // Response của từ khóa `dien` bị giữ bằng một lời hứa do test điều khiển, không dùng thời gian chờ thật.
+  async function openWithHeldSearch() {
+    let releaseSearchResponse!: () => void;
+    const searchResponseGate = new Promise<void>((resolve) => (releaseSearchResponse = resolve));
+    harness = await renderCatalogPage({
+      element: <ProductsPage />,
+      routePath: '/admin/products',
+      url: '/admin/products',
+      respond: async (requested) => {
+        if (requested.pathname === '/api/admin/categories') return [];
+        if (requested.searchParams.get('search') === 'dien') {
+          await searchResponseGate;
+          return productsPage([product('moi')]);
+        }
+        return productsPage([product('cu')]);
+      },
+    });
+    return releaseSearchResponse;
+  }
+
+  function busyBlock() {
+    return harness.container.querySelector<HTMLElement>('[aria-busy="true"]');
+  }
+
+  it('đổi từ khóa khi response mới chưa về thì bảng cũ còn, khối bảng có aria-busy và ô tìm báo đang tải', async () => {
+    const releaseSearchResponse = await openWithHeldSearch();
+    expect(busyBlock()).toBeNull();
+
+    await submitSearch('dien');
+
+    expect(harness.container.textContent).toContain('Áo cu');
+    expect(busyBlock()).not.toBeNull();
+    expect(busyBlock()!.querySelector('table')).not.toBeNull();
+    const searchStatus = findField(harness.container, searchLabel)!
+      .closest('.field')!
+      .querySelector('[aria-live="polite"]')!;
+    expect(searchStatus.textContent).toBe('Đang tải kết quả');
+
+    await act(async () => releaseSearchResponse());
+    await settle();
+
+    expect(busyBlock()).toBeNull();
+    expect(harness.container.textContent).toContain('Áo moi');
+    expect(harness.container.textContent).not.toContain('Áo cu');
+    expect(searchStatus.textContent).toBe('');
+  });
+
+  it('lần tải đầu chưa có dữ liệu vẫn hiện Đang tải sản phẩm và chưa có aria-busy', async () => {
+    harness = await renderCatalogPage({
+      element: <ProductsPage />,
+      routePath: '/admin/products',
+      url: '/admin/products',
+      respond: () => new Promise(() => {}),
+    });
+
+    expect(harness.container.textContent).toContain('Đang tải sản phẩm...');
+    expect(busyBlock()).toBeNull();
+    expect(harness.container.querySelector('table')).toBeNull();
+  });
+});
+
+describe('màn sản phẩm tô đậm chữ khớp từ khóa', () => {
+  const phone = {
+    ...product('1'),
+    name: 'Điện thoại Samsung',
+    variants: [{ id: 'sku-1', code: 'SS-DT-01' }],
+  };
+
+  it('tên có chữ khớp không dấu thì chữ đó nằm trong mark và giữ nguyên dấu', async () => {
+    harness = await open('/admin/products?search=dien%20thoai', [phone]);
+
+    const marks = [...harness.container.querySelectorAll('tbody mark')];
+    expect(marks.map((mark) => mark.textContent)).toEqual(['Điện thoại']);
+    expect(harness.container.querySelector('tbody th')!.textContent).toContain(
+      'Điện thoại Samsung',
+    );
+  });
+
+  it('mã SKU khớp từ khóa cũng nằm trong mark', async () => {
+    harness = await open('/admin/products?search=dt-01', [phone]);
+
+    const skuCell = harness.container.querySelector('tbody .cell-sub')!;
+    expect([...skuCell.querySelectorAll('mark')].map((mark) => mark.textContent)).toEqual([
+      'DT-01',
+    ]);
+    // Tên không chứa từ khóa nên không có mark ở tên.
+    expect(harness.container.querySelectorAll('tbody mark')).toHaveLength(1);
+  });
+
+  it('không có từ khóa thì bảng không có mark', async () => {
+    harness = await open('/admin/products', [phone]);
+
+    expect(harness.container.querySelector('mark')).toBeNull();
+  });
+});
+
+describe('thanh bộ lọc đang áp dụng', () => {
+  const allFiltersUrl =
+    '/admin/products?search=iphone&status=active&categoryId=cat-1&lowStock=true&page=2';
+
+  it('không có bộ lọc thì thanh không render và dòng đếm giữ nguyên', async () => {
+    harness = await open('/admin/products', [product('1')], 12);
+
+    expect(getFilterBar()).toBeNull();
+    expect(harness.container.querySelector('.product-list-head')!.textContent).toContain(
+      '12 sản phẩm',
+    );
+  });
+
+  it('URL có đủ 4 bộ lọc thì thanh có đủ 4 nhãn', async () => {
+    harness = await open(allFiltersUrl);
+
+    expect(filterLabels()).toEqual([
+      'Từ khóa: iphone',
+      'Trạng thái: Đang bán',
+      'Danh mục: Áo',
+      'Sắp hết hàng',
+    ]);
+  });
+
+  it('trạng thái lạ hiện nguyên giá trị và danh mục chưa có tên hiện mã danh mục', async () => {
+    harness = await renderCatalogPage({
+      element: <ProductsPage />,
+      routePath: '/admin/products',
+      url: '/admin/products?status=archived&categoryId=cat-9',
+      respond: (requested) =>
+        requested.pathname === '/api/admin/products' ? productsPage([product('1')]) : [],
+    });
+
+    expect(filterLabels()).toEqual(['Trạng thái: archived', 'Danh mục: cat-9']);
+  });
+
+  it.each([
+    ['Bỏ lọc Từ khóa: iphone', 'search'],
+    ['Bỏ lọc Trạng thái: Đang bán', 'status'],
+    ['Bỏ lọc Danh mục: Áo', 'categoryId'],
+    ['Bỏ lọc Sắp hết hàng', 'lowStock'],
+  ])('bấm %s chỉ xóa %s khỏi URL và xóa page', async (buttonName, removedName) => {
+    harness = await open(allFiltersUrl);
+
+    await act(async () => buttonByName(buttonName)!.click());
+
+    const params = searchParamsOfUrl();
+    expect(params.has(removedName)).toBe(false);
+    expect(params.has('page')).toBe(false);
+    const keptNames = ['search', 'status', 'categoryId', 'lowStock'].filter(
+      (name) => name !== removedName,
+    );
+    for (const name of keptNames) expect(params.has(name)).toBe(true);
+  });
+
+  it('bỏ nhãn từ khóa thì ô tìm cũng rỗng', async () => {
+    harness = await open(allFiltersUrl);
+    expect(findField(harness.container, searchLabel)!.value).toBe('iphone');
+
+    await act(async () => buttonByName('Bỏ lọc Từ khóa: iphone')!.click());
+
+    expect(findField(harness.container, searchLabel)!.value).toBe('');
+  });
+
+  it('nút X có type button', async () => {
+    harness = await open(allFiltersUrl);
+
+    expect(buttonByName('Bỏ lọc Trạng thái: Đang bán')!.type).toBe('button');
+  });
+
+  it('bấm Xóa bộ lọc thì URL không còn bộ lọc nào, thanh ẩn và ô tìm rỗng', async () => {
+    harness = await open(`${allFiltersUrl}&keep=1`);
+    const clearAll = [...harness.container.querySelectorAll('button')].find(
+      (button) => button.textContent === 'Xóa bộ lọc',
+    )!;
+
+    await act(async () => clearAll.click());
+
+    const params = searchParamsOfUrl();
+    for (const name of ['search', 'status', 'categoryId', 'lowStock', 'page']) {
+      expect(params.has(name)).toBe(false);
+    }
+    // Tham số lạ không thuộc bộ lọc nên còn nguyên.
+    expect(params.get('keep')).toBe('1');
+    expect(getFilterBar()).toBeNull();
+    expect(findField(harness.container, searchLabel)!.value).toBe('');
+  });
+
+  it('có từ khóa thì thanh hiện số kết quả kèm từ khóa', async () => {
+    harness = await open('/admin/products?search=iphone', [product('1')], 12);
+
+    expect(getFilterBar()!.textContent).toContain('12 sản phẩm khớp "iphone"');
+  });
+
+  it('chỉ có bộ lọc khác từ khóa thì thanh hiện số kết quả không kèm từ khóa', async () => {
+    harness = await open('/admin/products?status=active', [product('1')], 12);
+
+    const summary = getFilterBar()!.textContent!;
+    expect(summary).toContain('12 sản phẩm');
+    expect(summary).not.toContain('khớp');
+  });
+
+  it('thanh hiện thì dòng đếm ở đầu danh sách ẩn đi, số chỉ hiện một lần', async () => {
+    harness = await open('/admin/products?status=active', [product('1')], 12);
+
+    expect(harness.container.querySelector('.product-list-head')!.textContent).not.toContain(
+      'sản phẩm',
+    );
+    expect(harness.container.textContent!.match(/12 sản phẩm/g)).toHaveLength(1);
+  });
+});

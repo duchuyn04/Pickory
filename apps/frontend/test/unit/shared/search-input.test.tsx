@@ -7,9 +7,11 @@ import { SearchInput } from '../../../src/shared/search-input';
 let container: HTMLDivElement;
 let root: Root;
 
-function renderInput(value: string, onSearch: (text: string) => void) {
+function renderInput(value: string, onSearch: (text: string) => void, busy?: boolean) {
   return act(async () =>
-    root.render(<SearchInput label="Tìm nhân viên" value={value} onSearch={onSearch} />),
+    root.render(
+      <SearchInput label="Tìm nhân viên" value={value} onSearch={onSearch} busy={busy} />,
+    ),
   );
 }
 
@@ -263,5 +265,67 @@ describe('SearchInput', () => {
     await pressKey('a');
 
     expect(onSearch).not.toHaveBeenCalled();
+  });
+
+  describe('dấu hiệu đang tải', () => {
+    function getStatus() {
+      return container.querySelector('[aria-live="polite"]')!;
+    }
+
+    function getSpinner() {
+      return container.querySelector('.search-input-spinner');
+    }
+
+    it('vùng aria-live luôn có trong DOM và rỗng khi không tải', async () => {
+      await renderInput('', vi.fn());
+
+      expect(getStatus().textContent).toBe('');
+      expect(getSpinner()).toBeNull();
+    });
+
+    it('busy bật thì vòng xoay ẩn với trình đọc màn hình và vùng aria-live đọc Đang tải kết quả', async () => {
+      await renderInput('', vi.fn(), true);
+
+      expect(getSpinner()!.getAttribute('aria-hidden')).toBe('true');
+      expect(getStatus().textContent).toBe('Đang tải kết quả');
+    });
+
+    it('busy tắt lại thì vòng xoay mất và vùng aria-live rỗng nhưng vẫn còn trong DOM', async () => {
+      await renderInput('', vi.fn(), true);
+      const status = getStatus();
+
+      await renderInput('', vi.fn(), false);
+
+      expect(getSpinner()).toBeNull();
+      expect(getStatus()).toBe(status);
+      expect(status.textContent).toBe('');
+    });
+
+    it('busy đánh dấu khung ô để CSS tăng padding-right', async () => {
+      await renderInput('', vi.fn(), true);
+
+      expect(container.querySelector('.search-input-control.is-busy')).not.toBeNull();
+
+      await renderInput('', vi.fn(), false);
+
+      expect(container.querySelector('.search-input-control.is-busy')).toBeNull();
+    });
+
+    it('khung ô có has-keyword khi nút xóa hiện, để CSS đặt vòng xoay bên trái nút', async () => {
+      await renderInput('', vi.fn(), true);
+      expect(container.querySelector('.search-input-control.has-keyword')).toBeNull();
+
+      await type('an');
+
+      expect(container.querySelector('.search-input-control.has-keyword')).not.toBeNull();
+      expect(getClearButton()).not.toBeNull();
+    });
+
+    it('không truyền busy thì giữ hành vi cũ', async () => {
+      await renderInput('an', vi.fn());
+
+      expect(getSpinner()).toBeNull();
+      expect(getStatus().textContent).toBe('');
+    });
   });
 });

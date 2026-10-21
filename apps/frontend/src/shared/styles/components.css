@@ -172,6 +172,43 @@
   outline-offset: 0;
 }
 
+/* Vòng xoay 16px nằm sát mép phải khi ô chưa có nút xóa. Không nhận chuột, để bấm xuyên xuống ô tìm. */
+.search-input-spinner {
+  position: absolute;
+  top: calc(50% - 8px);
+  right: var(--space-2);
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--color-border-strong);
+  border-top-color: var(--color-ink-muted);
+  border-radius: 50%;
+  animation: search-input-spin var(--duration-slow) linear infinite;
+  pointer-events: none;
+}
+
+/* Ô có nút xóa thì vòng xoay lùi sang trái nút (nút 28px, cách mép 4px, cách vòng xoay 4px). */
+.search-input-control.has-keyword .search-input-spinner {
+  right: 36px;
+}
+
+/* Ô vừa có chữ vừa đang tải thì chừa thêm 20px cho vòng xoay. Chữ dài không chạy dưới vòng xoay. */
+.search-input-control.is-busy.has-keyword .search-input-field {
+  padding-right: 60px;
+}
+
+@keyframes search-input-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Người dùng đã tắt hiệu ứng chuyển động thì vòng xoay đứng yên. Vòng vẫn hiện để báo đang tải. */
+@media (prefers-reduced-motion: reduce) {
+  .search-input-spinner {
+    animation: none;
+  }
+}
+
 /* Ô sai luôn đi kèm chữ lỗi trong `.form-error`, không chỉ dựa vào màu viền. */
 [aria-invalid='true'] {
   border-color: var(--color-danger) !important;

@@ -1,0 +1,71 @@
+/*
+ * Thanh bộ lọc đang áp dụng: các nhãn, nút xóa tất cả và số kết quả.
+ * Thanh xuống dòng khi hẹp để không tràn ngang ở 375 px.
+ */
+.active-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  padding: var(--space-2) 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.active-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* Nhãn dạng viên thuốc. Chữ dài ngắt dòng trong nhãn, nên nhãn không rộng hơn thanh. */
+.active-filter-chip {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  max-width: 100%;
+  padding: 2px 2px 2px var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-neutral-soft);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-label);
+}
+
+.active-filter-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Nút X vuông 28px, vượt mức tối thiểu 24px của vùng bấm. Tên truy cập nằm ở `aria-label`. */
+.active-filter-remove {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+}
+
+.active-filter-remove:hover {
+  background: var(--color-border);
+  color: var(--color-dark);
+}
+
+.active-filter-remove:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+}
+
+/* Số kết quả đẩy sang mép phải khi đủ chỗ. Hẹp thì xuống dòng riêng. */
+.active-filter-summary {
+  margin: 0 0 0 auto;
+}

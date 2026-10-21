@@ -136,15 +136,15 @@ Người dùng yêu cầu ngày 2026-10-20. Phase này chỉ sửa frontend. Quy
 ### FLT-UI6: Màn sản phẩm giữ bảng cũ, tô đậm chữ khớp, hiện bộ lọc đang áp dụng
 **Mô tả:** Màn `/admin/products` giữ bảng cũ trong lúc tải kết quả mới. Màn tô đậm phần tên và mã SKU khớp từ khóa. Màn có thanh bộ lọc đang áp dụng.
 **Tiêu chí nghiệm thu:**
-- [ ] Đổi từ khóa hoặc bộ lọc thì bảng cũ vẫn hiện, mờ đi, và có `aria-busy="true"` cho tới khi có kết quả mới
-- [ ] Ô tìm hiện dấu hiệu đang tải trong lúc chờ kết quả. Lần tải đầu tiên vẫn hiện `Đang tải sản phẩm...`
-- [ ] Gõ `dien thoai` thì chữ `Điện thoại` trong tên được bọc trong `<mark>`. Phép so khớp không phân biệt dấu và hoa thường
-- [ ] Mã SKU khớp từ khóa cũng được tô đậm. Từ khóa rỗng thì bảng không có `<mark>`
-- [ ] Thanh bộ lọc hiện một nhãn cho mỗi bộ lọc đang bật: từ khóa, trạng thái, danh mục, sắp hết hàng
-- [ ] Bấm nút X trên một nhãn thì chỉ bộ lọc đó bị xóa khỏi URL. Danh sách quay về trang 1
-- [ ] Nút `Xóa bộ lọc` xóa mọi bộ lọc. Thanh bộ lọc ẩn khi không có bộ lọc nào
-- [ ] Thanh bộ lọc hiện số kết quả, ví dụ `12 sản phẩm khớp "iphone"`
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Đổi từ khóa hoặc bộ lọc thì bảng cũ vẫn hiện, mờ đi, và có `aria-busy="true"` cho tới khi có kết quả mới
+- [x] Ô tìm hiện dấu hiệu đang tải trong lúc chờ kết quả. Lần tải đầu tiên vẫn hiện `Đang tải sản phẩm...`
+- [x] Gõ `dien thoai` thì chữ `Điện thoại` trong tên được bọc trong `<mark>`. Phép so khớp không phân biệt dấu và hoa thường
+- [x] Mã SKU khớp từ khóa cũng được tô đậm. Từ khóa rỗng thì bảng không có `<mark>`
+- [x] Thanh bộ lọc hiện một nhãn cho mỗi bộ lọc đang bật: từ khóa, trạng thái, danh mục, sắp hết hàng
+- [x] Bấm nút X trên một nhãn thì chỉ bộ lọc đó bị xóa khỏi URL. Danh sách quay về trang 1
+- [x] Nút `Xóa bộ lọc` xóa mọi bộ lọc. Thanh bộ lọc ẩn khi không có bộ lọc nào
+- [x] Thanh bộ lọc hiện số kết quả, ví dụ `12 sản phẩm khớp "iphone"`
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI5 · **Quy mô:** M
 
