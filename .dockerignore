@@ -1,9 +1,14 @@
 # Context build là gốc repo. Loại file không cần để build nhanh hơn và không lộ secret vào image.
 
-# Secret ở máy dev không được vào image.
-.env
-.env.*
-!.env.example
+# Chặn mọi thứ ở gốc repo. Dockerfile chỉ chép file trong `apps/`, nên file mới ở gốc cũng tự bị loại.
+*
+# Chỉ mở lại `apps/`. Các dòng bên dưới loại tiếp phần không cần trong `apps/`.
+!apps
+
+# Secret ở máy dev không được vào image, kể cả file `.env` đặt trong `apps/`.
+**/.env
+**/.env.*
+!**/.env.example
 
 # Thư viện và kết quả build ở máy dev. Docker tự cài và tự build trong image.
 **/node_modules
@@ -15,16 +20,6 @@
 **/test-results
 **/coverage
 
-# Image không chạy test và không cần tài liệu.
-.git
-.claude
-.playwright-mcp
+# Image không chạy test.
 apps/backend/tests
 apps/frontend/e2e
-docs
-spec
-tasks
-shop-retail
-docker
-*.docx
-*.pdf

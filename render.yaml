@@ -7,7 +7,8 @@ services:
     dockerfilePath: ./apps/backend/Dockerfile
     dockerContext: .
     branch: main
-    # Gói free dùng cho giai đoạn demo. Service ngủ sau 15 phút không có request, nên worker nền dừng và webhook GHN chờ khởi động lại.
+    # Gói free dùng cho giai đoạn demo. Service ngủ sau 15 phút không có request.
+    # UptimeRobot gọi `/api/health` 5 phút một lần, nên service không ngủ. Xem mục 7 của `docs/deployment-overview.md`.
     plan: free
     # Đặt cùng vùng với project Supabase để giảm độ trễ tới DB.
     region: singapore
@@ -67,22 +68,6 @@ services:
       # Khóa SePay gửi kèm webhook tiền về. Production thiếu biến này thì API dừng khi khởi động.
       - key: SEPAY_WEBHOOK_API_KEY
         sync: false
-      - key: LLM_BASE_URL
-        value: https://api.deepseek.com
-      - key: LLM_API_KEY
-        sync: false
-      - key: LLM_MODEL
-        sync: false
-      - key: EMBEDDING_API_KEY
-        sync: false
-      - key: EMBEDDING_MODEL
-        value: text-embedding-3-small
-      - key: AI_MONTHLY_BUDGET_USD
-        value: "30"
-      - key: AI_CHAT_DAILY_LIMIT_USER
-        value: "50"
-      - key: AI_CHAT_DAILY_LIMIT_ANON
-        value: "15"
       # Mở tài liệu API chỉ xem tại `/api/docs`. Người xem đọc được route và schema, nhưng không gửi request từ trang docs.
       - key: API_DOCS_ENABLED
         value: "1"

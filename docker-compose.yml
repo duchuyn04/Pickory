@@ -1,7 +1,8 @@
-# PostgreSQL + pgvector cho môi trường dev. Chạy: docker compose up -d db
+# PostgreSQL cho môi trường dev. Chạy: docker compose up -d db
 services:
   db:
-    image: pgvector/pgvector:pg17
+    # Module AI đã gỡ nên DB không còn cần extension pgvector. Dùng image PostgreSQL thường.
+    image: postgres:17
     restart: unless-stopped
     environment:
       POSTGRES_USER: pickory
