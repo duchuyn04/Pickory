@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
+import { Icon } from './icons';
 
 // Thời gian chờ sau lần gõ cuối. Mỗi phím gõ không gửi một request tới API.
 const SEARCH_DELAY_MS = 300;
@@ -14,6 +15,7 @@ interface SearchInputProps {
 
 export function SearchInput({ label, value, onSearch, placeholder }: SearchInputProps) {
   const inputId = useId();
+  const inputRef = useRef<HTMLInputElement>(null);
   const [text, setText] = useState(value);
   const [previousValue, setPreviousValue] = useState(value);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -48,28 +50,88 @@ export function SearchInput({ label, value, onSearch, placeholder }: SearchInput
     };
   }, []);
 
+  // Hủy lần gọi đang hẹn giờ. Mọi đường gửi ngay đều gọi hàm này để API không nhận hai request cho một lần nhập.
+  const cancelPendingSearch = () => {
+    if (timerRef.current === null) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+  };
+
+  // Gửi từ khóa ngay, không chờ 300 ms. Enter, Esc và nút xóa dùng chung đường này.
+  const searchNow = (nextText: string) => {
+    cancelPendingSearch();
+    // Cập nhật chữ đang chờ trước khi gọi, để hiệu ứng đồng bộ theo `value` không coi giá trị mới là cũ.
+    pendingTextRef.current = nextText;
+    onSearchRef.current(nextText);
+  };
+
+  // Xóa ô và gửi từ khóa rỗng ngay. Nút xóa và phím Esc dùng chung hàm này.
+  const clearText = () => {
+    setText('');
+    searchNow('');
+    // Đưa con trỏ về ô để người dùng gõ từ khóa mới ngay, không phải bấm lại vào ô.
+    inputRef.current?.focus();
+  };
+
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const nextText = event.target.value;
     setText(nextText);
     pendingTextRef.current = nextText;
     // Mỗi phím gõ đặt lại bộ đếm. Chỉ chữ cuối sau khi ngừng gõ được gửi đi.
-    if (timerRef.current !== null) clearTimeout(timerRef.current);
+    cancelPendingSearch();
     timerRef.current = setTimeout(() => {
       timerRef.current = null;
       onSearchRef.current(nextText);
     }, SEARCH_DELAY_MS);
   };
 
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    // Phím Enter đang xác nhận chữ của bộ gõ chưa phải lệnh tìm. Chỉ nhận phím sau khi bộ gõ chốt chữ.
+    if (event.nativeEvent.isComposing) return;
+
+    if (event.key === 'Enter') {
+      // Chặn gửi form cha nếu có. Ô tìm đã tự gửi từ khóa.
+      event.preventDefault();
+      searchNow(text);
+      return;
+    }
+
+    // Ô rỗng không có gì để xóa. Bỏ qua để Esc vẫn đóng được hộp thoại hay lớp phủ bên ngoài.
+    if (event.key === 'Escape' && text !== '') {
+      // Chặn hành vi mặc định của `type="search"`. Trình duyệt sẽ tự xóa ô và phát thêm sự kiện `input`, làm hẹn giờ chạy lại.
+      event.preventDefault();
+      clearText();
+    }
+  };
+
+  // Chữ toàn khoảng trắng không phải từ khóa, nên không cần nút xóa.
+  const hasKeyword = text.trim() !== '';
+
   return (
     <div className="field">
       <label htmlFor={inputId}>{label}</label>
-      <input
-        id={inputId}
-        type="search"
-        value={text}
-        placeholder={placeholder}
-        onChange={handleChange}
-      />
+      <div className="search-input-control">
+        <input
+          ref={inputRef}
+          id={inputId}
+          className="search-input-field"
+          type="search"
+          value={text}
+          placeholder={placeholder}
+          onChange={handleChange}
+          onKeyDown={handleKeyDown}
+        />
+        {hasKeyword && (
+          <button
+            type="button"
+            className="search-input-clear"
+            aria-label="Xóa từ khóa"
+            onClick={clearText}
+          >
+            <Icon name="close" />
+          </button>
+        )}
+      </div>
     </div>
   );
 }

@@ -124,12 +124,12 @@ Người dùng yêu cầu ngày 2026-10-20. Phase này chỉ sửa frontend. Quy
 ### FLT-UI5: Ô tìm kiếm có nút xóa, phím Enter và phím Esc
 **Mô tả:** `SearchInput` thêm nút xóa từ khóa. Phím Enter gửi từ khóa ngay. Phím Esc xóa ô. Cả 8 màn đang dùng `SearchInput` nhận thay đổi này.
 **Tiêu chí nghiệm thu:**
-- [ ] Nút xóa chỉ hiện khi ô có chữ. Bấm nút thì ô rỗng, `onSearch('')` chạy ngay một lần, và con trỏ quay về ô
-- [ ] Phím Enter gọi `onSearch` ngay với từ khóa hiện tại. Lần gọi đang hẹn giờ bị hủy, nên API không nhận hai request
-- [ ] Phím Esc xóa ô có chữ và gọi `onSearch('')` ngay. Ô đã rỗng thì Esc không gọi `onSearch`
-- [ ] Nút xóa có tên truy cập `Xóa từ khóa` và dùng được bằng bàn phím
-- [ ] Trình duyệt không hiện thêm nút xóa riêng của ô `type="search"`
-- [ ] Test hiện có của `SearchInput` và 8 màn dùng nó vẫn đạt
+- [x] Nút xóa chỉ hiện khi ô có chữ. Bấm nút thì ô rỗng, `onSearch('')` chạy ngay một lần, và con trỏ quay về ô
+- [x] Phím Enter gọi `onSearch` ngay với từ khóa hiện tại. Lần gọi đang hẹn giờ bị hủy, nên API không nhận hai request
+- [x] Phím Esc xóa ô có chữ và gọi `onSearch('')` ngay. Ô đã rỗng thì Esc không gọi `onSearch`
+- [x] Nút xóa có tên truy cập `Xóa từ khóa` và dùng được bằng bàn phím
+- [x] Trình duyệt không hiện thêm nút xóa riêng của ô `type="search"`
+- [x] Test hiện có của `SearchInput` và 8 màn dùng nó vẫn đạt
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI1 · **Quy mô:** S
 

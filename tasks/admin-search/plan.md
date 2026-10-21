@@ -111,7 +111,7 @@ Chi tiết từng task ở `tasks/admin-search/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Trải nghiệm danh sách
-- [ ] FLT-UI5 · [ ] FLT-UI6 · [ ] FLT-UI7 · [ ] FLT-UI8 · [ ] FLT-UI9 · [ ] FLT-UI10 · [ ] FLT-UI11
+- [x] FLT-UI5 · [ ] FLT-UI6 · [ ] FLT-UI7 · [ ] FLT-UI8 · [ ] FLT-UI9 · [ ] FLT-UI10 · [ ] FLT-UI11
 
 ### Checkpoint S3
 - [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test`) sạch

@@ -127,6 +127,51 @@
   padding: var(--space-1) var(--space-2);
 }
 
+/* Khung ô tìm kiếm. Nút xóa nằm đè lên mép phải của ô, nên khung làm mốc định vị cho nút. */
+.search-input-control {
+  position: relative;
+}
+
+/* Ô chừa lề phải 40px (nút 28px, cách mép 4px, cách chữ 8px) để chữ dài không chạy dưới nút. */
+.field .search-input-field {
+  padding-right: 40px;
+}
+
+/* Ẩn nút xóa riêng của Chromium và Safari. Ô đã có nút xóa của ứng dụng, hai nút cạnh nhau gây rối. */
+.search-input-field::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* Nút xóa vuông 28px, vượt mức tối thiểu 24px của vùng bấm. Tên truy cập nằm ở `aria-label`. */
+.search-input-clear {
+  position: absolute;
+  top: 50%;
+  right: var(--space-1);
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--color-ink-muted);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.search-input-clear:hover {
+  background: var(--color-neutral-soft);
+  color: var(--color-dark);
+}
+
+/* Vòng focus xanh nằm sát nút. Lề ngoài 0 để vòng không chạm viền ô. */
+.search-input-clear:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 0;
+}
+
 /* Ô sai luôn đi kèm chữ lỗi trong `.form-error`, không chỉ dựa vào màu viền. */
 [aria-invalid='true'] {
   border-color: var(--color-danger) !important;
