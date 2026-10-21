@@ -42,7 +42,7 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 ### Checkpoint A1
 - [x] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
 - [x] Test kiến trúc chặn `ActivityTracking` tham chiếu module khác ngoài Contracts
-- [ ] Review với người dùng
+- [x] Review với người dùng
 
 ---
 
@@ -51,13 +51,13 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 ### ACT-06: API nhận lượt xem
 **Mô tả:** `POST /api/events` công khai nhận một lượt xem với body `{ "type": "product_view" }`. Endpoint cộng 1 vào bộ đếm `product_view` của hôm nay bằng một câu lệnh upsert, rồi trả 204.
 **Tiêu chí nghiệm thu:**
-- [ ] Body hợp lệ trả 204. Bộ đếm `product_view` của hôm nay tăng đúng 1
-- [ ] `type` khác `product_view`, thiếu `type` hoặc body không phải JSON: API trả 400 `VALIDATION_ERROR`, bộ đếm không đổi
-- [ ] 20 request song song làm bộ đếm tăng đúng 20
-- [ ] `Actor.Kind` là `Staff`: API trả 204, bộ đếm không đổi
-- [ ] User agent của crawler trong danh sách: API trả 204, bộ đếm không đổi
-- [ ] Request thứ 61 trong 1 phút của cùng `AnonymousId` trả 429 `TOO_MANY_REQUESTS`
-- [ ] Ngày của bộ đếm theo giờ `Asia/Ho_Chi_Minh`. Test biên 23:59 và 00:00 bằng `TimeProvider` giả
+- [x] Body hợp lệ trả 204. Bộ đếm `product_view` của hôm nay tăng đúng 1
+- [x] `type` khác `product_view`, thiếu `type` hoặc body không phải JSON: API trả 400 `VALIDATION_ERROR`, bộ đếm không đổi
+- [x] 20 request song song làm bộ đếm tăng đúng 20
+- [x] `Actor.Kind` là `Staff`: API trả 204, bộ đếm không đổi
+- [x] User agent của crawler trong danh sách: API trả 204, bộ đếm không đổi
+- [x] Request thứ 61 trong 1 phút của cùng `AnonymousId` trả 429 `TOO_MANY_REQUESTS`
+- [x] Ngày của bộ đếm theo giờ `Asia/Ho_Chi_Minh`. Test biên 23:59 và 00:00 bằng `TimeProvider` giả
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** ACT-04 · **Quy mô:** M
 **File:** `apps/backend/src/Pickory.Modules.ActivityTracking/Features/CollectEvents/`, `apps/backend/src/Pickory.Modules.ActivityTracking/Counters/DailyCounterWriter.cs`
@@ -88,6 +88,21 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 **Kiểm tra:** test tích hợp gọi API giỏ và đặt đơn thật, rồi đọc `daily_counters`
 **Phụ thuộc:** ACT-04, ACT-06 · **Quy mô:** S
 **File:** `apps/backend/src/Pickory.Modules.ActivityTracking/Counters/{CartItemAddedCounterHandler.cs, OrderPlacedCounterHandler.cs}`
+
+### ACT-14: Giới hạn lượt xem theo IP và dọn bộ nhớ của `RateLimiter`
+**Mô tả:** ACT-06 giới hạn lượt xem theo `AnonymousId`. Client xóa cookie `pk_anon` thì nhận khóa mới và né được giới hạn. Task đổi khóa theo mẫu `CheckoutPreviewRateLimiter.BuildKey`.
+
+`RateLimiter` của `Pickory.Shared` chỉ xóa bản ghi hết hạn khi khóa đó được gọi lại. Khóa không quay lại nằm trong bộ nhớ đến khi API khởi động lại. Task thêm bước dọn bản ghi hết hạn.
+**Tiêu chí nghiệm thu:**
+- [ ] Khách đã đăng nhập đi theo `UserId`. Khách vãng lai đi theo IP của `GetClientIp()`
+- [ ] Khách vãng lai đổi `pk_anon` ở mỗi request: request thứ 61 trong 1 phút từ cùng IP vẫn trả 429 `TOO_MANY_REQUESTS`
+- [ ] Hai khách đã đăng nhập dùng chung một IP có hạn mức riêng
+- [ ] `RateLimiter` xóa bản ghi đã hết cửa sổ, kể cả khi khóa không được gọi lại. Unit test dùng `FakeTimeProvider`
+- [ ] Bước dọn chạy tối đa một lần mỗi cửa sổ. Request thường không duyệt cả bảng bản ghi
+- [ ] Test giới hạn tần suất của `identity`, `commerce` và `shipping` vẫn xanh
+**Kiểm tra:** unit test cho `RateLimiter`; test tích hợp cho `POST /api/events`
+**Phụ thuộc:** ACT-06 · **Quy mô:** M
+**File:** `apps/backend/src/Pickory.Shared/Throttling/RateLimiter.cs`, `apps/backend/src/Pickory.Modules.ActivityTracking/Features/CollectEvents/{ProductViewRateLimiter.cs, CollectEventsEndpoints.cs}`
 
 ### Checkpoint A2
 - [ ] Xem sản phẩm, thêm giỏ, đặt đơn: mỗi bộ đếm của hôm nay tăng đúng 1

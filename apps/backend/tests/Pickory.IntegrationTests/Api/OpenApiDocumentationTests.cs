@@ -10,7 +10,7 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Api;
 
-// Development có tài liệu đủ chức năng. Production chỉ có tài liệu chỉ xem khi bật `API_DOCS_ENABLED`. Test kiểm route, tag và hai chế độ.
+// Development có tài liệu đủ chức năng. Production chỉ có tài liệu chỉ xem khi bật `API_DOCS_ENABLED`.
 [Collection(IntegrationDatabaseCollection.Name)]
 public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>
 {
@@ -19,7 +19,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
     // Cấu hình Swagger UI ghi danh sách phương thức được gửi. Danh sách rỗng nghĩa là không có nút gửi request.
     private const string EmptySubmitMethods = "\"supportedSubmitMethods\":[]";
 
-    private static readonly string[] AllowedTags = ["System", "Identity", "Catalog", "Shipping", "Commerce"];
+    private static readonly string[] AllowedTags = ["System", "Identity", "Catalog", "Shipping", "Commerce", "ActivityTracking"];
 
     private async Task<JsonDocument> ReadDocumentAsync()
     {
@@ -113,6 +113,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
         Assert.Equal("Commerce", FirstTag(paths, "/api/cart", "get"));
         Assert.Equal("Commerce", FirstTag(paths, "/api/checkout/previews", "post"));
         Assert.Equal("Commerce", FirstTag(paths, "/api/admin/commerce/settings", "get"));
+        Assert.Equal("ActivityTracking", FirstTag(paths, "/api/events", "post"));
     }
 
     [Fact]

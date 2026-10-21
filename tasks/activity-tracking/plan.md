@@ -6,7 +6,7 @@ Module đếm ba chỉ số theo ngày: lượt xem sản phẩm, lượt thêm 
 
 Module chỉ cộng số, không lưu ai đã làm gì. Vì vậy module không cần kiểm tra đồng ý, không cần xóa dữ liệu và không đổi Contracts của `identity`.
 
-Việc cần làm gồm 6 task, rồi E2E và nghiệm thu:
+Việc cần làm gồm 7 task, rồi E2E và nghiệm thu:
 
 1. ACT-02: hàm tính phễu.
 2. ACT-04: khung module và bảng `daily_counters`.
@@ -14,6 +14,7 @@ Việc cần làm gồm 6 task, rồi E2E và nghiệm thu:
 4. ACT-UI1: trang sản phẩm gửi lượt xem.
 5. ACT-07: nghe sự kiện thêm giỏ và đặt đơn của `commerce`.
 6. ACT-11: API phễu cho admin.
+7. ACT-14: giới hạn lượt xem theo IP và dọn bộ nhớ của `RateLimiter`.
 
 ## Thay đổi phạm vi ngày 2026-10-20
 
@@ -53,6 +54,7 @@ Mọi điều kiện đã có trong code ngày 2026-10-20:
 ACT-02 hàm tính phễu
 ACT-04 khung module, Contracts, bảng daily_counters
  ├── ACT-06 POST /api/events ─── ACT-UI1 trang sản phẩm gửi lượt xem
+ │    └── ACT-14 giới hạn lượt xem theo IP, dọn bộ nhớ của RateLimiter
  ├── ACT-07 nghe CartItemAddedEvent và OrderPlacedEvent
  └── ACT-11 IActivityMetrics và API phễu (cần ACT-02)
           └── ACT-E2E1 → ACT-13 nghiệm thu
@@ -70,7 +72,7 @@ ACT-06, ACT-07 và ACT-11 chỉ cần ACT-04, nên ba task chạy song song đư
 6. **`POST /api/events` ghi ngay rồi trả 204.** Một câu lệnh SQL đủ nhanh cho web demo. Plan không dùng hàng đợi nền, nên API dừng đột ngột không mất lượt nào.
 7. **Body chỉ có `type`.** `type` phải là `product_view`. Body không có `productId`, vì bộ đếm không lưu sản phẩm.
 8. **Bỏ qua nhân viên và crawler.** `Actor.Kind` là `Staff` thì API trả 204 và không cộng. User agent khớp danh sách crawler trong code thì API cũng trả 204 và không cộng.
-9. **Giới hạn 60 lượt xem mỗi phút theo `AnonymousId`.** API dùng `RateLimiter` của `Pickory.Shared`. Vượt giới hạn thì API trả 429 `TOO_MANY_REQUESTS`. Một khách mở 60 trang sản phẩm trong 1 phút là trường hợp hiếm.
+9. **Giới hạn 60 lượt xem mỗi phút cho mỗi khách.** API dùng `RateLimiter` của `Pickory.Shared`. Khách đã đăng nhập đi theo `UserId`, khách vãng lai đi theo IP, giống `CheckoutPreviewRateLimiter`. ACT-06 dùng khóa `AnonymousId`. Client xóa cookie `pk_anon` là né được khóa này, nên ACT-14 đổi khóa. Vượt giới hạn thì API trả 429 `TOO_MANY_REQUESTS`. Một khách mở 60 trang sản phẩm trong 1 phút là trường hợp hiếm.
 10. **Thêm giỏ đếm theo `CartItemAddedEvent`.** Mỗi sự kiện cộng 1, không cộng theo `Quantity`. `commerce` phát sự kiện cả khi cộng dồn số lượng vào dòng có sẵn.
 11. **Đặt đơn đếm theo `OrderPlacedEvent`.** Mỗi đơn mới cộng 1, với COD và SePay. ADM-UI9 gọi bước cuối là "đặt đơn".
 12. **Không dùng `OrderPaidEvent`.** `AdminOrderActionService` phát `OrderPaidEvent` khi admin xác nhận đã thu tiền COD. Đếm sự kiện này sẽ tính một đơn COD hai lần.
@@ -90,7 +92,7 @@ Chi tiết từng task ở `tasks/activity-tracking/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 2: Đếm
-- [ ] ACT-06 · [ ] ACT-UI1 · [ ] ACT-07
+- [x] ACT-06 · [ ] ACT-UI1 · [ ] ACT-07 · [ ] ACT-14
 
 ### Checkpoint A2
 - [ ] Xem sản phẩm, thêm giỏ, đặt đơn: mỗi bộ đếm của hôm nay tăng đúng 1
@@ -127,9 +129,11 @@ Chi tiết từng task ở `tasks/activity-tracking/todo.md`.
 
 | Rủi ro | Ảnh hưởng | Cách giảm |
 | --- | --- | --- |
-| Một người gọi `POST /api/events` liên tục để tăng lượt xem | Phễu sai | Giới hạn 60 lượt mỗi phút theo `AnonymousId`; bỏ qua crawler. Web demo chấp nhận mức chặn này |
+| Một người gọi `POST /api/events` liên tục để tăng lượt xem | Phễu sai | Giới hạn 60 lượt mỗi phút cho mỗi khách, khách vãng lai theo IP (ACT-14); bỏ qua crawler. Web demo chấp nhận mức chặn này |
+| Nhiều khách vãng lai dùng chung một IP, ví dụ mạng công ty | Lượt xem vượt 60 mỗi phút không được đếm | Trang sản phẩm bỏ qua lỗi của API (ACT-UI1), nên khách vẫn dùng trang bình thường |
 | Trình chặn quảng cáo chặn `POST /api/events` | Lượt xem thấp hơn thực tế | Thêm giỏ và đặt đơn đếm ở backend, nên hai bước này không bị ảnh hưởng |
 | `RateLimiter` giữ bộ đếm trong bộ nhớ | Giới hạn chỉ đúng khi API chạy một instance | MVP chạy một instance trên VPS |
+| Khóa không quay lại vẫn nằm trong bộ nhớ của `RateLimiter` | Bộ nhớ của API tăng dần đến khi API khởi động lại | ACT-14 thêm bước dọn bản ghi hết hạn |
 
 ## Câu hỏi mở
 
@@ -140,6 +144,7 @@ Chi tiết từng task ở `tasks/activity-tracking/todo.md`.
 - 2026-10-14: bỏ trường `variant` và các `source` của `recommendations`, `smart-search`. Hai module đó đã bỏ.
 - 2026-10-18: bỏ hồ sơ sở thích, "Đã xem gần đây", CTR, quy chuyển đổi 7 ngày, `rec_impression`, `rec_click`. Task bỏ: ACT-01, ACT-03, ACT-09, ACT-10, ACT-UI2.
 - 2026-10-20: bỏ bảng `activity_events` và mọi phần chỉ phục vụ bảng đó. Task bỏ: ACT-05, ACT-08, ACT-UI3, ACT-12.
+- 2026-10-21: thêm ACT-14 sau review ACT-06. Task đổi khóa giới hạn lượt xem sang IP và dọn bộ nhớ của `RateLimiter`.
 
 Câu hỏi mở của bản trước không còn áp dụng sau ngày 2026-10-20:
 - `ConsentChangedEvent` và `IConsentReader`: module không kiểm tra đồng ý.

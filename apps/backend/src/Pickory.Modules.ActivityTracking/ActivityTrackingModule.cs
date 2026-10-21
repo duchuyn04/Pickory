@@ -1,7 +1,12 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
+using Pickory.Modules.ActivityTracking.Counters;
+using Pickory.Modules.ActivityTracking.Features.CollectEvents;
 using Pickory.Modules.ActivityTracking.Persistence;
 using Pickory.Shared.Persistence;
 
@@ -20,6 +25,13 @@ public static class ActivityTrackingModule
         // Ứng dụng không tự chạy migration khi khởi động. Chỉ lệnh chuẩn bị DB gọi `MigrateActivityTrackingDatabaseAsync`.
         services.AddDbContext<ActivityTrackingDbContext>((provider, options) =>
             ActivityTrackingDbContext.ConfigureOptions(options, provider.GetRequiredService<NpgsqlDataSource>()));
+
+        // Bộ ghi đếm cần đồng hồ để chọn ngày giờ Việt Nam. Module không giả định module khác đã đăng ký đồng hồ.
+        services.TryAddSingleton(TimeProvider.System);
+        // Vòng đời scoped vì bộ ghi giữ `ActivityTrackingDbContext` của request.
+        services.AddScoped<DailyCounterWriter>();
+        // Bộ đếm tần suất nằm trong bộ nhớ, nên phải là singleton để mọi request dùng chung một bộ đếm.
+        services.AddSingleton<ProductViewRateLimiter>();
         return services;
     }
 
@@ -31,10 +43,12 @@ public static class ActivityTrackingModule
         await scope.ServiceProvider.GetRequiredService<ActivityTrackingDbContext>().Database.MigrateAsync(cancellationToken);
     }
 
-    // Chưa gắn route nào, vì ACT-06 và ACT-11 mới thêm route đếm lượt và route phễu.
-    // Hàm có sẵn để `Program.cs` gọi một lần, nên hai task sau không phải sửa `Program.cs`.
+    // Hàm để `Program.cs` gọi một lần. Route phễu của ACT-11 sẽ thêm vào đây mà không phải sửa `Program.cs`.
     public static IEndpointRouteBuilder MapActivityTrackingEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        // Nhóm không thêm tiền tố. Nhóm chỉ gắn tag `ActivityTracking` cho mọi route của module trong tài liệu OpenAPI.
+        var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("ActivityTracking");
+        CollectEventsEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }
