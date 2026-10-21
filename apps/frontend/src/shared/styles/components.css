@@ -374,6 +374,12 @@
   text-align: right;
 }
 
+/* Cột STT hẹp vừa số: `width: 1%` co cột về bề rộng nội dung, `nowrap` giữ số không xuống dòng. Chữ số đều và căn phải đến từ `.num`. */
+.tbl .col-row-number {
+  width: 1%;
+  white-space: nowrap;
+}
+
 .tbl tbody tr:hover td,
 .tbl tbody tr:hover th {
   background: var(--color-surface-hover);

@@ -5,6 +5,7 @@ import { ActiveFilterBar, type ActiveFilter } from '../../../shared/active-filte
 import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
 import { HighlightMatch } from '../../../shared/highlight-match';
 import { Pager } from '../../../shared/pager';
+import { rowNumber } from '../../../shared/row-number';
 import { SearchInput } from '../../../shared/search-input';
 import { useListFilters } from '../../../shared/use-list-filters';
 import { LOW_STOCK_THRESHOLD } from '../../../shared/catalog/inventory';
@@ -219,6 +220,9 @@ export function ProductsPage() {
               <table className="tbl product-list-table">
                 <thead>
                   <tr>
+                    <th scope="col" className="num col-row-number">
+                      STT
+                    </th>
                     <th scope="col">Sản phẩm</th>
                     <th scope="col">Danh mục</th>
                     <th scope="col">Trạng thái</th>
@@ -231,8 +235,10 @@ export function ProductsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {products.items.map((product) => (
+                  {products.items.map((product, index) => (
                     <tr key={product.id}>
+                      {/* STT theo `page` và `limit` của response đang hiện, không theo URL. Bảng cũ còn giữ STT cũ cho tới khi response mới về. */}
+                      <td className="num col-row-number">{rowNumber(products, index)}</td>
                       <th scope="row">
                         {/* Ảnh bên trái, khối tên và mã SKU bên phải. Ô `th` giữ nguyên là ô bảng, nên flex nằm ở thẻ con. */}
                         <div className="product-cell">

@@ -5,6 +5,7 @@ import { apiRequest } from '../../../shared/api';
 import { formatVietnamDateTime } from '../../../shared/vietnam-time';
 import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
 import { Pager } from '../../../shared/pager';
+import { rowNumber } from '../../../shared/row-number';
 import { useListFilters } from '../../../shared/use-list-filters';
 import { useCan } from '../../identity/hooks/use-actor';
 import { AdjustStockDialog } from './adjust-stock-dialog';
@@ -249,6 +250,9 @@ export function SkuInventoryPage() {
             <table className="tbl movement-table" aria-label="Lịch sử tồn kho">
               <thead>
                 <tr>
+                  <th scope="col" className="num col-row-number">
+                    STT
+                  </th>
                   <th scope="col">Thời điểm</th>
                   <th scope="col">Loại</th>
                   <th scope="col" className="num">
@@ -259,8 +263,10 @@ export function SkuInventoryPage() {
                 </tr>
               </thead>
               <tbody>
-                {movements.items.map((movement) => (
+                {movements.items.map((movement, index) => (
                   <tr key={movement.id}>
+                    {/* Biến động mới được chèn vào đầu trang trong cache. STT tính theo vị trí hiện tại nên dòng mới là 1 và các dòng cũ dịch xuống. */}
+                    <td className="num col-row-number">{rowNumber(movements, index)}</td>
                     <td>{formatVietnamDateTime(movement.createdAt)}</td>
                     <td>{movementTypeLabel(movement.type)}</td>
                     <td className="num">

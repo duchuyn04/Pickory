@@ -72,6 +72,8 @@ function jsonResponse(body: unknown, status = 200) {
 interface ServerOptions {
   productStatus?: number;
   total?: number;
+  // Phân trang mà response trả về, độc lập với tham số trên URL. Chứng minh màn đọc `page` và `limit` từ response.
+  responsePaging?: { page: number; limit: number };
   skuId?: string;
   // Sau khi điều chỉnh, các lần đọc lại không bao giờ trả về. Chứng minh trang tự cập nhật bằng dữ liệu của lần điều chỉnh.
   hangAfterAdjust?: boolean;
@@ -116,8 +118,8 @@ function createServer(options: ServerOptions = {}) {
         data: {
           items: state.movements,
           total: options.total ?? state.movements.length,
-          page,
-          limit: 20,
+          page: options.responsePaging?.page ?? page,
+          limit: options.responsePaging?.limit ?? 20,
         },
       });
     }
@@ -330,5 +332,54 @@ describe('SkuInventoryPage', () => {
     await settle();
     const urls = fetchMock.mock.calls.map(([input]) => String(input));
     expect(urls).toContain('/api/admin/skus/sku-1/movements?page=2&limit=20');
+  });
+
+  describe('cột STT', () => {
+    const rowNumbers = () => historyRows().map((row) => row.firstElementChild!.textContent);
+
+    it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+      createServer();
+      await renderPage(baseActor);
+
+      const headerCell = document.querySelector('table[aria-label="Lịch sử tồn kho"] thead th')!;
+      expect(headerCell.textContent).toBe('STT');
+      expect(headerCell.getAttribute('scope')).toBe('col');
+      expect(headerCell.classList.contains('num')).toBe(true);
+      const firstCell = historyRows()[0]!.firstElementChild!;
+      expect(firstCell.tagName).toBe('TD');
+      expect(firstCell.classList.contains('num')).toBe(true);
+    });
+
+    it('trang đầu đánh STT 1, 2 theo thứ tự đang hiện', async () => {
+      createServer();
+      await renderPage(baseActor);
+
+      expect(rowNumbers()).toEqual(['1', '2']);
+    });
+
+    it('response page 2, limit 20 thì STT là 21 và 22', async () => {
+      createServer({ responsePaging: { page: 2, limit: 20 } });
+      await renderPage(baseActor);
+
+      expect(rowNumbers()).toEqual(['21', '22']);
+    });
+
+    it('response có limit 5 ở trang 3 thì STT bắt đầu từ 11, không theo PAGE_SIZE của màn', async () => {
+      createServer({ responsePaging: { page: 3, limit: 5 } });
+      await renderPage(baseActor);
+
+      expect(rowNumbers()).toEqual(['11', '12']);
+    });
+
+    it('thêm biến động thì dòng mới có STT 1 và dòng cũ dịch xuống 2, 3', async () => {
+      createServer();
+      await renderPage(writerActor);
+      expect(rowNumbers()).toEqual(['1', '2']);
+
+      await adjustBy('7', 'Nhập lô mới');
+
+      expect(historyRows()[0]!.textContent).toContain('Nhập lô mới');
+      expect(rowNumbers()).toEqual(['1', '2', '3']);
+    });
   });
 });

@@ -163,11 +163,11 @@ Người dùng yêu cầu ngày 2026-10-20. Phase này chỉ sửa frontend. Quy
 ### FLT-UI8: Hàm STT dùng chung và màn sản phẩm, tồn kho, biến động kho
 **Mô tả:** Thêm hàm thuần tính số thứ tự (STT) của một dòng. Màn `/admin/products`, `/admin/inventory` và màn biến động kho của SKU thêm cột `STT` ở đầu bảng.
 **Tiêu chí nghiệm thu:**
-- [ ] Hàm trả `(page - 1) * limit + index + 1`. Trang 1 bắt đầu từ 1. Trang 2 với `limit` 20 bắt đầu từ 21
-- [ ] Ba màn đọc `page` và `limit` từ response, không từ hằng số trong màn
-- [ ] Cột `STT` là cột đầu tiên, có tiêu đề `STT`, căn phải
-- [ ] Test E2E hiện có của ba màn vẫn đạt sau khi bảng thêm cột
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Hàm trả `(page - 1) * limit + index + 1`. Trang 1 bắt đầu từ 1. Trang 2 với `limit` 20 bắt đầu từ 21
+- [x] Ba màn đọc `page` và `limit` từ response, không từ hằng số trong màn
+- [x] Cột `STT` là cột đầu tiên, có tiêu đề `STT`, căn phải
+- [x] Test E2E hiện có của ba màn vẫn đạt sau khi bảng thêm cột
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright `--headed`
 **Phụ thuộc:** FLT-UI7 · **Quy mô:** M
 

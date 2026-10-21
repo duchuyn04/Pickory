@@ -485,3 +485,85 @@ describe('màn sản phẩm hiện ảnh đầu tiên', () => {
     expect(marks).toEqual(['Áo', 'AO']);
   });
 });
+
+describe('màn sản phẩm có cột STT', () => {
+  // Response mang `page` và `limit` riêng, để test phân biệt STT theo response với STT theo URL hay hằng số.
+  function openPaged(url: string, count: number, paging: { page: number; limit: number }) {
+    const items = Array.from({ length: count }, (_, index) => product(String(index + 1)));
+    return renderCatalogPage({
+      element: <ProductsPage />,
+      routePath: '/admin/products',
+      url,
+      respond: (requested) => {
+        if (requested.pathname === '/api/admin/products') {
+          return { items, total: 100, ...paging };
+        }
+        return [];
+      },
+    });
+  }
+
+  function rowNumbers() {
+    return [...harness.container.querySelectorAll('tbody tr')].map(
+      (row) => row.firstElementChild!.textContent,
+    );
+  }
+
+  it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+    harness = await openPaged('/admin/products', 2, { page: 1, limit: 20 });
+
+    const headerCell = harness.container.querySelector('thead th')!;
+    expect(headerCell.textContent).toBe('STT');
+    expect(headerCell.getAttribute('scope')).toBe('col');
+    expect(headerCell.classList.contains('num')).toBe(true);
+    const firstCell = harness.container.querySelector('tbody tr')!.firstElementChild!;
+    expect(firstCell.tagName).toBe('TD');
+    expect(firstCell.classList.contains('num')).toBe(true);
+    // Ô tên sản phẩm vẫn là tiêu đề dòng.
+    expect(harness.container.querySelector('tbody tr th[scope="row"]')).not.toBeNull();
+  });
+
+  it('response page 2, limit 20 thì dòng đầu có STT 21, dòng hai có STT 22', async () => {
+    harness = await openPaged('/admin/products?page=2', 2, { page: 2, limit: 20 });
+
+    expect(rowNumbers()).toEqual(['21', '22']);
+  });
+
+  it('response có limit khác hằng số của màn thì STT theo limit của response', async () => {
+    // URL không có page. STT chỉ đúng nếu màn đọc `page` và `limit` từ response.
+    harness = await openPaged('/admin/products', 2, { page: 3, limit: 5 });
+
+    expect(rowNumbers()).toEqual(['11', '12']);
+  });
+
+  it('trong lúc giữ bảng cũ thì STT vẫn theo response cũ, rồi đổi theo response mới', async () => {
+    let releaseSearchResponse!: () => void;
+    const searchResponseGate = new Promise<void>((resolve) => (releaseSearchResponse = resolve));
+    harness = await renderCatalogPage({
+      element: <ProductsPage />,
+      routePath: '/admin/products',
+      url: '/admin/products?page=2',
+      respond: async (requested) => {
+        if (requested.pathname !== '/api/admin/products') return [];
+        if (requested.searchParams.get('search') === 'dien') {
+          await searchResponseGate;
+          return { items: [product('moi')], total: 1, page: 1, limit: 20 };
+        }
+        return { items: [product('cu1'), product('cu2')], total: 42, page: 2, limit: 20 };
+      },
+    });
+    expect(rowNumbers()).toEqual(['21', '22']);
+
+    await submitSearch('dien');
+
+    // Đổi từ khóa đã xóa page khỏi URL, nhưng bảng đang hiện vẫn là dữ liệu của trang 2.
+    expect(harness.container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(harness.container.textContent).toContain('Áo cu1');
+    expect(rowNumbers()).toEqual(['21', '22']);
+
+    await act(async () => releaseSearchResponse());
+    await settle();
+
+    expect(rowNumbers()).toEqual(['1']);
+  });
+});

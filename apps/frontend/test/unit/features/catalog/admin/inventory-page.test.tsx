@@ -134,4 +134,44 @@ describe('InventoryPage', () => {
     expect(document.body.textContent).toContain('Trang 3 / 3');
     expect(button('Trang sau').disabled).toBe(true);
   });
+
+  describe('cột STT', () => {
+    function rowNumbers() {
+      return [...document.querySelectorAll('tbody tr')].map(
+        (row) => row.firstElementChild!.textContent,
+      );
+    }
+
+    async function renderPaged(paging: { page: number; limit: number }) {
+      const fetchMock = vi
+        .fn()
+        .mockResolvedValue(jsonResponse({ data: { items, total: 100, ...paging } }));
+      await renderPage(fetchMock);
+    }
+
+    it('cột đầu có tiêu đề STT, tiêu đề và ô đều có class num', async () => {
+      await renderPaged({ page: 1, limit: 20 });
+
+      const headerCell = document.querySelector('thead th')!;
+      expect(headerCell.textContent).toBe('STT');
+      expect(headerCell.getAttribute('scope')).toBe('col');
+      expect(headerCell.classList.contains('num')).toBe(true);
+      const firstCell = document.querySelector('tbody tr')!.firstElementChild!;
+      expect(firstCell.tagName).toBe('TD');
+      expect(firstCell.classList.contains('num')).toBe(true);
+      expect(document.querySelector('tbody tr th[scope="row"]')).not.toBeNull();
+    });
+
+    it('response page 2, limit 20 thì STT là 21 và 22', async () => {
+      await renderPaged({ page: 2, limit: 20 });
+
+      expect(rowNumbers()).toEqual(['21', '22']);
+    });
+
+    it('response có limit 5 ở trang 3 thì STT bắt đầu từ 11, không theo PAGE_SIZE của màn', async () => {
+      await renderPaged({ page: 3, limit: 5 });
+
+      expect(rowNumbers()).toEqual(['11', '12']);
+    });
+  });
 });
