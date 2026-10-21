@@ -92,7 +92,7 @@ Chi tiết từng task ở `tasks/activity-tracking/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 2: Đếm
-- [x] ACT-06 · [x] ACT-UI1 · [x] ACT-07 · [ ] ACT-14
+- [x] ACT-06 · [x] ACT-UI1 · [x] ACT-07 · [x] ACT-14
 
 ### Checkpoint A2
 - [ ] Xem sản phẩm, thêm giỏ, đặt đơn: mỗi bộ đếm của hôm nay tăng đúng 1

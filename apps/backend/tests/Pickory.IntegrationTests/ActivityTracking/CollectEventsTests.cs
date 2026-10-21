@@ -144,7 +144,7 @@ public sealed class CollectEventsTests(PickoryWebApplicationFactory factory, Int
         var day = new DateOnly(2031, 1, 8);
         var (client, _) = await CreateHostAsync(day);
 
-        // Mỗi request một `AnonymousId` khác, để giới hạn tần suất không chặn request nào.
+        // 20 request cùng IP vẫn dưới hạn mức 60 mỗi phút, nên giới hạn tần suất không chặn request nào.
         var responses = await Task.WhenAll(Enumerable.Range(0, 20).Select(_ => SendAsync(client, ProductViewBody)));
 
         Assert.All(responses, response => Assert.Equal(HttpStatusCode.NoContent, response.StatusCode));
@@ -193,19 +193,18 @@ public sealed class CollectEventsTests(PickoryWebApplicationFactory factory, Int
     }
 
     [Fact]
-    public async Task Post_SixtyOneRequestsInOneMinuteFromSameAnonymousId_ReturnsTooManyRequestsOnTheLastOne()
+    public async Task Post_SixtyOneRequestsInOneMinuteFromSameIp_ReturnsTooManyRequestsOnTheLastOne()
     {
         var day = new DateOnly(2031, 1, 12);
         var (client, clock) = await CreateHostAsync(day);
-        var anonymousId = NewAnonymousId();
 
         for (var i = 0; i < 60; i++)
         {
-            var allowed = await SendAsync(client, ProductViewBody, anonymousId);
+            var allowed = await SendAsync(client, ProductViewBody);
             Assert.Equal(HttpStatusCode.NoContent, allowed.StatusCode);
         }
 
-        var limited = await SendAsync(client, ProductViewBody, anonymousId);
+        var limited = await SendAsync(client, ProductViewBody);
 
         Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
         using var document = await ActorHttp.ReadJsonAsync(limited);
@@ -213,15 +212,99 @@ public sealed class CollectEventsTests(PickoryWebApplicationFactory factory, Int
         // Request bị chặn không cộng bộ đếm.
         Assert.Equal(60, await ReadCounterAsync(day));
 
-        // Một `AnonymousId` khác có hạn mức riêng.
-        var otherVisitor = await SendAsync(client, ProductViewBody);
-        Assert.Equal(HttpStatusCode.NoContent, otherVisitor.StatusCode);
-
-        // Hết cửa sổ 1 phút thì `AnonymousId` đầu tiên được gửi lại.
+        // Hết cửa sổ 1 phút thì IP đã hết lượt được gửi lại.
         clock.Advance(TimeSpan.FromMinutes(1));
-        var afterWindow = await SendAsync(client, ProductViewBody, anonymousId);
+        var afterWindow = await SendAsync(client, ProductViewBody);
         Assert.Equal(HttpStatusCode.NoContent, afterWindow.StatusCode);
-        Assert.Equal(62, await ReadCounterAsync(day));
+        Assert.Equal(61, await ReadCounterAsync(day));
+    }
+
+    [Fact]
+    public async Task Post_NewAnonymousIdOnEveryRequestFromSameIp_StillLimitedAtTheSixtyFirst()
+    {
+        var day = new DateOnly(2031, 1, 15);
+        var (client, _) = await CreateHostAsync(day);
+
+        // Mỗi request mang `pk_anon` mới. Khóa theo `AnonymousId` sẽ không bao giờ chặn được client này.
+        for (var i = 0; i < 60; i++)
+        {
+            var allowed = await SendAsync(client, ProductViewBody);
+            Assert.Equal(HttpStatusCode.NoContent, allowed.StatusCode);
+        }
+
+        var limited = await SendAsync(client, ProductViewBody);
+
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(limited);
+        Assert.Equal("TOO_MANY_REQUESTS", document.RootElement.GetProperty("error").GetProperty("code").GetString());
+        Assert.Equal(60, await ReadCounterAsync(day));
+    }
+
+    [Fact]
+    public async Task Post_IpOutOfQuota_OtherIpStillReturns204()
+    {
+        var day = new DateOnly(2031, 1, 16);
+        var (client, _) = await CreateHostAsync(day, trustProxy: true);
+        const string exhaustedIp = "198.51.100.1";
+
+        for (var i = 0; i < 60; i++)
+        {
+            var allowed = await SendAsync(client, ProductViewBody, clientIp: exhaustedIp);
+            Assert.Equal(HttpStatusCode.NoContent, allowed.StatusCode);
+        }
+
+        var limited = await SendAsync(client, ProductViewBody, clientIp: exhaustedIp);
+        var otherIp = await SendAsync(client, ProductViewBody, clientIp: "198.51.100.2");
+
+        // Mỗi IP có hạn mức riêng. IP đã hết lượt không chặn IP khác.
+        Assert.Equal(HttpStatusCode.TooManyRequests, limited.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, otherIp.StatusCode);
+        Assert.Equal(61, await ReadCounterAsync(day));
+    }
+
+    [Fact]
+    public async Task Post_TwoCustomersOnSameIp_EachHasOwnQuota()
+    {
+        var day = new DateOnly(2031, 1, 17);
+        var (client, _) = await CreateHostAsync(day);
+        var customerA = await CreateCustomerSessionAsync();
+        var customerB = await CreateCustomerSessionAsync();
+
+        for (var i = 0; i < 60; i++)
+        {
+            var allowed = await SendAsync(client, ProductViewBody, sessionToken: customerA);
+            Assert.Equal(HttpStatusCode.NoContent, allowed.StatusCode);
+        }
+
+        var limitedA = await SendAsync(client, ProductViewBody, sessionToken: customerA);
+        var allowedB = await SendAsync(client, ProductViewBody, sessionToken: customerB);
+
+        // Khách đã đăng nhập đi theo `UserId`. Hai khách dùng chung IP không chia nhau hạn mức.
+        Assert.Equal(HttpStatusCode.TooManyRequests, limitedA.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, allowedB.StatusCode);
+        Assert.Equal(61, await ReadCounterAsync(day));
+    }
+
+    [Fact]
+    public async Task Post_CustomerOutOfQuota_GuestOnSameIpStillReturns204()
+    {
+        var day = new DateOnly(2031, 1, 18);
+        var (client, _) = await CreateHostAsync(day);
+        var customer = await CreateCustomerSessionAsync();
+
+        for (var i = 0; i < 60; i++)
+        {
+            var allowed = await SendAsync(client, ProductViewBody, sessionToken: customer);
+            Assert.Equal(HttpStatusCode.NoContent, allowed.StatusCode);
+        }
+
+        var limitedCustomer = await SendAsync(client, ProductViewBody, sessionToken: customer);
+        var guest = await SendAsync(client, ProductViewBody);
+
+        // Khách vãng lai đi theo IP, khách đã đăng nhập đi theo `UserId`. Hai khóa này không dùng chung hạn mức.
+        Assert.Equal(HttpStatusCode.TooManyRequests, limitedCustomer.StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, guest.StatusCode);
+        Assert.Equal(61, await ReadCounterAsync(day));
     }
 
     [Fact]
@@ -279,26 +362,37 @@ public sealed class CollectEventsTests(PickoryWebApplicationFactory factory, Int
     }
 
     // Dựng host riêng với đồng hồ giả. Mỗi host có limiter singleton riêng nên hạn mức không lẫn giữa các test.
-    private async Task<(HttpClient Client, FakeTimeProvider Clock)> CreateHostAsync(DateOnly day, DateTimeOffset? now = null)
+    private async Task<(HttpClient Client, FakeTimeProvider Clock)> CreateHostAsync(
+        DateOnly day, DateTimeOffset? now = null, bool trustProxy = false)
     {
-        var (_, client, clock) = await CreateHostWithServicesAsync(day, now);
+        var (_, client, clock) = await CreateHostWithServicesAsync(day, now, trustProxy);
         return (client, clock);
     }
 
     // Trả thêm host để test gọi handler trực tiếp qua `Services`. Các test HTTP chỉ cần client và đồng hồ.
     private async Task<(WebApplicationFactory<Program> Host, HttpClient Client, FakeTimeProvider Clock)> CreateHostWithServicesAsync(
         DateOnly day,
-        DateTimeOffset? now = null)
+        DateTimeOffset? now = null,
+        bool trustProxy = false)
     {
         // Mặc định đặt đồng hồ vào 12:00 giờ Việt Nam (05:00 UTC) để cả 1 phút tiến đồng hồ vẫn nằm trong cùng ngày.
         var startTime = now ?? new DateTimeOffset(day.Year, day.Month, day.Day, 5, 0, 0, TimeSpan.Zero);
         var clock = new FakeTimeProvider(startTime);
-        var host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
+        var host = factory.WithWebHostBuilder(builder =>
         {
-            // Đồng hồ giả chỉ thay trong host của test, module vẫn đăng ký `TimeProvider.System` ở production.
-            services.RemoveAll<TimeProvider>();
-            services.AddSingleton<TimeProvider>(clock);
-        }));
+            // Tin một proxy thì API đọc IP client từ `X-Forwarded-For`. Test giả được nhiều IP khác nhau.
+            if (trustProxy)
+            {
+                builder.UseSetting("TRUST_PROXY", "1");
+            }
+
+            builder.ConfigureTestServices(services =>
+            {
+                // Đồng hồ giả chỉ thay trong host của test, module vẫn đăng ký `TimeProvider.System` ở production.
+                services.RemoveAll<TimeProvider>();
+                services.AddSingleton<TimeProvider>(clock);
+            });
+        });
         _hosts.Add(host);
         // Xóa dòng cũ của ngày để test chạy lại trên DB đã dùng vẫn bắt đầu từ 0.
         await ClearCounterAsync(day);
@@ -308,12 +402,20 @@ public sealed class CollectEventsTests(PickoryWebApplicationFactory factory, Int
 
     private static string NewAnonymousId() => Guid.NewGuid().ToString();
 
+    private async Task<string> CreateCustomerSessionAsync()
+    {
+        var customer = await IdentityTestData.CreateUserAsync(
+            database, IdentityTestData.NewEmail("view-customer"), UserKind.Customer, "customer", emailVerified: true);
+        return await IdentityTestData.CreateSessionAsync(database, customer.Id);
+    }
+
     private static async Task<HttpResponseMessage> SendAsync(
         HttpClient client,
         string rawBody,
         string? anonymousId = null,
         string? sessionToken = null,
-        string userAgent = BrowserUserAgent)
+        string userAgent = BrowserUserAgent,
+        string? clientIp = null)
     {
         var cookie = $"pk_anon={anonymousId ?? NewAnonymousId()}";
         if (sessionToken is not null)
@@ -325,6 +427,12 @@ public sealed class CollectEventsTests(PickoryWebApplicationFactory factory, Int
         // Request ghi từ trình duyệt luôn có `Origin` của web. Thiếu header này thì actor middleware trả 403.
         request.Headers.Add("Origin", "http://localhost:5173");
         request.Headers.TryAddWithoutValidation("User-Agent", userAgent);
+        // Chỉ host có `TRUST_PROXY=1` đọc header này. Host mặc định bỏ qua và dùng địa chỉ kết nối.
+        if (clientIp is not null)
+        {
+            request.Headers.Add("X-Forwarded-For", clientIp);
+        }
+
         request.Content = new StringContent(rawBody, Encoding.UTF8, "application/json");
         return await client.SendAsync(request);
     }

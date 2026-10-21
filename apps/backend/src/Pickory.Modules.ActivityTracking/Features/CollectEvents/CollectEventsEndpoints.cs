@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Pickory.Modules.ActivityTracking.Counters;
 using Pickory.Modules.Identity.Contracts.Actors;
+using Pickory.Shared.Http;
 
 namespace Pickory.Modules.ActivityTracking.Features.CollectEvents;
 
@@ -38,8 +39,8 @@ internal static class CollectEventsEndpoints
             return Results.NoContent();
         }
 
-        // Giới hạn theo `AnonymousId` của actor. Hết lượt thì limiter ném 429 trước khi bộ đếm đổi.
-        rateLimiter.Consume(actor.AnonymousId);
+        // Khách đã đăng nhập đi theo `UserId`, khách vãng lai đi theo IP. Hết lượt thì limiter ném 429 trước khi bộ đếm đổi.
+        rateLimiter.Consume(ProductViewRateLimiter.BuildKey(actor.UserId, context.GetClientIp()));
 
         // Ghi bộ đếm không theo token của request. Client ngắt kết nối sau khi gửi xong body thì lượt xem vẫn hợp lệ.
         await counterWriter.IncrementAsync(request.Type, CancellationToken.None);

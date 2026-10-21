@@ -94,13 +94,14 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 
 `RateLimiter` của `Pickory.Shared` chỉ xóa bản ghi hết hạn khi khóa đó được gọi lại. Khóa không quay lại nằm trong bộ nhớ đến khi API khởi động lại. Task thêm bước dọn bản ghi hết hạn.
 **Tiêu chí nghiệm thu:**
-- [ ] Khách đã đăng nhập đi theo `UserId`. Khách vãng lai đi theo IP của `GetClientIp()`
-- [ ] Khách vãng lai đổi `pk_anon` ở mỗi request: request thứ 61 trong 1 phút từ cùng IP vẫn trả 429 `TOO_MANY_REQUESTS`
-- [ ] Hai khách đã đăng nhập dùng chung một IP có hạn mức riêng
-- [ ] `RateLimiter` xóa bản ghi đã hết cửa sổ, kể cả khi khóa không được gọi lại. Unit test dùng `FakeTimeProvider`
-- [ ] Bước dọn chạy tối đa một lần mỗi cửa sổ. Request thường không duyệt cả bảng bản ghi
-- [ ] Test giới hạn tần suất của `identity`, `commerce` và `shipping` vẫn xanh
-**Kiểm tra:** unit test cho `RateLimiter`; test tích hợp cho `POST /api/events`
+- [x] Khách đã đăng nhập đi theo `UserId`. Khách vãng lai đi theo IP của `GetClientIp()`
+- [x] Khách vãng lai đổi `pk_anon` ở mỗi request: request thứ 61 trong 1 phút từ cùng IP vẫn trả 429 `TOO_MANY_REQUESTS`
+- [x] Hai khách đã đăng nhập dùng chung một IP có hạn mức riêng
+- [x] `RateLimiter` xóa bản ghi đã hết cửa sổ, kể cả khi khóa không được gọi lại. Unit test dùng `FakeTimeProvider`
+- [x] Bước dọn chạy tối đa một lần mỗi cửa sổ. Request thường không duyệt cả bảng bản ghi
+- [x] Test giới hạn tần suất của `identity`, `commerce` và `shipping` vẫn xanh
+- [x] Toàn bộ E2E xanh. Mọi request E2E chạy từ cùng một IP, nên không request `POST /api/events` nào được nhận 429
+**Kiểm tra:** unit test cho `RateLimiter`; test tích hợp cho `POST /api/events`; toàn bộ E2E
 **Phụ thuộc:** ACT-06 · **Quy mô:** M
 **File:** `apps/backend/src/Pickory.Shared/Throttling/RateLimiter.cs`, `apps/backend/src/Pickory.Modules.ActivityTracking/Features/CollectEvents/{ProductViewRateLimiter.cs, CollectEventsEndpoints.cs}`
 

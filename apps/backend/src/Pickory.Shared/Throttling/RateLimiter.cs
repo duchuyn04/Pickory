@@ -9,6 +9,20 @@ public sealed class RateLimiter(TimeSpan window, int maxAttempts, string errorMe
     private readonly Dictionary<string, AttemptWindow> _windows = new(StringComparer.Ordinal);
     // Request chạy song song trên nhiều luồng. Khóa giữ bộ đếm không bị ghi đè lẫn nhau.
     private readonly Lock _gate = new();
+    // Mốc đến hạn của lần dọn kế tiếp. Lần dọn đầu tiên đến hạn sau một cửa sổ kể từ lúc dựng limiter.
+    private DateTimeOffset _nextCleanupAt = timeProvider.GetUtcNow().Add(window);
+
+    // Test đếm số khóa còn trong bộ nhớ để kiểm bước dọn. Code chạy thật không dùng thuộc tính này.
+    internal int TrackedKeyCount
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _windows.Count;
+            }
+        }
+    }
 
     // Ném 429 khi khóa đã dùng hết số lần trong cửa sổ hiện tại.
     public void AssertNotRateLimited(string key)
@@ -30,7 +44,7 @@ public sealed class RateLimiter(TimeSpan window, int maxAttempts, string errorMe
                 return false;
             }
 
-            // Cửa sổ đã hết thì xóa bản ghi. Khóa được gọi lại và bộ nhớ không phình mãi.
+            // Cửa sổ của khóa đang hỏi đã hết thì xóa bản ghi. `RemoveExpiredWindowsWhenDue` xóa các khóa không còn ai gọi lại.
             if (now >= attemptWindow.ResetAt)
             {
                 _windows.Remove(key);
@@ -46,6 +60,9 @@ public sealed class RateLimiter(TimeSpan window, int maxAttempts, string errorMe
         lock (_gate)
         {
             var now = timeProvider.GetUtcNow();
+            // Dọn trước khi ghi lượt. Khóa chỉ gọi một lần rồi bỏ đi (IP lạ, email lạ) không nằm lại trong bộ nhớ mãi.
+            RemoveExpiredWindowsWhenDue(now);
+
             // Khóa mới hoặc cửa sổ cũ đã hết thì bắt đầu cửa sổ mới.
             if (!_windows.TryGetValue(key, out var attemptWindow) || now >= attemptWindow.ResetAt)
             {
@@ -71,6 +88,27 @@ public sealed class RateLimiter(TimeSpan window, int maxAttempts, string errorMe
         {
             _windows.Clear();
         }
+    }
+
+    // Gọi trong `lock`. Mỗi cửa sổ chỉ duyệt cả bảng một lần, nên request thường không tốn thời gian tỷ lệ với số khóa.
+    private void RemoveExpiredWindowsWhenDue(DateTimeOffset now)
+    {
+        if (now < _nextCleanupAt)
+        {
+            return;
+        }
+
+        // Xóa trong lúc duyệt là hợp lệ với `Dictionary` từ .NET Core 3.0.
+        foreach (var (key, attemptWindow) in _windows)
+        {
+            if (now >= attemptWindow.ResetAt)
+            {
+                _windows.Remove(key);
+            }
+        }
+
+        // Đặt mốc sau lần dọn này một cửa sổ. Bản ghi hết hạn giữa hai lần dọn chờ đến lần dọn kế tiếp.
+        _nextCleanupAt = now.Add(window);
     }
 
     private sealed record AttemptWindow(int Attempts, DateTimeOffset ResetAt);

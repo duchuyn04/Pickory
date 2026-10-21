@@ -54,9 +54,9 @@ User story: Là admin hoặc `sales` (`reports:read`), tôi xem phễu theo kho�
 - `POST /api/events` nhận một lượt xem mỗi request, với body `{ "type": "product_view" }`.
 - `type` khác `product_view` hoặc body sai thì API trả 400 `VALIDATION_ERROR`.
 - Body không có `productId`, vì bộ đếm không lưu sản phẩm nào được xem.
-- Mỗi `anonymousId` gửi tối đa 60 lượt xem mỗi phút. Vượt giới hạn thì API trả 429 `TOO_MANY_REQUESTS`.
+- Mỗi khách gửi tối đa 60 lượt xem mỗi phút. Khách đã đăng nhập tính theo `userId`, khách vãng lai tính theo IP. Vượt giới hạn thì API trả 429 `TOO_MANY_REQUESTS`.
 - Backend bỏ qua request của crawler phổ biến, nhận diện theo user agent.
-- Backend lấy `anonymousId` và loại người dùng từ `Actor`. Backend không tin giá trị client gửi.
+- Backend lấy `userId` và loại người dùng từ `Actor`, và lấy IP từ kết nối. Backend không tin giá trị client gửi.
 - Backend cộng bộ đếm ngay trong request bằng một câu lệnh SQL, rồi trả 204.
 
 ### Cổng cho module khác
