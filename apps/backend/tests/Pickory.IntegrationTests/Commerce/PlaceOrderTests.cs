@@ -27,6 +27,7 @@ using Pickory.Modules.Shipping.Contracts.Parcels;
 using Pickory.Modules.Shipping.Contracts.Quotes;
 using Pickory.Modules.Shipping.Contracts.Shipments;
 using Pickory.Modules.Shipping.Ghn;
+using Pickory.Shared.Email;
 using Pickory.Shared.Events;
 using Xunit;
 
@@ -477,6 +478,139 @@ public sealed class PlaceOrderTests : IClassFixture<CheckoutWebApplicationFactor
             var stocks = new[] { await _kit.StockOfAsync(firstSkuId), await _kit.StockOfAsync(secondSkuId) };
             Assert.Equal([9, 10], stocks.OrderBy(stock => stock).ToArray());
         }
+    }
+
+    // ----- COM-28: request cùng khóa đến sau khi đơn đầu đã commit -----
+
+    // Host dựng riêng: danh mục địa chỉ có cổng và hộp thư đếm được. Danh mục thật được lấy từ đăng ký có sẵn.
+    private DerivedHost CreateHostWithAddressGate(AddressLookupGate gate, CountingEmailSender emails) =>
+        CreateHostWith(services =>
+        {
+            // Đăng ký lại bản thật bằng kiểu cụ thể của nó, rồi để bản bọc lấy bản thật từ DI.
+            var original = services.Single(descriptor => descriptor.ServiceType == typeof(IAddressDirectory));
+            // Chỉ bọc được đăng ký theo kiểu cụ thể. Đăng ký bằng factory làm test báo lỗi rõ thay vì `NullReferenceException`.
+            var realType = original.ImplementationType
+                ?? throw new InvalidOperationException(
+                    "Test cần `IAddressDirectory` đăng ký theo kiểu cụ thể để bọc bản thật. Nếu đăng ký đổi sang factory thì phải sửa cách bọc.");
+            services.Remove(original);
+            services.AddScoped(realType);
+            services.AddScoped<IAddressDirectory>(provider =>
+                new GatedAddressDirectory((IAddressDirectory)provider.GetRequiredService(realType), gate));
+
+            services.RemoveAll<IEmailSender>();
+            services.AddSingleton<IEmailSender>(emails);
+        });
+
+    [Fact]
+    public async Task PlaceOrder_SameKeyArrivesAfterFirstOrderCommitted_ReturnsThatOrderWith200AndChangesNothingMore()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var skuId = await AddToCartAsync(anonymousId, price: 100_000, quantity: 2);
+        var total = await PreviewTotalAsync(anonymousId);
+        var key = NewKey();
+        var gate = new AddressLookupGate();
+        var emails = new CountingEmailSender();
+        var host = CreateHostWithAddressGate(gate, emails);
+
+        // Request B tra khóa khi chưa có đơn, rồi dừng ở cổng trước khi đọc giỏ.
+        var secondRequest = SendOrderAsync(host.Client, anonymousId, key, BodyFor(total));
+        await gate.WaitUntilEnteredAsync();
+        // Mở cổng trong `finally`. Assert đỏ giữa chừng không làm request B treo tới hết hạn chờ 30 giây.
+        JsonElement firstData;
+        try
+        {
+            // Request A cùng khóa chạy trọn vẹn: tạo đơn, commit và xóa dòng giỏ.
+            var first = await SendOrderAsync(host.Client, anonymousId, key, BodyFor(total));
+            firstData = await ReadDataAsync(first, HttpStatusCode.Created);
+        }
+        finally
+        {
+            gate.Open();
+        }
+        var second = await secondRequest.WaitAsync(TimeSpan.FromSeconds(30));
+
+        // B thấy giỏ rỗng vì A đã xóa dòng giỏ. B phải nhận lại đơn của A, không phải lỗi 400.
+        var secondData = await ReadDataAsync(second, HttpStatusCode.OK);
+        var code = firstData.GetProperty("code").GetString()!;
+        Assert.Equal(code, secondData.GetProperty("code").GetString());
+        Assert.Equal(JsonValueKind.Null, secondData.GetProperty("accessToken").ValueKind);
+        // Mỗi khóa vẫn chỉ tạo một đơn, giữ hàng một lần, gửi một thư và phát một sự kiện.
+        Assert.Equal(1, await OrderCountAsync(key));
+        Assert.Equal(8, await _kit.StockOfAsync(skuId));
+        Assert.Equal([code], emails.OrderCodes);
+        Assert.Single(host.Events.OfType<OrderPlacedEvent>(), placed => placed.Code == code);
+    }
+
+    [Fact]
+    public async Task PlaceOrder_SameKeyArrivesAfterFirstOrderCommittedFromOtherOwner_Returns409Conflict()
+    {
+        var ownerAnonymousId = _kit.NewAnonymousId();
+        await AddToCartAsync(ownerAnonymousId, price: 100_000);
+        var ownerTotal = await PreviewTotalAsync(ownerAnonymousId);
+        var key = NewKey();
+        var gate = new AddressLookupGate();
+        var host = CreateHostWithAddressGate(gate, new CountingEmailSender());
+        // Chủ khác không có giỏ. Request này chỉ lọt tới bước đọc giỏ vì khóa chưa có đơn lúc nó tra.
+        var otherAnonymousId = _kit.NewAnonymousId();
+
+        var secondRequest = SendOrderAsync(host.Client, otherAnonymousId, key, BodyFor(ownerTotal));
+        await gate.WaitUntilEnteredAsync();
+        // Mở cổng trong `finally`. Assert đỏ giữa chừng không làm request B treo tới hết hạn chờ 30 giây.
+        JsonElement created;
+        try
+        {
+            var first = await SendOrderAsync(host.Client, ownerAnonymousId, key, BodyFor(ownerTotal));
+            created = await ReadDataAsync(first, HttpStatusCode.Created);
+        }
+        finally
+        {
+            gate.Open();
+        }
+        var second = await secondRequest.WaitAsync(TimeSpan.FromSeconds(30));
+
+        // Khóa thuộc về chủ đầu. Chủ khác vẫn nhận 409 và không thấy mã đơn.
+        var text = await second.Content.ReadAsStringAsync();
+        Assert.Equal(HttpStatusCode.Conflict, second.StatusCode);
+        Assert.Contains("IDEMPOTENCY_KEY_CONFLICT", text);
+        Assert.DoesNotContain(created.GetProperty("code").GetString()!, text);
+        Assert.Equal(1, await OrderCountAsync(key));
+    }
+
+    [Fact]
+    public async Task PlaceOrder_SameKeyArrivesAfterFirstOrderCommittedAndCartChanged_ReturnsThatOrderWith200()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        await AddToCartAsync(anonymousId, price: 100_000, quantity: 2);
+        var total = await PreviewTotalAsync(anonymousId);
+        var key = NewKey();
+        var gate = new AddressLookupGate();
+        var emails = new CountingEmailSender();
+        var host = CreateHostWithAddressGate(gate, emails);
+
+        var secondRequest = SendOrderAsync(host.Client, anonymousId, key, BodyFor(total));
+        await gate.WaitUntilEnteredAsync();
+        // Mở cổng trong `finally`. Assert đỏ giữa chừng không làm request B treo tới hết hạn chờ 30 giây.
+        JsonElement firstData;
+        try
+        {
+            var first = await SendOrderAsync(host.Client, anonymousId, key, BodyFor(total));
+            firstData = await ReadDataAsync(first, HttpStatusCode.Created);
+            // Khách thêm hàng mới vào giỏ sau đơn đầu. Request B đọc giỏ mới nên tổng khác `expectedTotal`.
+            await AddToCartAsync(anonymousId, price: 50_000);
+        }
+        finally
+        {
+            gate.Open();
+        }
+        var second = await secondRequest.WaitAsync(TimeSpan.FromSeconds(30));
+
+        // Tổng lệch là hệ quả của đơn đã commit, nên B vẫn nhận lại đơn của A thay vì 409 ORDER_TOTAL_CHANGED.
+        var secondData = await ReadDataAsync(second, HttpStatusCode.OK);
+        var code = firstData.GetProperty("code").GetString()!;
+        Assert.Equal(code, secondData.GetProperty("code").GetString());
+        Assert.Equal(1, await OrderCountAsync(key));
+        Assert.Equal([code], emails.OrderCodes);
+        Assert.Single(host.Events.OfType<OrderPlacedEvent>(), placed => placed.Code == code);
     }
 
     // ----- Tiêu chí 2: bỏ qua số tiền của client, so tổng với preview -----

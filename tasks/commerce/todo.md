@@ -733,3 +733,19 @@ Cách chạy lại:
   Reviewer chạy ngày 2026-10-19 sau lần dọn cuối. Backend: `dotnet build` 0 lỗi, 0 cảnh báo; `Pickory.UnitTests` 1701 đạt; `Pickory.ArchitectureTests` 14 đạt; `Pickory.IntegrationTests` toàn bộ 2246 đạt, 12 bỏ qua, 1 lỗi (49 phút 10 giây). Test lỗi là `AdminStaffTests.TwoLastAdmins_DemotingEachOtherConcurrentlyKeepsOneAdmin` của `identity`: lỗi khi chạy toàn bộ, đạt cả 3 lần chạy riêng. Frontend: `pnpm lint` và `pnpm typecheck` sạch, `pnpm test` 130 file 1682 test đạt, `pnpm build` đạt, `pnpm test:e2e --headed` toàn bộ 113 đạt, 0 lỗi (10,9 phút, có `commerce-fallback-fee.spec.ts`).
 **Kiểm tra:** test tích hợp đặt đơn; Vitest; E2E
 **Phụ thuộc:** SHIP-14, COM-26 · **Quy mô:** M
+
+### COM-28: Đặt đơn song song cùng khóa không trả 400
+**Mô tả:** Khách bấm "Đặt hàng" nhiều lần liên tiếp thì trình duyệt gửi nhiều request cùng `Idempotency-Key`. Request đến sau phải nhận lại đơn đã tạo. Hiện `PlaceOrderService` tra khóa rồi tính tiền ngoài transaction. Request đầu commit và xóa giỏ trong lúc đó thì request sau gặp giỏ rỗng và nhận 400 `VALIDATION_ERROR` ở khóa `cart`.
+- Reviewer phát hiện ngày 2026-10-21. Test `OrderConfirmationEmailTests.PlaceOrder_ConcurrentRequestsWithSameKey_SendExactlyOneEmail` đỏ một lần khi máy tải nặng, rồi đạt 3 lần chạy riêng.
+- Người dùng duyệt mở task ngày 2026-10-21.
+
+**Tiêu chí nghiệm thu:**
+- [x] Request cùng khóa đến sau khi đơn đã commit và giỏ đã xóa trả lại đơn đó với 200, không trả 400
+- [x] Test tái hiện đúng thứ tự trên một cách ổn định, không dựa vào việc máy chạy chậm
+- [x] Chủ giỏ khác dùng cùng khóa vẫn nhận 409 như hiện tại
+- [x] Giỏ rỗng thật, không có đơn nào mang khóa đó: API vẫn trả 400 như hiện tại
+- [x] Mỗi khóa vẫn tạo đúng 1 đơn, giữ hàng 1 lần, gửi 1 thư và phát 1 `OrderPlacedEvent`
+- [x] `dotnet test` sạch
+**Kiểm tra:** test tích hợp đặt đơn
+**Phụ thuộc:** không · **Quy mô:** S
+**File:** `apps/backend/src/Pickory.Modules.Commerce/Orders/PlaceOrderService.cs`

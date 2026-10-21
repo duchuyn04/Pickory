@@ -195,6 +195,7 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 ### Phase 8: Sửa sau nghiệm thu (thêm ngày 2026-10-19)
 - [x] COM-26 kiểm địa chỉ nhận với GHN khi khách đặt đơn
 - [x] COM-27 đơn dùng phí vận chuyển dự phòng
+- [x] COM-28 đặt đơn song song cùng khóa không trả 400 (thêm ngày 2026-10-21)
 
 ### Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt, trừ dòng ghi chờ khóa

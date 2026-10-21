@@ -1,4 +1,5 @@
 using System.Text.Json;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Microsoft.Extensions.Logging;
@@ -60,17 +61,36 @@ public sealed class PlaceOrderService(
             return Replay(existing, owner);
         }
 
-        // Tính tiền ngoài transaction. Lời gọi GHN có thể chờ mạng, và khóa DB không được giữ trong lúc chờ.
-        var calculation = await checkout.CalculateAsync(owner, input.Address, input.PaymentMethod, cancellationToken);
-
-        // Không tin số tiền của client. Tổng tính lại khác tổng khách đã xem thì khách phải xem lại preview.
-        if (calculation.Pricing.Total != input.ExpectedTotal)
+        CheckoutCalculation calculation;
+        try
         {
-            throw TotalChanged();
-        }
+            // Tính tiền ngoài transaction. Lời gọi GHN có thể chờ mạng, và khóa DB không được giữ trong lúc chờ.
+            calculation = await checkout.CalculateAsync(owner, input.Address, input.PaymentMethod, cancellationToken);
 
-        // Kiểm địa chỉ nhận trước transaction. Lời gọi GHN có thể chờ mạng, nên không được giữ khóa giỏ hay khóa kho.
-        await EnsureAddressDeliverableAsync(idempotencyKey, calculation, cancellationToken);
+            // Không tin số tiền của client. Tổng tính lại khác tổng khách đã xem thì khách phải xem lại preview.
+            if (calculation.Pricing.Total != input.ExpectedTotal)
+            {
+                throw TotalChanged();
+            }
+
+            // Kiểm địa chỉ nhận trước transaction. Lời gọi GHN có thể chờ mạng, nên không được giữ khóa giỏ hay khóa kho.
+            await EnsureAddressDeliverableAsync(idempotencyKey, calculation, cancellationToken);
+        }
+        catch (Exception exception) when (exception is AppException or ValidationException)
+        {
+            // Request cùng khóa có thể commit đơn trong lúc request này tính tiền.
+            // Mọi lỗi nghiệp vụ trước transaction khi đó có thể chỉ là hệ quả của đơn đã đặt.
+            var committed = await FindOrderByKeyAsync(idempotencyKey, cancellationToken);
+
+            // Chưa có đơn mang khóa này thì lỗi là thật. Giỏ rỗng vẫn trả 400 và tổng sai vẫn trả 409.
+            if (committed is null)
+            {
+                throw;
+            }
+
+            // Có đơn thì trả lại như lần gửi lại thường. Cùng chủ nhận đơn, khác chủ nhận 409, và không gửi thư hay phát sự kiện lần nữa.
+            return Replay(committed, owner);
+        }
 
         var events = new DomainEventCollector(dispatcher);
         CreatedOrder created;
