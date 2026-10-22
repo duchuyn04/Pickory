@@ -1,10 +1,14 @@
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using FluentValidation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Pickory.Modules.SupportDesk.Persistence;
+using Pickory.Modules.SupportDesk.Presence;
+using Pickory.Modules.SupportDesk.Realtime;
 using Pickory.Shared.Persistence;
 
 namespace Pickory.Modules.SupportDesk;
@@ -22,6 +26,20 @@ public static class SupportDeskModule
         // Ứng dụng không tự chạy migration khi khởi động. Chỉ lệnh chuẩn bị DB gọi `MigrateSupportDeskDatabaseAsync`.
         services.AddDbContext<SupportDeskDbContext>((provider, options) =>
             SupportDeskDbContext.ConfigureOptions(options, provider.GetRequiredService<NpgsqlDataSource>()));
+
+        // Nhịp tim và job `away` cần đồng hồ. Module không giả định module khác đã đăng ký đồng hồ.
+        services.TryAddSingleton(TimeProvider.System);
+        // Validator của module đều là `internal`, nên phải bật `includeInternalTypes` thì container mới thấy chúng.
+        services.AddValidatorsFromAssemblyContaining<SetPresenceRequestValidator>(includeInternalTypes: true);
+        // Hub là singleton vì mọi request SSE và mọi nơi phát sự kiện phải dùng chung một danh sách kết nối trong bộ nhớ.
+        services.AddSingleton<SupportEventHub>();
+        // Streamer không giữ trạng thái riêng nên là singleton. Nó tự tạo scope khi cần ghi DB.
+        services.AddSingleton<SupportEventStreamer>();
+        // Vòng đời scoped vì dịch vụ và job giữ `SupportDeskDbContext` của request hoặc của một vòng worker.
+        services.AddScoped<StaffPresenceService>();
+        services.AddScoped<StaffPresenceTimeoutProcessor>();
+        // Worker chạy nền gọi processor mỗi 30 giây.
+        services.AddHostedService<StaffPresenceTimeoutWorker>();
         return services;
     }
 
@@ -33,11 +51,13 @@ public static class SupportDeskModule
         await scope.ServiceProvider.GetRequiredService<SupportDeskDbContext>().Database.MigrateAsync(cancellationToken);
     }
 
-    // Nhóm route đã có tag `SupportDesk` nhưng chưa có route nào, vì các task sau mới thêm route.
-    // Hàm có sẵn để `Program.cs` gọi một lần, nên các task sau không phải sửa `Program.cs`.
+    // Hàm có sẵn để `Program.cs` gọi một lần, nên các task sau thêm route vào đây mà không phải sửa `Program.cs`.
     public static IEndpointRouteBuilder MapSupportDeskEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGroup(string.Empty).WithTags("SupportDesk");
+        // Nhóm không thêm tiền tố. Nhóm chỉ gắn tag `SupportDesk` cho mọi route của module trong tài liệu OpenAPI.
+        var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("SupportDesk");
+        SupportEventsEndpoints.Map(moduleRoutes);
+        StaffPresenceEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }

@@ -14,6 +14,7 @@ using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Roles;
 using Pickory.Modules.Shipping;
+using Pickory.Modules.SupportDesk;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Api;
@@ -106,6 +107,9 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "GET", "/api/admin/skus/dummy-id/movements", [Permissions.ProductsRead] },
         { "GET", "/api/admin/inventory/low-stock", [Permissions.ProductsRead] },
         { "GET", "/api/admin/analytics/funnel", [Permissions.ReportsRead] },
+        { "GET", "/api/admin/support/events", [Permissions.ConversationsRead] },
+        { "PUT", "/api/admin/support/presence", [Permissions.ConversationsReply] },
+        { "GET", "/api/admin/support/presence", [Permissions.ConversationsReply] },
     };
     [Theory]
     [MemberData(nameof(BackofficeEndpoints))]
@@ -169,7 +173,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         var hasAccess = requiredPermissions.All(permission => supportPermissions.Contains(permission));
 
         var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, BodyFor(method, path), cookieHeader: _supportCookie);
-        var response = await _client.SendAsync(request);
+        using var response = await SendReadingHeadersOnlyAsync(request);
 
         if (hasAccess)
         {
@@ -196,7 +200,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     {
         _ = requiredPermissions;
         var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, BodyFor(method, path), cookieHeader: _adminCookie);
-        var response = await _client.SendAsync(request);
+        using var response = await SendReadingHeadersOnlyAsync(request);
 
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
@@ -271,6 +275,18 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             typeof(ActivityTrackingModule).Assembly,
             "Pickory.Modules.ActivityTracking",
             [Permissions.ReportsRead]);
+    }
+
+    [Fact]
+    // SD-03: route back-office của support-desk phải có trong ma trận, kể cả route thêm sau này.
+    public void BackofficeEndpoints_CoversAllSupportDeskAdminEndpoints()
+    {
+        // Support-desk dùng hai quyền của identity: `conversations:read` cho luồng sự kiện và `conversations:reply` cho trạng thái trực.
+        AssertMatrixMatchesModuleAdminEndpoints(
+            "support-desk",
+            typeof(SupportDeskModule).Assembly,
+            "Pickory.Modules.SupportDesk",
+            [Permissions.ConversationsRead, Permissions.ConversationsReply]);
     }
 
     // Đối chiếu hai chiều giữa route `/api/admin/` của một module và các dòng ma trận dùng quyền của module đó.
@@ -388,11 +404,26 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             $"Ma trận BackofficeEndpoints chứa route {moduleName} không tồn tại: {string.Join(", ", unknownMatrixRoutes)}");
     }
 
-    // Route `PATCH` khóa tài khoản đọc body trước khi chạy nghiệp vụ, nên dòng ma trận cần body hợp lệ. Các route còn lại không cần body.
+    // Route `PATCH` khóa tài khoản và `PUT` trạng thái trực đọc body trước khi chạy nghiệp vụ, nên dòng ma trận cần body hợp lệ. Các route còn lại không cần body.
     private static object? BodyFor(string method, string path)
     {
         var isLockRoute = method == "PATCH" && (path == "/api/admin/staff/dummy-id" || path == "/api/admin/customers/dummy-id");
-        return isLockRoute ? new { locked = true } : null;
+        if (isLockRoute)
+        {
+            return new { locked = true };
+        }
+
+        // Gửi `away` để dòng trực của tài khoản thử không thành `available` giữa các test khác.
+        var isPresenceRoute = method == "PUT" && path == "/api/admin/support/presence";
+        return isPresenceRoute ? new { status = "away" } : null;
+    }
+
+    // Route SSE không bao giờ tự kết thúc. Đọc hết body sẽ treo test, nên chỉ chờ header rồi để `using` đóng response.
+    private async Task<HttpResponseMessage> SendReadingHeadersOnlyAsync(HttpRequestMessage request)
+    {
+        // Hạn chờ để request lỗi header làm test đỏ thay vì treo.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        return await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
     }
 
     // Ma trận dùng `dummy-id` trong request thử quyền nên cần cùng định dạng với route ứng dụng.

@@ -56,13 +56,13 @@ Quy ước:
 ### SD-03: Hub SSE nhân viên và trạng thái sẵn sàng
 **Mô tả:** `SupportEventHub` giữ kết nối SSE của từng nhân viên. `GET /api/admin/support/events` mở luồng SSE. `PUT /api/admin/support/presence` đổi `available` hoặc `away`. `GET /api/admin/support/presence` trả nhân viên đang sẵn sàng. Job mỗi 30 giây chuyển `away` khi mất nhịp tim quá 2 phút.
 **Tiêu chí nghiệm thu:**
-- [ ] `sales` gọi `GET /api/admin/support/events` nhận 403. Khách nhận 401
-- [ ] `PUT /api/admin/support/presence` cần `conversations:reply`. Giá trị khác `available` và `away` trả 400 `VALIDATION_ERROR`
-- [ ] Kết nối SSE gửi nhịp tim mỗi 30 giây và cập nhật `last_seen_at`
-- [ ] Ngắt kết nối hơn 2 phút thì job chuyển nhân viên sang `away` và phát sự kiện SSE cho người khác
-- [ ] Một nhân viên mở 2 tab: đóng 1 tab không chuyển `away`
-- [ ] Response SSE có `Content-Type: text/event-stream` và `Cache-Control: no-cache`
-- [ ] Endpoint mới có trong ma trận quyền
+- [x] `sales` gọi `GET /api/admin/support/events` nhận 403. Khách nhận 401
+- [x] `PUT /api/admin/support/presence` cần `conversations:reply`. Giá trị khác `available` và `away` trả 400 `VALIDATION_ERROR`
+- [x] Kết nối SSE gửi nhịp tim mỗi 30 giây và cập nhật `last_seen_at`
+- [x] Ngắt kết nối hơn 2 phút thì job chuyển nhân viên sang `away` và phát sự kiện SSE cho người khác
+- [x] Một nhân viên mở 2 tab: đóng 1 tab không chuyển `away`
+- [x] Response SSE có `Content-Type: text/event-stream` và `Cache-Control: no-cache`
+- [x] Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp; test gọi processor với `FakeTimeProvider`
 **Phụ thuộc:** SD-02 · **Quy mô:** M
 

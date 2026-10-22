@@ -20,6 +20,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Pickory.Shared\Pickory.Shared.csproj" />
     <ProjectReference Include="..\Pickory.Modules.SupportDesk.Contracts\Pickory.Modules.SupportDesk.Contracts.csproj" />
+    <ProjectReference Include="..\Pickory.Modules.Identity.Contracts\Pickory.Modules.Identity.Contracts.csproj" />
   </ItemGroup>
 
 </Project>
