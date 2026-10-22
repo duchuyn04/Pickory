@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pickory.UnitTests" />
+    <InternalsVisibleTo Include="Pickory.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pickory.Shared\Pickory.Shared.csproj" />
+  </ItemGroup>
+
+</Project>

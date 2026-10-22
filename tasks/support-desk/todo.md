@@ -26,13 +26,13 @@ Quy ước:
 - `Percentile.Of(values, p)`: phân vị cho p50 và p90.
 
 **Tiêu chí nghiệm thu:**
-- [ ] 7:59 và 21:00 giờ Việt Nam là ngoài giờ. 8:00 và 20:59 là trong giờ
-- [ ] Ngày nghỉ trong `holidays` là ngoài giờ cả ngày theo giờ Việt Nam
-- [ ] Đầu vào UTC lúc 00:30 ngày D là 7:30 ngày D giờ Việt Nam
-- [ ] Không có nhân viên sẵn sàng thì `WaitEstimator` không chia cho 0
-- [ ] Chưa có dữ liệu 7 ngày thì ước tính dùng 5 phút cho mỗi phiên
-- [ ] Biến không có giá trị giữ nguyên chuỗi `{ten_khach}`, không ném lỗi
-- [ ] `Percentile.Of` trả `null` với danh sách rỗng và đúng giá trị với danh sách 1 phần tử
+- [x] 7:59 và 21:00 giờ Việt Nam là ngoài giờ. 8:00 và 20:59 là trong giờ
+- [x] Ngày nghỉ trong `holidays` là ngoài giờ cả ngày theo giờ Việt Nam
+- [x] Đầu vào UTC lúc 00:30 ngày D là 7:30 ngày D giờ Việt Nam
+- [x] Không có nhân viên sẵn sàng thì `WaitEstimator` không chia cho 0
+- [x] Chưa có dữ liệu 7 ngày thì ước tính dùng 5 phút cho mỗi phiên
+- [x] Biến không có giá trị giữ nguyên chuỗi `{ten_khach}`, không ném lỗi
+- [x] `Percentile.Of` trả `null` với danh sách rỗng và đúng giá trị với danh sách 1 phần tử
 **Kiểm tra:** unit test với `FakeTimeProvider`
 **Phụ thuộc:** không · **Quy mô:** S
 **File:** `apps/backend/src/Pickory.Modules.SupportDesk/{Scheduling/WorkingHoursCalendar.cs, Scheduling/WaitEstimator.cs, CannedResponses/CannedResponseTemplate.cs, Metrics/Percentile.cs}`, test trong `apps/backend/tests/Pickory.UnitTests/Modules/SupportDesk/`
