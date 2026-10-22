@@ -37,6 +37,7 @@ import { OrderDetailPage } from './features/commerce/customer/orders/order-detai
 import { CustomerOrdersPage } from './features/commerce/customer/orders/customer-orders-page';
 import { OrderLookupPage } from './features/commerce/customer/orders/order-lookup-page';
 import { HomePage } from './features/home/home-page';
+import { SupportDeskPage } from './features/support-desk/admin/support-desk-page';
 import { Header } from './shared/header';
 // Tách trình soạn mô tả khỏi bundle trang khách, chỉ tải khi nhân viên mở trang sản phẩm.
 const ProductsPage = lazy(() =>
@@ -57,16 +58,6 @@ function CustomerLayout() {
       <Header />
       <Outlet />
     </>
-  );
-}
-
-// Trang giữ chỗ cho module chưa làm, để mục menu đã có route không mở ra trang trắng.
-function AdminPlaceholderPage({ title }: { title: string }) {
-  return (
-    <div className="card">
-      <h2 className="admin-placeholder-title">{title}</h2>
-      <p className="muted">Chức năng đang được phát triển trong module kế tiếp.</p>
-    </div>
   );
 }
 
@@ -133,10 +124,7 @@ export function App() {
           <Route path="products/:productId/skus/:skuId/inventory" element={<SkuInventoryPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="brands" element={<BrandsPage />} />
-          <Route
-            path="conversations"
-            element={<AdminPlaceholderPage title="Chăm sóc khách hàng" />}
-          />
+          <Route path="conversations" element={<SupportDeskPage />} />
           <Route path="shipping/settings" element={<ShippingSettingsPage />} />
           <Route path="shipping/fallback-fee" element={<FallbackFeePage />} />
           <Route path="commerce/settings" element={<CommerceSettingsPage />} />

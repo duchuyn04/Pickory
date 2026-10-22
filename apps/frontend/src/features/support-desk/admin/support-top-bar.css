@@ -1,0 +1,90 @@
+/* Công cụ CSKH nằm bên phải thanh trên cùng. Màu và cỡ chữ lấy từ token trong `tokens.css`. */
+.admin-top-tools {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  min-width: 0;
+  margin-left: auto;
+}
+
+.connection-status {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.connection-status-lost {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-pill);
+  background: var(--color-warning-soft);
+  color: var(--color-warning);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.connection-status-lost .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.presence-toggle {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+}
+
+.presence-toggle-state,
+.presence-toggle-error {
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.presence-toggle-state {
+  color: var(--color-ink-muted);
+}
+
+.presence-toggle-error {
+  color: var(--color-danger);
+  font-weight: 600;
+}
+
+/* Màn hẹp chỉ đủ chỗ cho công tắc. Chữ trạng thái đã có ở `aria-checked` và nút gạt. */
+@media (max-width: 599px) {
+  .presence-toggle-state {
+    display: none;
+  }
+}
+
+/* Màn hẹp: dòng lỗi xuống hàng thứ hai của thanh trên cùng, rộng hết thanh. Nội dung trang bị đẩy xuống, không bị che. */
+@media (max-width: 767px) {
+  /* Hai khung này mở ra để các phần tử con thành phần tử của thanh trên cùng. Nhờ đó dòng lỗi xuống hàng được. */
+  .admin-top-tools,
+  .presence-toggle {
+    display: contents;
+  }
+
+  /* Khung công cụ đã mở ra nên không còn đẩy sang phải. Chip kết nối làm việc đó. */
+  .connection-status {
+    margin-left: auto;
+  }
+
+  /* Bỏ icon của chip để logo, chip và công tắc vừa một hàng ở 375px. Chữ "Mất kết nối" vẫn nói đủ ý. */
+  .connection-status-lost .icon {
+    display: none;
+  }
+
+  .presence-toggle-error {
+    flex: 0 0 100%;
+    margin-bottom: var(--space-2);
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-control);
+    background: var(--color-danger-soft);
+    font-size: var(--text-label);
+    white-space: normal;
+  }
+}

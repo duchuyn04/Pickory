@@ -4,7 +4,10 @@ import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-d
 import { apiRequest } from '../../../shared/api';
 import { BrandMark } from '../../../shared/brand-mark';
 import { Icon } from '../../../shared/icons';
-import { useActor, type ActorData } from '../hooks/use-actor';
+import { SupportEventsProvider } from '../../support-desk/admin/support-events-provider';
+import { SupportTopBarTools } from '../../support-desk/admin/support-top-bar-tools';
+import { WaitingSessionAlerts } from '../../support-desk/admin/waiting-session-alerts';
+import { checkPermission, useActor, type ActorData } from '../hooks/use-actor';
 import { ADMIN_NAV_GROUPS, filterNavGroupsByPermission, isNavItemActive } from './admin-navigation';
 import './admin-layout.css';
 
@@ -91,116 +94,125 @@ export function AdminLayout() {
 
   const visibleGroups = filterNavGroupsByPermission(ADMIN_NAV_GROUPS, actor);
   const roleLabel = actor.roles.join(', ') || 'staff';
+  // Thanh trên cùng ở màn rộng chỉ hiện khi có công cụ CSKH để chứa. Người khác vẫn thấy thanh này ở màn hẹp như cũ.
+  const hasSupportTools = checkPermission(actor, 'conversations:read');
+  // Việc báo khách vào hàng chờ chỉ chạy khi nhân viên "Sẵn sàng". Chỉ người có `conversations:reply` bật được trạng thái đó.
+  const canReceiveWaitingAlerts = checkPermission(actor, 'conversations:reply');
 
   return (
-    <div className="admin-shell" data-collapsed={isCollapsed}>
-      <aside
-        id={SIDEBAR_ID}
-        className="admin-sidebar"
-        data-open={isMenuOpen}
-        aria-label="Menu quản trị"
-      >
-        <div className="admin-brand">
-          <BrandMark />
-          <span className="admin-brand-text admin-nav-label">
-            <b>Pickory</b>
-            <small>Trang quản trị</small>
-          </span>
-        </div>
+    // Provider nằm ngoài `admin-shell` để luồng SSE sống suốt khu quản trị, kể cả khi nhân viên đổi trang.
+    <SupportEventsProvider>
+      {canReceiveWaitingAlerts && <WaitingSessionAlerts />}
+      <div className="admin-shell" data-collapsed={isCollapsed}>
+        <aside
+          id={SIDEBAR_ID}
+          className="admin-sidebar"
+          data-open={isMenuOpen}
+          aria-label="Menu quản trị"
+        >
+          <div className="admin-brand">
+            <BrandMark />
+            <span className="admin-brand-text admin-nav-label">
+              <b>Pickory</b>
+              <small>Trang quản trị</small>
+            </span>
+          </div>
 
-        <nav className="admin-nav" aria-label="Quản trị">
-          {visibleGroups.map((group) => (
-            <div className="admin-nav-group" key={group.label ?? 'chung'}>
-              {group.label && (
-                <p className="admin-nav-group-label" data-nav-group-label>
-                  {group.label}
-                </p>
-              )}
-              <ul className="admin-nav-list">
-                {group.items.map((item) => (
-                  <li key={item.path}>
-                    {/* Mục cha vẫn sáng ở trang con như /admin/products/:id. Trang tồn kho SKU thuộc mục Tồn kho. */}
-                    <Link
-                      to={item.path}
-                      aria-current={isNavItemActive(item, pathname) ? 'page' : undefined}
-                      className="admin-nav-link"
-                      title={isCollapsed ? item.label : undefined}
-                      // Đóng ngăn kéo sau khi chọn trang, để nội dung trang mới không bị lớp phủ che.
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <Icon name={item.icon} />
-                      <span className="admin-nav-label">{item.label}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+          <nav className="admin-nav" aria-label="Quản trị">
+            {visibleGroups.map((group) => (
+              <div className="admin-nav-group" key={group.label ?? 'chung'}>
+                {group.label && (
+                  <p className="admin-nav-group-label" data-nav-group-label>
+                    {group.label}
+                  </p>
+                )}
+                <ul className="admin-nav-list">
+                  {group.items.map((item) => (
+                    <li key={item.path}>
+                      {/* Mục cha vẫn sáng ở trang con như /admin/products/:id. Trang tồn kho SKU thuộc mục Tồn kho. */}
+                      <Link
+                        to={item.path}
+                        aria-current={isNavItemActive(item, pathname) ? 'page' : undefined}
+                        className="admin-nav-link"
+                        title={isCollapsed ? item.label : undefined}
+                        // Đóng ngăn kéo sau khi chọn trang, để nội dung trang mới không bị lớp phủ che.
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Icon name={item.icon} />
+                        <span className="admin-nav-label">{item.label}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ))}
+          </nav>
+
+          <div className="admin-side-foot">
+            <div className="admin-user">
+              <span className="admin-avatar" aria-hidden="true">
+                {readInitial(actor)}
+              </span>
+              <span className="admin-user-text admin-nav-label">
+                <b>{actor.name || actor.email || 'Nhân viên'}</b>
+                <small>Role: {roleLabel}</small>
+              </span>
+              <button
+                type="button"
+                className="admin-icon-button"
+                aria-label="Đăng xuất"
+                title="Đăng xuất"
+                onClick={handleLogout}
+              >
+                <Icon name="logout" />
+              </button>
             </div>
-          ))}
-        </nav>
-
-        <div className="admin-side-foot">
-          <div className="admin-user">
-            <span className="admin-avatar" aria-hidden="true">
-              {readInitial(actor)}
-            </span>
-            <span className="admin-user-text admin-nav-label">
-              <b>{actor.name || actor.email || 'Nhân viên'}</b>
-              <small>Role: {roleLabel}</small>
-            </span>
+            {/* Thu gọn chỉ có ở màn rộng. Ở màn hẹp, sidebar đã là ngăn kéo ẩn sẵn. */}
             <button
               type="button"
-              className="admin-icon-button"
-              aria-label="Đăng xuất"
-              title="Đăng xuất"
-              onClick={handleLogout}
+              className="admin-collapse"
+              aria-label="Thu gọn menu"
+              aria-pressed={isCollapsed}
+              onClick={toggleCollapsed}
             >
-              <Icon name="logout" />
+              <Icon name="chevronLeft" />
+              <span className="admin-nav-label" aria-hidden="true">
+                Thu gọn
+              </span>
             </button>
           </div>
-          {/* Thu gọn chỉ có ở màn rộng. Ở màn hẹp, sidebar đã là ngăn kéo ẩn sẵn. */}
-          <button
-            type="button"
-            className="admin-collapse"
-            aria-label="Thu gọn menu"
-            aria-pressed={isCollapsed}
-            onClick={toggleCollapsed}
-          >
-            <Icon name="chevronLeft" />
-            <span className="admin-nav-label" aria-hidden="true">
-              Thu gọn
+        </aside>
+
+        {/* Lớp phủ chặn thao tác với trang phía sau khi ngăn kéo mở; bấm vào thì đóng ngăn kéo. */}
+        {isMenuOpen && (
+          <div className="admin-scrim" data-admin-scrim onClick={() => setIsMenuOpen(false)} />
+        )}
+
+        <div className="admin-body">
+          <header className="admin-top" data-has-tools={hasSupportTools}>
+            {/* `aria-expanded` và `aria-controls` báo cho trình đọc màn hình trạng thái của ngăn kéo menu. */}
+            <button
+              ref={menuButtonRef}
+              type="button"
+              className="admin-icon-button admin-menu-toggle"
+              aria-label="Menu"
+              aria-expanded={isMenuOpen}
+              aria-controls={SIDEBAR_ID}
+              onClick={() => setIsMenuOpen((wasOpen) => !wasOpen)}
+            >
+              <Icon name={isMenuOpen ? 'close' : 'menu'} />
+            </button>
+            <span className="admin-top-brand">
+              <BrandMark />
+              <b>Pickory</b>
             </span>
-          </button>
+            <SupportTopBarTools />
+          </header>
+          <main className="admin-main">
+            <Outlet />
+          </main>
         </div>
-      </aside>
-
-      {/* Lớp phủ chặn thao tác với trang phía sau khi ngăn kéo mở; bấm vào thì đóng ngăn kéo. */}
-      {isMenuOpen && (
-        <div className="admin-scrim" data-admin-scrim onClick={() => setIsMenuOpen(false)} />
-      )}
-
-      <div className="admin-body">
-        <header className="admin-top">
-          {/* `aria-expanded` và `aria-controls` báo cho trình đọc màn hình trạng thái của ngăn kéo menu. */}
-          <button
-            ref={menuButtonRef}
-            type="button"
-            className="admin-icon-button admin-menu-toggle"
-            aria-label="Menu"
-            aria-expanded={isMenuOpen}
-            aria-controls={SIDEBAR_ID}
-            onClick={() => setIsMenuOpen((wasOpen) => !wasOpen)}
-          >
-            <Icon name={isMenuOpen ? 'close' : 'menu'} />
-          </button>
-          <span className="admin-top-brand">
-            <BrandMark />
-            <b>Pickory</b>
-          </span>
-        </header>
-        <main className="admin-main">
-          <Outlet />
-        </main>
       </div>
-    </div>
+    </SupportEventsProvider>
   );
 }

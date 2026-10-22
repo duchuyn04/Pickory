@@ -1,6 +1,6 @@
 /*
- * Khung quản trị theo bản mẫu `shop-retail/admin/`: sidebar sáng có icon, nhóm menu, khối người dùng ở đáy.
- * Màn hẹp đổi sidebar thành ngăn kéo. Chỉ dùng token trong `tokens.css`.
+ * Khung quản trị theo bản mẫu `shop-retail/admin/`.
+ * Màn hẹp đổi sidebar thành ngăn kéo, màu và cỡ chữ lấy từ token trong `tokens.css`.
  */
 .admin-shell {
   --admin-sidebar-width: 252px;
@@ -218,7 +218,7 @@
   min-width: 0;
 }
 
-/* Thanh trên chỉ dùng ở màn hẹp, nơi nó chứa nút mở ngăn kéo. */
+/* Thanh trên mặc định chỉ dùng ở màn hẹp, nơi nó chứa nút mở ngăn kéo. Màn rộng hiện nó khi có công cụ CSKH. */
 .admin-top {
   display: none;
 }
@@ -234,6 +234,24 @@
 }
 
 @media (min-width: 768px) {
+  /* Màn rộng đã có sidebar, nên thanh trên chỉ chứa công cụ CSKH ở bên phải. Nút Menu và logo ẩn đi. */
+  .admin-top[data-has-tools='true'] {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    height: 48px;
+    padding: 0 var(--space-5);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-surface);
+  }
+
+  .admin-top[data-has-tools='true'] .admin-menu-toggle,
+  .admin-top[data-has-tools='true'] .admin-top-brand {
+    display: none;
+  }
+
   /* Ẩn chữ bằng mắt nhưng giữ cho trình đọc màn hình. Link vẫn có tên khi sidebar thu gọn. */
   .admin-shell[data-collapsed='true'] .admin-nav-label {
     position: absolute;
@@ -326,18 +344,22 @@
     top: 0;
     z-index: 20;
     display: flex;
-    gap: var(--space-2);
+    /* Phần tử xuống hàng, như dòng lỗi của công tắc, làm thanh cao thêm. */
+    flex-wrap: wrap;
+    gap: 0 var(--space-2);
     align-items: center;
-    height: 56px;
+    min-height: 56px;
     padding: 0 var(--space-2);
     border-bottom: 1px solid var(--color-border);
     background: var(--color-surface);
   }
 
+  /* Hàng đầu cao 55px, cộng viền dưới 1px là 56px. */
   .admin-top-brand {
     display: flex;
     gap: var(--space-2);
     align-items: center;
+    min-height: 55px;
     color: var(--color-dark);
     font-size: var(--text-md);
   }

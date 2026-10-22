@@ -69,17 +69,19 @@ Quy ước:
 ### SD-UI1: Khung màn CSKH, hàng chờ và công tắc sẵn sàng
 **Mô tả:** Thay `AdminPlaceholderPage` ở `/admin/conversations` bằng màn CSKH 3 cột. Task này làm cột hàng chờ (tab Đang chờ, Của tôi, Gọi lại), client SSE, `PresenceToggle`, thông báo trình duyệt và âm báo. Hai cột còn lại là khung trống có tiêu đề.
 **Tiêu chí nghiệm thu:**
-- [ ] Mục menu "CSKH" giữ đường dẫn `/admin/conversations`. Người thiếu `conversations:read` không thấy menu
-- [ ] Mở thẳng URL khi thiếu quyền thấy trang không đủ quyền
-- [ ] `PresenceToggle` hiện trên thanh trên cùng của `AdminLayout` khi người dùng có `conversations:reply`
-- [ ] Hội thoại mới vào hàng chờ hiện trong tab Đang chờ mà không tải lại trang
-- [ ] Badge trên tab Đang chờ khớp số phiên đang chờ
-- [ ] Trình duyệt chỉ hỏi quyền thông báo khi nhân viên bấm nút bật thông báo
-- [ ] Nhân viên tắt được âm báo. Lựa chọn còn sau khi tải lại trang
-- [ ] Mất SSE thì client tự kết nối lại và hiện trạng thái "Mất kết nối"
-- [ ] Dùng được bằng bàn phím. Tab có vai trò `tablist`
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang
-- [ ] Playwright console có 0 lỗi và 0 cảnh báo
+- [x] Mục menu "CSKH" giữ đường dẫn `/admin/conversations`. Người thiếu `conversations:read` không thấy menu
+- [x] Mở thẳng URL khi thiếu quyền thấy trang không đủ quyền
+- [x] `PresenceToggle` hiện trên thanh trên cùng của `AdminLayout` khi người dùng có `conversations:reply`
+- [x] Hội thoại mới vào hàng chờ hiện trong tab Đang chờ mà không tải lại trang
+  Kiểm đầu cuối với backend thật ở SD-E2E1.
+- [x] Badge trên tab Đang chờ khớp số phiên đang chờ
+  Kiểm đầu cuối với backend thật ở SD-E2E1.
+- [x] Trình duyệt chỉ hỏi quyền thông báo khi nhân viên bấm nút bật thông báo
+- [x] Nhân viên tắt được âm báo. Lựa chọn còn sau khi tải lại trang
+- [x] Mất SSE thì client tự kết nối lại và hiện trạng thái "Mất kết nối"
+- [x] Dùng được bằng bàn phím. Tab có vai trò `tablist`
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang
+- [x] Playwright console có 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest cho hook SSE và bộ lọc tab; ảnh chụp; Playwright `--headed`
 **Phụ thuộc:** SD-03 · **Quy mô:** M
 **File:** `apps/frontend/src/features/support-desk/admin/`, `apps/frontend/src/app.tsx`

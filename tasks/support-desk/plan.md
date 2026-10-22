@@ -146,13 +146,21 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
 27. Chống spam tin của khách. Route gửi tin và tạo hội thoại mở công khai cho khách vãng lai. Module dùng `RateLimiter` của `Pickory.Shared` theo `anonymous_id`. Đề xuất 10 tin mỗi phút và 200 tin mỗi ngày, chờ chốt ở Câu hỏi mở 10.
 28. Gắn hội thoại vãng lai vào tài khoản. Module nghe `UserLinkedEvent` và gán `customer_user_id` cho hội thoại `open` của `anonymous_id` đó. Khách đăng nhập giữa chừng vẫn thấy hội thoại cũ.
 29. Thông báo lưu hội thoại. Response tạo hội thoại lần đầu có cờ `showRetentionNotice`. Trang `/support` hiện câu báo hội thoại được lưu 90 ngày. Cách làm giữ theo SA-03 của plan `shopping-assistant` đã bỏ.
+30. Hợp đồng dữ liệu của hàng chờ. SD-UI1 chốt hợp đồng này ở frontend. SD-04, SD-05 và SD-06 làm backend theo đúng hợp đồng.
+    - `GET /api/admin/support/sessions?view=waiting` và `view=mine` trả `{ data: [{ id, conversationId, preview, waitingSeconds, handoffAt }] }`. `preview` là 200 ký tự đầu của tin đầu tiên (tiêu chí SD-06).
+    - `GET /api/admin/support/callback-requests` trả `{ data: [{ id, phone, status, createdAt }] }`. Tab "Gọi lại" chỉ hiện dòng có `status` bằng `pending`.
+    - Luồng SSE của nhân viên gửi ba sự kiện của phiên: `session.waiting`, `session.assigned`, `session.closed`. Dữ liệu của mỗi sự kiện là `{ sessionId }`.
+    - Client nhận một trong ba sự kiện thì đọc lại danh sách. Client không dùng dữ liệu nào khác trong sự kiện.
+    - Client kiểm dữ liệu trả về bằng `zod`. Dữ liệu sai hợp đồng hiện như một lỗi tải, kèm nút "Thử lại".
+    - Route chưa có trả 404. Cột hàng chờ hiện lỗi ngắn và trang không vỡ.
+    - Mỗi lần luồng SSE mở lại, client đọc lại `GET /api/admin/support/presence` và danh sách của tab đang mở (quyết định 7).
 
 ## Task List
 
 Chi tiết từng task ở `tasks/support-desk/todo.md`.
 
 ### Phase 1: Nền tảng
-- [x] SD-01 · [x] SD-02 · [x] SD-03 · [ ] SD-UI1
+- [x] SD-01 · [x] SD-02 · [x] SD-03 · [x] SD-UI1
 
 ### Checkpoint SD1
 - [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
