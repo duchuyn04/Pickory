@@ -40,16 +40,16 @@ Quy ước:
 ### SD-02: Khung module, Contracts và schema
 **Mô tả:** Tạo `Pickory.Modules.SupportDesk` và `Pickory.Modules.SupportDesk.Contracts`. Thêm `SupportDeskDbContext` với schema lịch sử `ef_support_desk`, migration đầu tiên và `SupportDeskModule.cs`. Contracts có `ISupportMetrics`, `SupportMetricsSnapshot`, `SupportPendingCounts`. Ngày 2026-10-18 task bỏ bảng `draft_logs` và thêm hai bảng hội thoại theo quyết định 24.
 **Tiêu chí nghiệm thu:**
-- [ ] Bảng `support_sessions`, `callback_requests`, `canned_responses`, `staff_presence`, `support_settings` theo Data Model của spec
-- [ ] Bảng `support_conversations` và `support_messages` theo quyết định 24
-- [ ] `support_sessions` có thêm `handoff_in_hours`, `customer_user_id`, `anonymous_id` theo quyết định 10
-- [ ] Chỉ mục unique một phần chặn hai phiên mở (`closed_at` rỗng) cho cùng `conversation_id`
-- [ ] Chỉ mục unique một phần chặn hai hội thoại `open` cho cùng `anonymous_id`
-- [ ] `support_settings` có một dòng mặc định: 8:00 đến 21:00 mỗi ngày, nhắc lại 10 phút, tự đóng 30 phút
-- [ ] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
-- [ ] `Pickory.ArchitectureTests` chặn `SupportDesk` tham chiếu module khác ngoài project Contracts
-- [ ] `SupportDesk` không tham chiếu `Pickory.Modules.AiGateway.Contracts`
-- [ ] `Program.cs` chỉ gọi `AddSupportDeskModule` và `MapSupportDeskEndpoints`
+- [x] Bảng `support_sessions`, `callback_requests`, `canned_responses`, `staff_presence`, `support_settings` theo Data Model của spec
+- [x] Bảng `support_conversations` và `support_messages` theo quyết định 24
+- [x] `support_sessions` có thêm `handoff_in_hours`, `customer_user_id`, `anonymous_id` theo quyết định 10
+- [x] Chỉ mục unique một phần chặn hai phiên mở (`closed_at` rỗng) cho cùng `conversation_id`
+- [x] Chỉ mục unique một phần chặn hai hội thoại `open` cho cùng `anonymous_id`
+- [x] `support_settings` có một dòng mặc định: 8:00 đến 21:00 mỗi ngày, nhắc lại 10 phút, tự đóng 30 phút
+- [x] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
+- [x] `Pickory.ArchitectureTests` chặn `SupportDesk` tham chiếu module khác ngoài project Contracts
+- [x] `SupportDesk` không tham chiếu `Pickory.Modules.AiGateway.Contracts`
+- [x] `Program.cs` chỉ gọi `AddSupportDeskModule` và `MapSupportDeskEndpoints`
 **Kiểm tra:** build, test kiến trúc, test tích hợp schema
 **Phụ thuộc:** SD-01 · **Quy mô:** M
 

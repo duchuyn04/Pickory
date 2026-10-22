@@ -4,6 +4,7 @@ using Pickory.Modules.Catalog;
 using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
 using Pickory.Modules.Shipping;
+using Pickory.Modules.SupportDesk;
 using Pickory.Shared.Configuration;
 
 namespace Pickory.Api.Deployment;
@@ -37,6 +38,7 @@ public static class DatabaseMigrationCommand
             new("Shipping", token => ShippingModule.MigrateShippingDatabaseAsync(services, token)),
             new("Commerce", token => CommerceModule.MigrateCommerceDatabaseAsync(services, token)),
             new("ActivityTracking", token => ActivityTrackingModule.MigrateActivityTrackingDatabaseAsync(services, token)),
+            new("SupportDesk", token => SupportDeskModule.MigrateSupportDeskDatabaseAsync(services, token)),
             // Dọn cuối cùng, sau migration của mọi module, để không xóa bảng khi bước trước còn có thể lỗi.
             new(AiGatewayCleanup.StepName, token => AiGatewayCleanup.RunAsync(services.GetRequiredService<AppConfig>(), token)),
         ];

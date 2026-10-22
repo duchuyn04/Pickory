@@ -10,6 +10,7 @@ using Pickory.Modules.Catalog.Seeding;
 using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
 using Pickory.Modules.Shipping;
+using Pickory.Modules.SupportDesk;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.DependencyInjection;
 using Pickory.Shared.Email;
@@ -94,6 +95,8 @@ builder.Services.AddShippingModule(databaseConnectionString, config, builder.Env
 builder.Services.AddCommerceModule(databaseConnectionString, config, builder.Environment.IsProduction());
 // ActivityTracking chỉ cần chuỗi kết nối, vì module không có biến cấu hình bắt buộc.
 builder.Services.AddActivityTrackingModule(databaseConnectionString);
+// SupportDesk chỉ cần chuỗi kết nối ở bước đăng ký này, vì module chưa có biến cấu hình bắt buộc.
+builder.Services.AddSupportDeskModule(databaseConnectionString);
 
 // Development luôn có tài liệu. Môi trường khác chỉ sinh tài liệu khi `API_DOCS_ENABLED` bật, vì tài liệu liệt kê cả route admin.
 var apiDocumentationMode = ApiDocumentation.SelectMode(
@@ -179,6 +182,7 @@ if (E2eStartup.IsCommand(args))
 }
 app.MapCommerceEndpoints();
 app.MapActivityTrackingEndpoints();
+app.MapSupportDeskEndpoints();
 
 // Lệnh benchmark cần đủ route để đo `GET /api/products`, nên chạy sau khi route đã gắn.
 if (isBenchmarkCommand)

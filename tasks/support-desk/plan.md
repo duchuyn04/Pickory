@@ -152,7 +152,7 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
 Chi tiết từng task ở `tasks/support-desk/todo.md`.
 
 ### Phase 1: Nền tảng
-- [x] SD-01 · [ ] SD-02 · [ ] SD-03 · [ ] SD-UI1
+- [x] SD-01 · [x] SD-02 · [ ] SD-03 · [ ] SD-UI1
 
 ### Checkpoint SD1
 - [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch

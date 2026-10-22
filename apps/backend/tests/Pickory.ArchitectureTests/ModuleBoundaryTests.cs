@@ -5,6 +5,7 @@ using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Shipping;
+using Pickory.Modules.SupportDesk;
 using Xunit;
 
 // Namespace giả lập phải mang tên `Contracts` của module Identity. Tên này cố ý khác thư mục của project test.
@@ -45,6 +46,7 @@ namespace Pickory.ArchitectureTests
             typeof(ShippingModule).Assembly,
             typeof(CommerceModule).Assembly,
             typeof(ActivityTrackingModule).Assembly,
+            typeof(SupportDeskModule).Assembly,
         ];
 
         [Fact]
@@ -188,6 +190,47 @@ namespace Pickory.ArchitectureTests
         public void ActivityTrackingContracts_KhongThamChieuContractsKhac()
         {
             var contractsAssembly = typeof(Pickory.Modules.ActivityTracking.Contracts.Metrics.Funnel).Assembly;
+            var otherModuleReferences = contractsAssembly.GetReferencedAssemblies()
+                .Select(reference => reference.Name ?? string.Empty)
+                .Where(name => name.StartsWith("Pickory.Modules.", StringComparison.Ordinal))
+                .Where(name => name != contractsAssembly.GetName().Name)
+                .ToList();
+
+            Assert.Empty(otherModuleReferences);
+        }
+
+        [Fact]
+        // Assembly SupportDesk thật phải có trong danh sách module mà test duyệt, nếu không luật biên không bao giờ kiểm nó.
+        public void DanhSachModule_GomAssemblySupportDesk_VaLuatBienChayTrenNo()
+        {
+            var moduleAssemblies = ModuleArchitectureValidator.GetModuleAssemblies();
+            var supportDeskAssembly = moduleAssemblies.SingleOrDefault(
+                assembly => assembly.GetName().Name == "Pickory.Modules.SupportDesk");
+
+            Assert.NotNull(supportDeskAssembly);
+            Assert.DoesNotContain(moduleAssemblies, assembly => assembly.GetName().Name == "Pickory.Modules.SupportDesk.Contracts");
+            // Cùng luật biên với mọi module: chỉ tham chiếu `Pickory.Shared` và Contracts của module khác.
+            var result = ModuleArchitectureValidator.ValidateModule(supportDeskAssembly);
+            Assert.True(result.IsSuccessful, $"SupportDesk có vi phạm: {string.Join("; ", result.Violations)}");
+        }
+
+        [Fact]
+        // Chatbot đã tách thành dự án riêng, nên CSKH không được kéo bất kỳ assembly nào của cổng AI vào lại.
+        public void SupportDesk_KhongThamChieuAssemblyNaoCoTenAiGateway()
+        {
+            var aiReferences = typeof(SupportDeskModule).Assembly.GetReferencedAssemblies()
+                .Select(reference => reference.Name ?? string.Empty)
+                .Where(name => name.Contains("AiGateway", StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            Assert.Empty(aiReferences);
+        }
+
+        [Fact]
+        // Contracts của SupportDesk không được tham chiếu Contracts của module khác. Nhờ vậy module khác dùng Contracts này mà không kéo theo dây chuyền phụ thuộc.
+        public void SupportDeskContracts_KhongThamChieuContractsKhac()
+        {
+            var contractsAssembly = typeof(Pickory.Modules.SupportDesk.Contracts.Metrics.ISupportMetrics).Assembly;
             var otherModuleReferences = contractsAssembly.GetReferencedAssemblies()
                 .Select(reference => reference.Name ?? string.Empty)
                 .Where(name => name.StartsWith("Pickory.Modules.", StringComparison.Ordinal))
