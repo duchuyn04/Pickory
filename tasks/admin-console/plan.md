@@ -52,6 +52,16 @@ Thứ tự mới:
 
 ADM-04, ADM-08, ADM-11 và ADM-17 làm sau, khi đo thấy báo cáo chậm. ADM-UI1 không còn chặn trang báo cáo.
 
+## Thay đổi ngày 2026-10-27: mỗi trang một biểu đồ
+
+Người dùng tách hai biểu đồ của báo cáo doanh thu thành hai trang. Mỗi trang chỉ có một biểu đồ và bảng số liệu của nó.
+
+- Trang `/admin/reports/revenue/brands` có biểu đồ tròn doanh thu theo thương hiệu của một tháng.
+- Trang `/admin/reports/revenue/periods` có biểu đồ cột doanh thu theo kỳ.
+- Bỏ bảng sản phẩm chi tiết và biểu đồ thứ hai trên cùng một trang.
+- `/admin/reports/revenue` chuyển về trang thương hiệu và giữ tham số tháng.
+- ADM-UI10 áp dụng cùng quy tắc: mỗi biểu đồ là một trang riêng.
+
 ## Phần đã phủ bởi plan cũ
 
 1. **Khung back-office tối thiểu.** UI-05 và quyết định 14 của `tasks/identity-ai-gateway/plan.md` đã làm trang `/admin/login`, layout, `useActor()`, `useCan()` và menu ẩn theo quyền. Plan này không làm lại các phần đó.
@@ -59,7 +69,7 @@ ADM-04, ADM-08, ADM-11 và ADM-17 làm sau, khi đo thấy báo cáo chậm. ADM
 3. **Menu tập trung.** `ADMIN_NAV_GROUPS` trong `apps/frontend/src/features/identity/admin/admin-navigation.ts` đang liệt kê mọi mục menu. `filterNavGroupsByPermission` và `isNavItemActive` đã có test. Plan này chỉ đổi nguồn của danh sách menu (ADM-UI1).
 4. **Trang giữ chỗ.** `apps/frontend/src/app.tsx` có `AdminPlaceholderPage` cho `/admin/orders` và `/admin/conversations`. Module `commerce` và `support-desk` thay các trang này. Plan này không làm màn nghiệp vụ.
 5. **Báo cáo chi phí AI của `ai-gateway`.** Đã bỏ ngày 2026-10-18. `GET /api/admin/ai/usage` và `GET`, `PUT /api/admin/ai/settings` đã có từ AI-09. Lớp `UsageSummaryReader` đã tính chi phí theo ngày, theo feature, tỉ lệ lỗi và p95. Plan này chỉ đưa lớp đó ra Contracts (ADM-07), không viết lại phép tính.
-6. **Đếm SKU sắp hết.** `ICatalogReader.CountLowStockAsync` đã có cho badge. Plan này dùng lại hàm đó.
+6. **Đếm SKU sắp hết.** Ngày 2026-10-22 tồn kho chuyển sang module `inventory`. Badge đọc `IInventoryReader.CountLowStockAsync`, có sau INV-10 của `tasks/inventory/todo.md`. `ICatalogReader.CountLowStockAsync` bị xóa ở task đó.
 7. **Quyền.** `reports:read`, `reports:export` đã có trong `Permissions.cs`. Bảng quyền mặc định trong `spec/SPEC-identity.md` đã có hai quyền này. Plan này không thêm quyền mới.
 8. **Mục hoãn của identity.** Traceability của `tasks/identity-ai-gateway/plan.md` hoãn phần E2E "sales thấy menu đơn hàng" tới `commerce` hoặc `admin-console`. ADM-E2E1 đóng mục này, sau khi `commerce` có route `/admin/orders` thật.
 
@@ -128,7 +138,7 @@ ADM-18 nghiệm thu module
 12. **Badge theo quyền ở backend.** `GET /api/admin/badges` dùng `RequireStaff()`. Mỗi số chỉ được đọc khi người gọi có quyền của mục đó:
     - `orders.pendingConfirmation`: `orders:read`.
     - `payments.unmatched`, `payments.codUnreceived`: `payments:read`.
-    - `catalog.lowStock`: `products:read`.
+    - `inventory.lowStock`: `inventory:read`.
     - `support.waiting`, `support.callbacks`: `conversations:read`.
     Thiếu quyền thì khóa đó không có trong response. Module không gọi cổng đọc của mục thiếu quyền.
 13. **Một nguồn lỗi không làm hỏng badge.** Mỗi nguồn badge chạy riêng. Nguồn lỗi hoặc chưa đăng ký trả `null` và ghi log cảnh báo. Menu vẫn hiện các badge còn lại.
@@ -156,12 +166,14 @@ ADM-18 nghiệm thu module
     - Thẻ trên dashboard hiện biểu đồ tròn của tháng này và tổng của tháng này.
     - Bốn trang chi tiết và dashboard đọc chung `GET /api/admin/reports/sales` của ADM-12.
     - ADM-01 thêm hai giá trị `range`: `month` đi kèm `month=YYYY-MM`, và `6m` cho 6 tháng lịch gần nhất.
+    - Ngày 2026-10-27 tách mỗi biểu đồ thành một trang riêng. Xem mục "Thay đổi ngày 2026-10-27: mỗi trang một biểu đồ".
 24. **Tên sản phẩm và thương hiệu trong bảng tổng hợp.** `report_daily_products` thêm cột `product_name`, `brand_id`, `brand_name`. ADM-08 chép các giá trị này từ `ICatalogReader` lúc tổng hợp. Nhờ vậy API báo cáo chỉ đọc bảng `report_daily_*`, đúng quyết định 3.
     - `ICatalogReader.GetProductsAsync` bỏ sản phẩm khách không thấy. Dòng của sản phẩm đó có `brand_id` rỗng, và báo cáo gộp vào nhóm "Khác".
 25. **API báo cáo đọc thẳng cổng đọc (thay quyết định 3 và 24 cho tới khi có bảng tổng hợp).** Người dùng chọn ngày 2026-10-26, để thấy dashboard sớm.
     - `GET /api/admin/reports/sales` gọi `ICommerceReports` và `ICatalogReader` mỗi lần mở trang. Route không đọc bảng nào của module khác.
     - `DailySales` của `commerce` thêm `SoldQuantity`, để biểu đồ cột của báo cáo sản phẩm có số lượng mỗi kỳ.
     - Tên sản phẩm và thương hiệu lấy từ `ICatalogReader.GetProductsAsync` lúc gọi. Sản phẩm catalog không trả về gộp vào nhóm "Khác".
+    - Danh mục lá lấy từ `ICatalogReader.GetProductCategoriesAsync` lúc gọi. Báo cáo gộp doanh thu và số lượng theo danh mục, nhóm `null` cho sản phẩm catalog không trả về.
     - Web là bản demo, dữ liệu ít. Bảng tổng hợp (ADM-04, ADM-08) chỉ làm khi ADM-17 đo p95 vượt 1 giây.
 
 ## Task List
@@ -186,7 +198,7 @@ Chi tiết từng task ở `tasks/admin-console/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Báo cáo
-- [ ] ADM-08 · [ ] ADM-10 · [ ] ADM-11 · [ ] ADM-12 · [ ] ADM-19 · [ ] ADM-UI5 · [ ] ADM-UI10 · [ ] ADM-UI11 · [ ] ADM-UI9 · [ ] ADM-14 · [ ] ADM-UI7
+- [ ] ADM-08 · [ ] ADM-10 · [ ] ADM-11 · [x] ADM-12 · [x] ADM-19 · [x] ADM-UI5 · [ ] ADM-UI10 · [ ] ADM-UI11 · [x] ADM-UI9 · [ ] ADM-14 · [ ] ADM-UI7
 - Đã bỏ ngày 2026-10-18: ADM-07, ADM-09, ADM-13, ADM-UI6
 
 ### Checkpoint A3

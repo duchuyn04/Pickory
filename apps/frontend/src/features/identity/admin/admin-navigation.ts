@@ -95,6 +95,23 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
     ],
   },
   {
+    label: 'Báo cáo',
+    items: [
+      {
+        label: 'Doanh thu thương hiệu',
+        path: '/admin/reports/revenue/brands',
+        icon: 'chart',
+        requiredPermission: 'reports:read',
+      },
+      {
+        label: 'Doanh thu theo kỳ',
+        path: '/admin/reports/revenue/periods',
+        icon: 'chart',
+        requiredPermission: 'reports:read',
+      },
+    ],
+  },
+  {
     label: 'Hệ thống',
     items: [
       { label: 'Nhân viên', path: '/admin/staff', icon: 'staff', requiredPermission: 'staff:read' },

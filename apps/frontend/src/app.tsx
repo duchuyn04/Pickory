@@ -9,7 +9,7 @@ import { ComparePage } from './features/catalog/customer/compare-page';
 import { ProductPage } from './features/catalog/customer/product-page';
 import { InventoryPage } from './features/catalog/admin/inventory-page';
 import { SkuInventoryPage } from './features/catalog/admin/sku-inventory-page';
-import { Outlet, Route, Routes } from 'react-router-dom';
+import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AccountPage } from './features/identity/customer/account-page';
 import { AdminDashboardPage } from './features/identity/admin/dashboard-page';
 import { AdminLayout } from './features/identity/admin/admin-layout';
@@ -50,6 +50,28 @@ const ProductFormPage = lazy(() =>
     default: module.ProductFormPage,
   })),
 );
+// Recharts chỉ tải khi nhân viên mở trang báo cáo, không làm nặng bundle của khung quản trị.
+const RevenueBrandsReportPage = lazy(() =>
+  import('./features/admin-console/reports/revenue-brands-page').then((module) => ({
+    default: module.RevenueBrandsReportPage,
+  })),
+);
+const RevenuePeriodsReportPage = lazy(() =>
+  import('./features/admin-console/reports/revenue-periods-page').then((module) => ({
+    default: module.RevenuePeriodsReportPage,
+  })),
+);
+
+// Đường dẫn cũ từng chứa cả hai biểu đồ. Chuyển về trang thương hiệu và chỉ giữ tham số tháng.
+function RevenueReportRedirect() {
+  const { search } = useLocation();
+  const next = new URLSearchParams(search);
+  next.delete('range');
+  next.delete('granularity');
+  next.delete('brand');
+  const query = next.toString();
+  return <Navigate to={`/admin/reports/revenue/brands${query ? `?${query}` : ''}`} replace />;
+}
 
 function CustomerLayout() {
   // Header thuộc layout để trang chủ và mọi luồng tài khoản cùng phản ánh phiên hiện tại.
@@ -128,6 +150,23 @@ export function App() {
           <Route path="shipping/settings" element={<ShippingSettingsPage />} />
           <Route path="shipping/fallback-fee" element={<FallbackFeePage />} />
           <Route path="commerce/settings" element={<CommerceSettingsPage />} />
+          <Route path="reports/revenue" element={<RevenueReportRedirect />} />
+          <Route
+            path="reports/revenue/brands"
+            element={
+              <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
+                <RevenueBrandsReportPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="reports/revenue/periods"
+            element={
+              <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
+                <RevenuePeriodsReportPage />
+              </Suspense>
+            }
+          />
         </Route>
       </Routes>
       <ConsentBanner />

@@ -18,6 +18,14 @@ const iconPaths = {
       <path d="M12 17.5v-11" />
     </>
   ),
+  chart: (
+    <>
+      <path d="M3 3v18h18" />
+      <path d="M18 17V9" />
+      <path d="M13 17V5" />
+      <path d="M8 17v-3" />
+    </>
+  ),
   users: (
     <>
       <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
