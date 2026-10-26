@@ -104,17 +104,17 @@ Quy ước:
 
 Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài khoản.
 **Tiêu chí nghiệm thu:**
-- [ ] Lần đầu trả 201 kèm hội thoại mới trạng thái `open`. Lần sau trả 200 kèm hội thoại đang mở
-- [ ] Response lần đầu có cờ `showRetentionNotice` bằng `true`. Lần sau cờ bằng `false`
-- [ ] Khách vãng lai khác `pk_anon` đọc lịch sử hoặc gửi tin nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
-- [ ] Khách đăng nhập khác tài khoản nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
-- [ ] Khách vãng lai đăng nhập sau: `UserLinkedEvent` gắn hội thoại, và khách thấy hội thoại cũ bằng tài khoản
-- [ ] Tin rỗng hoặc dài hơn 2.000 ký tự trả 400 `VALIDATION_ERROR`
-- [ ] Gửi tin vào hội thoại `closed` trả 409 `SUPPORT_CONVERSATION_CLOSED`
-- [ ] Gửi vượt giới hạn của quyết định 27 trả 429 `SUPPORT_MESSAGE_RATE_LIMITED`. Tin bị chặn không được lưu
-- [ ] Lịch sử phân trang theo con trỏ, mới nhất ở cuối
-- [ ] Lịch sử không có ghi chú nội bộ của nhân viên
-- [ ] Nhân viên gọi route phía khách nhận 403
+- [x] Lần đầu trả 201 kèm hội thoại mới trạng thái `open`. Lần sau trả 200 kèm hội thoại đang mở
+- [x] Response lần đầu có cờ `showRetentionNotice` bằng `true`. Lần sau cờ bằng `false`
+- [x] Khách vãng lai khác `pk_anon` đọc lịch sử hoặc gửi tin nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
+- [x] Khách đăng nhập khác tài khoản nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
+- [x] Khách vãng lai đăng nhập sau: `UserLinkedEvent` gắn hội thoại, và khách thấy hội thoại cũ bằng tài khoản
+- [x] Tin rỗng hoặc dài hơn 2.000 ký tự trả 400 `VALIDATION_ERROR`
+- [x] Gửi tin vào hội thoại `closed` trả 409 `SUPPORT_CONVERSATION_CLOSED`
+- [x] Gửi vượt giới hạn của quyết định 27 trả 429 `SUPPORT_MESSAGE_RATE_LIMITED`. Tin bị chặn không được lưu
+- [x] Lịch sử phân trang theo con trỏ, mới nhất ở cuối
+- [x] Lịch sử không có ghi chú nội bộ của nhân viên
+- [x] Nhân viên gọi route phía khách nhận 403
 **Kiểm tra:** test tích hợp với hai `pk_anon` khác nhau; test giới hạn với `FakeTimeProvider`
 **Phụ thuộc:** SD-02 · **Quy mô:** M
 

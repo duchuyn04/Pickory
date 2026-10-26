@@ -22,12 +22,18 @@ internal sealed class SupportConversationConfiguration : IEntityTypeConfiguratio
         entity.Property(value => value.LastMessageAt).IsRequired();
         entity.Property(value => value.ClosedAt).IsRequired(false);
 
-        // Mỗi khách có tối đa một hội thoại đang mở. Hai tin đầu đến cùng lúc không tạo được hai hội thoại.
+        // Mỗi khách vãng lai có tối đa một hội thoại đang mở. Hai tin đầu đến cùng lúc không tạo được hai hội thoại.
         entity.HasIndex(value => value.AnonymousId)
             .IsUnique()
-            // Điều kiện lọc chỉ tính hội thoại `open`, nên hội thoại đã đóng không chặn hội thoại mới.
+            // Chỉ tính hội thoại `open` chưa gắn tài khoản, vì cookie `pk_anon` không đổi khi chủ đăng xuất.
             // Ép kiểu enum tường minh để model khớp DB.
-            .HasFilter("\"status\" = 'open'::\"SupportConversationStatus\"")
+            .HasFilter("\"status\" = 'open'::\"SupportConversationStatus\" AND \"customerUserId\" IS NULL")
             .HasDatabaseName("support_conversations_anonymousId_open_key");
+
+        // Mỗi tài khoản có tối đa một hội thoại đang mở, dù khách dùng nhiều trình duyệt với nhiều `anonymousId`.
+        entity.HasIndex(value => value.CustomerUserId)
+            .IsUnique()
+            .HasFilter("\"status\" = 'open'::\"SupportConversationStatus\" AND \"customerUserId\" IS NOT NULL")
+            .HasDatabaseName("support_conversations_customerUserId_open_key");
     }
 }

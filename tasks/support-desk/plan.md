@@ -114,7 +114,11 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
     - `SUPPORT_CONVERSATION_CLOSED` (409): khách gửi tin vào hội thoại đã đóng.
     - `SUPPORT_MESSAGE_RATE_LIMITED` (429): khách gửi tin vượt giới hạn ở quyết định 27.
     - Đã bỏ ngày 2026-10-18: `SUPPORT_DRAFT_UNAVAILABLE` và `SUPPORT_UNAVAILABLE`.
-13. Chủ hội thoại. Route phía khách đọc `support_conversations` của module. Khách đăng nhập là chủ khi `customer_user_id` bằng `Actor.UserId`. Khách vãng lai là chủ khi `anonymous_id` bằng `Actor.AnonymousId`. Không khớp thì trả 404 `SUPPORT_CONVERSATION_NOT_FOUND`, để không lộ hội thoại có tồn tại.
+13. Chủ hội thoại. Route phía khách đọc `support_conversations` của module. Khách đăng nhập là chủ khi `customer_user_id` bằng `Actor.UserId`. Khách vãng lai là chủ khi `customer_user_id` rỗng và `anonymous_id` bằng `Actor.AnonymousId`. Không khớp thì trả 404 `SUPPORT_CONVERSATION_NOT_FOUND`, để không lộ hội thoại có tồn tại.
+    Cập nhật ngày 2026-10-26:
+    - Điều kiện `customer_user_id` rỗng của khách vãng lai là mới.
+    - Đăng xuất không đổi cookie `pk_anon`.
+    - Thiếu điều kiện này, người dùng chung trình duyệt đọc được hội thoại của chủ tài khoản vừa đăng xuất.
 14. Giới hạn 3 yêu cầu gọi lại mỗi ngày. Module đếm dòng `callback_requests` theo `anonymous_id` trong ngày giờ Việt Nam. Bộ đếm nằm trong DB, nên khởi động lại API không xóa giới hạn. Số điện thoại kiểm bằng `ContactFieldRules` và lưu dạng `0xxxxxxxxx`.
 15. Đã bỏ ngày 2026-10-18. Dữ liệu gửi AI không còn, vì `SD-12` đã bỏ.
 16. Tin tối đa 2.000 ký tự. Giới hạn áp cho tin của nhân viên và tin của khách. Spec không ghi giới hạn này. Plan chọn 2.000 ký tự, bằng giới hạn nhận xét của review trong `commerce`.
@@ -142,6 +146,10 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
 
     Ghi chú nội bộ khi chuyển phiên nằm ở `support_sessions`, không nằm ở `support_messages`. Khách không đọc được ghi chú này.
 25. Vòng đời hội thoại. Mỗi chủ có tối đa một hội thoại `open`. Hội thoại im lặng 24 giờ thì job chuyển `closed`. Tin tiếp theo của khách tạo hội thoại mới. Trong một hội thoại, mỗi lần khách cần nhân viên mở một phiên mới. Khách gửi tin khi không có phiên mở thì module mở phiên chờ.
+    Cập nhật ngày 2026-10-26:
+    - `support_conversations_anonymousId_open_key` chỉ tính hội thoại `open` có `customer_user_id` rỗng.
+    - `support_conversations_customerUserId_open_key` chỉ tính hội thoại `open` có `customer_user_id` khác rỗng.
+    - Chỉ mục cũ theo `anonymous_id` chặn khách vãng lai tạo hội thoại mới sau khi chủ tài khoản đăng xuất, vì `pk_anon` không đổi.
 26. Thời hạn lưu 90 ngày. Job hằng ngày xóa hội thoại có `last_message_at` cũ hơn 90 ngày, cùng tin và phiên của hội thoại. `UserDeletedEvent` xóa hội thoại của người dùng đó. Hạn này thay Câu hỏi mở 6 cũ và giữ luật "Never" của spec về lịch sử hỗ trợ.
 27. Chống spam tin của khách. Route gửi tin và tạo hội thoại mở công khai cho khách vãng lai. Module dùng `RateLimiter` của `Pickory.Shared` theo `anonymous_id`. Đề xuất 10 tin mỗi phút và 200 tin mỗi ngày, chờ chốt ở Câu hỏi mở 10.
 28. Gắn hội thoại vãng lai vào tài khoản. Module nghe `UserLinkedEvent` và gán `customer_user_id` cho hội thoại `open` của `anonymous_id` đó. Khách đăng nhập giữa chừng vẫn thấy hội thoại cũ.
@@ -169,7 +177,7 @@ Chi tiết từng task ở `tasks/support-desk/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 2: Hội thoại phía khách, tiếp nhận và trả lời
-- [ ] SD-15 · [ ] SD-16 · [ ] SD-UI7 · [ ] SD-04 · [ ] SD-05 · [ ] SD-06 · [ ] SD-07 · [ ] SD-UI2 · [ ] SD-08 · [ ] SD-09 · [ ] SD-11 · [ ] SD-UI3 · [ ] SD-UI4 · [ ] SD-UI6 · [ ] SD-17
+- [x] SD-15 · [ ] SD-16 · [ ] SD-UI7 · [ ] SD-04 · [ ] SD-05 · [ ] SD-06 · [ ] SD-07 · [ ] SD-UI2 · [ ] SD-08 · [ ] SD-09 · [ ] SD-11 · [ ] SD-UI3 · [ ] SD-UI4 · [ ] SD-UI6 · [ ] SD-17
 
 ### Checkpoint SD2
 - [ ] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`

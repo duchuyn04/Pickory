@@ -39,8 +39,11 @@ Chatbot của Pickory là dự án riêng `chatbot-rag`. Câu chatbot không tr�
 ### Hội thoại phía khách
 
 - Module tự lưu hội thoại và tin của khách.
-- Chủ hội thoại: khách đăng nhập theo tài khoản, khách vãng lai theo cookie `pk_anon`. Người khác đọc hoặc gửi tin nhận 404, để không lộ hội thoại có tồn tại.
+- Chủ hội thoại: khách đăng nhập theo tài khoản, khách vãng lai theo cookie `pk_anon`, chỉ với hội thoại chưa gắn tài khoản. Người khác đọc hoặc gửi tin nhận 404, để không lộ hội thoại có tồn tại.
 - Mỗi chủ có tối đa một hội thoại đang mở. Hội thoại im lặng 24 giờ thì tự đóng. Tin tiếp theo của khách tạo hội thoại mới.
+- Hai chỉ mục unique một phần giữ luật một hội thoại đang mở cho mỗi chủ:
+  - Một chỉ mục theo `anonymous_id`, cho hội thoại chưa gắn tài khoản.
+  - Một chỉ mục theo `customer_user_id`, cho hội thoại đã gắn tài khoản.
 - Khách vãng lai đăng nhập giữa chừng thì hội thoại đang mở gắn vào tài khoản (nghe `UserLinkedEvent`).
 - Tin tối đa 2.000 ký tự, cho cả khách và nhân viên.
 - Chống spam: mỗi khách gửi tối đa 10 tin mỗi phút và 200 tin mỗi ngày, đếm theo `anonymous_id`.

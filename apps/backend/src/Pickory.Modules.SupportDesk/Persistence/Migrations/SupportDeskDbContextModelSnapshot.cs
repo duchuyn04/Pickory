@@ -185,7 +185,12 @@ namespace Pickory.Modules.SupportDesk.Persistence.Migrations
                     b.HasIndex("AnonymousId")
                         .IsUnique()
                         .HasDatabaseName("support_conversations_anonymousId_open_key")
-                        .HasFilter("\"status\" = 'open'::\"SupportConversationStatus\"");
+                        .HasFilter("\"status\" = 'open'::\"SupportConversationStatus\" AND \"customerUserId\" IS NULL");
+
+                    b.HasIndex("CustomerUserId")
+                        .IsUnique()
+                        .HasDatabaseName("support_conversations_customerUserId_open_key")
+                        .HasFilter("\"status\" = 'open'::\"SupportConversationStatus\" AND \"customerUserId\" IS NOT NULL");
 
                     b.ToTable("support_conversations", (string)null);
                 });

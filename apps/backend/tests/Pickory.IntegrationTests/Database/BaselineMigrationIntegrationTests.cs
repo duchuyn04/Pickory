@@ -26,7 +26,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
     [InlineData("shipping", "ef_shipping", "20261019123657_AddShippingQuoteCache")]
     [InlineData("commerce", "ef_commerce", "20261019144909_AddOrderShippingFeeSource")]
     [InlineData("activity-tracking", "ef_activity_tracking", "20261020093013_InitialActivityTracking")]
-    [InlineData("support-desk", "ef_support_desk", "20261022043717_InitialSupportDesk")]
+    [InlineData("support-desk", "ef_support_desk", "20261026031746_SupportConversationOwnerIndexes")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(
         string module, string historySchema, string migrationId)
     {

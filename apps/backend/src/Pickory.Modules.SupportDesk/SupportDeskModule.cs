@@ -6,9 +6,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
+using Pickory.Modules.Identity.Contracts.Events;
+using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Persistence;
 using Pickory.Modules.SupportDesk.Presence;
 using Pickory.Modules.SupportDesk.Realtime;
+using Pickory.Shared.Events;
 using Pickory.Shared.Persistence;
 
 namespace Pickory.Modules.SupportDesk;
@@ -36,8 +39,13 @@ public static class SupportDeskModule
         // Streamer không giữ trạng thái riêng nên là singleton. Nó tự tạo scope khi cần ghi DB.
         services.AddSingleton<SupportEventStreamer>();
         // Vòng đời scoped vì dịch vụ và job giữ `SupportDeskDbContext` của request hoặc của một vòng worker.
+        services.AddScoped<SupportConversationService>();
         services.AddScoped<StaffPresenceService>();
         services.AddScoped<StaffPresenceTimeoutProcessor>();
+        // Giới hạn tin là singleton vì bộ đếm trong bộ nhớ phải dùng chung cho mọi request của một khách.
+        services.AddSingleton<SupportMessageLimiters>();
+        // Đăng nhập phát `UserLinkedEvent`. Handler gắn hội thoại vãng lai vào tài khoản vừa đăng nhập.
+        services.AddScoped<IDomainEventHandler<UserLinkedEvent>, SupportConversationLinkHandler>();
         // Worker chạy nền gọi processor mỗi 30 giây.
         services.AddHostedService<StaffPresenceTimeoutWorker>();
         return services;
@@ -58,6 +66,7 @@ public static class SupportDeskModule
         var moduleRoutes = endpoints.MapGroup(string.Empty).WithTags("SupportDesk");
         SupportEventsEndpoints.Map(moduleRoutes);
         StaffPresenceEndpoints.Map(moduleRoutes);
+        SupportConversationEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }

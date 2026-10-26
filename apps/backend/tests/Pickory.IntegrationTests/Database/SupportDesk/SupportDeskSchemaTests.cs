@@ -139,7 +139,8 @@ public sealed class SupportDeskSchemaTests(PickoryWebApplicationFactory factory)
                 "CREATE INDEX \"callback_requests_status_createdAt_idx\" ON public.callback_requests USING btree (status, \"createdAt\")",
                 "CREATE INDEX \"support_messages_conversationId_createdAt_idx\" ON public.support_messages USING btree (\"conversationId\", \"createdAt\")",
                 "CREATE INDEX \"support_sessions_closedAt_handoffAt_idx\" ON public.support_sessions USING btree (\"closedAt\", \"handoffAt\")",
-                "CREATE UNIQUE INDEX \"support_conversations_anonymousId_open_key\" ON public.support_conversations USING btree (\"anonymousId\") WHERE (status = 'open'::\"SupportConversationStatus\")",
+                "CREATE UNIQUE INDEX \"support_conversations_anonymousId_open_key\" ON public.support_conversations USING btree (\"anonymousId\") WHERE ((status = 'open'::\"SupportConversationStatus\") AND (\"customerUserId\" IS NULL))",
+                "CREATE UNIQUE INDEX \"support_conversations_customerUserId_open_key\" ON public.support_conversations USING btree (\"customerUserId\") WHERE ((status = 'open'::\"SupportConversationStatus\") AND (\"customerUserId\" IS NOT NULL))",
                 "CREATE UNIQUE INDEX \"support_sessions_conversationId_open_key\" ON public.support_sessions USING btree (\"conversationId\") WHERE (\"closedAt\" IS NULL)",
             ],
             indexes.Order(StringComparer.Ordinal));
@@ -287,6 +288,59 @@ public sealed class SupportDeskSchemaTests(PickoryWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task Conversations_AllowGuestOpenConversationWhenAccountConversationOfSameAnonymousIdIsOpen()
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<SupportDeskDbContext>();
+        DotnetSchemaIntegrationTests.AssertTestConnection(context);
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        try
+        {
+            // Cookie `pk_anon` không đổi khi chủ tài khoản đăng xuất. Khách vãng lai sau đó vẫn phải tạo được hội thoại mới.
+            var anonymousId = NewId();
+            context.Conversations.AddRange(
+                NewConversation(anonymousId, SupportConversationStatus.Open, customerUserId: NewId()),
+                NewConversation(anonymousId, SupportConversationStatus.Open));
+            await context.SaveChangesAsync();
+            context.ChangeTracker.Clear();
+
+            var openCount = await context.Conversations.CountAsync(conversation =>
+                conversation.AnonymousId == anonymousId && conversation.Status == SupportConversationStatus.Open);
+            Assert.Equal(2, openCount);
+        }
+        finally
+        {
+            await transaction.RollbackAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Conversations_RejectSecondOpenConversationOfSameAccountEvenWithDifferentAnonymousIds()
+    {
+        await using var scope = factory.Services.CreateAsyncScope();
+        var context = scope.ServiceProvider.GetRequiredService<SupportDeskDbContext>();
+        DotnetSchemaIntegrationTests.AssertTestConnection(context);
+        await using var transaction = await context.Database.BeginTransactionAsync();
+        try
+        {
+            var customerUserId = NewId();
+            context.Conversations.Add(NewConversation(NewId(), SupportConversationStatus.Open, customerUserId));
+            await context.SaveChangesAsync();
+
+            context.Conversations.Add(NewConversation(NewId(), SupportConversationStatus.Open, customerUserId));
+            var exception = await Assert.ThrowsAsync<DbUpdateException>(() => context.SaveChangesAsync());
+
+            var postgresError = Assert.IsType<PostgresException>(exception.InnerException);
+            Assert.Equal(PostgresErrorCodes.UniqueViolation, postgresError.SqlState);
+            Assert.Equal("support_conversations_customerUserId_open_key", postgresError.ConstraintName);
+        }
+        finally
+        {
+            await transaction.RollbackAsync();
+        }
+    }
+
+    [Fact]
     public async Task Settings_HasExactlyOneRowWithTheDefaultValues()
     {
         await using var scope = factory.Services.CreateAsyncScope();
@@ -355,13 +409,15 @@ public sealed class SupportDeskSchemaTests(PickoryWebApplicationFactory factory)
     // Mỗi test dùng mã riêng nên không phụ thuộc thứ tự chạy và không đụng dữ liệu của test khác.
     private static string NewId() => Guid.NewGuid().ToString();
 
-    private static SupportConversation NewConversation(string anonymousId, SupportConversationStatus status)
+    private static SupportConversation NewConversation(
+        string anonymousId, SupportConversationStatus status, string? customerUserId = null)
     {
         var now = DateTime.UtcNow;
         return new SupportConversation
         {
             Id = NewId(),
             AnonymousId = anonymousId,
+            CustomerUserId = customerUserId,
             Status = status,
             CreatedAt = now,
             LastMessageAt = now,
