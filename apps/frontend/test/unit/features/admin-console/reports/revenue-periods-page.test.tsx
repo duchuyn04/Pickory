@@ -8,6 +8,8 @@ import {
   findField,
   installReportClock,
   renderReportPage,
+  reportBucket,
+  reportTotals,
   selectOption,
   textOf,
   waitFor,
@@ -29,10 +31,22 @@ const periodReport: SalesReportData = {
   from: '2026-05-01',
   to: '2026-10-15',
   buckets: [
-    { key: '2026-05-01', from: '2026-05-01', to: '2026-05-31', recognizedRevenue: 500_000 },
-    { key: '2026-10-01', from: '2026-10-01', to: '2026-10-31', recognizedRevenue: 1_500_000 },
+    reportBucket({
+      key: '2026-05-01',
+      from: '2026-05-01',
+      to: '2026-05-31',
+      recognizedRevenue: 500_000,
+    }),
+    reportBucket({
+      key: '2026-10-01',
+      from: '2026-10-01',
+      to: '2026-10-31',
+      recognizedRevenue: 1_500_000,
+    }),
   ],
   brands: [],
+  totals: reportTotals({ recognizedRevenue: 2_000_000 }),
+  topProducts: [],
 };
 
 const emptyPeriod: SalesReportData = {
@@ -40,6 +54,8 @@ const emptyPeriod: SalesReportData = {
   to: '2026-10-27',
   buckets: [],
   brands: [],
+  totals: reportTotals(),
+  topProducts: [],
 };
 
 const funnelSteps = [

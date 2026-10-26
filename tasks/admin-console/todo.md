@@ -288,20 +288,22 @@ Quy ước:
 **File:** `apps/frontend/src/features/admin-console/reports/revenue-funnel-panel.tsx`, `apps/frontend/src/features/admin-console/reports/report-funnel-chart.tsx`, `apps/frontend/src/features/admin-console/reports/funnel-steps.ts`
 
 ### ADM-UI10: Ba trang báo cáo còn lại
-**Mô tả:** Trang `/admin/reports/orders`, `/admin/reports/cancellations` và `/admin/reports/products` dùng khung và component của ADM-UI5 (quyết định 23 của plan). Mỗi trang chỉ thống kê một loại số liệu. Ngày 2026-10-27 áp dụng quy tắc một biểu đồ một trang của ADM-UI5: mỗi báo cáo tách trang biểu đồ tròn và trang biểu đồ cột, bỏ nhấn cột đổi tháng. Task thêm ngày 2026-10-26.
+**Mô tả:** Sáu trang của ba báo cáo dùng khung và component của ADM-UI5 (quyết định 23 của plan). Mỗi trang chỉ thống kê một loại số liệu. Ngày 2026-10-27 áp dụng quy tắc một biểu đồ một trang của ADM-UI5: mỗi báo cáo có một trang biểu đồ tròn và một trang biểu đồ cột. Task bỏ nhấn cột đổi tháng. Task thêm ngày 2026-10-26.
 **Tiêu chí nghiệm thu:**
-- [ ] Trang đơn đã thanh toán: biểu đồ tròn chia số đơn theo COD và SePay trong tháng. Biểu đồ cột hiện số đơn mỗi kỳ
-- [ ] Trang đơn hủy: biểu đồ tròn có ba lát (khách hủy, shop hủy, quá hạn thanh toán). Biểu đồ cột hiện số đơn hủy mỗi kỳ
-- [ ] Trang sản phẩm bán ra: biểu đồ tròn có 5 sản phẩm bán nhiều nhất và lát "Khác". Biểu đồ cột hiện số lượng mỗi kỳ
-- [ ] Nhấn lát phương thức thanh toán hoặc lát lý do hủy thì bảng hiện số đơn của nhóm đó theo từng ngày trong tháng
-- [ ] Nhấn lát sản phẩm thì bảng hiện doanh thu, số lượng, thương hiệu của sản phẩm đó. Nhấn lát "Khác" thì bảng liệt kê các sản phẩm trong nhóm đó
-- [ ] Ba trang giữ hành vi của khung: mặc định thời gian, nhấn cột đổi tháng, URL mở lại cho cùng báo cáo
-- [ ] Một nhóm giữ cùng màu trên dashboard và trang chi tiết
-- [ ] Tháng không có số liệu thì trang hiện "Chưa có dữ liệu trong tháng này", không vẽ biểu đồ rỗng
-- [ ] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px trang không tràn ngang
-- [ ] Playwright console 0 lỗi và 0 cảnh báo
+- [x] Đơn đã thanh toán có hai trang. `/admin/reports/orders/payments` chia số đơn theo COD và SePay của một tháng. `/admin/reports/orders/periods` hiện số đơn mỗi kỳ
+- [x] Đơn hủy có hai trang. `/admin/reports/cancellations/reasons` có ba lát: khách hủy, shop hủy, quá hạn thanh toán. `/admin/reports/cancellations/periods` hiện số đơn hủy mỗi kỳ
+- [x] Sản phẩm bán ra có hai trang. `/admin/reports/products/top` có 5 sản phẩm bán nhiều nhất và lát "Khác". `/admin/reports/products/periods` hiện số lượng mỗi kỳ
+- [x] Nhấn lát phương thức thanh toán hoặc lát lý do hủy thì bảng hiện số đơn của nhóm đó theo từng ngày trong tháng
+- [x] Nhấn lát sản phẩm thì bảng hiện doanh thu, số lượng, thương hiệu của sản phẩm đó. Nhấn lát "Khác" thì bảng liệt kê các sản phẩm trong nhóm đó
+- [x] Trang giữ hành vi của khung: mặc định thời gian và URL mở lại cho cùng báo cáo. Tham số chọn lát nằm trên URL: `method`, `reason`, `product`
+- [x] Một nhóm giữ cùng màu trên dashboard và trang chi tiết. Mỗi phương thức thanh toán và mỗi lý do hủy có màu cố định theo mã nhóm
+- [x] Tháng không có số liệu hiện "Chưa có dữ liệu trong tháng này". Khoảng không có số liệu hiện "Chưa có dữ liệu trong khoảng này". Trang không vẽ biểu đồ rỗng
+- [x] Ba đường dẫn gốc `/admin/reports/orders`, `/admin/reports/cancellations`, `/admin/reports/products` chuyển về trang biểu đồ tròn và giữ tham số tháng
+- [x] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px trang không tràn ngang
+- [x] Playwright console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; ảnh chụp 1280 px, 768 px và 375 px
 **Phụ thuộc:** ADM-UI5 · **Quy mô:** M
+**Bằng chứng (2026-10-27):** Vitest đạt 40/40 test của ba báo cáo: 13 test nhóm, 10 test đơn đã thanh toán, 8 test đơn hủy, 9 test sản phẩm. `pnpm exec playwright test admin-reports-orders.spec.ts` đạt 3/3. Lượt chạy sinh 18 ảnh chụp cho sáu trang ở 1280, 768 và 375 px. Playwright console 0 lỗi.
 
 ### ADM-UI11: Dashboard báo cáo
 **Mô tả:** Trang `/admin/reports` có 4 thẻ theo quyết định 23 của plan, mỗi thẻ là một báo cáo. Task cài Recharts và làm component biểu đồ tròn có bảng số liệu. Task thêm mục menu Báo cáo vào `ADMIN_NAV_GROUPS`. Trang chi tiết chưa có thì route của trang hiện trang giữ chỗ. Task thêm ngày 2026-10-26 và làm trước ADM-UI5.

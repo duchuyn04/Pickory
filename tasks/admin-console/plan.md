@@ -60,7 +60,9 @@ Người dùng tách hai biểu đồ của báo cáo doanh thu thành hai trang
 - Trang `/admin/reports/revenue/periods` có biểu đồ cột doanh thu theo kỳ.
 - Bỏ bảng sản phẩm chi tiết và biểu đồ thứ hai trên cùng một trang.
 - `/admin/reports/revenue` chuyển về trang thương hiệu và giữ tham số tháng.
-- ADM-UI10 áp dụng cùng quy tắc: mỗi biểu đồ là một trang riêng.
+- ADM-UI10 áp dụng cùng quy tắc cho ba báo cáo còn lại. Sáu trang là `/admin/reports/orders/payments`, `/admin/reports/orders/periods`, `/admin/reports/cancellations/reasons`, `/admin/reports/cancellations/periods`, `/admin/reports/products/top` và `/admin/reports/products/periods`.
+- Ba đường dẫn gốc `/admin/reports/orders`, `/admin/reports/cancellations`, `/admin/reports/products` chuyển về trang biểu đồ tròn và giữ tham số tháng.
+- Trang biểu đồ tròn giữ nhóm đang chọn trên URL: `brand`, `method`, `reason` hoặc `product`. Liên kết mở lại cho đúng nhóm và đúng bảng chi tiết.
 
 ## Phần đã phủ bởi plan cũ
 
@@ -198,7 +200,7 @@ Chi tiết từng task ở `tasks/admin-console/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Báo cáo
-- [ ] ADM-08 · [ ] ADM-10 · [ ] ADM-11 · [x] ADM-12 · [x] ADM-19 · [x] ADM-UI5 · [ ] ADM-UI10 · [ ] ADM-UI11 · [x] ADM-UI9 · [ ] ADM-14 · [ ] ADM-UI7
+- [ ] ADM-08 · [ ] ADM-10 · [ ] ADM-11 · [x] ADM-12 · [x] ADM-19 · [x] ADM-UI5 · [x] ADM-UI10 · [ ] ADM-UI11 · [x] ADM-UI9 · [ ] ADM-14 · [ ] ADM-UI7
 - Đã bỏ ngày 2026-10-18: ADM-07, ADM-09, ADM-13, ADM-UI6
 
 ### Checkpoint A3

@@ -8,7 +8,7 @@ import { ReportPageFrame } from './report-page-frame';
 import { ReportMonthControl } from './report-period-controls';
 import { ReportPieChart } from './report-pie-chart';
 import { fetchSalesReport } from './reports-api';
-import { useBrandReportParams } from './use-report-params';
+import { useMonthReportParams } from './use-report-params';
 import './reports.css';
 
 const MONTH_EMPTY_MESSAGE = 'Chưa có dữ liệu trong tháng này';
@@ -16,7 +16,7 @@ const MONTH_EMPTY_MESSAGE = 'Chưa có dữ liệu trong tháng này';
 // Trang doanh thu theo thương hiệu của một tháng. Chỉ có một biểu đồ và bảng số liệu của nó.
 export function RevenueBrandsReportPage() {
   const canReadReports = useCan('reports:read');
-  const params = useBrandReportParams();
+  const params = useMonthReportParams('brand');
 
   const monthQuery = useQuery({
     queryKey: ['admin-sales-report', 'month', params.month],
@@ -77,6 +77,8 @@ export function RevenueBrandsReportPage() {
               value: slice.revenue,
             }))}
             neutralKey={OTHER_BRAND_KEY}
+            selectedKey={params.selection || null}
+            onSliceSelect={params.selectGroup}
             tableCaption={`Bảng doanh thu theo thương hiệu, ${formatReportMonth(params.month)}`}
             tableHead={
               <>

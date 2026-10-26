@@ -61,16 +61,45 @@ const RevenuePeriodsReportPage = lazy(() =>
     default: module.RevenuePeriodsReportPage,
   })),
 );
+const OrdersPaymentsReportPage = lazy(() =>
+  import('./features/admin-console/reports/orders-payments-page').then((module) => ({
+    default: module.OrdersPaymentsReportPage,
+  })),
+);
+const OrdersPeriodsReportPage = lazy(() =>
+  import('./features/admin-console/reports/orders-periods-page').then((module) => ({
+    default: module.OrdersPeriodsReportPage,
+  })),
+);
+const CancellationsReasonsReportPage = lazy(() =>
+  import('./features/admin-console/reports/cancellations-reasons-page').then((module) => ({
+    default: module.CancellationsReasonsReportPage,
+  })),
+);
+const CancellationsPeriodsReportPage = lazy(() =>
+  import('./features/admin-console/reports/cancellations-periods-page').then((module) => ({
+    default: module.CancellationsPeriodsReportPage,
+  })),
+);
+const ProductsTopReportPage = lazy(() =>
+  import('./features/admin-console/reports/products-top-page').then((module) => ({
+    default: module.ProductsTopReportPage,
+  })),
+);
+const ProductsPeriodsReportPage = lazy(() =>
+  import('./features/admin-console/reports/products-periods-page').then((module) => ({
+    default: module.ProductsPeriodsReportPage,
+  })),
+);
 
-// Đường dẫn cũ từng chứa cả hai biểu đồ. Chuyển về trang thương hiệu và chỉ giữ tham số tháng.
-function RevenueReportRedirect() {
+// Đường dẫn gốc của mỗi báo cáo chưa có trang riêng. Chuyển về trang biểu đồ tròn và giữ tham số tháng.
+function ReportRedirect({ to }: { to: string }) {
   const { search } = useLocation();
   const next = new URLSearchParams(search);
-  next.delete('range');
-  next.delete('granularity');
-  next.delete('brand');
+  // Tham số của trang biểu đồ cột không dùng ở trang biểu đồ tròn.
+  for (const name of ['range', 'granularity', 'brand']) next.delete(name);
   const query = next.toString();
-  return <Navigate to={`/admin/reports/revenue/brands${query ? `?${query}` : ''}`} replace />;
+  return <Navigate to={`${to}${query ? `?${query}` : ''}`} replace />;
 }
 
 function CustomerLayout() {
@@ -150,7 +179,22 @@ export function App() {
           <Route path="shipping/settings" element={<ShippingSettingsPage />} />
           <Route path="shipping/fallback-fee" element={<FallbackFeePage />} />
           <Route path="commerce/settings" element={<CommerceSettingsPage />} />
-          <Route path="reports/revenue" element={<RevenueReportRedirect />} />
+          <Route
+            path="reports/revenue"
+            element={<ReportRedirect to="/admin/reports/revenue/brands" />}
+          />
+          <Route
+            path="reports/orders"
+            element={<ReportRedirect to="/admin/reports/orders/payments" />}
+          />
+          <Route
+            path="reports/cancellations"
+            element={<ReportRedirect to="/admin/reports/cancellations/reasons" />}
+          />
+          <Route
+            path="reports/products"
+            element={<ReportRedirect to="/admin/reports/products/top" />}
+          />
           <Route
             path="reports/revenue/brands"
             element={
@@ -164,6 +208,54 @@ export function App() {
             element={
               <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
                 <RevenuePeriodsReportPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="reports/orders/payments"
+            element={
+              <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
+                <OrdersPaymentsReportPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="reports/orders/periods"
+            element={
+              <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
+                <OrdersPeriodsReportPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="reports/cancellations/reasons"
+            element={
+              <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
+                <CancellationsReasonsReportPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="reports/cancellations/periods"
+            element={
+              <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
+                <CancellationsPeriodsReportPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="reports/products/top"
+            element={
+              <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
+                <ProductsTopReportPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="reports/products/periods"
+            element={
+              <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
+                <ProductsPeriodsReportPage />
               </Suspense>
             }
           />

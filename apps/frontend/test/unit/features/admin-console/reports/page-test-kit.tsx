@@ -4,6 +4,10 @@ import { act, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { vi } from 'vitest';
+import type {
+  SalesReportBucket,
+  SalesReportTotals,
+} from '../../../../../src/features/admin-console/reports/reports-api';
 import type { ActorData } from '../../../../../src/features/identity/hooks/use-actor';
 
 export interface ReportPageHarness {
@@ -116,6 +120,43 @@ export async function selectOption(select: HTMLSelectElement, value: string) {
   await act(async () => {
     setter.call(select, value);
     select.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+}
+
+// Tổng hợp rỗng của response báo cáo. Mỗi test chỉ đặt các chỉ số mà trang đang kiểm.
+export function reportTotals(overrides: Partial<SalesReportTotals> = {}): SalesReportTotals {
+  return {
+    recognizedRevenue: 0,
+    paidOrders: 0,
+    soldQuantity: 0,
+    paidByMethod: { cod: 0, sepay: 0 },
+    cancellations: { byCustomer: 0, byShop: 0, paymentExpired: 0 },
+    ...overrides,
+  };
+}
+
+// Một nhóm thời gian rỗng. `key`, `from` và `to` bắt buộc vì mọi test đều đọc chúng.
+export function reportBucket(
+  overrides: Partial<SalesReportBucket> & { key: string; from: string; to: string },
+): SalesReportBucket {
+  return {
+    recognizedRevenue: 0,
+    paidOrders: 0,
+    paidByMethod: { cod: 0, sepay: 0 },
+    cancellations: { byCustomer: 0, byShop: 0, paymentExpired: 0 },
+    soldQuantity: 0,
+    ...overrides,
+  };
+}
+
+// Nhấn một nút theo chữ hiện trên nút. Bọc trong `act` để React xử lý sự kiện rồi vẽ lại.
+export async function clickButton(container: HTMLElement, name: string) {
+  const button = Array.from(container.querySelectorAll('button')).find((candidate) =>
+    (candidate.textContent ?? '').includes(name),
+  );
+  if (!button) throw new Error(`Không thấy nút ${name}.`);
+  await act(async () => {
+    button.dispatchEvent(new MouseEvent('click', { bubbles: true }));
   });
 }
 

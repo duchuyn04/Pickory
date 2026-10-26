@@ -8,6 +8,7 @@ import {
   findField,
   installReportClock,
   renderReportPage,
+  reportTotals,
   selectOption,
   textOf,
   waitFor,
@@ -32,6 +33,8 @@ const brandReport: SalesReportData = {
     { brandId: 'b1', brandName: 'Hãng Một', revenue: 1_234_567 },
     { brandId: 'b2', brandName: 'Hãng Hai', revenue: 234_567 },
   ],
+  totals: reportTotals({ recognizedRevenue: 1_469_134 }),
+  topProducts: [],
 };
 
 const emptyMonth: SalesReportData = {
@@ -39,6 +42,8 @@ const emptyMonth: SalesReportData = {
   to: '2026-09-30',
   buckets: [],
   brands: [],
+  totals: reportTotals(),
+  topProducts: [],
 };
 
 // Trả dữ liệu theo tháng của request, giống route báo cáo thật.
@@ -114,6 +119,22 @@ describe('trang báo cáo doanh thu theo thương hiệu', () => {
     expect(harness.searchParams().get('month')).toBe('2026-09');
     expect(harness.searchParams().has('range')).toBe(false);
     expect(harness.container.querySelector('.report-chart-legend')).toBeNull();
+  });
+
+  it('mở lại liên kết có sẵn thương hiệu thì lát đó đang được chọn', async () => {
+    const harness = await renderReportPage(
+      <RevenueBrandsReportPage />,
+      '/admin/reports/revenue/brands?brand=b2',
+      reportsActor,
+      respond,
+    );
+
+    await waitFor(() => textOf(harness.container).includes('Hãng Một'), 'bảng thương hiệu');
+    const pressed = Array.from(
+      harness.container.querySelectorAll('.report-legend-item button[aria-pressed="true"]'),
+    );
+    expect(pressed).toHaveLength(1);
+    expect(pressed[0]?.textContent).toContain('Hãng Hai');
   });
 
   it('mở lại URL đã chọn tháng', async () => {

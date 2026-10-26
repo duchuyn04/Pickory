@@ -11,27 +11,37 @@ import {
   type ReportRangeCode,
 } from './report-period';
 
-// Trang thương hiệu chỉ có tham số tháng trên URL.
-const BRAND_PARAM_NAMES = ['month'] as const;
 // Trang theo kỳ chỉ có khoảng thời gian và độ chia trên URL.
 const PERIOD_PARAM_NAMES = ['range', 'granularity'] as const;
 
-export interface BrandReportParams {
+export interface MonthReportParams {
   month: string;
   monthOptions: ReportMonthOption[];
   setMonth: (month: string) => void;
+  // Nhóm đang chọn trên URL, ví dụ `cod` hoặc mã sản phẩm. Chuỗi rỗng khi không chọn nhóm nào.
+  selection: string;
+  // Ghi nhóm đang chọn lên URL. Nhấn lại nhóm đang chọn thì bỏ chọn.
+  selectGroup: (key: string) => void;
 }
 
-// Đọc và ghi tháng của trang thương hiệu. Mở lại liên kết cho đúng tháng.
-export function useBrandReportParams(): BrandReportParams {
-  const { values, setFilter } = useListFilters(BRAND_PARAM_NAMES);
+// Đọc và ghi tháng cùng nhóm đang chọn của trang biểu đồ tròn. `selectionParamName` là tên tham số riêng
+// của trang, như `brand` hay `method`, để mở lại liên kết cho đúng nhóm đang xem.
+export function useMonthReportParams(selectionParamName: string): MonthReportParams {
+  const paramNames: readonly string[] = ['month', selectionParamName];
+  const { values, setFilter } = useListFilters(paramNames);
   const todayMonth = currentVietnamMonth();
-  const month = readReportMonth(values.month, todayMonth);
+  // Tên tham số là chuỗi động, nên bản ghi có thể không có khóa này. Giá trị thiếu đọc thành chuỗi rỗng.
+  const month = readReportMonth(values.month ?? null, todayMonth);
+  const selection = values[selectionParamName] ?? '';
+
   return {
     month,
     monthOptions: reportMonthOptions(todayMonth, month),
     // Chỉ ghi tham số của trang này. Tham số khác không bị xóa.
     setMonth: (nextMonth) => setFilter('month', nextMonth),
+    selection,
+    // Bỏ chọn khi nhấn lại cùng nhóm để bảng chi tiết không mở mãi.
+    selectGroup: (key) => setFilter(selectionParamName, selection === key ? '' : key),
   };
 }
 

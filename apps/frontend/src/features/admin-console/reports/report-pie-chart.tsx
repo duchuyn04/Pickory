@@ -16,6 +16,8 @@ export interface ReportPieSlice {
   key: string;
   label: string;
   value: number;
+  // Màu cố định của nhóm, để dashboard và trang chi tiết cùng màu. Bỏ trống thì theo thứ tự lát.
+  fill?: string;
 }
 
 interface ReportPieChartProps {
@@ -29,6 +31,10 @@ interface ReportPieChartProps {
   tableHead: ReactNode;
   // Trả về một dòng `tr` của bảng số liệu. Trang quyết định các cột cần hiện.
   renderRow: (slice: ReportPieSlice, percent: string) => ReactNode;
+  // Cho phép chọn một lát để mở bảng chi tiết. Bỏ trống thì biểu đồ chỉ để đọc số liệu.
+  onSliceSelect?: (key: string) => void;
+  // Khóa của lát đang chọn, dùng cho trạng thái nhấn của nút chú giải.
+  selectedKey?: string | null;
   // Kích thước cố định cho test jsdom. Trang thật để trống để biểu đồ theo bề rộng thẻ.
   width?: number;
   height?: number;
@@ -66,7 +72,7 @@ function renderPercentLabel(props: PieLabelRenderProps) {
 }
 
 // Biểu đồ tròn có nhãn phần trăm, chú giải và bảng số liệu đọc bằng trình đọc màn hình.
-// Lát không nhận focus vì trang chỉ trình bày số liệu, không mở thêm chi tiết.
+// Lát nhận nhấn khi trang mở bảng chi tiết. Bàn phím dùng nút trong chú giải, vì lát SVG không nhận focus.
 export function ReportPieChart({
   chartLabel,
   slices,
@@ -74,6 +80,8 @@ export function ReportPieChart({
   tableCaption,
   tableHead,
   renderRow,
+  onSliceSelect,
+  selectedKey,
   width,
   height,
 }: ReportPieChartProps) {
@@ -83,7 +91,8 @@ export function ReportPieChart({
 
   const data: PieDatum[] = slices.map((slice, index) => ({
     ...slice,
-    fill: reportSeriesColor(index, slice.key === neutralKey),
+    // Màu của nhóm do trang đặt để giữ nguyên giữa dashboard và trang chi tiết.
+    fill: slice.fill ?? reportSeriesColor(index, slice.key === neutralKey),
     percentLabel: formatPercent(slice.value, total),
   }));
 
@@ -102,6 +111,9 @@ export function ReportPieChart({
         fill={datum.fill}
         stroke="var(--color-surface)"
         strokeWidth={2}
+        // Trang có bảng chi tiết thì lát nhận nhấn. Trang không có thì lát chỉ để đọc.
+        cursor={onSliceSelect ? 'pointer' : undefined}
+        onClick={onSliceSelect ? () => onSliceSelect(datum.key) : undefined}
       />
     );
   };
@@ -139,21 +151,42 @@ export function ReportPieChart({
         )}
       </div>
       <ul className="report-chart-legend" aria-label={`Chú giải cho ${chartLabel}`}>
-        {data.map((datum) => (
-          <li key={datum.key} className="report-legend-item">
-            {/* Ô màu vẽ bằng `fill` của SVG, không dùng style trực tiếp trong component. */}
-            <svg
-              className="report-legend-swatch"
-              viewBox="0 0 12 12"
-              aria-hidden="true"
-              focusable="false"
-            >
-              <rect width="12" height="12" rx="3" fill={datum.fill} />
-            </svg>
-            <span className="report-legend-name">{datum.label}</span>
-            <span className="report-legend-percent">{datum.percentLabel}</span>
-          </li>
-        ))}
+        {data.map((datum) => {
+          const isSelected = selectedKey === datum.key;
+          const marker = (
+            <>
+              {/* Ô màu vẽ bằng `fill` của SVG, không dùng style trực tiếp trong component. */}
+              <svg
+                className="report-legend-swatch"
+                viewBox="0 0 12 12"
+                aria-hidden="true"
+                focusable="false"
+              >
+                <rect width="12" height="12" rx="3" fill={datum.fill} />
+              </svg>
+              <span className="report-legend-name">{datum.label}</span>
+              <span className="report-legend-percent">{datum.percentLabel}</span>
+            </>
+          );
+
+          return (
+            <li key={datum.key} className={`report-legend-item${isSelected ? ' is-selected' : ''}`}>
+              {onSliceSelect ? (
+                // Nút cho bàn phím mở bảng chi tiết của lát này, vì lát SVG không nhận focus.
+                <button
+                  type="button"
+                  className="report-legend-button"
+                  aria-pressed={isSelected}
+                  onClick={() => onSliceSelect(datum.key)}
+                >
+                  {marker}
+                </button>
+              ) : (
+                marker
+              )}
+            </li>
+          );
+        })}
       </ul>
       <div className="table-wrap">
         <table className="tbl report-table">

@@ -1,6 +1,19 @@
 import { apiRequest } from '../../../shared/api';
 import type { ReportGranularityCode, ReportRangeCode } from './report-period';
 
+// Số đơn đã thanh toán theo phương thức trong một kỳ. Báo cáo chỉ có hai phương thức của cửa hàng.
+export interface SalesReportPaymentMethods {
+  cod: number;
+  sepay: number;
+}
+
+// Số đơn hủy theo lý do trong một kỳ.
+export interface SalesReportCancellations {
+  byCustomer: number;
+  byShop: number;
+  paymentExpired: number;
+}
+
 // Một nhóm thời gian của biểu đồ cột. Ngày là ngày lịch Việt Nam, gồm cả hai đầu.
 export interface SalesReportBucket {
   key: string;
@@ -8,6 +21,10 @@ export interface SalesReportBucket {
   to: string;
   // Doanh thu ghi nhận của nhóm, tính bằng VND.
   recognizedRevenue: number;
+  paidOrders: number;
+  paidByMethod: SalesReportPaymentMethods;
+  cancellations: SalesReportCancellations;
+  soldQuantity: number;
 }
 
 // Doanh thu gộp theo thương hiệu trong tháng. API trả thêm số lượng và sản phẩm, nhưng trang chỉ đọc ba trường này.
@@ -18,15 +35,36 @@ export interface SalesReportBrand {
   revenue: number;
 }
 
-// Phần dữ liệu hai trang doanh thu dùng từ response báo cáo. Các chỉ số khác của API chưa cần ở đây.
+// Doanh thu và số lượng của một sản phẩm bán ra trong tháng.
+export interface SalesReportTopProduct {
+  productId: string;
+  // `null` khi catalog không trả về sản phẩm, ví dụ sản phẩm đã bị xóa.
+  name: string | null;
+  brandName: string | null;
+  revenue: number;
+  quantity: number;
+}
+
+// Tổng hợp toàn bộ khoảng báo cáo. Trang biểu đồ tròn đọc các chỉ số của tháng đang chọn từ đây.
+export interface SalesReportTotals {
+  recognizedRevenue: number;
+  paidOrders: number;
+  soldQuantity: number;
+  paidByMethod: SalesReportPaymentMethods;
+  cancellations: SalesReportCancellations;
+}
+
+// Phần dữ liệu các trang báo cáo dùng từ response báo cáo. Các chỉ số khác của API chưa cần ở đây.
 export interface SalesReportData {
   from: string;
   to: string;
   buckets: SalesReportBucket[];
   brands: SalesReportBrand[];
+  totals: SalesReportTotals;
+  topProducts: SalesReportTopProduct[];
 }
 
-// `month` là khoảng của trang thương hiệu, không nằm trong bộ chọn khoảng của trang theo kỳ.
+// `month` là khoảng của trang biểu đồ tròn, không nằm trong bộ chọn khoảng của trang theo kỳ.
 export type SalesReportRange = ReportRangeCode | 'month';
 
 export interface SalesReportQuery {
