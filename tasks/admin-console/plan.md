@@ -22,6 +22,18 @@ Chatbot chuyển sang dự án riêng `chatbot-rag`. Pickory gỡ `ai-gateway` t
 - Trang Cấu hình không còn mục AI.
 - Thêm ADM-UI9: khối phễu chuyển đổi trên trang doanh thu, đọc route phễu của ACT-11.
 
+## Thay đổi ngày 2026-10-26: dashboard báo cáo
+
+Người dùng muốn làm dashboard báo cáo trước các phần khác của module. Dashboard có biểu đồ. Người dùng nhấn vào biểu đồ để mở trang chi tiết. Người dùng chọn làm theo plan đầy đủ: số liệu đi qua bảng tổng hợp và job, không đọc thẳng cổng đọc khi mở trang.
+
+- Người dùng duyệt Recharts cho frontend (Câu hỏi mở 1). Thư viện `.xlsx` vẫn chờ duyệt.
+- Dashboard có 4 báo cáo theo quyết định 23.
+- Bảng `report_daily_products` lưu thêm tên sản phẩm và thương hiệu theo quyết định 24.
+- Thứ tự làm: ADM-01, ADM-04, ADM-08, ADM-12, ADM-UI1, ADM-UI5, ADM-UI10, ADM-UI11. Các task còn lại làm sau.
+- ADM-UI5 làm hai trang chi tiết dạng cột, thay cho trang `/admin/reports/sales`.
+- ADM-UI9 đặt khối phễu trên trang `/admin/reports/revenue`.
+- Thêm ADM-UI10 (hai trang chi tiết dạng tròn) và ADM-UI11 (trang dashboard).
+
 ## Phần đã phủ bởi plan cũ
 
 1. **Khung back-office tối thiểu.** UI-05 và quyết định 14 của `tasks/identity-ai-gateway/plan.md` đã làm trang `/admin/login`, layout, `useActor()`, `useCan()` và menu ẩn theo quyền. Plan này không làm lại các phần đó.
@@ -62,7 +74,8 @@ ADM-04 ─┬── ADM-05 API badge ───────────── ADM
 Phase 3: báo cáo (cần module nguồn)
 ADM-08 job tổng hợp doanh thu, đơn hàng ──┬── ADM-11 lệnh `reports:rebuild`
 ADM-10 job tổng hợp CSKH ─────────────────┘
-ADM-08 ── ADM-12 API báo cáo doanh thu ── ADM-UI5 khung trang báo cáo + trang doanh thu
+ADM-08 ── ADM-12 API báo cáo doanh thu ── ADM-UI5 khung trang báo cáo + 2 trang cột
+                                          └── ADM-UI10 2 trang tròn ── ADM-UI11 dashboard `/admin/reports`
 ADM-10 ── ADM-14 API báo cáo CSKH ── ADM-UI7 trang CSKH
 
 Phase 4: xuất file
@@ -107,16 +120,31 @@ ADM-18 nghiệm thu module
 17. **Xuất file stream trong response.** File không lưu trên server. CSV dùng UTF-8 có BOM và escape dấu phẩy, dấu ngoặc kép, xuống dòng theo RFC 4180. Excel dùng thư viện được duyệt ở Câu hỏi mở 1. Quá 50.000 dòng thì trả 422 `EXPORT_TOO_LARGE`, không ghi file dở dang.
 18. **Audit log khi xuất đơn hàng.** `IAuditLogWriter.WriteAsync` cần `DbTransaction`. Module mở transaction trên `AdminConsoleDbContext`, ghi một dòng `admin-console.orders.export`, commit, rồi mới stream. Dòng audit ghi người xuất, thời điểm, khoảng thời gian và số dòng. Lỗi khi stream không xóa dòng audit, vì dữ liệu cá nhân có thể đã rời server.
 19. **Quyền kép cho xuất đơn hàng.** Route cần cả `orders:read` và `reports:export`. Thiếu một trong hai quyền thì trả 403. Route xuất bảng báo cáo cần cả `reports:read` và `reports:export`.
-20. **Biểu đồ.** Frontend dùng Recharts sau khi người dùng duyệt. Mỗi biểu đồ có bảng số liệu bên dưới. Màu lấy từ token trong `apps/frontend/src/shared/styles/tokens.css`.
+20. **Biểu đồ.** Frontend dùng Recharts. Người dùng duyệt thư viện này ngày 2026-10-26. Mỗi biểu đồ có bảng số liệu bên dưới. Màu lấy từ token trong `apps/frontend/src/shared/styles/tokens.css`.
 21. **Bộ chọn thời gian trên URL.** Khoảng thời gian và độ chia nằm trong query string, ví dụ `?range=30d&granularity=day`. Mở lại link cho cùng báo cáo.
 22. **Đo p95 bằng lệnh riêng.** Lệnh `reports:benchmark` theo mẫu `catalog:benchmark`. Lệnh chỉ chạy khi tên DB chứa `bench`. Lệnh sinh 400 ngày tổng hợp, rồi đo p95 của hai route báo cáo với khoảng 30 ngày.
+23. **Dashboard báo cáo.** Trang `/admin/reports` có 4 thẻ biểu đồ. Người dùng nhấn thẻ, lát hoặc cột để mở trang chi tiết của báo cáo đó. Trang chi tiết giữ khoảng thời gian đang xem.
+
+    | Báo cáo | Biểu đồ | Khoảng mặc định | Trang chi tiết |
+    | --- | --- | --- | --- |
+    | Doanh thu theo thương hiệu | tròn | tháng này | `/admin/reports/brands` |
+    | Đơn hủy theo lý do | tròn | tháng này | `/admin/reports/cancellations` |
+    | Doanh thu theo kỳ | cột | 6 tháng gần nhất, chia theo tháng | `/admin/reports/revenue` |
+    | Số đơn đã thanh toán theo kỳ, tách COD và SePay | cột chồng | 6 tháng gần nhất, chia theo tháng | `/admin/reports/orders` |
+
+    - Biểu đồ tròn so sánh nhiều nhóm trong một tháng. Biểu đồ cột so sánh tổng giữa các kỳ trong một khoảng thời gian.
+    - Trang chi tiết có biểu đồ lớn, bộ chọn thời gian trên URL và bảng số liệu.
+    - Bốn trang chi tiết và dashboard đọc chung `GET /api/admin/reports/sales` của ADM-12.
+    - ADM-01 thêm hai giá trị `range`: `month` đi kèm `month=YYYY-MM`, và `6m` cho 6 tháng lịch gần nhất.
+24. **Tên sản phẩm và thương hiệu trong bảng tổng hợp.** `report_daily_products` thêm cột `product_name`, `brand_id`, `brand_name`. ADM-08 chép các giá trị này từ `ICatalogReader` lúc tổng hợp. Nhờ vậy API báo cáo chỉ đọc bảng `report_daily_*`, đúng quyết định 3.
+    - `ICatalogReader.GetProductsAsync` bỏ sản phẩm khách không thấy. Dòng của sản phẩm đó có `brand_id` rỗng, và báo cáo gộp vào nhóm "Khác".
 
 ## Task List
 
 Chi tiết từng task ở `tasks/admin-console/todo.md`.
 
 ### Phase 1: Nền tảng
-- [ ] ADM-01 · [ ] ADM-03 · [ ] ADM-04 · [ ] ADM-UI1
+- [x] ADM-01 · [ ] ADM-03 · [ ] ADM-04 · [ ] ADM-UI1
 - Đã bỏ ngày 2026-10-18: ADM-02
 
 ### Checkpoint A1
@@ -133,7 +161,7 @@ Chi tiết từng task ở `tasks/admin-console/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Báo cáo
-- [ ] ADM-08 · [ ] ADM-10 · [ ] ADM-11 · [ ] ADM-12 · [ ] ADM-UI5 · [ ] ADM-UI9 · [ ] ADM-14 · [ ] ADM-UI7
+- [ ] ADM-08 · [ ] ADM-10 · [ ] ADM-11 · [ ] ADM-12 · [ ] ADM-UI5 · [ ] ADM-UI10 · [ ] ADM-UI11 · [ ] ADM-UI9 · [ ] ADM-14 · [ ] ADM-UI7
 - Đã bỏ ngày 2026-10-18: ADM-07, ADM-09, ADM-13, ADM-UI6
 
 ### Checkpoint A3
@@ -185,7 +213,7 @@ Chi tiết từng task ở `tasks/admin-console/todo.md`.
 ## Câu hỏi mở
 
 1. **Dependency mới (Ask first).** Plan đề xuất:
-   - Frontend: `recharts` cho biểu đồ, theo spec.
+   - Frontend: `recharts` cho biểu đồ, theo spec. Người dùng duyệt ngày 2026-10-26.
    - Backend: `ClosedXML` để ghi `.xlsx`. Phương án khác là `DocumentFormat.OpenXml`, nhẹ hơn nhưng phải viết nhiều code hơn.
 2. **Cổng đọc báo cáo còn thiếu trong Contracts của module khác.** Ngày 2026-10-18 plan bỏ cổng đọc của `shopping-assistant`. Plan đề xuất:
    - `ICommerceReports` cần thêm hàm đọc đơn cho file kế toán, ví dụ `ReadOrdersForExportAsync(DateRange, int maxRows, CancellationToken)` trả `IAsyncEnumerable`. Spec `commerce` chưa có hàm này.
