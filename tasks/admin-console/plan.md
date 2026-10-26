@@ -30,9 +30,27 @@ Người dùng muốn làm dashboard báo cáo trước các phần khác của 
 - Dashboard có 4 báo cáo theo quyết định 23.
 - Bảng `report_daily_products` lưu thêm tên sản phẩm và thương hiệu theo quyết định 24.
 - Thứ tự làm: ADM-01, ADM-04, ADM-08, ADM-12, ADM-UI1, ADM-UI5, ADM-UI10, ADM-UI11. Các task còn lại làm sau.
-- ADM-UI5 làm hai trang chi tiết dạng cột, thay cho trang `/admin/reports/sales`.
+- Mỗi trang báo cáo chỉ thống kê một loại số liệu. Mỗi trang có một biểu đồ tròn và một biểu đồ cột (người dùng chốt cùng ngày).
+- ADM-UI5 làm khung, hai component biểu đồ và trang Doanh thu. Trang Doanh thu thay trang `/admin/reports/sales`.
 - ADM-UI9 đặt khối phễu trên trang `/admin/reports/revenue`.
-- Thêm ADM-UI10 (hai trang chi tiết dạng tròn) và ADM-UI11 (trang dashboard).
+- Thêm ADM-UI10 (ba trang báo cáo còn lại) và ADM-UI11 (trang dashboard).
+
+## Thay đổi ngày 2026-10-26, lần 2: đường ngắn tới dashboard
+
+Người dùng muốn thấy dashboard với dữ liệu từ DB nhanh nhất. Plan đổi các điểm sau:
+
+- API báo cáo đọc thẳng `ICommerceReports` và `ICatalogReader` khi mở trang (quyết định 25). Bảng tổng hợp và job tạm hoãn.
+- DB dev chỉ có 2 đơn. ADM-19 thêm lệnh tạo đơn mẫu trong 6 tháng, để biểu đồ có số liệu.
+- Dashboard làm trước các trang chi tiết.
+
+Thứ tự mới:
+
+1. ADM-12: khung module tối thiểu và API báo cáo.
+2. ADM-19: lệnh tạo đơn mẫu.
+3. ADM-UI11: dashboard. Người dùng thấy dashboard sau task này.
+4. ADM-UI5, rồi ADM-UI10: bốn trang chi tiết.
+
+ADM-04, ADM-08, ADM-11 và ADM-17 làm sau, khi đo thấy báo cáo chậm. ADM-UI1 không còn chặn trang báo cáo.
 
 ## Phần đã phủ bởi plan cũ
 
@@ -74,8 +92,8 @@ ADM-04 ─┬── ADM-05 API badge ───────────── ADM
 Phase 3: báo cáo (cần module nguồn)
 ADM-08 job tổng hợp doanh thu, đơn hàng ──┬── ADM-11 lệnh `reports:rebuild`
 ADM-10 job tổng hợp CSKH ─────────────────┘
-ADM-08 ── ADM-12 API báo cáo doanh thu ── ADM-UI5 khung trang báo cáo + 2 trang cột
-                                          └── ADM-UI10 2 trang tròn ── ADM-UI11 dashboard `/admin/reports`
+ADM-08 ── ADM-12 API báo cáo doanh thu ── ADM-UI5 khung trang báo cáo + trang Doanh thu
+                                          └── ADM-UI10 3 trang còn lại ── ADM-UI11 dashboard `/admin/reports`
 ADM-10 ── ADM-14 API báo cáo CSKH ── ADM-UI7 trang CSKH
 
 Phase 4: xuất file
@@ -123,21 +141,28 @@ ADM-18 nghiệm thu module
 20. **Biểu đồ.** Frontend dùng Recharts. Người dùng duyệt thư viện này ngày 2026-10-26. Mỗi biểu đồ có bảng số liệu bên dưới. Màu lấy từ token trong `apps/frontend/src/shared/styles/tokens.css`.
 21. **Bộ chọn thời gian trên URL.** Khoảng thời gian và độ chia nằm trong query string, ví dụ `?range=30d&granularity=day`. Mở lại link cho cùng báo cáo.
 22. **Đo p95 bằng lệnh riêng.** Lệnh `reports:benchmark` theo mẫu `catalog:benchmark`. Lệnh chỉ chạy khi tên DB chứa `bench`. Lệnh sinh 400 ngày tổng hợp, rồi đo p95 của hai route báo cáo với khoảng 30 ngày.
-23. **Dashboard báo cáo.** Trang `/admin/reports` có 4 thẻ biểu đồ. Người dùng nhấn thẻ, lát hoặc cột để mở trang chi tiết của báo cáo đó. Trang chi tiết giữ khoảng thời gian đang xem.
+23. **Dashboard báo cáo.** Trang `/admin/reports` có 4 thẻ, mỗi thẻ là một báo cáo. Người dùng nhấn thẻ để mở trang chi tiết của báo cáo đó. Mỗi trang chi tiết chỉ thống kê một loại số liệu.
 
-    | Báo cáo | Biểu đồ | Khoảng mặc định | Trang chi tiết |
-    | --- | --- | --- | --- |
-    | Doanh thu theo thương hiệu | tròn | tháng này | `/admin/reports/brands` |
-    | Đơn hủy theo lý do | tròn | tháng này | `/admin/reports/cancellations` |
-    | Doanh thu theo kỳ | cột | 6 tháng gần nhất, chia theo tháng | `/admin/reports/revenue` |
-    | Số đơn đã thanh toán theo kỳ, tách COD và SePay | cột chồng | 6 tháng gần nhất, chia theo tháng | `/admin/reports/orders` |
+    | Báo cáo | Loại số liệu | Biểu đồ tròn: các nhóm trong 1 tháng | Biểu đồ cột: tổng mỗi kỳ | Trang chi tiết |
+    | --- | --- | --- | --- | --- |
+    | Doanh thu | doanh thu ghi nhận (VND) | theo thương hiệu | doanh thu mỗi kỳ | `/admin/reports/revenue` |
+    | Đơn đã thanh toán | số đơn | theo phương thức thanh toán: COD, SePay | số đơn mỗi kỳ | `/admin/reports/orders` |
+    | Đơn hủy | số đơn hủy | theo lý do: khách hủy, shop hủy, quá hạn thanh toán | số đơn hủy mỗi kỳ | `/admin/reports/cancellations` |
+    | Sản phẩm bán ra | số lượng sản phẩm | theo sản phẩm: 5 sản phẩm bán nhiều nhất và nhóm "Khác" | số lượng mỗi kỳ | `/admin/reports/products` |
 
-    - Biểu đồ tròn so sánh nhiều nhóm trong một tháng. Biểu đồ cột so sánh tổng giữa các kỳ trong một khoảng thời gian.
-    - Trang chi tiết có biểu đồ lớn, bộ chọn thời gian trên URL và bảng số liệu.
+    - Biểu đồ tròn dùng `month`, mặc định là tháng này. Biểu đồ cột dùng `range` và `granularity`, mặc định là 6 tháng gần nhất, chia theo tháng.
+    - Người dùng nhấn một cột thì biểu đồ tròn và bảng chuyển sang tháng chứa kỳ đó. URL đổi theo.
+    - Người dùng nhấn một lát thì bảng hiện chi tiết của nhóm đó trong tháng.
+    - Thẻ trên dashboard hiện biểu đồ tròn của tháng này và tổng của tháng này.
     - Bốn trang chi tiết và dashboard đọc chung `GET /api/admin/reports/sales` của ADM-12.
     - ADM-01 thêm hai giá trị `range`: `month` đi kèm `month=YYYY-MM`, và `6m` cho 6 tháng lịch gần nhất.
 24. **Tên sản phẩm và thương hiệu trong bảng tổng hợp.** `report_daily_products` thêm cột `product_name`, `brand_id`, `brand_name`. ADM-08 chép các giá trị này từ `ICatalogReader` lúc tổng hợp. Nhờ vậy API báo cáo chỉ đọc bảng `report_daily_*`, đúng quyết định 3.
     - `ICatalogReader.GetProductsAsync` bỏ sản phẩm khách không thấy. Dòng của sản phẩm đó có `brand_id` rỗng, và báo cáo gộp vào nhóm "Khác".
+25. **API báo cáo đọc thẳng cổng đọc (thay quyết định 3 và 24 cho tới khi có bảng tổng hợp).** Người dùng chọn ngày 2026-10-26, để thấy dashboard sớm.
+    - `GET /api/admin/reports/sales` gọi `ICommerceReports` và `ICatalogReader` mỗi lần mở trang. Route không đọc bảng nào của module khác.
+    - `DailySales` của `commerce` thêm `SoldQuantity`, để biểu đồ cột của báo cáo sản phẩm có số lượng mỗi kỳ.
+    - Tên sản phẩm và thương hiệu lấy từ `ICatalogReader.GetProductsAsync` lúc gọi. Sản phẩm catalog không trả về gộp vào nhóm "Khác".
+    - Web là bản demo, dữ liệu ít. Bảng tổng hợp (ADM-04, ADM-08) chỉ làm khi ADM-17 đo p95 vượt 1 giây.
 
 ## Task List
 
@@ -161,7 +186,7 @@ Chi tiết từng task ở `tasks/admin-console/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Báo cáo
-- [ ] ADM-08 · [ ] ADM-10 · [ ] ADM-11 · [ ] ADM-12 · [ ] ADM-UI5 · [ ] ADM-UI10 · [ ] ADM-UI11 · [ ] ADM-UI9 · [ ] ADM-14 · [ ] ADM-UI7
+- [ ] ADM-08 · [ ] ADM-10 · [ ] ADM-11 · [ ] ADM-12 · [ ] ADM-19 · [ ] ADM-UI5 · [ ] ADM-UI10 · [ ] ADM-UI11 · [ ] ADM-UI9 · [ ] ADM-14 · [ ] ADM-UI7
 - Đã bỏ ngày 2026-10-18: ADM-07, ADM-09, ADM-13, ADM-UI6
 
 ### Checkpoint A3

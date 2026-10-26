@@ -39,6 +39,8 @@ internal static class DailySalesAggregator
             {
                 totals.RecognizedRevenue += payment.Total;
                 totals.PaidOrderCount++;
+                // Số lượng sản phẩm bán ra chỉ tính khi đơn đủ điều kiện ghi nhận doanh thu.
+                totals.SoldQuantity += payment.SoldQuantity;
             }
         }
 
@@ -123,6 +125,7 @@ internal static class DailySalesAggregator
         public int CodOrderCount { get; set; }
         public int SepayOrderCount { get; set; }
         public long ShippingDiscount { get; set; }
+        public int SoldQuantity { get; set; }
 
         public DailySales ToDailySales(DateOnly day) => new(
             day,
@@ -132,6 +135,7 @@ internal static class DailySalesAggregator
             CreatedOrderCount,
             new CancellationCounts(CustomerCancellations, ShopCancellations, PaymentExpiredCancellations),
             new PaymentMethodCounts(CodOrderCount, SepayOrderCount),
-            ShippingDiscount);
+            ShippingDiscount,
+            SoldQuantity);
     }
 }

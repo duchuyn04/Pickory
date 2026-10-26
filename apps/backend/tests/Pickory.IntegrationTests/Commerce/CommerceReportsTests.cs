@@ -306,8 +306,9 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
 
     private static DailySales Day(
         int dayOfMonth, long revenue, int paidCount, long placedValue, int createdCount,
-        CancellationCounts cancellations, PaymentMethodCounts methods, long shippingDiscount) =>
-        new(new DateOnly(2040, 3, dayOfMonth), revenue, paidCount, placedValue, createdCount, cancellations, methods, shippingDiscount);
+        CancellationCounts cancellations, PaymentMethodCounts methods, long shippingDiscount,
+        int soldQuantity = 0) =>
+        new(new DateOnly(2040, 3, dayOfMonth), revenue, paidCount, placedValue, createdCount, cancellations, methods, shippingDiscount, soldQuantity);
 
     // ---------- GetDailySalesAsync ----------
 
@@ -321,9 +322,9 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
 
         Assert.Equal(
             [
-                Day(10, 1_490_000, 2, 2_170_000, 5, new CancellationCounts(0, 0, 0), new PaymentMethodCounts(2, 3), 30_000),
-                Day(11, 800_000, 2, 1_420_000, 7, new CancellationCounts(0, 1, 1), new PaymentMethodCounts(3, 3), 10_000),
-                Day(12, 1_090_000, 3, 1_860_000, 5, new CancellationCounts(1, 0, 1), new PaymentMethodCounts(2, 2), 10_000),
+                Day(10, 1_490_000, 2, 2_170_000, 5, new CancellationCounts(0, 0, 0), new PaymentMethodCounts(2, 3), 30_000, 4),
+                Day(11, 800_000, 2, 1_420_000, 7, new CancellationCounts(0, 1, 1), new PaymentMethodCounts(3, 3), 10_000, 4),
+                Day(12, 1_090_000, 3, 1_860_000, 5, new CancellationCounts(1, 0, 1), new PaymentMethodCounts(2, 2), 10_000, 5),
             ],
             days);
     }
@@ -338,7 +339,7 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
         var days = await WithReportsAsync(reports => reports.GetDailySalesAsync(onlyD2, CancellationToken.None));
 
         Assert.Equal(
-            [Day(11, 800_000, 2, 1_420_000, 7, new CancellationCounts(0, 1, 1), new PaymentMethodCounts(3, 3), 10_000)],
+            [Day(11, 800_000, 2, 1_420_000, 7, new CancellationCounts(0, 1, 1), new PaymentMethodCounts(3, 3), 10_000, 4)],
             days);
     }
 
@@ -352,7 +353,7 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
 
         Assert.Equal(3, days.Count);
         Assert.All(days, day => Assert.Equal(
-            new DailySales(day.Day, 0, 0, 0, 0, new CancellationCounts(0, 0, 0), new PaymentMethodCounts(0, 0), 0), day));
+            new DailySales(day.Day, 0, 0, 0, 0, new CancellationCounts(0, 0, 0), new PaymentMethodCounts(0, 0), 0, 0), day));
     }
 
     [Fact]

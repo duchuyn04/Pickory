@@ -217,35 +217,55 @@ Quy ước:
 **Phụ thuộc:** ADM-08, ADM-10 · **Quy mô:** S
 
 ### ADM-12: API báo cáo doanh thu
-**Mô tả:** `GET /api/admin/reports/sales?range=&from=&to=&granularity=` đọc `report_daily_sales` và `report_daily_products`.
+**Mô tả:** `GET /api/admin/reports/sales?range=&month=&from=&to=&granularity=` đọc thẳng `ICommerceReports` và `ICatalogReader` (quyết định 25 của plan). Task tạo khung module tối thiểu: `AdminConsoleModule.cs` có `AddAdminConsoleModule` và `MapAdminConsoleEndpoints`, chưa có `DbContext`. Ngày 2026-10-26 task đổi nguồn từ bảng `report_daily_*` sang cổng đọc.
 **Tiêu chí nghiệm thu:**
-- [ ] Thiếu `reports:read` trả 403. Endpoint có trong ma trận quyền
-- [ ] Tham số sai trả 400 `VALIDATION_ERROR`
+- [x] `Program.cs` chỉ gọi `AddAdminConsoleModule` và `MapAdminConsoleEndpoints`
+- [x] `DailySales` của `commerce` có `SoldQuantity`. Test của `CommerceReports` kiểm số này
+- [x] Thiếu `reports:read` trả 403. Endpoint có trong ma trận quyền
+- [x] Tham số sai trả 400 `VALIDATION_ERROR`
 - [ ] Response có các chỉ số sau:
   - doanh thu ghi nhận và giá trị đơn đặt;
   - số đơn theo trạng thái;
   - tỉ lệ hủy theo lý do;
   - giá trị trung bình đơn;
   - top sản phẩm và top danh mục;
+  - Top danh mục chờ `ICatalogReader` trả danh mục. Dashboard không cần số này.
   - tỉ lệ COD và SePay;
   - phí ship shop chịu.
-- [ ] Response có chuỗi theo nhóm thời gian của `granularity` cho dashboard (quyết định 23 của plan). Mỗi nhóm có:
+- [x] Response có chuỗi theo nhóm thời gian của `granularity` cho dashboard (quyết định 23 của plan). Mỗi nhóm có:
   - doanh thu ghi nhận;
   - số đơn đã thanh toán, tách COD và SePay;
-  - số đơn hủy theo lý do.
-- [ ] Response có doanh thu và số lượng theo thương hiệu. Mỗi thương hiệu có danh sách sản phẩm kèm tên, doanh thu, số lượng. Sản phẩm có `brand_id` rỗng gộp vào nhóm `null`
-- [ ] Gộp tuần và tháng khớp số tính tay, kể cả biên nửa đêm giờ Việt Nam
-- [ ] Route không đọc bảng của module khác (test đếm truy vấn chỉ thấy bảng `report_daily_*`)
+  - số đơn hủy theo lý do;
+  - số lượng sản phẩm bán ra.
+- [x] Response có doanh thu và số lượng theo thương hiệu. Mỗi thương hiệu có danh sách sản phẩm kèm tên, doanh thu, số lượng. Sản phẩm có `brand_id` rỗng gộp vào nhóm `null`
+- [x] Gộp tuần và tháng khớp số tính tay, kể cả biên nửa đêm giờ Việt Nam
+- [x] Route chỉ đọc số liệu qua `ICommerceReports` và `ICatalogReader`. `Pickory.ArchitectureTests` chặn `AdminConsole` tham chiếu module khác ngoài project Contracts
 **Kiểm tra:** test tích hợp
-**Phụ thuộc:** ADM-08 · **Quy mô:** M
+**Phụ thuộc:** ADM-01 · **Quy mô:** M
 
-### ADM-UI5: Khung trang báo cáo và hai trang chi tiết dạng cột
-**Mô tả:** Task này làm bộ chọn thời gian lưu trên URL theo quyết định 21 của plan. Task làm component biểu đồ cột có bảng số liệu. Task làm trang `/admin/reports/revenue` và `/admin/reports/orders` theo quyết định 23. Ngày 2026-10-26 hai trang này thay trang `/admin/reports/sales`. Người dùng đã duyệt Recharts.
+### ADM-19: Lệnh tạo đơn mẫu cho báo cáo
+**Mô tả:** Lệnh `dotnet run --project apps/backend/src/Pickory.Api -- commerce:demo-orders` tạo đơn mẫu trong 6 tháng gần nhất cho DB dev. Code nằm trong module `commerce`, vì chỉ `commerce` được ghi bảng đơn hàng. Task thêm ngày 2026-10-26 (quyết định 25 của plan).
 **Tiêu chí nghiệm thu:**
-- [ ] Trang doanh thu hiện cột doanh thu ghi nhận cho mỗi kỳ. Trang đơn hàng hiện cột chồng COD và SePay cho mỗi kỳ
-- [ ] Mặc định là 6 tháng gần nhất, chia theo tháng
-- [ ] Nhấn một cột thì trang chuyển sang khoảng của kỳ đó, chia theo ngày. URL đổi theo
-- [ ] Đổi khoảng thời gian cập nhật URL. Mở lại URL cho cùng báo cáo
+- [ ] Lệnh tạo đơn trên sản phẩm có sẵn của `catalog:seed`, rải đều 6 tháng gần nhất, gồm nhiều thương hiệu
+- [ ] Đơn mẫu có đủ các trạng thái mà báo cáo đọc: đã thanh toán COD, đã thanh toán SePay, khách hủy, shop hủy, quá hạn thanh toán
+- [ ] Sau khi chạy lệnh, `ICommerceReports` trả doanh thu, số đơn và số lượng khác 0 cho mỗi tháng trong 6 tháng
+- [ ] Mọi đơn mẫu có dấu nhận biết riêng. Chạy lệnh lần hai không tạo thêm đơn trùng
+- [ ] Lệnh `commerce:demo-orders --reset` xóa đúng các đơn mẫu, không xóa đơn thật
+- [ ] Lệnh từ chối chạy khi môi trường là `Production`, và in lỗi tiếng Việt
+**Kiểm tra:** test tích hợp gọi hàm của lệnh; chạy lệnh trên DB dev sau khi người dùng đồng ý
+**Phụ thuộc:** ADM-12 · **Quy mô:** M
+
+### ADM-UI5: Khung trang báo cáo và trang Doanh thu
+**Mô tả:** Task này làm khung trang báo cáo theo quyết định 21 và 23 của plan. Khung có bộ chọn tháng cho biểu đồ tròn và bộ chọn khoảng thời gian cho biểu đồ cột, cả hai lưu trên URL. Task làm component biểu đồ tròn và biểu đồ cột, mỗi biểu đồ có bảng số liệu. Task làm trang `/admin/reports/revenue`, thay trang `/admin/reports/sales`. Người dùng đã duyệt Recharts.
+**Tiêu chí nghiệm thu:**
+- [ ] Trang chỉ thống kê doanh thu ghi nhận. Biểu đồ tròn chia doanh thu theo thương hiệu trong tháng. Biểu đồ cột hiện doanh thu mỗi kỳ
+- [ ] Biểu đồ tròn mặc định là tháng này. Biểu đồ cột mặc định là 6 tháng gần nhất, chia theo tháng
+- [ ] Quá 6 thương hiệu thì biểu đồ tròn gộp phần còn lại vào lát "Khác"
+- [ ] Nhấn một cột thì biểu đồ tròn và bảng chuyển sang tháng chứa kỳ đó. URL đổi theo
+- [ ] Nhấn lát thương hiệu thì bảng hiện sản phẩm của thương hiệu đó trong tháng, kèm doanh thu và số lượng
+- [ ] Lát và cột chọn được bằng bàn phím. Mỗi lát có nhãn phần trăm, màu không phải cách duy nhất để phân biệt lát
+- [ ] Tháng không có số liệu thì trang hiện "Chưa có dữ liệu trong tháng này", không vẽ biểu đồ rỗng
+- [ ] Đổi tháng hoặc khoảng thời gian cập nhật URL. Mở lại URL cho cùng báo cáo
 - [ ] Mỗi biểu đồ có bảng số liệu bên dưới, đọc được bằng trình đọc màn hình
 - [ ] Bộ chọn thời gian dùng được bằng bàn phím, có `label`
 - [ ] Giá hiện dạng VND, ngày hiện theo giờ Việt Nam
@@ -253,7 +273,7 @@ Quy ước:
 - [ ] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px trang không tràn ngang
 - [ ] Playwright console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; ảnh chụp 1280 px, 768 px và 375 px
-**Phụ thuộc:** ADM-12, ADM-UI1 · **Quy mô:** M
+**Phụ thuộc:** ADM-UI11 · **Quy mô:** M
 
 ### ADM-UI9: Phễu chuyển đổi trên trang doanh thu
 **Mô tả:** Thêm khối phễu vào trang `/admin/reports/revenue`. Ngày 2026-10-26 trang này thay trang `/admin/reports/sales`. Khối đọc `GET /api/admin/analytics/funnel` của ACT-11 với khoảng thời gian của bộ chọn chung. Task thêm ngày 2026-10-18, vì `activity-tracking` chỉ còn phần đo chuyển đổi.
@@ -267,16 +287,16 @@ Quy ước:
 **Kiểm tra:** Vitest; ảnh chụp 1280 px và 375 px
 **Phụ thuộc:** ADM-UI5, ACT-11 · **Quy mô:** S
 
-### ADM-UI10: Hai trang chi tiết dạng tròn
-**Mô tả:** Trang `/admin/reports/brands` và `/admin/reports/cancellations` dùng khung của ADM-UI5 (quyết định 23 của plan). Task làm component biểu đồ tròn có bảng số liệu. Task thêm ngày 2026-10-26.
+### ADM-UI10: Ba trang báo cáo còn lại
+**Mô tả:** Trang `/admin/reports/orders`, `/admin/reports/cancellations` và `/admin/reports/products` dùng khung và component của ADM-UI5 (quyết định 23 của plan). Mỗi trang chỉ thống kê một loại số liệu. Task thêm ngày 2026-10-26.
 **Tiêu chí nghiệm thu:**
-- [ ] Mặc định là tháng này. Bộ chọn tháng đổi `month` trên URL
-- [ ] Trang thương hiệu hiện doanh thu theo thương hiệu. Quá 6 thương hiệu thì gộp phần còn lại vào lát "Khác"
-- [ ] Nhấn lát thương hiệu thì bảng hiện sản phẩm của thương hiệu đó, kèm doanh thu và số lượng
-- [ ] Trang đơn hủy hiện ba lát: khách hủy, shop hủy, quá hạn thanh toán
-- [ ] Nhấn lát lý do thì bảng hiện số đơn hủy vì lý do đó theo từng ngày của tháng
-- [ ] Lát chọn được bằng bàn phím. Mỗi lát có nhãn phần trăm, màu không phải cách duy nhất để phân biệt lát
-- [ ] Một thương hiệu giữ cùng màu trên dashboard và trang chi tiết
+- [ ] Trang đơn đã thanh toán: biểu đồ tròn chia số đơn theo COD và SePay trong tháng. Biểu đồ cột hiện số đơn mỗi kỳ
+- [ ] Trang đơn hủy: biểu đồ tròn có ba lát (khách hủy, shop hủy, quá hạn thanh toán). Biểu đồ cột hiện số đơn hủy mỗi kỳ
+- [ ] Trang sản phẩm bán ra: biểu đồ tròn có 5 sản phẩm bán nhiều nhất và lát "Khác". Biểu đồ cột hiện số lượng mỗi kỳ
+- [ ] Nhấn lát phương thức thanh toán hoặc lát lý do hủy thì bảng hiện số đơn của nhóm đó theo từng ngày trong tháng
+- [ ] Nhấn lát sản phẩm thì bảng hiện doanh thu, số lượng, thương hiệu của sản phẩm đó. Nhấn lát "Khác" thì bảng liệt kê các sản phẩm trong nhóm đó
+- [ ] Ba trang giữ hành vi của khung: mặc định thời gian, nhấn cột đổi tháng, URL mở lại cho cùng báo cáo
+- [ ] Một nhóm giữ cùng màu trên dashboard và trang chi tiết
 - [ ] Tháng không có số liệu thì trang hiện "Chưa có dữ liệu trong tháng này", không vẽ biểu đồ rỗng
 - [ ] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px trang không tràn ngang
 - [ ] Playwright console 0 lỗi và 0 cảnh báo
@@ -284,19 +304,18 @@ Quy ước:
 **Phụ thuộc:** ADM-UI5 · **Quy mô:** M
 
 ### ADM-UI11: Dashboard báo cáo
-**Mô tả:** Trang `/admin/reports` có 4 thẻ biểu đồ theo quyết định 23 của plan. Mục menu Báo cáo mở trang này. Task thêm ngày 2026-10-26.
+**Mô tả:** Trang `/admin/reports` có 4 thẻ theo quyết định 23 của plan, mỗi thẻ là một báo cáo. Task cài Recharts và làm component biểu đồ tròn có bảng số liệu. Task thêm mục menu Báo cáo vào `ADMIN_NAV_GROUPS`. Trang chi tiết chưa có thì route của trang hiện trang giữ chỗ. Task thêm ngày 2026-10-26 và làm trước ADM-UI5.
 **Tiêu chí nghiệm thu:**
-- [ ] Trang có 4 thẻ: doanh thu theo thương hiệu, đơn hủy theo lý do, doanh thu theo kỳ, số đơn đã thanh toán theo kỳ
-- [ ] Hai thẻ tròn dùng tháng này. Hai thẻ cột dùng 6 tháng gần nhất, chia theo tháng
-- [ ] Nhấn tiêu đề thẻ mở trang chi tiết của báo cáo đó với cùng khoảng thời gian
-- [ ] Nhấn lát hoặc cột mở trang chi tiết đã chọn sẵn lát hoặc kỳ đó
-- [ ] Mỗi thẻ có tổng của kỳ, ví dụ tổng doanh thu tháng này
+- [ ] Trang có 4 thẻ: doanh thu, đơn đã thanh toán, đơn hủy, sản phẩm bán ra
+- [ ] Mỗi thẻ hiện biểu đồ tròn của tháng này và tổng của tháng này, ví dụ tổng doanh thu tháng này
+- [ ] Nhấn thẻ mở trang chi tiết của báo cáo đó
+- [ ] Nhấn một lát mở trang chi tiết đã chọn sẵn lát đó
 - [ ] Một thẻ lỗi API thì thẻ đó hiện thông báo lỗi. Các thẻ khác vẫn hiện
 - [ ] Người thiếu `reports:read` không thấy menu Báo cáo. Mở thẳng URL thấy trang không đủ quyền
 - [ ] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px các thẻ xếp một cột và trang không tràn ngang
 - [ ] Playwright console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; E2E nhấn từng thẻ; ảnh chụp 1280 px, 768 px và 375 px
-**Phụ thuộc:** ADM-UI5, ADM-UI10 · **Quy mô:** M
+**Phụ thuộc:** ADM-12, ADM-19 · **Quy mô:** M
 
 ### ADM-13: API báo cáo AI
 **Mô tả:** `GET /api/admin/reports/ai` trả số liệu chatbot và chi phí AI. Ngày 2026-10-14 task bỏ phần gợi ý, bảng so sánh nhóm và tìm kiếm, vì `recommendations` và `smart-search` đã bỏ.

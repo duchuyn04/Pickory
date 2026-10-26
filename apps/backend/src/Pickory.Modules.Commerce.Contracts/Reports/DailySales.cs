@@ -12,4 +12,6 @@ public sealed record DailySales(
     int CreatedOrderCount,
     CancellationCounts Cancellations,
     PaymentMethodCounts PaymentMethods,
-    long ShippingDiscount);
+    long ShippingDiscount,
+    // Tổng số lượng sản phẩm của các đơn có doanh thu ghi nhận trong ngày.
+    int SoldQuantity);

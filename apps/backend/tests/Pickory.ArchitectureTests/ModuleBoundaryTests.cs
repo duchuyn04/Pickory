@@ -6,6 +6,7 @@ using Pickory.Modules.Identity;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Shipping;
 using Pickory.Modules.SupportDesk;
+using Pickory.Modules.AdminConsole;
 using Xunit;
 
 // Namespace giả lập phải mang tên `Contracts` của module Identity. Tên này cố ý khác thư mục của project test.
@@ -47,6 +48,7 @@ namespace Pickory.ArchitectureTests
             typeof(CommerceModule).Assembly,
             typeof(ActivityTrackingModule).Assembly,
             typeof(SupportDeskModule).Assembly,
+            typeof(AdminConsoleModule).Assembly,
         ];
 
         [Fact]
@@ -238,6 +240,22 @@ namespace Pickory.ArchitectureTests
                 .ToList();
 
             Assert.Empty(otherModuleReferences);
+        }
+
+        [Fact]
+        // Assembly AdminConsole thật phải có trong danh sách module và chỉ tham chiếu Shared hoặc Contracts.
+        public void DanhSachModule_GomAssemblyAdminConsole_VaChiThamChieuSharedHoacContracts()
+        {
+            var moduleNames = ModuleArchitectureValidator.GetModuleAssemblies().Select(assembly => assembly.GetName().Name).ToList();
+
+            Assert.Contains("Pickory.Modules.AdminConsole", moduleNames);
+            var adminConsoleReferences = typeof(AdminConsoleModule).Assembly.GetReferencedAssemblies()
+                .Select(reference => reference.Name ?? string.Empty)
+                .Where(name => name.StartsWith("Pickory.", StringComparison.Ordinal))
+                .ToList();
+            Assert.All(adminConsoleReferences, name => Assert.True(
+                name == "Pickory.Shared" || name.EndsWith(".Contracts", StringComparison.Ordinal),
+                $"AdminConsole không được tham chiếu {name}."));
         }
 
         [Fact]

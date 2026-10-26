@@ -26,8 +26,8 @@ public sealed class DailySalesAggregatorTests
         new(createdAtUtc, status, method, total, shippingDiscount, expiredFlag, cancelReason);
 
     private static OrderPaymentRow Payment(
-        DateTime paidAtUtc, int total = 100_000, PaymentStatus status = PaymentStatus.Paid) =>
-        new("order-" + Guid.NewGuid().ToString("N"), paidAtUtc, total, status);
+        DateTime paidAtUtc, int total = 100_000, PaymentStatus status = PaymentStatus.Paid, int soldQuantity = 0) =>
+        new("order-" + Guid.NewGuid().ToString("N"), paidAtUtc, total, status, soldQuantity);
 
     private static DailySales DayOf(IReadOnlyList<DailySales> days, int dayOfMonth) =>
         days.Single(day => day.Day == new DateOnly(2026, 10, dayOfMonth));
@@ -80,6 +80,24 @@ public sealed class DailySalesAggregatorTests
 
         Assert.Equal(100_000, day.RecognizedRevenue);
         Assert.Equal(1, day.PaidOrderCount);
+    }
+
+    [Fact]
+    // Số lượng sản phẩm bán ra chỉ cộng từ đơn có doanh thu ghi nhận.
+    public void Build_PaymentWithSoldQuantity_AggregatesOnlyForRecognizedRevenue()
+    {
+        var payments = new[]
+        {
+            Payment(MiddayOct5, total: 100_000, status: PaymentStatus.Paid, soldQuantity: 3),
+            Payment(MiddayOct5, total: 50_000, status: PaymentStatus.RefundPending, soldQuantity: 2),
+            Payment(MiddayOct6, total: 200_000, status: PaymentStatus.Paid, soldQuantity: 5),
+        };
+
+        var oct5 = DayOf(DailySalesAggregator.Build(ThreeDays, payments, []), 5);
+        var oct6 = DayOf(DailySalesAggregator.Build(ThreeDays, payments, []), 6);
+
+        Assert.Equal(3, oct5.SoldQuantity);
+        Assert.Equal(5, oct6.SoldQuantity);
     }
 
     [Fact]

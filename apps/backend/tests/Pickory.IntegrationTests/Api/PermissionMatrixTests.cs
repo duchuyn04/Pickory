@@ -15,6 +15,7 @@ using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Roles;
 using Pickory.Modules.Shipping;
 using Pickory.Modules.SupportDesk;
+using Pickory.Modules.AdminConsole;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Api;
@@ -107,6 +108,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "GET", "/api/admin/skus/dummy-id/movements", [Permissions.ProductsRead] },
         { "GET", "/api/admin/inventory/low-stock", [Permissions.ProductsRead] },
         { "GET", "/api/admin/analytics/funnel", [Permissions.ReportsRead] },
+        { "GET", "/api/admin/reports/sales", [Permissions.ReportsRead] },
         { "GET", "/api/admin/support/events", [Permissions.ConversationsRead] },
         { "PUT", "/api/admin/support/presence", [Permissions.ConversationsReply] },
         { "GET", "/api/admin/support/presence", [Permissions.ConversationsReply] },
@@ -274,7 +276,8 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             "activity-tracking",
             typeof(ActivityTrackingModule).Assembly,
             "Pickory.Modules.ActivityTracking",
-            [Permissions.ReportsRead]);
+            [Permissions.ReportsRead],
+            [typeof(AdminConsoleModule).Assembly]);
     }
 
     [Fact]
@@ -289,13 +292,33 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             [Permissions.ConversationsRead, Permissions.ConversationsReply]);
     }
 
+    [Fact]
+    // ADM-12: route back-office của admin-console phải có trong ma trận, kể cả route thêm sau này.
+    public void BackofficeEndpoints_CoversAllAdminConsoleAdminEndpoints()
+    {
+        // Admin-console dùng quyền `reports:read` cho báo cáo doanh thu. Quyền này nằm trong danh sách chung của identity.
+        AssertMatrixMatchesModuleAdminEndpoints(
+            "admin-console",
+            typeof(AdminConsoleModule).Assembly,
+            "Pickory.Modules.AdminConsole",
+            [Permissions.ReportsRead],
+            [typeof(ActivityTrackingModule).Assembly]);
+    }
+
     // Đối chiếu hai chiều giữa route `/api/admin/` của một module và các dòng ma trận dùng quyền của module đó.
     private void AssertMatrixMatchesModuleAdminEndpoints(
-        string moduleName, Assembly moduleAssembly, string moduleNamespace, IEnumerable<string> modulePermissions)
+        string moduleName,
+        Assembly moduleAssembly,
+        string moduleNamespace,
+        IEnumerable<string> modulePermissions,
+        IEnumerable<Assembly>? sharedPermissionModules = null)
     {
         // Dùng endpoint của ứng dụng thật để route mới không cần thêm vào danh sách kiểm thử riêng.
         var endpointDataSource = _factory.Services.GetRequiredService<EndpointDataSource>();
         var moduleAdminEndpoints = new List<(string Method, string Pattern)>();
+        var otherModuleAdminEndpoints = new HashSet<(string Method, string Path)>();
+        // Chỉ module khai báo dùng chung quyền mới được bỏ qua. Route của module khác vẫn phải bắt dòng ma trận sai.
+        var sharedPermissionModuleSet = sharedPermissionModules?.ToHashSet() ?? new HashSet<Assembly>();
 
         foreach (var endpoint in endpointDataSource.Endpoints)
         {
@@ -315,6 +338,12 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             // Ma trận luôn ghi đường dẫn với dấu `/` đầu tiên; `RoutePattern` có thể không ghi dấu đó.
             var normalizedPattern = rawPattern.StartsWith('/') ? rawPattern : "/" + rawPattern;
 
+            // Route công khai không yêu cầu quyền quản trị và không có trong ma trận.
+            if (!normalizedPattern.StartsWith("/api/admin/", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             // Kiểu khai báo của handler giúp giới hạn phép kiểm vào module đang xét.
             var methodInfo = endpoint.Metadata.GetMetadata<MethodInfo>()
                 ?? endpoint.Metadata.OfType<Delegate>().FirstOrDefault()?.Method
@@ -324,18 +353,8 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             var isModuleEndpoint = declaringType != null &&
                 (declaringType.Assembly == moduleAssembly ||
                  declaringType.Namespace?.StartsWith(moduleNamespace, StringComparison.Ordinal) == true);
-
-            // Route của module khác do phép kiểm của module đó đối chiếu.
-            if (!isModuleEndpoint)
-            {
-                continue;
-            }
-
-            // Route công khai không yêu cầu quyền quản trị và không có trong ma trận.
-            if (!normalizedPattern.StartsWith("/api/admin/", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
+            var isSharedPermissionModuleEndpoint = declaringType != null &&
+                sharedPermissionModuleSet.Contains(declaringType.Assembly);
 
             // Route thiếu phương thức HTTP không có cặp phương thức và đường dẫn để đối chiếu.
             var httpMethodMetadata = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>();
@@ -348,7 +367,14 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             // Một route có thể chấp nhận nhiều phương thức HTTP, mỗi phương thức cần một dòng ma trận.
             foreach (var method in httpMethods)
             {
-                moduleAdminEndpoints.Add((method.ToUpperInvariant(), normalizedPattern));
+                if (isModuleEndpoint)
+                {
+                    moduleAdminEndpoints.Add((method.ToUpperInvariant(), normalizedPattern));
+                }
+                else if (isSharedPermissionModuleEndpoint)
+                {
+                    otherModuleAdminEndpoints.Add((method.ToUpperInvariant(), NormalizeRoutePatternForMatrix(normalizedPattern)));
+                }
             }
         }
 
@@ -395,6 +421,8 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         var unknownMatrixRoutes = matrixRows
             .Where(row => row.RequiredPermissions.Any(permission => modulePermissionSet.Contains(permission)))
             .Where(row => !registeredModuleRoutes.Contains((row.Method, row.Path)))
+            // Chỉ bỏ qua route của module đã khai báo dùng chung quyền. Dòng gán nhầm cho route khác vẫn bị báo lỗi.
+            .Where(row => !otherModuleAdminEndpoints.Contains((row.Method, row.Path)))
             .Select(row => $"{row.Method} {row.Path}")
             .ToList();
 
