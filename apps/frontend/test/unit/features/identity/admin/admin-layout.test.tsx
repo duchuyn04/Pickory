@@ -105,6 +105,7 @@ describe('AdminLayout', () => {
       'Tồn kho',
       'Danh mục',
       'Thương hiệu',
+      'Báo cáo tổng quan',
       'Doanh thu thương hiệu',
       'Doanh thu theo kỳ',
       'Nhân viên',

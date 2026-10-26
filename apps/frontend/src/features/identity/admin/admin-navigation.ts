@@ -22,6 +22,9 @@ export interface AdminNavGroup {
 // Trang tồn kho của một SKU. Trang này thuộc mục Tồn kho dù đường dẫn nằm dưới `/admin/products`.
 const SKU_INVENTORY_PATH = /^\/admin\/products\/[^/]+\/skus\/[^/]+\/inventory\/?$/;
 
+// Các trang báo cáo chi tiết nằm dưới `/admin/reports`. Mục tổng quan không nhận các trang này.
+const REPORT_DETAIL_PATH = /^\/admin\/reports\/.+/;
+
 // Chỉ liệt kê mục có route trong `app.tsx`. Mục của module chưa làm có trang giữ chỗ, nên bấm không ra trang trắng.
 export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
@@ -97,6 +100,14 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
   {
     label: 'Báo cáo',
     items: [
+      {
+        label: 'Báo cáo tổng quan',
+        path: '/admin/reports',
+        icon: 'chart',
+        requiredPermission: 'reports:read',
+        // Trang báo cáo chi tiết có mục riêng, nên mục tổng quan chỉ mở đúng `/admin/reports`.
+        inactiveOn: REPORT_DETAIL_PATH,
+      },
       {
         label: 'Doanh thu thương hiệu',
         path: '/admin/reports/revenue/brands',

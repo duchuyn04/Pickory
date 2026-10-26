@@ -119,6 +119,56 @@
   text-align: left;
 }
 
+/* Thẻ báo cáo xếp hai cột trên màn rộng và một cột trên màn hẹp. */
+.report-cards {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.report-card {
+  /* Điểm neo cho lớp phủ của link mở báo cáo. */
+  position: relative;
+  min-width: 0;
+}
+
+/* Lớp phủ lấp kín thẻ, để nhấn vào chỗ trống trong thẻ cũng mở báo cáo. */
+.report-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* Khối biểu đồ nằm trên lớp phủ để lát và nút chú giải vẫn nhận nhấn. */
+.report-card .report-chart-block {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tổng của tháng đứng trước biểu đồ, đọc nhanh hơn nhìn phần trăm từng lát. */
+.report-card-total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  margin: var(--space-2) 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}
+
+.report-card-total strong {
+  color: var(--color-ink);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1023px) {
+  /* Máy tính bảng và điện thoại chỉ đủ chỗ cho một thẻ mỗi hàng. */
+  .report-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 @media (max-width: 767px) {
   .report-note {
     text-align: left;

@@ -51,6 +51,11 @@ const ProductFormPage = lazy(() =>
   })),
 );
 // Recharts chỉ tải khi nhân viên mở trang báo cáo, không làm nặng bundle của khung quản trị.
+const ReportsDashboardPage = lazy(() =>
+  import('./features/admin-console/reports/reports-dashboard-page').then((module) => ({
+    default: module.ReportsDashboardPage,
+  })),
+);
 const RevenueBrandsReportPage = lazy(() =>
   import('./features/admin-console/reports/revenue-brands-page').then((module) => ({
     default: module.RevenueBrandsReportPage,
@@ -179,6 +184,14 @@ export function App() {
           <Route path="shipping/settings" element={<ShippingSettingsPage />} />
           <Route path="shipping/fallback-fee" element={<FallbackFeePage />} />
           <Route path="commerce/settings" element={<CommerceSettingsPage />} />
+          <Route
+            path="reports"
+            element={
+              <Suspense fallback={<p role="status">Đang tải báo cáo...</p>}>
+                <ReportsDashboardPage />
+              </Suspense>
+            }
+          />
           <Route
             path="reports/revenue"
             element={<ReportRedirect to="/admin/reports/revenue/brands" />}

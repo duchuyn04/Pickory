@@ -306,18 +306,19 @@ Quy ước:
 **Bằng chứng (2026-10-27):** Vitest đạt 40/40 test của ba báo cáo: 13 test nhóm, 10 test đơn đã thanh toán, 8 test đơn hủy, 9 test sản phẩm. `pnpm exec playwright test admin-reports-orders.spec.ts` đạt 3/3. Lượt chạy sinh 18 ảnh chụp cho sáu trang ở 1280, 768 và 375 px. Playwright console 0 lỗi.
 
 ### ADM-UI11: Dashboard báo cáo
-**Mô tả:** Trang `/admin/reports` có 4 thẻ theo quyết định 23 của plan, mỗi thẻ là một báo cáo. Task cài Recharts và làm component biểu đồ tròn có bảng số liệu. Task thêm mục menu Báo cáo vào `ADMIN_NAV_GROUPS`. Trang chi tiết chưa có thì route của trang hiện trang giữ chỗ. Task thêm ngày 2026-10-26 và làm trước ADM-UI5.
+**Mô tả:** Trang `/admin/reports` có 4 thẻ theo quyết định 23 của plan, mỗi thẻ là một báo cáo. Recharts và component biểu đồ tròn có bảng số liệu đã có từ ADM-UI5, nên task này dùng lại. Task thêm mục `Báo cáo tổng quan` vào `ADMIN_NAV_GROUPS`. Mỗi thẻ gọi báo cáo riêng, nên một thẻ lỗi không làm trống ba thẻ còn lại. Task thêm ngày 2026-10-26.
 **Tiêu chí nghiệm thu:**
-- [ ] Trang có 4 thẻ: doanh thu, đơn đã thanh toán, đơn hủy, sản phẩm bán ra
-- [ ] Mỗi thẻ hiện biểu đồ tròn của tháng này và tổng của tháng này, ví dụ tổng doanh thu tháng này
-- [ ] Nhấn thẻ mở trang chi tiết của báo cáo đó
-- [ ] Nhấn một lát mở trang chi tiết đã chọn sẵn lát đó
-- [ ] Một thẻ lỗi API thì thẻ đó hiện thông báo lỗi. Các thẻ khác vẫn hiện
-- [ ] Người thiếu `reports:read` không thấy menu Báo cáo. Mở thẳng URL thấy trang không đủ quyền
-- [ ] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px các thẻ xếp một cột và trang không tràn ngang
-- [ ] Playwright console 0 lỗi và 0 cảnh báo
+- [x] Trang có 4 thẻ: doanh thu, đơn đã thanh toán, đơn hủy, sản phẩm bán ra
+- [x] Mỗi thẻ hiện biểu đồ tròn của tháng này và tổng của tháng này, ví dụ tổng doanh thu tháng này
+- [x] Nhấn thẻ mở trang chi tiết của báo cáo đó
+- [x] Nhấn một lát mở trang chi tiết đã chọn sẵn lát đó: `brand`, `method`, `reason` hoặc `product`
+- [x] Một thẻ lỗi API thì thẻ đó hiện thông báo lỗi. Các thẻ khác vẫn hiện
+- [x] Người thiếu `reports:read` không thấy menu Báo cáo. Mở thẳng URL thấy trang không đủ quyền
+- [x] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px các thẻ xếp một cột và trang không tràn ngang
+- [x] Playwright console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; E2E nhấn từng thẻ; ảnh chụp 1280 px, 768 px và 375 px
 **Phụ thuộc:** ADM-12, ADM-19 · **Quy mô:** M
+**Bằng chứng (2026-10-27):** Vitest đạt 5/5 test dashboard, cả thư mục `reports` đạt 89/89. `pnpm exec playwright test admin-reports-dashboard.spec.ts` đạt 3/3: thẻ và lát mở đúng trang, thẻ lỗi hiện thông báo, tài khoản thiếu quyền thấy trang 403. Ảnh chụp `dashboard-1280.png`, `dashboard-768.png` và `dashboard-375.png`. Playwright console 0 lỗi.
 
 ### ADM-13: API báo cáo AI
 **Mô tả:** `GET /api/admin/reports/ai` trả số liệu chatbot và chi phí AI. Ngày 2026-10-14 task bỏ phần gợi ý, bảng so sánh nhóm và tìm kiếm, vì `recommendations` và `smart-search` đã bỏ.
