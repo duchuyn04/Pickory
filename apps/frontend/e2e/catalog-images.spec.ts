@@ -151,6 +151,29 @@ test('UI-C6: tải, kiểm, sắp xếp ảnh bằng bàn phím và lưu thứ t
     expect(await altValues(page)).toEqual(['Mặt sau', 'Mặt trước']);
   });
 
+  await test.step('Bỏ ảnh mở xác nhận, Hủy giữ ảnh, xác nhận rồi lưu mới xóa', async () => {
+    await page.getByRole('button', { name: 'Bỏ ảnh 1', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Bỏ ảnh khỏi sản phẩm' });
+    await expect(dialog).toBeVisible();
+    await expect(dialog).toContainText('Ảnh chỉ bị xóa sau khi bạn lưu sản phẩm.');
+    await dialog.getByRole('button', { name: 'Hủy', exact: true }).click();
+    await expect(page.locator('[data-image-id]')).toHaveCount(2);
+
+    await page.getByRole('button', { name: 'Bỏ ảnh 1', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Bỏ ảnh', exact: true }).click();
+    await expect(page.locator('[data-image-id]')).toHaveCount(1);
+
+    const saved = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PATCH' &&
+        response.url().endsWith(`/api/admin/products/${productId}`),
+    );
+    await page.getByRole('button', { name: 'Lưu sản phẩm', exact: true }).click();
+    expect((await saved).status()).toBe(200);
+    await page.reload();
+    await expect(page.locator('[data-image-id]')).toHaveCount(1);
+  });
+
   await test.step('Ở 1280px và 375px, khối ảnh không làm trang tràn ngang', async () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.getByRole('heading', { name: 'Ảnh sản phẩm' }).scrollIntoViewIfNeeded();

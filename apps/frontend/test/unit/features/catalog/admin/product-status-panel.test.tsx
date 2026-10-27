@@ -23,28 +23,36 @@ afterEach(async () => {
 
 interface PanelOptions {
   status?: string;
+  deletedAt?: string | null;
   canWrite?: boolean;
   hasUnsavedChanges?: boolean;
+  onSaveChanges?: () => Promise<boolean>;
   onChangeStatus?: (target: string) => Promise<void>;
   onDelete?: () => Promise<void>;
+  onRestore?: () => Promise<void>;
 }
 
 async function renderPanel(options: PanelOptions = {}) {
+  const onSaveChanges = options.onSaveChanges ?? vi.fn(async () => true);
   const onChangeStatus = options.onChangeStatus ?? vi.fn(async () => {});
   const onDelete = options.onDelete ?? vi.fn(async () => {});
+  const onRestore = options.onRestore ?? vi.fn(async () => {});
   await act(async () =>
     root.render(
       <ProductStatusPanel
         productName="MacBook Air M3"
         status={options.status ?? 'draft'}
+        deletedAt={options.deletedAt ?? null}
         canWrite={options.canWrite ?? true}
         hasUnsavedChanges={options.hasUnsavedChanges ?? false}
+        onSaveChanges={onSaveChanges}
         onChangeStatus={onChangeStatus}
         onDelete={onDelete}
+        onRestore={onRestore}
       />,
     ),
   );
-  return { onChangeStatus, onDelete };
+  return { onSaveChanges, onChangeStatus, onDelete, onRestore };
 }
 
 function buttonByName(name: string): HTMLButtonElement | undefined {
@@ -233,12 +241,44 @@ describe('ProductStatusPanel: bấm hai lần liên tiếp', () => {
 });
 
 describe('ProductStatusPanel: thay đổi chưa lưu', () => {
-  it('khóa các nút trạng thái và hiện câu hướng dẫn', async () => {
-    const { onChangeStatus } = await renderPanel({ hasUnsavedChanges: true });
+  it('bấm nút thì lưu bản nháp trước rồi mới đổi trạng thái', async () => {
+    const order: string[] = [];
+    const onSaveChanges = vi.fn(async () => {
+      order.push('save-start');
+      // Nhường một vi tác vụ để phát hiện code gọi trạng thái trước khi lưu xong.
+      await Promise.resolve();
+      order.push('save-end');
+      return true;
+    });
+    const onChangeStatus = vi.fn(async () => {
+      order.push('status');
+    });
+    await renderPanel({
+      hasUnsavedChanges: true,
+      onSaveChanges,
+      onChangeStatus,
+    });
     const publish = buttonByName('Đăng bán')!;
-    expect(publish.disabled).toBe(true);
-    expect(container.textContent).toContain('Lưu thay đổi trước khi đổi trạng thái.');
+    expect(publish.disabled).toBe(false);
+    expect(container.textContent).toContain('Thay đổi sẽ được lưu trước khi đổi trạng thái.');
+
     await click(publish);
+
+    expect(order).toEqual(['save-start', 'save-end', 'status']);
+    expect(onSaveChanges).toHaveBeenCalledTimes(1);
+    expect(onChangeStatus).toHaveBeenCalledExactlyOnceWith('active');
+  });
+
+  it('lưu bản nháp thất bại thì không đổi trạng thái', async () => {
+    const onSaveChanges = vi.fn(async () => false);
+    const { onChangeStatus } = await renderPanel({
+      hasUnsavedChanges: true,
+      onSaveChanges,
+    });
+
+    await click(buttonByName('Đăng bán'));
+
+    expect(onSaveChanges).toHaveBeenCalledTimes(1);
     expect(onChangeStatus).not.toHaveBeenCalled();
   });
 
@@ -246,14 +286,19 @@ describe('ProductStatusPanel: thay đổi chưa lưu', () => {
     await renderPanel({ hasUnsavedChanges: true });
     const hintId = buttonByName('Đăng bán')!.getAttribute('aria-describedby')!;
     expect(document.getElementById(hintId)?.textContent).toBe(
-      'Lưu thay đổi trước khi đổi trạng thái.',
+      'Thay đổi sẽ được lưu trước khi đổi trạng thái.',
     );
   });
 
-  it('không có thay đổi thì không hiện câu hướng dẫn và nút bật', async () => {
-    await renderPanel({ hasUnsavedChanges: false });
-    expect(container.textContent).not.toContain('Lưu thay đổi trước');
+  it('không có thay đổi thì không lưu thêm và nút bật', async () => {
+    const { onSaveChanges, onChangeStatus } = await renderPanel({ hasUnsavedChanges: false });
+    expect(container.textContent).not.toContain('Thay đổi sẽ được lưu');
     expect(buttonByName('Đăng bán')!.disabled).toBe(false);
+
+    await click(buttonByName('Đăng bán'));
+
+    expect(onSaveChanges).not.toHaveBeenCalled();
+    expect(onChangeStatus).toHaveBeenCalledExactlyOnceWith('active');
   });
 
   it('nút xóa vẫn bật khi có thay đổi chưa lưu', async () => {
@@ -282,14 +327,15 @@ describe('ProductStatusPanel: xóa sản phẩm', () => {
   const dialog = () => document.querySelector<HTMLElement>('[role="dialog"]');
   const confirmButton = () =>
     [...dialog()!.querySelectorAll('button')].find(
-      (button) => button.textContent === 'Xóa vĩnh viễn',
+      (button) => button.textContent === 'Xác nhận xóa',
     );
 
-  it('bấm Xóa sản phẩm mở hộp thoại nêu tên sản phẩm và cảnh báo không hoàn tác', async () => {
+  it('bấm Xóa sản phẩm mở hộp thoại nêu tên và cả hai kết quả', async () => {
     const { onDelete } = await openDeleteDialog();
     expect(dialog()).not.toBeNull();
     expect(dialog()!.textContent).toContain('MacBook Air M3');
-    expect(dialog()!.textContent).toContain('không thể hoàn tác');
+    expect(dialog()!.textContent).toContain('Sản phẩm chưa có đơn sẽ bị xóa vĩnh viễn.');
+    expect(dialog()!.textContent).toContain('Sản phẩm đã có đơn được xóa mềm và có thể khôi phục.');
     expect(onDelete).not.toHaveBeenCalled();
   });
 
@@ -318,24 +364,6 @@ describe('ProductStatusPanel: xóa sản phẩm', () => {
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
-  it('lỗi 409 PRODUCT_HAS_ORDERS hiện trong hộp thoại và hộp thoại không đóng', async () => {
-    await openDeleteDialog({
-      onDelete: vi.fn(async () => {
-        throw new ApiError(
-          'PRODUCT_HAS_ORDERS',
-          409,
-          'Sản phẩm đã có đơn hàng nên không xóa được.',
-        );
-      }),
-    });
-    await click(confirmButton());
-    expect(dialog()).not.toBeNull();
-    expect(dialog()!.querySelector('[role="alert"]')?.textContent).toBe(
-      'Sản phẩm đã có đơn hàng nên không xóa được.',
-    );
-    expect(confirmButton()!.disabled).toBe(false);
-  });
-
   it('khóa nút và không gọi lần hai trong lúc chờ API', async () => {
     const onDelete = vi.fn(() => new Promise<void>(() => {}));
     await openDeleteDialog({ onDelete });
@@ -346,7 +374,7 @@ describe('ProductStatusPanel: xóa sản phẩm', () => {
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 
-  it('hai lần bấm Xóa vĩnh viễn trong cùng một lượt vẽ chỉ gọi API một lần', async () => {
+  it('hai lần bấm Xác nhận xóa trong cùng một lượt vẽ chỉ gọi API một lần', async () => {
     const onDelete = vi.fn(() => new Promise<void>(() => {}));
     await openDeleteDialog({ onDelete });
     const confirm = confirmButton()!;
@@ -382,5 +410,46 @@ describe('ProductStatusPanel: xóa sản phẩm', () => {
     await click(opener);
     await click(buttonByName('Hủy'));
     expect(document.activeElement).toBe(opener);
+  });
+});
+
+describe('ProductStatusPanel: sản phẩm xóa mềm', () => {
+  it('hiện nhãn Đã xóa mềm và chỉ cho khôi phục', async () => {
+    await renderPanel({ status: 'active', deletedAt: '2026-10-27T00:00:00Z' });
+
+    expect(container.querySelector('.badge')?.textContent).toBe('Đã xóa mềm');
+    expect(statusButtonNames()).toEqual([]);
+    expect(buttonByName('Xóa sản phẩm')).toBeUndefined();
+    expect(buttonByName('Khôi phục sản phẩm')).toBeDefined();
+  });
+
+  it('khôi phục thành công gọi API một lần và hiện thông báo', async () => {
+    const { onRestore } = await renderPanel({ deletedAt: '2026-10-27T00:00:00Z' });
+
+    await click(buttonByName('Khôi phục sản phẩm'));
+
+    expect(onRestore).toHaveBeenCalledTimes(1);
+    expect(container.querySelector('[role="status"]')?.textContent).toBe('Đã khôi phục sản phẩm.');
+  });
+
+  it('khôi phục lỗi giữ nút mở lại và hiện thông báo', async () => {
+    const onRestore = vi.fn(async () => {
+      throw new ApiError('NETWORK_ERROR', 0, 'Không kết nối được máy chủ.');
+    });
+    await renderPanel({ deletedAt: '2026-10-27T00:00:00Z', onRestore });
+
+    await click(buttonByName('Khôi phục sản phẩm'));
+
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(
+      'Không kết nối được máy chủ.',
+    );
+    expect(buttonByName('Khôi phục sản phẩm')!.disabled).toBe(false);
+  });
+
+  it('chỉ đọc thì thấy nhãn nhưng không có nút khôi phục', async () => {
+    await renderPanel({ deletedAt: '2026-10-27T00:00:00Z', canWrite: false });
+
+    expect(container.querySelector('.badge')?.textContent).toBe('Đã xóa mềm');
+    expect(container.querySelectorAll('button')).toHaveLength(0);
   });
 });

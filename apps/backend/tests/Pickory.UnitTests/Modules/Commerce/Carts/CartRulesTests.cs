@@ -35,6 +35,15 @@ public sealed class CartRulesTests
     }
 
     [Fact]
+    public void SoftDeletedProduct_IsRemovedAndCannotBeAdded()
+    {
+        var sku = Sku() with { ProductDeleted = true };
+
+        Assert.Equal(CartUnavailableReason.Removed, CartRules.FindUnavailableReason(sku, quantity: 1));
+        Assert.Equal(AddCheck.NotFound, CartRules.CheckAddable(sku));
+    }
+
+    [Fact]
     public void FindUnavailableReason_DiscontinuedProduct_ReturnsProductUnavailable()
     {
         var reason = CartRules.FindUnavailableReason(Sku(productStatus: "discontinued"), quantity: 1);

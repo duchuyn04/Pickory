@@ -93,13 +93,13 @@ public sealed class PublicProductDetailTests : IClassFixture<PickoryWebApplicati
         Assert.Equal(20_000_000, data.GetProperty("minPrice").GetInt32());
         Assert.True(data.GetProperty("inStock").GetBoolean());
 
-        // SKU tắt không hiện cho khách. Khách chỉ nhận cờ `inStock`, không nhận số tồn chính xác.
+        // SKU tắt không hiện cho khách. API trả cờ `inStock` và số tồn chính xác của từng SKU.
         var skus = data.GetProperty("skus").EnumerateArray().ToList();
         Assert.Equal([seeded.SkuIds[0], seeded.SkuIds[1]], skus.Select(sku => sku.GetProperty("id").GetString()));
         Assert.Equal([true, false], skus.Select(sku => sku.GetProperty("inStock").GetBoolean()));
+        Assert.Equal([5, 0], skus.Select(sku => sku.GetProperty("stock").GetInt32()));
         Assert.Equal(24_000_000, skus[0].GetProperty("compareAtPrice").GetInt32());
         Assert.Equal("Đỏ", skus[0].GetProperty("optionValues").GetProperty("Màu").GetString());
-        Assert.All(skus, sku => Assert.False(sku.TryGetProperty("stock", out _)));
 
         var images = data.GetProperty("images").EnumerateArray().ToList();
         Assert.Equal(2, images.Count);

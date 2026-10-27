@@ -3,6 +3,12 @@ import { expectListAlertStyle } from './alert-assertions';
 import { e2eEnvironment } from './environment';
 import { readPasswordSetupLink } from './outbox';
 
+declare global {
+  interface Window {
+    __noReload?: boolean;
+  }
+}
+
 // Ảnh PNG 1x1 trả cho mọi yêu cầu ảnh thu nhỏ, để trình duyệt không ghi lỗi tải ảnh vào console.
 const tinyPng = Buffer.from(
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
@@ -164,7 +170,7 @@ test('UI-C5b: đăng bán, ẩn, bán lại, xóa sản phẩm và quyền của
       .screenshot({ path: testInfo.outputPath('status-422-1280.png') });
   });
 
-  await test.step('Thêm ảnh, nhập số đo và lưu: nút trạng thái khóa khi chưa lưu', async () => {
+  await test.step('Thêm ảnh và nhập số đo nhưng chưa lưu', async () => {
     await page
       .locator('input[type="file"]')
       .setInputFiles([
@@ -177,38 +183,39 @@ test('UI-C5b: đăng bán, ẩn, bán lại, xóa sản phẩm và quyền của
     await page.getByLabel('Rộng (cm) Mặc định').fill('10');
     await page.getByLabel('Cao (cm) Mặc định').fill('5');
 
-    // Chưa lưu: API kiểm điều kiện trên dữ liệu đã lưu nên nút bị khóa kèm câu hướng dẫn.
+    // Nút trạng thái vẫn bấm được. Lần bấm sau sẽ tự lưu các thay đổi này trước.
     const publishButton = page.getByRole('button', { name: 'Đăng bán', exact: true });
-    await expect(publishButton).toBeDisabled();
-    await expect(page.getByText('Lưu thay đổi trước khi đổi trạng thái.')).toBeVisible();
+    await expect(publishButton).toBeEnabled();
+    await expect(page.getByText('Thay đổi sẽ được lưu trước khi đổi trạng thái.')).toBeVisible();
     await page
       .locator('.status-panel')
       .screenshot({ path: testInfo.outputPath('status-unsaved-1280.png') });
+  });
 
+  await test.step('Đăng bán tự lưu bản nháp trước rồi mới đổi trạng thái', async () => {
+    // Cờ trên `window` mất nếu trang điều hướng hoặc tải lại.
+    await page.evaluate(() => {
+      window.__noReload = true;
+    });
     const saved = page.waitForResponse(
       (response) =>
         response.request().method() === 'PATCH' &&
         response.url().endsWith(`/api/admin/products/${publishedProduct.id}`),
     );
-    await page.getByRole('button', { name: 'Lưu sản phẩm', exact: true }).click();
-    expect((await saved).status()).toBe(200);
-    await expect(publishButton).toBeEnabled();
-    await expect(page.getByText('Lưu thay đổi trước khi đổi trạng thái.')).toHaveCount(0);
-  });
-
-  await test.step('Đăng bán đổi nhãn thành Đang bán mà không tải lại trang', async () => {
-    // Cờ trên `window` mất nếu trang điều hướng hoặc tải lại.
-    await page.evaluate(() => {
-      (window as unknown as { __noReload: boolean }).__noReload = true;
-    });
+    const statusChanged = page.waitForResponse(
+      (response) =>
+        response.request().method() === 'PUT' &&
+        response.url().endsWith(`/api/admin/products/${publishedProduct.id}/status`),
+    );
     await page.getByRole('button', { name: 'Đăng bán', exact: true }).click();
+    expect((await saved).status()).toBe(200);
+    expect((await statusChanged).status()).toBe(200);
     await expect(statusBadge(page)).toHaveText('Đang bán');
     await expect(
       page.getByRole('status').filter({ hasText: 'Đã đổi trạng thái thành "Đang bán".' }),
     ).toBeVisible();
-    expect(
-      await page.evaluate(() => (window as unknown as { __noReload?: boolean }).__noReload),
-    ).toBe(true);
+    await expect(page.getByText('Thay đổi sẽ được lưu trước khi đổi trạng thái.')).toHaveCount(0);
+    expect(await page.evaluate(() => window.__noReload)).toBe(true);
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}${productUrl}`);
     // Đang bán chỉ chuyển được sang ẩn hoặc ngừng kinh doanh.
     await expect(page.getByRole('button', { name: 'Đăng bán', exact: true })).toHaveCount(0);
@@ -258,7 +265,7 @@ test('UI-C5b: đăng bán, ẩn, bán lại, xóa sản phẩm và quyền của
     await page.getByRole('button', { name: 'Xóa sản phẩm', exact: true }).click();
     const dialog = page.getByRole('dialog');
     await expect(dialog).toContainText(doomedProduct.name);
-    await expect(dialog).toContainText('không thể hoàn tác');
+    await expect(dialog).toContainText('Sản phẩm đã có đơn được xóa mềm và có thể khôi phục.');
     await expectNoHorizontalPageOverflow(page);
     await page.screenshot({ path: testInfo.outputPath('delete-dialog-375.png') });
     await dialog.getByRole('button', { name: 'Hủy', exact: true }).click();
@@ -277,8 +284,10 @@ test('UI-C5b: đăng bán, ẩn, bán lại, xóa sản phẩm và quyền của
         response.request().method() === 'DELETE' &&
         response.url().endsWith(`/api/admin/products/${doomedProduct.id}`),
     );
-    await dialog.getByRole('button', { name: 'Xóa vĩnh viễn', exact: true }).click();
-    expect((await deleted).status()).toBe(204);
+    await dialog.getByRole('button', { name: 'Xác nhận xóa', exact: true }).click();
+    const deletionResponse = await deleted;
+    expect(deletionResponse.status()).toBe(200);
+    expect((await deletionResponse.json()).data.outcome).toBe('hard_deleted');
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin/products`);
     await page.getByLabel('Tên hoặc mã SKU').fill(doomedProduct.name);
     await expect(page.getByText('Không có kết quả phù hợp với bộ lọc.')).toBeVisible();

@@ -100,7 +100,7 @@ export interface ProductOptionInfo {
   values: string[];
 }
 
-// SKU đang bật. Khách chỉ biết còn hàng hay không, không biết số tồn.
+// SKU đang bật. `stock` là số lượng tồn hiện tại của biến thể.
 export interface ProductSkuInfo {
   id: string;
   code: string;
@@ -108,6 +108,7 @@ export interface ProductSkuInfo {
   price: number;
   compareAtPrice: number | null;
   inStock: boolean;
+  stock: number;
 }
 
 // `skuId` khác null khi ảnh gắn riêng cho một SKU.

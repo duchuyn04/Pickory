@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { FieldError, fieldErrorProps } from '../../../shared/field-error';
 import { Icon } from '../../../shared/icons';
+import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import { withCloudinaryTransform } from '../shared/image-url';
 import { MAX_IMAGES_PER_PRODUCT } from './image-upload';
 
@@ -53,8 +54,27 @@ export function ImageManager({
   onAddFiles,
 }: ImageManagerProps) {
   const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [pendingRemovalId, setPendingRemovalId] = useState<string | null>(null);
   const pendingFocus = useRef<{ publicId: string; action: MoveAction } | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
+  const pendingRemovalIndex = images.findIndex((image) => image.publicId === pendingRemovalId);
+  const pendingRemoval = pendingRemovalIndex >= 0 ? images[pendingRemovalIndex] : null;
+
+  function closeRemoveDialog() {
+    setPendingRemovalId(null);
+  }
+
+  const removeDialogRef = useDialogFocus({
+    isOpen: pendingRemovalId !== null,
+    onClose: closeRemoveDialog,
+  });
+
+  function confirmRemoveImage() {
+    if (pendingRemovalId === null) return;
+    // Chỉ bỏ ảnh khỏi bản nháp. Backend tạo job xóa Cloudinary sau khi admin lưu sản phẩm.
+    onChange(images.filter((image) => image.publicId !== pendingRemovalId));
+    setPendingRemovalId(null);
+  }
 
   // Sau khi đổi chỗ, đưa focus về nút của chính ảnh vừa di chuyển, để người dùng bàn phím bấm tiếp.
   useEffect(() => {
@@ -198,7 +218,7 @@ export function ImageManager({
                       type="button"
                       className="icon-btn image-remove"
                       aria-label={`Bỏ ảnh ${position}`}
-                      onClick={() => onChange(images.filter((_, itemIndex) => itemIndex !== index))}
+                      onClick={() => setPendingRemovalId(image.publicId)}
                     >
                       <Icon name="trash" />
                     </button>
@@ -234,6 +254,39 @@ export function ImageManager({
         <p role="status" className="muted small">
           Đang tải ảnh lên...
         </p>
+      )}
+      {pendingRemoval && (
+        <div className="dialog-backdrop">
+          <div
+            ref={removeDialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="remove-image-title"
+            aria-describedby="remove-image-description"
+            tabIndex={-1}
+            className="dialog"
+          >
+            <div className="dialog-head">
+              <h2 id="remove-image-title">Bỏ ảnh khỏi sản phẩm</h2>
+            </div>
+            <div className="dialog-body stack">
+              <p className="delete-product-text">
+                Bạn có chắc muốn bỏ ảnh {pendingRemovalIndex + 1}?
+              </p>
+              <p id="remove-image-description" className="muted">
+                Ảnh chỉ bị xóa sau khi bạn lưu sản phẩm.
+              </p>
+            </div>
+            <div className="dialog-foot">
+              <button type="button" className="btn" onClick={closeRemoveDialog}>
+                Hủy
+              </button>
+              <button type="button" className="btn btn-danger" onClick={confirmRemoveImage}>
+                Bỏ ảnh
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </section>
   );

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Api.Identity;
 using Pickory.IntegrationTests.Infrastructure;
@@ -140,6 +141,7 @@ public sealed class CatalogReaderTests : IClassFixture<PickoryWebApplicationFact
         Assert.Equal(2, byId.Skus.Count);
         Assert.DoesNotContain(byId.Skus, sku => sku.Id == seeded.SkuIds[2]);
         Assert.Equal([true, false], byId.Skus.Select(sku => sku.InStock));
+        Assert.Equal([5, 0], byId.Skus.Select(sku => sku.Stock));
         Assert.Equal(25_000_000, byId.Skus[0].CompareAtPrice);
         Assert.Equal(20_000_000, byId.MinPrice);
         Assert.Equal(["a", "b", "red"], byId.Images.Select(image => image.Url.Split('/')[^1]));
@@ -232,6 +234,27 @@ public sealed class CatalogReaderTests : IClassFixture<PickoryWebApplicationFact
 
         Assert.Equal("draft", snapshots.Single(snapshot => snapshot.SkuId == draft.SkuIds[0]).ProductStatus);
         Assert.Equal("discontinued", snapshots.Single(snapshot => snapshot.SkuId == discontinued.SkuIds[0]).ProductStatus);
+    }
+
+    [Fact]
+    public async Task GetSkus_SoftDeletedProduct_RemainsReadableWithDeletionFlag()
+    {
+        var product = await AddProductAsync(1, skus: [new(20_000_000, 4)]);
+        await using (var context = _database.CreateCatalogContext())
+        {
+            var entity = await context.Products.SingleAsync(item => item.Id == product.Id);
+            entity.DeletedAt = DateTime.UtcNow;
+            await context.SaveChangesAsync();
+        }
+
+        var snapshots = await WithReaderAsync(reader => reader.GetSkusAsync(
+            product.SkuIds, CancellationToken.None));
+        var snapshot = Assert.Single(snapshots);
+
+        // Đơn cũ vẫn đọc được kích thước, nhưng giỏ mới nhận cờ để chặn mua sản phẩm đã xóa.
+        Assert.True(snapshot.ProductDeleted);
+        Assert.Equal(300, snapshot.WeightGrams);
+        Assert.Null(await WithReaderAsync(reader => reader.GetProductAsync(product.Id, CancellationToken.None)));
     }
 
     [Fact]

@@ -29,6 +29,7 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         entity.Property(value => value.InStock).HasDefaultValue(false);
         entity.Property(value => value.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         entity.Property(value => value.UpdatedAt).IsRequired();
+        entity.Property(value => value.DeletedAt).IsRequired(false);
 
         entity.HasIndex(value => value.Slug)
             .IsUnique()

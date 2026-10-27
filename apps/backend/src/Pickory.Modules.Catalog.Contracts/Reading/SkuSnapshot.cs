@@ -20,4 +20,6 @@ public sealed record SkuSnapshot(
     int? HeightCm,
     ProductImageInfo? Image,
     // Mã ảnh trong kho ảnh. Đơn hàng lưu mã này thay cho URL, vì URL đổi theo cấu hình.
-    string? ImagePublicId = null);
+    string? ImagePublicId = null,
+    // Đơn cũ vẫn đọc được SKU, nhưng giỏ mới phải chặn sản phẩm đã xóa mềm.
+    bool ProductDeleted = false);

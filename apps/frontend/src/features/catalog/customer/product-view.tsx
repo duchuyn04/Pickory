@@ -134,6 +134,9 @@ export function ProductView({ product }: { product: ProductDetail }) {
                 ) : (
                   <span className="badge badge-bad">Hết hàng</span>
                 )}
+                <span className="product-stock-quantity">
+                  Tồn kho: {selectedSku.stock} sản phẩm
+                </span>
               </p>
             )}
           </div>

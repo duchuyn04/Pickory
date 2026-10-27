@@ -77,8 +77,18 @@ public sealed record ProductResponse(
     bool InStock,
     IReadOnlyList<ProductVariantResponse> Variants,
     IReadOnlyList<ProductImageResponse> Images,
+    DateTime? DeletedAt,
     DateTime CreatedAt,
     DateTime UpdatedAt);
+
+public static class ProductDeletionOutcome
+{
+    public const string HardDeleted = "hard_deleted";
+    public const string SoftDeleted = "soft_deleted";
+}
+
+// Kết quả xóa giúp giao diện phân biệt sản phẩm đã mất hẳn và sản phẩm có thể khôi phục.
+public sealed record DeleteProductResponse(string Outcome, ProductResponse? Product);
 
 // Ảnh theo thứ tự hiển thị; `SkuId` có giá trị khi ảnh thuộc riêng một biến thể.
 // `Url` là URL ảnh gốc, giao diện thêm tham số biến đổi để lấy ảnh vừa kích thước.

@@ -106,6 +106,24 @@ describe('ProductView: chọn biến thể', () => {
     expect(stockBadgeText()).toBe('Hết hàng');
   });
 
+  it('hiển thị số lượng tồn của SKU và cập nhật khi đổi biến thể', async () => {
+    await renderProduct(buildProductDetail());
+    expect(container.querySelector('.product-stock-quantity')?.textContent).toBe(
+      'Tồn kho: 12 sản phẩm',
+    );
+
+    await choose('Màu', 'Bạc');
+    expect(container.querySelector('.product-stock-quantity')?.textContent).toBe(
+      'Tồn kho: 3 sản phẩm',
+    );
+
+    await choose('Màu', 'Đen');
+    await choose('Bộ nhớ', '512GB');
+    expect(container.querySelector('.product-stock-quantity')?.textContent).toBe(
+      'Tồn kho: 0 sản phẩm',
+    );
+  });
+
   it('ghi SKU đang chọn vào ?sku= bằng replace và giữ tham số khác', async () => {
     await renderProduct(buildProductDetail(), '/p/laptop-1?ref=mail');
     await choose('Màu', 'Bạc');

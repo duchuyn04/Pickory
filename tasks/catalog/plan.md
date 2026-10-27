@@ -53,12 +53,12 @@ CAT-01 bộ thuộc tính + validate thông số (packages/shared)
 12. **Facets theo kiểu loại trừ chính nó.** Số đếm của thuộc tính X áp mọi bộ lọc khác, trừ bộ lọc của X. Người dùng chọn `RAM 16GB` vẫn thấy số đếm của `RAM 32GB`. Facets chỉ đếm sản phẩm khách thấy được.
 13. **Thẻ meta SEO theo hướng (b).** Backend có hàm `renderProductMeta` và route trả `index.html` đã chèn thẻ `title`, `description`, Open Graph cho `/products/:slug` và `/categories/:slug`. Hạ tầng deploy chưa chốt (Open Question 1 của `SPEC.md`). Task chỉ làm hàm, route và test. Bước gắn vào server production chờ quyết định deploy.
 14. **Slug bỏ dấu không cần thư viện.** Dùng `normalize('NFD')`, xóa dấu kết hợp, đổi `đ` thành `d`. Trùng slug thì thêm hậu tố `-2`, `-3`.
-15. **Mã lỗi nghiệp vụ.** Dùng `AppError` với mã cố định: `SPECS_INVALID`, `ATTRIBUTE_IN_USE`, `PRODUCT_NOT_PUBLISHABLE`, `PRODUCT_HAS_ORDERS`, `COMPARE_CATEGORY_MISMATCH`, `UNKNOWN_FILTER`. Bổ sung ngày 2026-10-08: `INSUFFICIENT_STOCK` (điều chỉnh tay làm tồn kho âm, trả 409). Message viết tiếng Việt.
+15. **Mã lỗi nghiệp vụ.** Dùng `AppError` với mã cố định: `SPECS_INVALID`, `ATTRIBUTE_IN_USE`, `PRODUCT_NOT_PUBLISHABLE`, `PRODUCT_DELETED`, `COMPARE_CATEGORY_MISMATCH`, `UNKNOWN_FILTER`. Bổ sung ngày 2026-10-08: `INSUFFICIENT_STOCK` (điều chỉnh tay làm tồn kho âm, trả 409). Message viết tiếng Việt.
 16. **Audit log.** Ghi `recordAudit` trong cùng transaction cho đổi giá (`catalog.sku.price_change`), đổi trạng thái (`catalog.product.status_change`) và điều chỉnh tồn kho (`catalog.sku.stock_adjust`). Mỗi thao tác đúng 1 dòng.
 
 17. **Mô tả chi tiết là tài liệu JSON, không phải Markdown hay HTML.** Ngày 2026-10-05 người dùng chọn trình soạn thảo trực quan. Trình soạn thảo dùng Tiptap, chỉ bật đoạn văn, tiêu đề 3 cấp, chữ đậm, chữ nghiêng. Schema Zod đặt ở `packages/shared/src/catalog/` làm whitelist. Backend và trình soạn thảo dùng chung schema này. Frontend đổi từng nút thành thẻ React, không dùng `dangerouslySetInnerHTML`. Tiêu đề cấp 1, 2, 3 hiện thành H2, H3, H4 vì trang đã có H1. Hàm `descriptionToPlainText` từng phục vụ `smart-search` (đã bỏ ngày 2026-10-14). Ngày 2026-10-05 người dùng duyệt Tiptap cho Ask first. Builder chọn các extension tối thiểu và ghim phiên bản sau khi đối chiếu tài liệu chính thức.
 
-18. **Xóa cứng sản phẩm xóa movement không thuộc đơn hàng.** FK từ `inventory_movements` sang `skus` giữ `onDelete: Restrict`. Khi xóa cứng, service kiểm tra không có movement `order_reserve`. Service xóa các movement `manual` và `return` của sản phẩm, rồi xóa sản phẩm, trong cùng transaction. Movement đơn hàng còn sót thì FK chặn lại, là lớp bảo vệ thứ hai. Khi admin bỏ một giá trị tùy chọn, CAT-05 tắt SKU (`enabled = false`), không xóa SKU, để giữ lịch sử tồn kho. Quyết định ngày 2026-10-05 sau review Phase 1.
+18. **Xóa cứng sản phẩm xóa movement không thuộc đơn hàng.** FK từ `inventory_movements` sang `skus` giữ `onDelete: Restrict`. Khi xóa cứng, service kiểm tra không có movement `order_reserve`. Service xóa các movement `manual` và `return` của sản phẩm, rồi xóa sản phẩm, trong cùng transaction. Movement đơn hàng còn sót thì FK chặn lại, là lớp bảo vệ thứ hai. Khi admin bỏ một giá trị tùy chọn, CAT-05 tắt SKU (`enabled = false`), không xóa SKU, để giữ lịch sử tồn kho. Quyết định ngày 2026-10-05 sau review Phase 1. Phần chặn xóa sản phẩm đã có đơn được thay bằng Quyết định 20.
 
 19. **Tìm theo từ khóa nằm ở `catalog`.** Ngày 2026-10-14 người dùng bỏ `smart-search`. `GET /api/products` nhận thêm `q`. `q` khớp một phần tên sản phẩm hoặc tên thương hiệu, bằng `unaccent` và `ILIKE`.
     - Kỹ thuật so khớp giống ô tìm của danh sách sản phẩm quản trị trong `ProductManagementHandler`.
@@ -66,6 +66,25 @@ CAT-01 bộ thuộc tính + validate thông số (packages/shared)
     - Đây là đổi Contracts. Người dùng duyệt ngày 2026-10-14, cùng lúc bỏ `smart-search`.
     - Không có tìm theo ý nghĩa (vector) cho sản phẩm.
     - `ListForIndexingAsync` chỉ phục vụ `smart-search`, nên không còn cần. Xóa code của hàm ở một task sau.
+
+20. **Xóa mềm sản phẩm đã có đơn.** Quyết định ngày 2026-10-27 thay cho phần chặn xóa của Quyết định 18.
+    - Sản phẩm chưa có movement `order_reserve` vẫn bị xóa cứng như cũ.
+    - Sản phẩm đã có đơn được đặt `deletedAt`, giữ nguyên trạng thái và dữ liệu liên quan.
+    - Sản phẩm xóa mềm bị ẩn khỏi mọi truy vấn khách hàng, kể cả giỏ hàng mới.
+    - `GetSkusAsync` vẫn trả SKU kèm cờ `ProductDeleted` để đơn cũ đọc được số đo đóng gói.
+    - `POST /api/admin/products/{id}/restoration` xóa `deletedAt` và phát sự kiện `Status`.
+    - API sửa và đổi trạng thái trả `PRODUCT_DELETED` cho tới khi khôi phục.
+    - Migration chỉ thêm cột `deletedAt` nullable, nên rollback là bỏ cột và không đụng dữ liệu cũ.
+
+21. **Tự lưu trước khi đổi trạng thái.** Quyết định ngày 2026-10-27.
+    - Nút trạng thái không khóa vì bản nháp. Panel gọi hàm lưu của form trước.
+    - Chỉ gửi trạng thái đích khi lưu thành công. Lỗi thẩm định hoặc API giữ trạng thái cũ.
+    - Lưu và đổi trạng thái dùng chung id sản phẩm, nên thứ tự hai request là tuần tự.
+
+22. **Xác nhận trước khi bỏ ảnh.** Quyết định ngày 2026-10-27.
+    - Nút bỏ ảnh mở hộp thoại xác nhận thay vì sửa bản nháp ngay.
+    - Ảnh chỉ bị xóa khỏi sản phẩm và Cloudinary sau khi admin lưu sản phẩm.
+    - Hộp thoại dùng `useDialogFocus` để giữ focus và đóng bằng Escape.
 
 ## Task List
 

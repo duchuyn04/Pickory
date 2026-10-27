@@ -11,6 +11,7 @@ export const skuBlack256: ProductSkuInfo = {
   price: 20_000_000,
   compareAtPrice: null,
   inStock: true,
+  stock: 12,
 };
 export const skuBlack512: ProductSkuInfo = {
   id: 'sku-black-512',
@@ -19,6 +20,7 @@ export const skuBlack512: ProductSkuInfo = {
   price: 24_000_000,
   compareAtPrice: null,
   inStock: false,
+  stock: 0,
 };
 export const skuSilver256: ProductSkuInfo = {
   id: 'sku-silver-256',
@@ -27,6 +29,7 @@ export const skuSilver256: ProductSkuInfo = {
   price: 21_000_000,
   compareAtPrice: 25_000_000,
   inStock: true,
+  stock: 3,
 };
 export const skuSilver512: ProductSkuInfo = {
   id: 'sku-silver-512',
@@ -35,6 +38,7 @@ export const skuSilver512: ProductSkuInfo = {
   price: 26_000_000,
   compareAtPrice: null,
   inStock: true,
+  stock: 8,
 };
 
 export const imageBlack = {

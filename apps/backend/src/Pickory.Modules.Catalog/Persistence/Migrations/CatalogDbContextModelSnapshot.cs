@@ -262,6 +262,11 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                         .HasColumnName("createdAt")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("deletedAt");
+
                     b.Property<JsonDocument>("Description")
                         .IsRequired()
                         .HasColumnType("jsonb")

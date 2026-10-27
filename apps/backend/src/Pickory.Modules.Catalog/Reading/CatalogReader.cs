@@ -50,6 +50,7 @@ public sealed class CatalogReader(
                 ProductName = sku.Product!.Name,
                 ProductSlug = sku.Product.Slug,
                 ProductStatus = sku.Product.Status,
+                ProductDeleted = sku.Product.DeletedAt != null,
                 sku.Enabled,
                 sku.OptionValues,
                 sku.Price,
@@ -97,7 +98,8 @@ public sealed class CatalogReader(
                 chosen is null
                     ? null
                     : new ProductImageInfo(ProductImageUrl.Build(credentials, chosen.PublicId), chosen.Alt, chosen.SkuId),
-                chosen?.PublicId);
+                chosen?.PublicId,
+                row.ProductDeleted);
         });
 
         // DB không giữ thứ tự của `skuIds`. Sắp lại để giỏ hàng nhận đúng thứ tự đã gửi.
