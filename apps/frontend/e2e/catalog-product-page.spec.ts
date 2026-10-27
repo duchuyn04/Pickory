@@ -354,4 +354,30 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await expect(page.getByText('Sắp có')).toHaveCount(0);
     expect(issues).toEqual([]);
   });
+
+  test('chọn số lượng trên trang sản phẩm và thêm đúng số lượng vào giỏ', async ({ page }) => {
+    const issues = collectConsoleIssues(page);
+    await stubProductImages(page);
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto(`/p/${catalog.activeSlug}?sku=${catalog.skuIds.black256}`);
+    await dismissConsent(page);
+
+    const qtyInput = page.locator('#product-quantity-input');
+    const decreaseBtn = page.getByRole('button', { name: 'Giảm số lượng' });
+    const increaseBtn = page.getByRole('button', { name: 'Tăng số lượng' });
+
+    await expect(qtyInput).toHaveValue('1');
+    await expect(decreaseBtn).toBeDisabled();
+
+    // Tăng số lượng lên 2.
+    await increaseBtn.click();
+    await expect(qtyInput).toHaveValue('2');
+    await expect(decreaseBtn).toBeEnabled();
+
+    // Thêm vào giỏ và kiểm tra thông báo phản ánh đúng số lượng.
+    await page.getByRole('button', { name: 'Thêm vào giỏ' }).click();
+    await expect(page.getByRole('status')).toHaveText('Đã thêm 2 sản phẩm vào giỏ');
+
+    expect(issues).toEqual([]);
+  });
 });

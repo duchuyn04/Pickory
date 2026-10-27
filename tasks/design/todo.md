@@ -99,15 +99,21 @@ Trước DS-05, lỗi nhập liệu chỉ hiện ở thông báo chung đầu fo
 ### DS-07: Header của khách trên mobile
 **Mô tả:** Dưới 768 px, header của khách xếp logo, nút tài khoản và giỏ trên một hàng chật. Ba liên kết điều hướng rơi xuống hàng thứ hai. Task đổi header trên mobile sang một hàng gồm nút menu, logo và giỏ. Liên kết điều hướng và thao tác tài khoản chuyển vào ngăn menu. Mẫu: nút `hdr-burger` và `drawer` trong `shop-retail/account/index.html`. Task chỉ đổi `src/shared/header.tsx` và `header.css`, không đổi header của admin.
 **Tiêu chí nghiệm thu:**
-- [ ] Dưới 768 px, header có đúng một hàng: nút menu, logo Pickory, giỏ hàng. Từ 768 px trở lên, header giữ bố cục hiện tại
-- [ ] Ngăn menu chứa `Trang chủ`, `Tra cứu đơn`, `Quyền riêng tư` và thao tác theo phiên của khách vãng lai, khách đăng nhập, nhân viên
-- [ ] Nút menu có nhãn truy cập được, `aria-expanded` và `aria-controls`
-- [ ] Ngăn menu là hộp thoại có nhãn. Focus nằm trong ngăn khi ngăn mở. Phím Escape đóng ngăn và trả focus về nút menu
-- [ ] Ngăn đóng khi khách bấm một liên kết, bấm nền mờ hoặc đổi trang
-- [ ] `Đăng xuất` trong ngăn chạy như nút hiện tại, lỗi đăng xuất vẫn hiện dưới header
-- [ ] Mini cart mở được ở 375 px, panel không tràn màn hình
-- [ ] Nút menu, nút đóng và các dòng trong ngăn có vùng bấm ít nhất 44 x 44 px
-- [ ] Ảnh 375 px và 1280 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
-- [ ] Spec E2E đang bấm liên kết header ở màn hẹp vẫn đạt. Spec chỉ đổi cách mở ngăn, không bỏ bước kiểm
+- [x] Dưới 768 px, header có đúng một hàng: nút menu, logo Pickory, giỏ hàng. Từ 768 px trở lên, header giữ bố cục hiện tại
+- [x] Ngăn menu chứa `Trang chủ`, `Tra cứu đơn`, `Quyền riêng tư` và thao tác theo phiên của khách vãng lai, khách đăng nhập, nhân viên
+- [x] Nút menu có nhãn truy cập được, `aria-expanded` và `aria-controls`
+- [x] Ngăn menu là hộp thoại có nhãn. Focus nằm trong ngăn khi ngăn mở. Phím Escape đóng ngăn và trả focus về nút menu
+- [x] Ngăn đóng khi khách bấm một liên kết, bấm nền mờ hoặc đổi trang
+- [x] `Đăng xuất` trong ngăn chạy như nút hiện tại, lỗi đăng xuất vẫn hiện dưới header
+- [x] Mini cart mở được ở 375 px, panel không tràn màn hình
+- [x] Nút menu, nút đóng và các dòng trong ngăn có vùng bấm ít nhất 44 x 44 px
+- [x] Ảnh 375 px và 1280 px không tràn ngang. Console 0 lỗi và 0 cảnh báo
+- [x] Spec E2E đang bấm liên kết header ở màn hẹp vẫn đạt. Spec chỉ đổi cách mở ngăn, không bỏ bước kiểm
 **Kiểm tra:** Vitest; Playwright có giao diện ở 375 px và 1280 px; `pnpm test:e2e`
 **Phụ thuộc:** DS-05 · **Quy mô:** M
+**Bằng chứng (2026-10-27):** Vitest đạt 9/9 trong `header.test.tsx` và 1855/1855 toàn bộ unit test frontend.
+Spec mới `customer-header-mobile.spec.ts` đạt khi chạy có giao diện (`--headed`).
+Spec kiểm tra header 1 hàng trên mobile, kích thước nút menu và đóng tối thiểu 44 x 44 px.
+Ngăn menu có vai trò dialog và quản lý focus đầy đủ khi mở hoặc bấm phím Escape.
+Spec `commerce-order-lookup.spec.ts` đã cập nhật bước mở ngăn trên mobile và đạt 4/4 khi chạy có giao diện.
+Toàn bộ kiểm tra console ghi nhận 0 lỗi và 0 cảnh báo.

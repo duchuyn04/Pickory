@@ -3,21 +3,25 @@ import { useEffect, useMemo, useRef, useState, type FocusEvent, type FormEvent }
 import { Link, useNavigate } from 'react-router-dom';
 import type { ApiError } from '../../../../shared/api';
 import { ErrorAlert } from '../../../../shared/error-alert';
-import { FieldError, fieldErrorProps, hasFieldErrors } from '../../../../shared/field-error';
+import { hasFieldErrors } from '../../../../shared/field-error';
 import { useActor } from '../../../identity/hooks/use-actor';
-import { describeAddress, useSavedAddresses } from '../addresses/addresses-api';
+import { useSavedAddresses } from '../addresses/addresses-api';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
-import { AddressPicker, EMPTY_ADDRESS, type AddressValue } from '../../../shipping/address-picker';
+import { EMPTY_ADDRESS, type AddressValue } from '../../../shipping/address-picker';
 import { canCheckout, checkoutHint } from '../cart-labels';
+import { PurchaseProgress } from '../purchase-progress';
 import { CART_QUERY_KEY, useCart } from '../use-cart';
 import type { PaymentMethod, PlaceOrderPayload } from './checkout-api';
+import { CheckoutContactSection } from './checkout-contact-section';
+import { CheckoutDeliverySection } from './checkout-delivery-section';
 import {
-  NOTE_MAX_LENGTH,
   validateCheckoutForm,
   type CheckoutFieldErrors,
   type CheckoutFieldName,
   type CheckoutFormValues,
 } from './checkout-form-schema';
+import { CheckoutInvoiceSection } from './checkout-invoice-section';
+import { CheckoutPaymentMethods } from './checkout-payment-methods';
 import {
   describeOrderError,
   describePreviewError,
@@ -47,9 +51,6 @@ const FIELD_IDS: Record<CheckoutFieldName, string> = {
   'invoice.email': 'checkout-invoice-email',
 };
 
-const ADDRESS_ID_PREFIX = 'checkout-address';
-const ADDRESS_ERROR_ANCHOR_ID = 'checkout-address-group';
-
 const EMPTY_FORM: CheckoutFormValues = {
   contact: { name: '', phone: '', email: '' },
   address: EMPTY_ADDRESS,
@@ -68,6 +69,18 @@ function BlockedCheckout({ message }: { message: string }) {
         Quay lại giỏ hàng
       </Link>
     </div>
+  );
+}
+
+function CheckoutHeading() {
+  return (
+    <>
+      <PurchaseProgress stage="checkout" />
+      <header className="checkout-page-header">
+        <h1>Đặt hàng</h1>
+        <p className="muted">Nhập thông tin giao hàng và chọn phương thức thanh toán.</p>
+      </header>
+    </>
   );
 }
 
@@ -322,6 +335,7 @@ export function CheckoutPage() {
   if (cartQuery.isPending) {
     return (
       <main className="catalog-page checkout-page">
+        <CheckoutHeading />
         <p role="status" aria-busy="true">
           Đang tải giỏ hàng...
         </p>
@@ -332,7 +346,7 @@ export function CheckoutPage() {
   if (cartQuery.isError || !cart) {
     return (
       <main className="catalog-page checkout-page">
-        <h1>Đặt hàng</h1>
+        <CheckoutHeading />
         <ErrorAlert message={cartQuery.error?.message ?? 'Không tải được giỏ hàng.'} />
         <Link to="/cart" className="btn btn-outline">
           Quay lại giỏ hàng
@@ -344,7 +358,7 @@ export function CheckoutPage() {
   if (!isCartReady) {
     return (
       <main className="catalog-page checkout-page">
-        <h1>Đặt hàng</h1>
+        <CheckoutHeading />
         <BlockedCheckout message={checkoutHint(cart) ?? 'Giỏ hàng chưa sẵn sàng để đặt hàng.'} />
       </main>
     );
@@ -379,7 +393,7 @@ export function CheckoutPage() {
 
   return (
     <main className="catalog-page checkout-page">
-      <h1>Đặt hàng</h1>
+      <CheckoutHeading />
 
       {orderFailure?.kind === 'total-changed' && (
         <ErrorAlert
@@ -431,265 +445,58 @@ export function CheckoutPage() {
 
       <form noValidate className="checkout-layout" onSubmit={(event) => void handleSubmit(event)}>
         <div className="checkout-main">
-          <section className="card checkout-section" aria-labelledby="checkout-contact-title">
-            <h2 id="checkout-contact-title">Thông tin liên hệ</h2>
-            <div className="form-grid form-grid-2">
-              <div className="field">
-                <label htmlFor={FIELD_IDS['contact.name']}>Họ và tên</label>
-                <input
-                  id={FIELD_IDS['contact.name']}
-                  type="text"
-                  autoComplete="name"
-                  disabled={isSubmitting}
-                  value={values.contact.name}
-                  onChange={(event) => changeContact('name', event.target.value)}
-                  onBlur={() => validateFieldOnBlur('contact.name')}
-                  {...fieldErrorProps(FIELD_IDS['contact.name'], fieldErrors['contact.name'])}
-                />
-                <FieldError
-                  inputId={FIELD_IDS['contact.name']}
-                  message={fieldErrors['contact.name']}
-                />
-              </div>
-              <div className="field">
-                <label htmlFor={FIELD_IDS['contact.phone']}>Số điện thoại</label>
-                <input
-                  id={FIELD_IDS['contact.phone']}
-                  type="tel"
-                  autoComplete="tel"
-                  inputMode="tel"
-                  disabled={isSubmitting}
-                  value={values.contact.phone}
-                  onChange={(event) => changeContact('phone', event.target.value)}
-                  onBlur={() => validateFieldOnBlur('contact.phone')}
-                  {...fieldErrorProps(FIELD_IDS['contact.phone'], fieldErrors['contact.phone'])}
-                />
-                <FieldError
-                  inputId={FIELD_IDS['contact.phone']}
-                  message={fieldErrors['contact.phone']}
-                />
-              </div>
-              <div className="field field-full">
-                <label htmlFor={FIELD_IDS['contact.email']}>Email</label>
-                <input
-                  id={FIELD_IDS['contact.email']}
-                  type="email"
-                  autoComplete="email"
-                  disabled={isSubmitting}
-                  value={values.contact.email}
-                  onChange={(event) => changeContact('email', event.target.value)}
-                  onBlur={() => validateFieldOnBlur('contact.email')}
-                  {...fieldErrorProps(FIELD_IDS['contact.email'], fieldErrors['contact.email'])}
-                />
-                <FieldError
-                  inputId={FIELD_IDS['contact.email']}
-                  message={fieldErrors['contact.email']}
-                />
-              </div>
-            </div>
-          </section>
+          <CheckoutContactSection
+            values={values.contact}
+            errors={fieldErrors}
+            fieldIds={FIELD_IDS}
+            isSubmitting={isSubmitting}
+            onChange={changeContact}
+            onBlur={validateFieldOnBlur}
+          />
 
-          <section className="card checkout-section" aria-labelledby="checkout-address-title">
-            <h2 id="checkout-address-title">Địa chỉ nhận hàng</h2>
-            {savedAddresses.length > 0 && (
-              <div className="field">
-                <label htmlFor="checkout-saved-address">Địa chỉ đã lưu</label>
-                <select
-                  id="checkout-saved-address"
-                  disabled={isSubmitting}
-                  value={selectedSavedId}
-                  onChange={(event) => chooseSavedAddress(event.target.value)}
-                >
-                  <option value="">Nhập địa chỉ khác</option>
-                  {savedAddresses.map((saved) => (
-                    <option key={saved.id} value={saved.id}>
-                      {saved.label}: {describeAddress(saved.address)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-            <div id={ADDRESS_ERROR_ANCHOR_ID} onBlur={handleAddressBlur}>
-              <AddressPicker
-                value={values.address}
-                onChange={changeAddress}
-                idPrefix={ADDRESS_ID_PREFIX}
-                disabled={isSubmitting}
-                errors={{
-                  province: addressErrors['address.provinceCode'],
-                  ward: addressErrors['address.wardCode'],
-                  line: addressErrors['address.line'],
-                }}
-              />
-            </div>
-            <FieldError inputId={ADDRESS_ID_PREFIX} message={addressErrors.address} />
-          </section>
+          <CheckoutDeliverySection
+            address={values.address}
+            note={values.note}
+            savedAddresses={savedAddresses}
+            selectedSavedId={selectedSavedId}
+            errors={addressErrors}
+            fieldIds={FIELD_IDS}
+            isSubmitting={isSubmitting}
+            onSavedAddressChange={chooseSavedAddress}
+            onAddressChange={changeAddress}
+            onAddressBlur={handleAddressBlur}
+            onNoteChange={(note) => {
+              setValues((current) => ({ ...current, note }));
+              changeField('note');
+            }}
+            onNoteBlur={() => validateFieldOnBlur('note')}
+          />
 
-          <section className="card checkout-section" aria-labelledby="checkout-note-title">
-            <h2 id="checkout-note-title">Ghi chú</h2>
-            <div className="field">
-              <label htmlFor={FIELD_IDS.note}>Ghi chú cho đơn hàng (không bắt buộc)</label>
-              <textarea
-                id={FIELD_IDS.note}
-                rows={3}
-                disabled={isSubmitting}
-                value={values.note}
-                onChange={(event) => {
-                  setValues((current) => ({ ...current, note: event.target.value }));
-                  changeField('note');
-                }}
-                onBlur={() => validateFieldOnBlur('note')}
-                {...fieldErrorProps(FIELD_IDS.note, fieldErrors.note)}
-              />
-              <FieldError inputId={FIELD_IDS.note} message={fieldErrors.note} />
-              <span className="muted small">Tối đa {NOTE_MAX_LENGTH} ký tự.</span>
-            </div>
-          </section>
+          <CheckoutPaymentMethods
+            paymentMethod={values.paymentMethod}
+            codDisabledReason={codDisabledReason}
+            errorMessage={fieldErrors.paymentMethod}
+            isSubmitting={isSubmitting}
+            onChange={changePaymentMethod}
+          />
 
-          <section className="card checkout-section">
-            <fieldset className="checkout-fieldset">
-              <legend>Phương thức thanh toán</legend>
-              <label
-                className={
-                  codDisabledReason ? 'checkout-radio checkout-radio-disabled' : 'checkout-radio'
-                }
-              >
-                <input
-                  id="checkout-payment-cod"
-                  type="radio"
-                  name="paymentMethod"
-                  value="cod"
-                  checked={values.paymentMethod === 'cod'}
-                  disabled={isSubmitting || codDisabledReason !== null}
-                  aria-describedby={codDisabledReason ? 'checkout-cod-reason' : undefined}
-                  onChange={() => changePaymentMethod('cod')}
-                />
-                <span>Thanh toán khi nhận hàng (COD)</span>
-              </label>
-              {codDisabledReason && (
-                <p id="checkout-cod-reason" className="muted small checkout-radio-reason">
-                  {codDisabledReason}
-                </p>
-              )}
-              <label className="checkout-radio">
-                <input
-                  id="checkout-payment-sepay"
-                  type="radio"
-                  name="paymentMethod"
-                  value="sepay"
-                  checked={values.paymentMethod === 'sepay'}
-                  disabled={isSubmitting}
-                  onChange={() => changePaymentMethod('sepay')}
-                />
-                <span>Chuyển khoản (VietQR)</span>
-              </label>
-              <FieldError inputId="checkout-payment" message={fieldErrors.paymentMethod} />
-            </fieldset>
-          </section>
-
-          <section className="card checkout-section" aria-labelledby="checkout-invoice-title">
-            <h2 id="checkout-invoice-title">Hóa đơn VAT</h2>
-            <label className="checkout-radio">
-              <input
-                id={FIELD_IDS.invoice}
-                type="checkbox"
-                checked={values.wantsInvoice}
-                disabled={isSubmitting}
-                onChange={(event) => {
-                  setValues((current) => ({ ...current, wantsInvoice: event.target.checked }));
-                  changeField('invoice');
-                }}
-              />
-              <span>Xuất hóa đơn công ty</span>
-            </label>
-            <FieldError inputId={FIELD_IDS.invoice} message={fieldErrors.invoice} />
-
-            {values.wantsInvoice && (
-              <div className="form-grid form-grid-2 checkout-invoice-fields">
-                <div className="field field-full">
-                  <label htmlFor={FIELD_IDS['invoice.companyName']}>Tên công ty</label>
-                  <input
-                    id={FIELD_IDS['invoice.companyName']}
-                    type="text"
-                    autoComplete="organization"
-                    disabled={isSubmitting}
-                    value={values.invoice.companyName}
-                    onChange={(event) => changeInvoice('companyName', event.target.value)}
-                    onBlur={() => validateFieldOnBlur('invoice.companyName')}
-                    {...fieldErrorProps(
-                      FIELD_IDS['invoice.companyName'],
-                      fieldErrors['invoice.companyName'],
-                    )}
-                  />
-                  <FieldError
-                    inputId={FIELD_IDS['invoice.companyName']}
-                    message={fieldErrors['invoice.companyName']}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor={FIELD_IDS['invoice.taxCode']}>Mã số thuế</label>
-                  <input
-                    id={FIELD_IDS['invoice.taxCode']}
-                    type="text"
-                    inputMode="numeric"
-                    autoComplete="off"
-                    disabled={isSubmitting}
-                    value={values.invoice.taxCode}
-                    onChange={(event) => changeInvoice('taxCode', event.target.value)}
-                    onBlur={() => validateFieldOnBlur('invoice.taxCode')}
-                    {...fieldErrorProps(
-                      FIELD_IDS['invoice.taxCode'],
-                      fieldErrors['invoice.taxCode'],
-                    )}
-                  />
-                  <FieldError
-                    inputId={FIELD_IDS['invoice.taxCode']}
-                    message={fieldErrors['invoice.taxCode']}
-                  />
-                </div>
-                <div className="field">
-                  <label htmlFor={FIELD_IDS['invoice.email']}>Email nhận hóa đơn</label>
-                  <input
-                    id={FIELD_IDS['invoice.email']}
-                    type="email"
-                    autoComplete="off"
-                    disabled={isSubmitting}
-                    value={values.invoice.email}
-                    onChange={(event) => changeInvoice('email', event.target.value)}
-                    onBlur={() => validateFieldOnBlur('invoice.email')}
-                    {...fieldErrorProps(FIELD_IDS['invoice.email'], fieldErrors['invoice.email'])}
-                  />
-                  <FieldError
-                    inputId={FIELD_IDS['invoice.email']}
-                    message={fieldErrors['invoice.email']}
-                  />
-                </div>
-                <div className="field field-full">
-                  <label htmlFor={FIELD_IDS['invoice.address']}>Địa chỉ công ty</label>
-                  <input
-                    id={FIELD_IDS['invoice.address']}
-                    type="text"
-                    autoComplete="off"
-                    disabled={isSubmitting}
-                    value={values.invoice.address}
-                    onChange={(event) => changeInvoice('address', event.target.value)}
-                    onBlur={() => validateFieldOnBlur('invoice.address')}
-                    {...fieldErrorProps(
-                      FIELD_IDS['invoice.address'],
-                      fieldErrors['invoice.address'],
-                    )}
-                  />
-                  <FieldError
-                    inputId={FIELD_IDS['invoice.address']}
-                    message={fieldErrors['invoice.address']}
-                  />
-                </div>
-              </div>
-            )}
-          </section>
+          <CheckoutInvoiceSection
+            wantsInvoice={values.wantsInvoice}
+            values={values.invoice}
+            errors={fieldErrors}
+            fieldIds={FIELD_IDS}
+            isSubmitting={isSubmitting}
+            onToggle={(checked) => {
+              setValues((current) => ({ ...current, wantsInvoice: checked }));
+              changeField('invoice');
+            }}
+            onChange={changeInvoice}
+            onBlur={validateFieldOnBlur}
+          />
         </div>
 
         <CheckoutSummary
+          items={cart.items}
           cartSubtotal={cart.subtotal}
           preview={preview.data}
           isAddressIncomplete={preview.isAddressIncomplete}

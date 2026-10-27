@@ -385,6 +385,11 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
     await dismissConsent(page);
     // Header có thêm link không được làm trang tràn ngang ở 375px.
     await expectNoHorizontalOverflow(page);
+    // Ở màn hẹp, mở ngăn menu trước khi bấm liên kết điều hướng.
+    const menuButton = page.getByRole('button', { name: 'Menu', exact: true });
+    if (await menuButton.isVisible()) {
+      await menuButton.click();
+    }
     await page
       .getByRole('navigation', { name: 'Điều hướng chính' })
       .getByRole('link', { name: 'Tra cứu đơn' })

@@ -1,7 +1,9 @@
+import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { Icon } from '../../../shared/icons';
 import type { ProductDetail, ProductSkuInfo } from './catalog-api';
 import { AddToCartButton } from '../../commerce/customer/add-to-cart-button';
+import { BuyNowButton } from '../../commerce/customer/buy-now-button';
 import { ReviewsSection } from '../../commerce/customer/reviews/reviews-section';
 import { CompareControl } from './compare-control';
 import { DescriptionView } from './description-view';
@@ -64,11 +66,17 @@ function PriceBlock({ sku }: { sku: ProductSkuInfo | null }) {
 
 export function ProductView({ product }: { product: ProductDetail }) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [quantity, setQuantity] = useState(1);
   // SKU đang chọn suy ra từ URL, nên link chia sẻ mở đúng biến thể và không cần state riêng.
   const selectedSku = pickInitialSku(product.skus, searchParams.get(SKU_PARAM));
   const isDiscontinued = product.status === 'discontinued';
+  const isUnavailable = selectedSku === null || !selectedSku.inStock || isDiscontinued;
   const images = selectGalleryImages(product, selectedSku);
 
+  // Đổi biến thể thì trả số lượng về 1 để khách không đặt nhầm.
+  useEffect(() => {
+    setQuantity(1);
+  }, [selectedSku?.id]);
   function handleSelectOption(optionName: string, value: string) {
     if (!selectedSku) return;
     const nextSku = chooseSkuForOptionValue(
@@ -101,18 +109,38 @@ export function ProductView({ product }: { product: ProductDetail }) {
       </header>
 
       <div className="product-grid">
-        <ProductGallery
-          // Danh sách ảnh đổi thì dựng lại gallery, để ảnh đang xem quay về ảnh đầu của biến thể mới.
-          key={images.map((image) => image.url).join('|')}
-          images={images}
-          productName={product.name}
-        />
+        <div className="product-main-column">
+          <ProductGallery
+            // Danh sách ảnh đổi thì dựng lại gallery, để ảnh đang xem quay về ảnh đầu của biến thể mới.
+            key={images.map((image) => image.url).join('|')}
+            images={images}
+            productName={product.name}
+          />
+          {product.shortDesc && (
+            <section className="product-highlight" aria-label="Điểm nổi bật">
+              <h2>Điểm nổi bật</h2>
+              <p>{product.shortDesc}</p>
+            </section>
+          )}
+        </div>
 
         <section className="product-buy" aria-label="Mua hàng">
-          <PriceBlock sku={selectedSku} />
+          <div className="product-buy-top">
+            <PriceBlock sku={selectedSku} />
+            {selectedSku !== null && !isDiscontinued && (
+              <p className="product-stock-badge">
+                {selectedSku.inStock ? (
+                  <span className="badge badge-ok">Còn hàng</span>
+                ) : (
+                  <span className="badge badge-bad">Hết hàng</span>
+                )}
+              </p>
+            )}
+          </div>
 
           {selectedSku !== null && (
             <>
+              <p className="product-sku muted small">Mã phiên bản: {selectedSku.code}</p>
               {product.options.length > 0 && (
                 <VariantPicker
                   options={product.options}
@@ -123,19 +151,9 @@ export function ProductView({ product }: { product: ProductDetail }) {
                 />
               )}
               {/* Sản phẩm ngừng kinh doanh không hiện tồn kho, vì "Còn hàng" mâu thuẫn với dòng ngừng kinh doanh. */}
-              {!isDiscontinued && (
-                <p className="product-stock">
-                  {selectedSku.inStock ? (
-                    <span className="badge badge-ok">Còn hàng</span>
-                  ) : (
-                    <span className="badge badge-bad">Hết hàng</span>
-                  )}
-                  {selectedSku.inStock && (
-                    <span className="muted small">
-                      {' '}
-                      Còn {selectedSku.stock.toLocaleString('vi-VN')} sản phẩm
-                    </span>
-                  )}
+              {!isDiscontinued && selectedSku.inStock && (
+                <p className="product-stock muted small">
+                  Còn {selectedSku.stock.toLocaleString('vi-VN')} sản phẩm
                 </p>
               )}
             </>
@@ -143,27 +161,99 @@ export function ProductView({ product }: { product: ProductDetail }) {
 
           {isDiscontinued && <p className="muted small">Sản phẩm đã ngừng kinh doanh.</p>}
 
+          {selectedSku !== null && (
+            <div className="product-quantity">
+              <span className="product-quantity-label" id="product-quantity-label">
+                Số lượng
+              </span>
+              <div className="quantity-stepper">
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  aria-label="Giảm số lượng"
+                  disabled={isUnavailable || quantity <= 1}
+                  onClick={() => setQuantity((current) => Math.max(1, current - 1))}
+                >
+                  −
+                </button>
+                <input
+                  id="product-quantity-input"
+                  aria-labelledby="product-quantity-label"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={5}
+                  step={1}
+                  value={quantity}
+                  disabled={isUnavailable}
+                  onChange={(event) => {
+                    const parsed = parseInt(event.target.value, 10);
+                    if (Number.isNaN(parsed)) return;
+                    setQuantity(Math.max(1, Math.min(5, parsed)));
+                  }}
+                />
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  aria-label="Tăng số lượng"
+                  disabled={isUnavailable || quantity >= 5}
+                  onClick={() => setQuantity((current) => Math.min(5, current + 1))}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="product-actions">
+            <BuyNowButton
+              key={`buy-${selectedSku?.id ?? 'no-sku'}`}
+              sku={selectedSku}
+              isDiscontinued={isDiscontinued}
+              quantity={quantity}
+            />
             {/* `key` theo SKU: đổi biến thể thì xác nhận và lỗi của lần thêm trước được xóa. */}
             <AddToCartButton
               key={selectedSku?.id ?? 'no-sku'}
               sku={selectedSku}
               isDiscontinued={isDiscontinued}
+              quantity={quantity}
             />
+          </div>
+
+          <div className="product-secondary-actions">
             <CompareControl categoryId={product.category.id} productId={product.id} />
           </div>
 
           {product.warrantyMonths > 0 && (
-            <p className="muted small">Bảo hành {product.warrantyMonths} tháng</p>
+            <p className="product-warranty">
+              <Icon name="shield" />
+              <span>Bảo hành {product.warrantyMonths} tháng</span>
+            </p>
           )}
-          {product.shortDesc && <p>{product.shortDesc}</p>}
         </section>
       </div>
 
-      <DescriptionView description={product.description} />
-      <SpecTable specs={product.specs} />
-      {/* Khối đánh giá tự giữ trạng thái lỗi của nó, nên API đánh giá lỗi không làm hỏng phần mua hàng. */}
-      <ReviewsSection productId={product.id} />
+      <div
+        className={
+          product.specs.length > 0
+            ? 'product-content-grid'
+            : 'product-content-grid product-content-grid-single'
+        }
+      >
+        <div className="product-description-slot">
+          <DescriptionView description={product.description} />
+        </div>
+        {product.specs.length > 0 && (
+          <aside className="product-spec-slot" aria-label="Thông số kỹ thuật">
+            <SpecTable specs={product.specs} />
+          </aside>
+        )}
+        <div className="product-reviews-slot">
+          {/* Khối đánh giá tự giữ trạng thái lỗi của nó, nên API đánh giá lỗi không làm hỏng phần mua hàng. */}
+          <ReviewsSection productId={product.id} />
+        </div>
+      </div>
 
       {/* Hai vùng cho module sau. Vùng rỗng không có kích thước, nên khách không thấy khung trống. */}
       <div className="product-slot" data-slot="recommendations" />

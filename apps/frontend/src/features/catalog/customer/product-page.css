@@ -1,15 +1,15 @@
-/*
- * Kiểu riêng của trang sản phẩm cho khách, theo `shop-retail/p/kaze-air-14.html`.
- * Đường dẫn, thẻ không tìm thấy, nút và badge dùng lại lớp của trang danh mục và `components.css`.
- */
+/* Trang chi tiết sản phẩm dùng token của Pickory và bố cục tham chiếu từ `shop-retail/p/kaze-air-14.html`. */
+.product-page {
+  padding-bottom: var(--space-8);
+}
 
 .product-title {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-3);
   align-items: baseline;
-  margin: var(--space-3) 0 var(--space-4);
-  padding-bottom: var(--space-3);
+  margin: var(--space-3) 0 var(--space-5);
+  padding-bottom: var(--space-4);
   border-bottom: 1px solid var(--color-border);
 }
 
@@ -27,12 +27,18 @@
   overflow-wrap: anywhere;
 }
 
-/* Hai cột: ảnh bên trái rộng hơn, mua hàng bên phải. Cột nhận `min-width: 0` để ảnh không đẩy trang tràn ngang. */
 .product-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.12fr) minmax(340px, 0.88fr);
   gap: var(--space-5);
   align-items: start;
+}
+
+.product-main-column {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .gallery {
@@ -41,9 +47,10 @@
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
-/* Khung 4:3 giữ chỗ cố định. Ảnh nằm tuyệt đối trong khung nên tỉ lệ ảnh gốc không làm khung cao thêm. */
+/* Khung 4:3 giữ tỉ lệ ổn định. Ảnh tuyệt đối không làm bố cục nhảy khi tải hoặc đổi biến thể. */
 .gallery-main {
   position: relative;
   display: grid;
@@ -60,10 +67,49 @@
   object-fit: contain;
 }
 
-/* Khung giữ chỗ giữ `display: grid` của lớp chung để icon nằm giữa khung. */
 .gallery-main .product-image-placeholder {
   position: absolute;
   inset: 0;
+}
+
+.gallery-nav {
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+  color: var(--color-ink);
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.gallery-nav:hover {
+  background: var(--color-neutral-soft);
+}
+
+.gallery-nav:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.gallery-nav:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.gallery-prev {
+  left: var(--space-3);
+}
+
+.gallery-next {
+  right: var(--space-3);
 }
 
 .gallery-thumbs {
@@ -77,6 +123,7 @@
 
 .gallery-thumbs button {
   display: block;
+  flex: none;
   padding: var(--space-1);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-control);
@@ -84,32 +131,70 @@
   cursor: pointer;
 }
 
+.gallery-thumbs button:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
 .gallery-thumbs button[aria-pressed='true'] {
   border-color: var(--color-brand);
   box-shadow: 0 0 0 1px var(--color-brand);
 }
 
-.gallery-thumbs img {
+.gallery-thumbs img,
+.gallery-thumbs .product-image-placeholder {
   display: block;
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   object-fit: contain;
 }
 
-.gallery-thumbs .product-image-placeholder {
-  width: 56px;
-  height: 56px;
+.product-highlight {
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+.product-highlight h2 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-md);
+}
+
+.product-highlight p {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  line-height: 1.6;
 }
 
 .product-buy {
+  position: sticky;
+  top: 88px;
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
-.product-buy > p {
+.product-buy p {
   margin: 0;
+}
+
+.product-buy-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.product-stock-badge {
+  flex: none;
 }
 
 .product-price {
@@ -136,8 +221,8 @@
 }
 
 .product-discount {
-  padding: 2px 8px;
-  border-radius: var(--radius-control);
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-chip);
   background: var(--color-brand-soft);
   color: var(--color-brand);
   font-size: var(--text-label);
@@ -170,7 +255,7 @@
   gap: var(--space-2);
 }
 
-/* Radio gốc nằm đè lên nhãn và trong suốt: bàn phím và trình đọc màn hình dùng radio, mắt thấy nhãn dạng nút. */
+/* Radio gốc trong suốt phủ nhãn để bàn phím dùng được, trong khi mắt thấy nút chọn rõ trạng thái. */
 .variant-choice {
   position: relative;
   display: inline-flex;
@@ -210,7 +295,6 @@
   outline-offset: 2px;
 }
 
-/* Giá trị không ghép được thành SKU: chữ mờ và gạch ngang để khách thấy là không chọn được. */
 .variant-choice:has(input:disabled:not(:checked)) {
   background: var(--color-surface-muted);
   color: var(--color-ink-muted);
@@ -218,15 +302,78 @@
   cursor: not-allowed;
 }
 
-/* Sản phẩm ngừng kinh doanh: mọi giá trị chỉ để xem, nên không gạch ngang như giá trị không ghép được. */
 .variant-picker[data-readonly] .variant-choice:has(input:disabled:not(:checked)) {
   text-decoration: none;
   cursor: default;
 }
 
-/* Lựa chọn đang chọn vẫn thấy rõ nhưng con trỏ báo không đổi được. */
 .variant-choice:has(input:disabled:checked) {
   cursor: default;
+}
+
+.variant-choice.is-switching {
+  border-color: var(--color-ink-muted);
+  border-style: dashed;
+}
+
+/* Khối chọn số lượng mua sản phẩm ngay trên các nút hành động chính. */
+.product-quantity {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--color-border);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.product-quantity-label {
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-dark);
+}
+
+.product-quantity .quantity-stepper {
+  display: inline-grid;
+  grid-template-columns: 38px 48px 38px;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+}
+
+.product-quantity .quantity-stepper input {
+  width: 48px;
+  min-height: 38px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-right: 1px solid var(--color-border);
+  border-left: 1px solid var(--color-border);
+  border-radius: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font: inherit;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  -moz-appearance: textfield;
+}
+
+.product-quantity .quantity-stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.product-quantity .quantity-stepper input:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.product-quantity .quantity-stepper .btn {
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  font-size: var(--text-md);
 }
 
 .product-actions {
@@ -235,8 +382,14 @@
   gap: var(--space-2);
 }
 
-.product-actions p {
-  margin: 0;
+.product-actions .btn {
+  min-height: 48px;
+  font-weight: 700;
+}
+
+.product-secondary-actions {
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--color-border);
 }
 
 .compare-control {
@@ -253,7 +406,6 @@
   font-weight: 600;
 }
 
-/* Link tới trang so sánh dùng màu link chung, để khách nhận ra đây là chỗ bấm được. */
 .compare-control a {
   color: var(--color-link);
 }
@@ -269,16 +421,61 @@
   align-items: flex-start;
 }
 
+.product-warranty {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-sm);
+}
+
+.product-warranty .icon {
+  color: var(--color-success);
+}
+
+.product-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.85fr);
+  grid-template-areas:
+    'description specs'
+    'reviews specs';
+  gap: var(--space-5);
+  align-items: start;
+  margin-top: var(--space-6);
+}
+
+.product-content-grid-single {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.product-description-slot {
+  grid-area: description;
+  min-width: 0;
+}
+
+.product-spec-slot {
+  position: sticky;
+  top: 88px;
+  grid-area: specs;
+  min-width: 0;
+}
+
+.product-reviews-slot {
+  grid-area: reviews;
+  min-width: 0;
+}
+
 .product-info-section {
-  margin-top: var(--space-5);
-  padding: var(--space-4);
+  padding: var(--space-5);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-card);
   background: var(--color-surface);
 }
 
 .product-info-title {
-  margin: 0 0 var(--space-3);
+  margin: 0 0 var(--space-4);
   font-size: var(--text-lg);
 }
 
@@ -292,7 +489,6 @@
   font-size: var(--text-md);
 }
 
-/* Ba cấp giảm dần theo cỡ chữ và màu, để khách thấy thứ bậc khi mô tả dùng cả ba cấp. */
 .description-body h3 {
   margin: var(--space-3) 0 var(--space-2);
   font-size: var(--text-sm);
@@ -306,6 +502,7 @@
 
 .description-body p {
   margin: 0 0 var(--space-3);
+  line-height: 1.7;
 }
 
 .description-body > :first-child {
@@ -314,8 +511,8 @@
 
 .spec-groups {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
 }
 
 .spec-group {
@@ -324,6 +521,8 @@
 
 .spec-group h3 {
   margin: 0 0 var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
   font-size: var(--text-md);
 }
 
@@ -343,13 +542,12 @@
 }
 
 .spec-table th {
-  width: 40%;
+  width: 42%;
   background: var(--color-surface-muted);
   color: var(--color-ink-secondary);
   font-weight: 600;
 }
 
-/* Vùng cho module sau. Khi chưa có nội dung, vùng không chiếm chỗ. */
 .product-slot:empty {
   display: none;
 }
@@ -373,24 +571,84 @@
   background: var(--color-neutral-soft);
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1199px) {
   .product-grid {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr) 340px;
     gap: var(--space-4);
   }
 
-  .spec-groups {
-    grid-template-columns: minmax(0, 1fr);
-    gap: var(--space-4);
+  .product-buy {
+    padding: var(--space-4);
   }
 
-  .product-title h1 {
-    font-size: var(--text-lg);
+  .product-content-grid {
+    gap: var(--space-4);
   }
 }
 
-/* Giá trị có SKU nhưng phải đổi lựa chọn khác mới tới được: viền nét đứt để phân biệt với giá trị ghép thẳng. */
-.variant-choice.is-switching {
-  border-color: var(--color-ink-muted);
-  border-style: dashed;
+@media (max-width: 1023px) {
+  .product-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .product-buy,
+  .product-spec-slot {
+    position: static;
+  }
+
+  .product-content-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      'description'
+      'specs'
+      'reviews';
+  }
+}
+
+@media (max-width: 767px) {
+  .product-title h1 {
+    font-size: var(--text-lg);
+  }
+
+  .gallery {
+    padding: var(--space-3);
+  }
+
+  .gallery-nav {
+    width: 40px;
+    height: 40px;
+  }
+
+  .product-highlight {
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 359px) {
+  .product-buy,
+  .product-info-section {
+    padding: var(--space-4);
+  }
+
+  .product-buy-top {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .product-price strong {
+    font-size: var(--text-title);
+  }
+
+  .gallery-nav {
+    width: 36px;
+    height: 36px;
+  }
+
+  .gallery-prev {
+    left: var(--space-2);
+  }
+
+  .gallery-next {
+    right: var(--space-2);
+  }
 }

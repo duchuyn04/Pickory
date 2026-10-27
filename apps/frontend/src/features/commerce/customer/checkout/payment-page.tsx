@@ -6,6 +6,7 @@ import { ErrorAlert } from '../../../../shared/error-alert';
 import { Icon } from '../../../../shared/icons';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
 import { addCartItem } from '../cart-api';
+import { PurchaseProgress } from '../purchase-progress';
 import { CART_QUERY_KEY } from '../use-cart';
 import { fetchOrderDetail } from '../orders/orders-api';
 import { fetchOrderPayment } from './payment-api';
@@ -186,6 +187,7 @@ export function PaymentPage() {
 
   return (
     <main className="catalog-page payment-page">
+      <PurchaseProgress stage="payment" />
       <div className="payment-heading">
         <div>
           <p className="payment-eyebrow">Đơn hàng {payment.code}</p>

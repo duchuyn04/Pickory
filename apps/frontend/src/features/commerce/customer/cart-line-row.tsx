@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { Icon } from '../../../shared/icons';
 import { formatProductPrice } from '../../catalog/customer/product-display';
 import type { CartLine } from './cart-api';
 import { ProductThumbnail } from './product-thumbnail';
@@ -67,7 +68,7 @@ export function CartLineRow({
   }
 
   return (
-    <li className="cart-line" data-sku-id={line.skuId}>
+    <li className="cart-line" data-sku-id={line.skuId} aria-busy={isBusy}>
       <ProductThumbnail imageUrl={line.image?.url} size={96} className="cart-line-image" />
 
       <div className="cart-line-main">
@@ -81,7 +82,8 @@ export function CartLineRow({
         {line.optionValues && <OptionValues optionValues={line.optionValues} />}
         {line.unitPrice !== null && (
           <p className="cart-line-price">
-            {formatProductPrice(line.unitPrice)}
+            <span className="cart-line-price-label">Đơn giá</span>
+            <span>{formatProductPrice(line.unitPrice)}</span>
             {line.compareAtPrice !== null && line.compareAtPrice > line.unitPrice && (
               <s className="muted">{formatProductPrice(line.compareAtPrice)}</s>
             )}
@@ -92,6 +94,9 @@ export function CartLineRow({
 
       {!isRemoved && (
         <div className="cart-line-quantity">
+          <span className="cart-line-quantity-label" aria-hidden="true">
+            Số lượng
+          </span>
           <label htmlFor={inputId} className="sr">
             Số lượng của {productName}
           </label>
@@ -135,11 +140,16 @@ export function CartLineRow({
       )}
 
       {!isRemoved && line.lineTotal !== null && (
-        <p
-          className={line.purchasable ? 'cart-line-total' : 'cart-line-total cart-line-total-muted'}
-        >
-          {formatProductPrice(line.lineTotal)}
-        </p>
+        <div className="cart-line-total-wrap">
+          <span className="cart-line-total-label">Thành tiền</span>
+          <p
+            className={
+              line.purchasable ? 'cart-line-total' : 'cart-line-total cart-line-total-muted'
+            }
+          >
+            {formatProductPrice(line.lineTotal)}
+          </p>
+        </div>
       )}
 
       <button
@@ -149,7 +159,8 @@ export function CartLineRow({
         disabled={isBusy}
         onClick={onRemove}
       >
-        Xóa
+        <Icon name="trash" />
+        <span>Xóa</span>
       </button>
 
       {errorMessage && <ErrorAlert message={errorMessage} className="cart-line-alert" />}

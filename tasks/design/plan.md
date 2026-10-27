@@ -29,7 +29,7 @@ DS-01 token, CSS component chung, tài liệu design system
 
 ## Task List
 
-- [x] DS-01 · [x] DS-02 · [x] DS-03 · [x] DS-04 · [x] DS-05 · [x] DS-06 · [ ] DS-07
+- [x] DS-01 · [x] DS-02 · [x] DS-03 · [x] DS-04 · [x] DS-05 · [x] DS-06 · [x] DS-07
 
 ### Checkpoint DS
 

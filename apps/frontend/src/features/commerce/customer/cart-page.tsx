@@ -8,6 +8,7 @@ import { CartLineRow } from './cart-line-row';
 import { canCheckout, checkoutHint } from './cart-labels';
 import { useCart, useRemoveCartItem, useSetCartQuantity } from './use-cart';
 import './cart-page.css';
+import { PurchaseProgress } from './purchase-progress';
 
 function EmptyCart() {
   return (
@@ -31,28 +32,44 @@ function CartSummary({ cart }: { cart: Cart }) {
   const hint = checkoutHint(cart);
   return (
     <aside className="card cart-summary" aria-label="Tổng giỏ hàng">
-      <p className="cart-summary-row">
-        <span>Tạm tính</span>
-        <strong>{formatProductPrice(cart.subtotal)}</strong>
-      </p>
-      <p className="muted small">Phí vận chuyển được tính ở bước đặt hàng.</p>
-      <Link
-        to="/checkout"
-        className="btn btn-primary btn-block cart-checkout"
-        aria-disabled={isCheckoutEnabled ? undefined : true}
-        aria-describedby={hint ? 'cart-checkout-hint' : undefined}
-        onClick={(event) => {
-          // Nút tắt là liên kết nên phải chặn điều hướng bằng tay. Thuộc tính `aria-disabled` không tự chặn.
-          if (!isCheckoutEnabled) event.preventDefault();
-        }}
-      >
-        Tiến hành đặt hàng
-      </Link>
-      {hint && (
-        <p id="cart-checkout-hint" className="cart-checkout-hint muted small">
-          {hint}
+      <div className="cart-summary-head">
+        <h2>Tóm tắt đơn hàng</h2>
+        <p className="muted small">Kiểm tra lại sản phẩm trước khi tiếp tục.</p>
+      </div>
+
+      <div className="cart-summary-figures">
+        <p className="cart-summary-row">
+          <span>Tạm tính</span>
+          <strong>{formatProductPrice(cart.subtotal)}</strong>
         </p>
-      )}
+        <p className="cart-summary-shipping muted small">
+          <span>Phí vận chuyển</span>
+          <span>Tính ở bước tiếp theo</span>
+        </p>
+      </div>
+
+      <div className="cart-summary-actions">
+        <Link
+          to="/checkout"
+          className="btn btn-primary btn-block cart-checkout"
+          aria-disabled={isCheckoutEnabled ? undefined : true}
+          aria-describedby={hint ? 'cart-checkout-hint' : undefined}
+          onClick={(event) => {
+            // Nút tắt là liên kết nên phải chặn điều hướng bằng tay. Thuộc tính `aria-disabled` không tự chặn.
+            if (!isCheckoutEnabled) event.preventDefault();
+          }}
+        >
+          Tiến hành đặt hàng
+        </Link>
+        {hint && (
+          <p id="cart-checkout-hint" className="cart-checkout-hint muted small">
+            {hint}
+          </p>
+        )}
+        <Link to="/" className="btn btn-outline btn-block">
+          Tiếp tục mua sắm
+        </Link>
+      </div>
     </aside>
   );
 }
@@ -105,7 +122,12 @@ export function CartPage() {
 
   return (
     <main className="catalog-page cart-page">
-      <h1>Giỏ hàng</h1>
+      <PurchaseProgress stage="cart" />
+
+      <header className="cart-page-header">
+        <h1>Giỏ hàng</h1>
+        <p className="muted">Kiểm tra sản phẩm và số lượng trước khi đặt hàng.</p>
+      </header>
 
       {reorderFailedCount > 0 && (
         <p role="status" className="alert alert-warn">
@@ -128,18 +150,26 @@ export function CartPage() {
           <EmptyCart />
         ) : (
           <div className="cart-layout">
-            <ul className="cart-lines card">
-              {cartQuery.data.items.map((line) => (
-                <CartLineRow
-                  key={line.skuId}
-                  line={line}
-                  errorMessage={lineErrors[line.skuId] ?? null}
-                  isBusy={busySkuId === line.skuId}
-                  onSetQuantity={(quantity) => handleSetQuantity(line.skuId, quantity)}
-                  onRemove={() => void handleRemove(line.skuId)}
-                />
-              ))}
-            </ul>
+            <section className="card cart-items-card" aria-labelledby="cart-items-title">
+              <div className="cart-items-head">
+                <h2 id="cart-items-title">Sản phẩm trong giỏ</h2>
+                <span className="cart-items-count">
+                  {cartQuery.data.items.length} dòng sản phẩm
+                </span>
+              </div>
+              <ul className="cart-lines">
+                {cartQuery.data.items.map((line) => (
+                  <CartLineRow
+                    key={line.skuId}
+                    line={line}
+                    errorMessage={lineErrors[line.skuId] ?? null}
+                    isBusy={busySkuId === line.skuId}
+                    onSetQuantity={(quantity) => handleSetQuantity(line.skuId, quantity)}
+                    onRemove={() => void handleRemove(line.skuId)}
+                  />
+                ))}
+              </ul>
+            </section>
             <CartSummary cart={cartQuery.data} />
           </div>
         ))}

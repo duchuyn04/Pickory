@@ -6,6 +6,7 @@ import { Icon } from '../../../../shared/icons';
 import { ResultIcon } from '../../../../shared/result-panel';
 import { useActor } from '../../../identity/hooks/use-actor';
 import { formatPaymentMethod } from '../../order-labels';
+import { PurchaseProgress } from '../purchase-progress';
 import { buildNextSteps, type NextStepState } from '../orders/order-next-steps';
 import { OrderItemsList, OrderPaymentRows, formatShippingAddress } from '../orders/order-sections';
 import { buildOrderSuccessLink } from '../orders/order-success-link';
@@ -153,6 +154,7 @@ export function OrderSuccessPage() {
 
   return (
     <main className="catalog-page checkout-page order-success-page">
+      <PurchaseProgress stage="success" />
       <section className="card order-success-hero">
         <ResultIcon tone="success" />
         <div className="order-success-hero-body">

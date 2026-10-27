@@ -10,13 +10,17 @@
 
 .site-header-inner {
   display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2) 14px;
   align-items: center;
   max-width: 1200px;
   min-height: 64px;
   margin: 0 auto;
   padding: var(--space-2) var(--space-4);
+  gap: var(--space-2) 14px;
+}
+
+/* Nút mở menu chỉ hiện trên màn hình hẹp dưới 768px. */
+.site-menu-toggle {
+  display: none;
 }
 
 .site-logo {
@@ -37,6 +41,19 @@
   padding: 3px 5px;
   border-radius: 9px;
   background: var(--color-on-brand);
+}
+
+/* Trên màn hình rộng, ngăn menu nằm ngang cùng hàng với logo và giỏ hàng. */
+.site-menu-panel {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Tiêu đề và nút đóng ngăn menu chỉ dùng ở chế độ ngăn kéo trên mobile. */
+.site-menu-head {
+  display: none;
 }
 
 .site-nav {
@@ -92,23 +109,209 @@
   background: var(--color-brand-soft);
 }
 
+.site-header-cart {
+  display: flex;
+  align-items: center;
+  margin-left: var(--space-1);
+}
+
+.site-menu-scrim {
+  display: none;
+}
+
 .site-header-alert {
   max-width: 1200px;
   margin: 0 auto var(--space-2);
 }
 
-/* Màn hẹp: điều hướng xuống hàng riêng dưới logo, thao tác nằm cạnh logo. */
+/* Dưới 768px: header thu về 1 hàng duy nhất gồm nút menu, logo và giỏ hàng. */
 @media (max-width: 767px) {
   .site-header-inner {
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    min-height: 56px;
     padding: var(--space-2) var(--space-3);
+    gap: var(--space-2);
   }
 
-  .site-nav {
-    order: 3;
+  /* Nút menu burger có kích thước tối thiểu 44 x 44 px để đạt chuẩn chạm trên di động. */
+  .site-menu-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .site-menu-toggle:hover {
+    background: var(--color-header-soft);
+  }
+
+  .site-logo {
+    margin-right: auto;
+  }
+
+  .site-header-cart {
+    margin-left: 0;
+  }
+
+  .site-header-cart .site-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0 var(--space-2);
+  }
+
+  /* Lớp phủ màn hình chặn thao tác với trang phía sau khi mở ngăn kéo. */
+  .site-menu-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: 55;
+    display: block;
+    background: var(--color-overlay);
+  }
+
+  /* Ngăn kéo cố định cạnh trái, ẩn bằng visibility khi đóng để tránh nhận focus bàn phím. */
+  .site-menu-panel {
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    width: min(320px, 86vw);
+    max-width: 100vw;
+    height: 100%;
+    background: var(--color-surface);
+    color: var(--color-dark);
+    box-shadow: var(--shadow-drawer);
+    transform: translateX(-100%);
+    visibility: hidden;
+    overflow-y: auto;
+  }
+
+  /* Ngăn kéo mở trượt ra và hiện rõ cho người dùng. */
+  .site-menu-panel[data-open='true'] {
+    transform: none;
+    visibility: visible;
+    transition: transform var(--duration-fast) ease;
+  }
+
+  .site-menu-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    min-height: 56px;
+    padding: var(--space-2) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .site-menu-title {
+    color: var(--color-dark);
+    font-size: var(--text-md);
+    font-weight: 700;
+  }
+
+  /* Nút đóng ngăn menu có diện tích bấm 44 x 44 px. */
+  .site-menu-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-control);
+    background: none;
+    color: var(--color-dark);
+    cursor: pointer;
+  }
+
+  .site-menu-close:hover {
+    background: var(--color-surface-muted);
+  }
+
+  .site-menu-panel .site-nav {
+    display: flex;
+    flex-direction: column;
     width: 100%;
+    gap: 0;
+    padding: var(--space-2) 0;
+    border-bottom: 1px solid var(--color-border);
   }
 
-  .site-action {
-    padding: 6px var(--space-2);
+  .site-menu-panel .site-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    margin: 0;
+    gap: 0;
+    padding: var(--space-2) 0;
+  }
+
+  /* Các dòng liên kết trong ngăn kéo xếp dọc với vùng bấm cao ít nhất 44 px. */
+  .site-menu-panel .site-nav a,
+  .site-menu-panel .site-action {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 44px;
+    padding: var(--space-2) var(--space-4);
+    border-radius: 0;
+    color: var(--color-dark);
+    font-size: var(--text-md);
+    font-weight: 500;
+    text-decoration: none;
+    white-space: normal;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: left;
+  }
+
+  .site-menu-panel .site-nav a:hover,
+  .site-menu-panel .site-action:hover {
+    background: var(--color-surface-muted);
+    color: var(--color-brand);
+  }
+
+  /* Viền focus trong ngăn menu dùng màu nổi trên nền sáng. */
+  .site-menu-panel :focus-visible {
+    outline-color: var(--color-focus);
+  }
+
+  .site-menu-panel .site-action-primary {
+    justify-content: center;
+    margin: var(--space-2) var(--space-4);
+    width: calc(100% - var(--space-4) * 2);
+    min-height: 44px;
+    border-radius: var(--radius-control);
+    background: var(--color-brand);
+    color: var(--color-on-brand);
+    font-weight: 700;
+  }
+
+  .site-menu-panel .site-action-primary:hover {
+    background: var(--color-brand-hover);
+    color: var(--color-on-brand);
+  }
+}
+
+/* Tắt chuyển động khi người dùng yêu cầu giảm hiệu ứng. */
+@media (prefers-reduced-motion: reduce) {
+  .site-menu-panel,
+  .site-menu-panel[data-open='true'] {
+    transition: none;
   }
 }

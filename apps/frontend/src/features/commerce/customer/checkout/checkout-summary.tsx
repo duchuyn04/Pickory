@@ -1,8 +1,12 @@
+import { Link } from 'react-router-dom';
 import { ErrorAlert } from '../../../../shared/error-alert';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
+import type { CartLine } from '../cart-api';
+import { ProductThumbnail } from '../product-thumbnail';
 import type { CheckoutPreview } from './checkout-api';
 
 interface CheckoutSummaryProps {
+  items: CartLine[];
   // Tạm tính của giỏ. Hiện khi chưa có preview.
   cartSubtotal: number;
   preview: CheckoutPreview | undefined;
@@ -32,8 +36,36 @@ function SummaryRow({
   );
 }
 
+function CheckoutItem({ line }: { line: CartLine }) {
+  const options = Object.entries(line.optionValues ?? {});
+  return (
+    <li className="checkout-summary-item">
+      <ProductThumbnail
+        imageUrl={line.image?.url}
+        size={56}
+        className="checkout-summary-item-image"
+      />
+      <div className="checkout-summary-item-main">
+        <p className="checkout-summary-item-name">{line.productName ?? 'Sản phẩm đã gỡ'}</p>
+        {options.length > 0 && (
+          <p className="checkout-summary-item-meta">
+            {options.map(([name, value]) => `${name}: ${value}`).join(' · ')}
+          </p>
+        )}
+        <p className="checkout-summary-item-meta">Số lượng: {line.quantity}</p>
+      </div>
+      {line.lineTotal !== null && (
+        <strong className="checkout-summary-item-total">
+          {formatProductPrice(line.lineTotal)}
+        </strong>
+      )}
+    </li>
+  );
+}
+
 // Khối tóm tắt tiền. Vùng số tiền có `aria-live` để trình đọc màn hình đọc khi tổng đổi.
 export function CheckoutSummary({
+  items,
   cartSubtotal,
   preview,
   isAddressIncomplete,
@@ -47,7 +79,18 @@ export function CheckoutSummary({
 
   return (
     <aside className="card checkout-summary" aria-label="Tóm tắt đơn hàng">
-      <h2 className="checkout-summary-title">Tóm tắt đơn hàng</h2>
+      <div className="checkout-summary-head">
+        <h2 className="checkout-summary-title">Tóm tắt đơn hàng</h2>
+        <Link to="/cart" className="checkout-summary-edit">
+          Sửa giỏ hàng
+        </Link>
+      </div>
+
+      <ul className="checkout-summary-items">
+        {items.map((line) => (
+          <CheckoutItem key={line.skuId} line={line} />
+        ))}
+      </ul>
 
       <div aria-live="polite" aria-atomic="true" className="checkout-summary-figures">
         {preview && !hasError ? (

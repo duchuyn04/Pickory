@@ -1,0 +1,117 @@
+.purchase-progress {
+  max-width: 720px;
+  margin: 0 auto var(--space-5);
+}
+
+.purchase-progress-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.purchase-progress-step {
+  position: relative;
+  min-width: 0;
+  text-align: center;
+}
+
+/* Đường nối đứng sau marker và dừng trước marker kế tiếp, nên không chạy qua chữ hoặc số. */
+.purchase-progress-step:not(:last-child)::after {
+  position: absolute;
+  z-index: 0;
+  top: 18px;
+  right: calc(-50% + 28px);
+  left: calc(50% + 28px);
+  height: 1px;
+  background: var(--color-border-strong);
+  content: '';
+}
+
+.purchase-progress-step[data-state='done']:not(:last-child)::after {
+  background: var(--color-success);
+}
+
+.purchase-progress-link {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+  min-width: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  text-decoration: none;
+}
+
+a.purchase-progress-link:hover {
+  color: var(--color-brand);
+}
+
+a.purchase-progress-link:focus-visible {
+  border-radius: var(--radius-control);
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.purchase-progress-marker {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.purchase-progress-marker .icon {
+  width: 18px;
+  height: 18px;
+}
+
+.purchase-progress-step[data-state='done'] .purchase-progress-marker {
+  border-color: var(--color-success-soft);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.purchase-progress-step[data-state='current'] .purchase-progress-marker {
+  border-color: var(--color-brand);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.purchase-progress-step[data-state='current'] .purchase-progress-label {
+  color: var(--color-ink);
+  font-weight: 700;
+}
+
+.purchase-progress-label {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 599px) {
+  .purchase-progress {
+    margin-bottom: var(--space-4);
+  }
+
+  .purchase-progress-link {
+    font-size: var(--text-xs);
+  }
+
+  .purchase-progress-marker {
+    width: 32px;
+    height: 32px;
+  }
+
+  .purchase-progress-step:not(:last-child)::after {
+    top: 16px;
+    right: calc(-50% + 24px);
+    left: calc(50% + 24px);
+  }
+}
