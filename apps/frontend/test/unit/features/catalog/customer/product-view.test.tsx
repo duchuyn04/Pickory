@@ -359,3 +359,79 @@ describe('ProductView: so sánh', () => {
     vi.restoreAllMocks();
   });
 });
+
+describe('ProductView: số lượng sản phẩm', () => {
+  it('mặc định số lượng là 1 và nút giảm bị vô hiệu hóa', async () => {
+    await renderProduct(buildProductDetail());
+    const input = container.querySelector<HTMLInputElement>('.product-quantity input');
+    const decrease = container.querySelector<HTMLButtonElement>(
+      '.product-quantity button[aria-label="Giảm số lượng"]',
+    );
+    const increase = container.querySelector<HTMLButtonElement>(
+      '.product-quantity button[aria-label="Tăng số lượng"]',
+    );
+
+    expect(input?.value).toBe('1');
+    expect(decrease?.disabled).toBe(true);
+    expect(increase?.disabled).toBe(false);
+  });
+
+  it('bấm tăng và giảm số lượng trong khoảng 1 đến 5', async () => {
+    await renderProduct(buildProductDetail());
+    const input = container.querySelector<HTMLInputElement>('.product-quantity input');
+    const decrease = container.querySelector<HTMLButtonElement>(
+      '.product-quantity button[aria-label="Giảm số lượng"]',
+    );
+    const increase = container.querySelector<HTMLButtonElement>(
+      '.product-quantity button[aria-label="Tăng số lượng"]',
+    );
+
+    await act(async () => increase?.click());
+    expect(input?.value).toBe('2');
+    expect(decrease?.disabled).toBe(false);
+
+    // Tăng tiếp lên mức tối đa là 5.
+    await act(async () => increase?.click());
+    await act(async () => increase?.click());
+    await act(async () => increase?.click());
+    expect(input?.value).toBe('5');
+    expect(increase?.disabled).toBe(true);
+
+    // Giảm xuống 4 thì nút tăng hoạt động trở lại.
+    await act(async () => decrease?.click());
+    expect(input?.value).toBe('4');
+    expect(increase?.disabled).toBe(false);
+  });
+
+  it('đổi biến thể đặt lại số lượng về 1', async () => {
+    await renderProduct(buildProductDetail());
+    const increase = container.querySelector<HTMLButtonElement>(
+      '.product-quantity button[aria-label="Tăng số lượng"]',
+    );
+    await act(async () => increase?.click());
+    expect(container.querySelector<HTMLInputElement>('.product-quantity input')?.value).toBe('2');
+
+    await choose('Màu', 'Bạc');
+    // Đổi biến thể thì số lượng quay về 1 để tránh mua nhầm số lượng lớn của máy mới.
+    expect(container.querySelector<HTMLInputElement>('.product-quantity input')?.value).toBe('1');
+  });
+
+  it('biến thể hết hàng hoặc ngừng kinh doanh vô hiệu hóa bộ chọn số lượng', async () => {
+    await renderProduct(buildProductDetail());
+    await choose('Màu', 'Đen');
+    await choose('Bộ nhớ', '512GB');
+
+    const input = container.querySelector<HTMLInputElement>('.product-quantity input');
+    const decrease = container.querySelector<HTMLButtonElement>(
+      '.product-quantity button[aria-label="Giảm số lượng"]',
+    );
+    const increase = container.querySelector<HTMLButtonElement>(
+      '.product-quantity button[aria-label="Tăng số lượng"]',
+    );
+
+    // Biến thể hết hàng thì khóa ô nhập và hai nút tăng giảm.
+    expect(input?.disabled).toBe(true);
+    expect(decrease?.disabled).toBe(true);
+    expect(increase?.disabled).toBe(true);
+  });
+});

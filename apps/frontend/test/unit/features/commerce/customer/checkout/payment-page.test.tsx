@@ -108,6 +108,14 @@ afterEach(async () => {
 });
 
 describe('PaymentPage', () => {
+  it('hiện bước thanh toán và tổng tiền của đơn', async () => {
+    await renderPayment();
+
+    const currentStep = container.querySelector('.purchase-progress-step[data-state="current"]');
+    expect(currentStep?.textContent).toContain('Thanh toán và hoàn tất');
+    expect(container.querySelector('.payment-summary-total strong')?.textContent).toBe('123.456 đ');
+  });
+
   it('hỏi sau mỗi 3 giây và dừng hẳn khi rời trang', async () => {
     await renderPayment();
     expect(calls.filter((call) => call.path.includes('/payment'))).toHaveLength(1);

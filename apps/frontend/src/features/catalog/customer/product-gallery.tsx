@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Icon } from '../../../shared/icons';
 import { buildCloudinarySrcSet, withCloudinaryTransform } from '../shared/image-url';
 import { ProductImage } from '../shared/product-image';
 import type { ProductImageInfo } from './catalog-api';
@@ -20,6 +21,16 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
   // Danh sách ảnh đổi khi khách đổi màu. Vị trí cũ có thể vượt danh sách mới nên kẹp lại.
   const activeImage = images[Math.min(activeIndex, images.length - 1)];
 
+  function showPreviousImage() {
+    // Chỉ lùi khi còn ảnh trước, nên vị trí đầu danh sách không bị âm.
+    setActiveIndex((current) => Math.max(0, current - 1));
+  }
+
+  function showNextImage() {
+    // Chỉ tới khi còn ảnh sau, nên vị trí cuối không vượt danh sách.
+    setActiveIndex((current) => Math.min(images.length - 1, current + 1));
+  }
+
   return (
     <div className="gallery">
       <div className="gallery-main">
@@ -36,6 +47,28 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
           height={MAIN_IMAGE_FALLBACK_WIDTH}
           fetchPriority="high"
         />
+        {images.length > 1 && (
+          <>
+            <button
+              type="button"
+              className="gallery-nav gallery-prev"
+              aria-label="Ảnh trước"
+              disabled={activeIndex === 0}
+              onClick={showPreviousImage}
+            >
+              <Icon name="chevronLeft" />
+            </button>
+            <button
+              type="button"
+              className="gallery-nav gallery-next"
+              aria-label="Ảnh sau"
+              disabled={activeIndex === images.length - 1}
+              onClick={showNextImage}
+            >
+              <Icon name="chevronRight" />
+            </button>
+          </>
+        )}
       </div>
       {images.length > 1 && (
         <ul className="gallery-thumbs">

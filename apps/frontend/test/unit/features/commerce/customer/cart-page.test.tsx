@@ -82,6 +82,17 @@ describe('CartPage: hiển thị', () => {
     expect(container.querySelector('.cart-summary')?.textContent).toContain('40.000.000 đ');
   });
 
+  it('hiện bước giỏ hàng, tiêu đề tóm tắt và liên kết tiếp tục mua sắm', async () => {
+    stubCartApi(buildCart([buildCartLine()]));
+    await renderWithProviders(root, cartRoutes(), '/cart');
+
+    const currentStep = container.querySelector('.purchase-progress-step[data-state="current"]');
+    const summary = container.querySelector('.cart-summary');
+    expect(currentStep?.textContent).toContain('Giỏ hàng');
+    expect(summary?.querySelector('h2')?.textContent).toBe('Tóm tắt đơn hàng');
+    expect(summary?.querySelector('a[href="/"]')?.textContent).toBe('Tiếp tục mua sắm');
+  });
+
   it('ô số lượng có label gắn đúng ô', async () => {
     stubCartApi(buildCart([buildCartLine({ quantity: 3 })]));
     await renderWithProviders(root, cartRoutes(), '/cart');

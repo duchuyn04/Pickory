@@ -238,6 +238,20 @@ describe('CheckoutPage: preview và tóm tắt tiền', () => {
     expect(api.previewCalls()).toHaveLength(0);
   });
 
+  it('hiện bước đặt hàng và sản phẩm thật trong tóm tắt', async () => {
+    stubCheckoutApi({}, buildCart([buildCartLine({ quantity: 2, lineTotal: 40_000_000 })]));
+    await openCheckout();
+
+    const currentStep = container.querySelector('.purchase-progress-step[data-state="current"]');
+    const items = container.querySelectorAll('.checkout-summary-items > li');
+    expect(currentStep?.textContent).toContain('Thông tin đặt hàng');
+    expect(items).toHaveLength(1);
+    expect(summaryText()).toContain('Laptop Kaze');
+    expect(summaryText()).toContain('Màu: Đen');
+    expect(summaryText()).toContain('Số lượng: 2');
+    expect(summaryText()).toContain('40.000.000 đ');
+  });
+
   it('hiện tạm tính, phí vận chuyển, phần miễn phí và tổng tiền của preview', async () => {
     stubCheckoutApi({
       previewReply: () =>

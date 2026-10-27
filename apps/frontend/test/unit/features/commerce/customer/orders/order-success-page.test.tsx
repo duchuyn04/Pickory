@@ -119,6 +119,16 @@ async function renderOrderSuccess(
 }
 
 describe('OrderSuccessPage', () => {
+  it('đánh dấu cả ba bước đã xong khi đặt hàng thành công', async () => {
+    stubOrderApi(() => orderResponse(buildOrderDetail()));
+    await renderOrderSuccess('PK12345678', { accessToken: 'token-abc' }, null);
+
+    expect(container.querySelectorAll('.purchase-progress-step[data-state="done"]')).toHaveLength(
+      3,
+    );
+    expect(container.querySelector('[aria-current="step"]')).toBeNull();
+  });
+
   it('hiển thị mã đơn và liên kết xem đơn kèm token khi có accessToken trong state', async () => {
     // Khách có token thì nhận liên kết xem đơn kèm token truy cập.
     stubOrderApi(() => orderResponse(buildOrderDetail()));

@@ -24,9 +24,17 @@ function useCartMutation<Variables>(mutationFn: (variables: Variables) => Promis
     },
   });
 }
+// Đầu vào thêm giỏ có thể là SKU hoặc kèm số lượng mong muốn.
+export type AddCartItemInput = string | { skuId: string; quantity: number };
 
 export function useAddCartItem() {
-  return useCartMutation((skuId: string) => addCartItem(skuId, 1));
+  return useCartMutation((input: AddCartItemInput) => {
+    // Chuỗi thuần tương thích với các màn chỉ cần thêm 1 sản phẩm.
+    if (typeof input === 'string') {
+      return addCartItem(input, 1);
+    }
+    return addCartItem(input.skuId, input.quantity);
+  });
 }
 
 export function useSetCartQuantity() {
