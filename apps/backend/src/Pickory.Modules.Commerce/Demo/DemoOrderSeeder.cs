@@ -18,7 +18,7 @@ internal static class DemoOrderSeeder
     public const string CodePrefix = "DEMO-";
 
     private const int MonthCount = 6;
-    private const int OrdersPerMonth = 5;
+    private const int OrdersPerMonth = 8;
     private const int MaxBrands = 6;
     private const int ShippingFee = 30_000;
     private const int SepayShippingDiscount = 10_000;
@@ -46,6 +46,51 @@ internal static class DemoOrderSeeder
         DateOnly Day,
         DemoProduct Product,
         int Quantity);
+
+    private sealed record DemoCustomer(string Name, string Phone, string Email, string Note);
+
+    private sealed record DemoAddress(string ProvinceCode, string ProvinceName, string WardCode, string WardName, string Line);
+
+    // Tên, số điện thoại và email là dữ liệu mẫu, không phải khách thật. Số điện thoại dùng dải 09000000xx để dễ nhận ra.
+    private static readonly DemoCustomer[] Customers =
+    [
+        new("Nguyễn Văn An", "0900000001", "an.nguyen@example.com", "Giao giờ hành chính"),
+        new("Trần Thị Mai", "0900000002", "mai.tran@example.com", "Gọi trước khi giao"),
+        new("Lê Hoàng Nam", "0900000003", "nam.le@example.com", "Để hàng ở lễ tân"),
+        new("Phạm Minh Anh", "0900000004", "anh.pham@example.com", "Không cần hóa đơn"),
+        new("Hoàng Đức Thịnh", "0900000005", "thinh.hoang@example.com", "Giao ngoài giờ"),
+        new("Vũ Thu Hà", "0900000006", "ha.vu@example.com", "Đóng gói kỹ"),
+        new("Đặng Quốc Bảo", "0900000007", "bao.dang@example.com", "Liên hệ trước 30 phút"),
+        new("Bùi Ngọc Lan", "0900000008", "lan.bui@example.com", "Giao trong buổi sáng"),
+        new("Đỗ Thanh Tùng", "0900000009", "tung.do@example.com", "Để hàng ở bảo vệ"),
+        new("Ngô Thị Hương", "0900000010", "huong.ngo@example.com", "Gọi trước 15 phút"),
+        new("Phan Văn Hùng", "0900000011", "hung.phan@example.com", "Giao giờ hành chính"),
+        new("Trịnh Mai Chi", "0900000012", "chi.trinh@example.com", "Gọi trước khi giao"),
+        new("Lý Gia Hân", "0900000013", "han.ly@example.com", "Để hàng ở lễ tân"),
+        new("Mai Xuân Trường", "0900000014", "truong.mai@example.com", "Không cần hóa đơn"),
+        new("Tạ Thị Kim Oanh", "0900000015", "oanh.ta@example.com", "Giao ngoài giờ"),
+        new("Cao Minh Tuấn", "0900000016", "tuan.cao@example.com", "Đóng gói kỹ"),
+        new("Lưu Thu Trang", "0900000017", "trang.luu@example.com", "Liên hệ trước 30 phút"),
+        new("Hồ Nhật Minh", "0900000018", "minh.ho@example.com", "Giao trong buổi sáng"),
+        new("Dương Khánh Linh", "0900000019", "linh.duong@example.com", "Để hàng ở bảo vệ"),
+        new("Võ Thành Đạt", "0900000020", "dat.vo@example.com", "Gọi trước 15 phút"),
+    ];
+
+    private static readonly DemoAddress[] Addresses =
+    [
+        new("1000001", "Hà Nội", "1003646", "Phường Ba Đình", "Số 25 phố Hàng Bài"),
+        new("1000001", "Hà Nội", "1003646", "Phường Ba Đình", "Số 18 đường Nguyễn Huệ"),
+        new("1000001", "Hà Nội", "1003646", "Phường Ba Đình", "Căn hộ 1205 Vinhomes Times City"),
+        new("1000001", "Hà Nội", "1003646", "Phường Ba Đình", "Số 42 phố Tràng Tiền"),
+        new("1000001", "Hà Nội", "1003646", "Phường Ba Đình", "Số 7 ngõ 68 Cầu Giấy"),
+        new("1000001", "Hà Nội", "1003646", "Phường Ba Đình", "Số 101 đường Trần Hưng Đạo"),
+        new("1000001", "Hà Nội", "1003646", "Phường Ba Đình", "Số 88 phố Huế"),
+        new("1000001", "Hà Nội", "1003646", "Phường Ba Đình", "Số 33 phố Đội Cấn"),
+        new("1000013", "An Giang", "1006607", "Đặc khu Phú Quốc", "Số 15 đường Trần Hưng Đạo, Dương Đông"),
+        new("1000013", "An Giang", "1006607", "Đặc khu Phú Quốc", "Số 8 đường 30 Tháng 4, Dương Đông"),
+        new("1000013", "An Giang", "1006607", "Đặc khu Phú Quốc", "Số 22 đường Nguyễn Trãi, Dương Đông"),
+        new("1000013", "An Giang", "1006607", "Đặc khu Phú Quốc", "Bãi Trường, Dương Đông"),
+    ];
 
     private sealed record BuiltOrder(Order Order, PaymentTransaction? Payment);
 
@@ -164,7 +209,7 @@ internal static class DemoOrderSeeder
         return products;
     }
 
-    // Dựng kế hoạch cho 6 tháng lịch gần nhất. Mỗi tháng có hai đơn đã thanh toán và ba đơn hủy.
+    // Dựng kế hoạch cho 6 tháng lịch gần nhất. Mỗi tháng có 8 đơn, lặp lại 5 loại để đủ trạng thái báo cáo.
     private static List<DemoOrderPlan> BuildPlans(
         DateOnly currentMonth, DateOnly today, IReadOnlyList<DemoProduct> products)
     {
@@ -182,7 +227,8 @@ internal static class DemoOrderSeeder
                     day = today;
                 }
 
-                var kind = (DemoOrderKind)kindIndex;
+                // Lặp lại 5 loại đơn để tháng có 8 đơn mà vẫn đủ trạng thái cho báo cáo.
+                var kind = (DemoOrderKind)(kindIndex % 5);
                 var product = products[(monthOffset * OrdersPerMonth + kindIndex) % products.Count];
                 var quantity = 1 + ((monthOffset + kindIndex) % 2);
                 var code = CodePrefix
@@ -227,6 +273,11 @@ internal static class DemoOrderSeeder
             _ => null,
         };
 
+        // Chọn khách và địa chỉ theo mã đơn để cùng một kế hoạch luôn ra cùng dữ liệu.
+        var seed = plan.Code.Sum(character => character);
+        var customer = Customers[seed % Customers.Length];
+        var address = Addresses[(seed / Customers.Length) % Addresses.Length];
+
         var order = new Order
         {
             Id = Guid.NewGuid().ToString("N"),
@@ -234,18 +285,18 @@ internal static class DemoOrderSeeder
             AnonymousId = "demo-anonymous-" + plan.Code,
             Contact = Json(new
             {
-                name = "Khách demo",
-                phone = "0900000000",
-                email = "demo@pickory.local",
-                note = "Đơn mẫu cho báo cáo",
+                name = customer.Name,
+                phone = customer.Phone,
+                email = customer.Email,
+                note = customer.Note,
             }),
             ShippingAddress = Json(new
             {
-                provinceCode = "1000001",
-                provinceName = "Hà Nội",
-                wardCode = "1003646",
-                wardName = "Phường Ba Đình",
-                line = "12 Phố Demo",
+                provinceCode = address.ProvinceCode,
+                provinceName = address.ProvinceName,
+                wardCode = address.WardCode,
+                wardName = address.WardName,
+                line = address.Line,
             }),
             InvoiceInfo = null,
             PaymentMethod = paymentMethod,

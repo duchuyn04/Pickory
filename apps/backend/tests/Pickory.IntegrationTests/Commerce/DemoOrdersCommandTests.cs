@@ -64,14 +64,24 @@ public sealed class DemoOrdersCommandTests : IClassFixture<PickoryWebApplication
     }
 
     [Fact]
+    public async Task Run_InProductionWithAllowFlag_CreatesOrders()
+    {
+        var result = await RunCommandAsync(isProduction: true, "--allow-production");
+
+        Assert.Equal(0, result.ExitCode);
+        Assert.Contains("Đã tạo 48 đơn mẫu", result.Output);
+        Assert.Equal(48, await CountDemoOrdersAsync());
+    }
+
+    [Fact]
     public async Task Run_CreatesOrdersForSixMonthsWithAllReportStatuses()
     {
         var result = await RunCommandAsync();
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("Đã tạo 30 đơn mẫu", result.Output);
+        Assert.Contains("Đã tạo 48 đơn mẫu", result.Output);
         Assert.Equal(string.Empty, result.Error);
-        Assert.Equal(30, await CountDemoOrdersAsync());
+        Assert.Equal(48, await CountDemoOrdersAsync());
         Assert.True(await CountOrderBrandsAsync() >= 2);
 
         var daily = await GetDailySalesAsync();
@@ -105,8 +115,8 @@ public sealed class DemoOrdersCommandTests : IClassFixture<PickoryWebApplication
 
         Assert.Equal(0, second.ExitCode);
         Assert.Contains("Đã tạo 0 đơn mẫu", second.Output);
-        Assert.Contains("Bỏ qua 30 đơn mẫu", second.Output);
-        Assert.Equal(30, await CountDemoOrdersAsync());
+        Assert.Contains("Bỏ qua 48 đơn mẫu", second.Output);
+        Assert.Equal(48, await CountDemoOrdersAsync());
     }
 
     [Fact]
@@ -118,7 +128,7 @@ public sealed class DemoOrdersCommandTests : IClassFixture<PickoryWebApplication
         var result = await RunCommandAsync("--reset");
 
         Assert.Equal(0, result.ExitCode);
-        Assert.Contains("Đã xóa 30 đơn mẫu", result.Output);
+        Assert.Contains("Đã xóa 48 đơn mẫu", result.Output);
         Assert.Equal(0, await CountDemoOrdersAsync());
 
         await using var commerce = _database.CreateCommerceContext();

@@ -9,7 +9,8 @@ internal static class DemoOrdersCommand
 {
     public const string Command = "commerce:demo-orders";
     private const string ResetOption = "--reset";
-    private const string Usage = "Cách dùng: commerce:demo-orders [--reset]";
+    private const string AllowProductionOption = "--allow-production";
+    private const string Usage = "Cách dùng: commerce:demo-orders [--reset] [--allow-production]";
 
     public static bool IsCommand(IReadOnlyList<string> args) => args.Count > 0 && args[0] == Command;
 
@@ -21,23 +22,26 @@ internal static class DemoOrdersCommand
         TextWriter error,
         CancellationToken cancellationToken)
     {
-        // Dữ liệu mẫu chỉ dành cho DB dev. Production không bao giờ được nhận chúng.
-        if (isProduction)
-        {
-            await error.WriteLineAsync("commerce:demo-orders không chạy ở môi trường Production.");
-            return 1;
-        }
-
         if (!IsCommand(args))
         {
             await error.WriteLineAsync(Usage);
             return 1;
         }
 
-        var reset = args.Count == 2 && args[1] == ResetOption;
-        if (args.Count > 2 || (args.Count == 2 && !reset))
+        var options = args.Skip(1).ToList();
+        var reset = options.Contains(ResetOption);
+        var allowProduction = options.Contains(AllowProductionOption);
+        if (options.Any(option => option != ResetOption && option != AllowProductionOption))
         {
             await error.WriteLineAsync(Usage);
+            return 1;
+        }
+
+        // Production chỉ nhận dữ liệu mẫu khi người chạy thêm cờ xác nhận.
+        if (isProduction && !allowProduction)
+        {
+            await error.WriteLineAsync(
+                "commerce:demo-orders không chạy ở Production. Thêm --allow-production nếu thật sự cần dữ liệu mẫu.");
             return 1;
         }
 
