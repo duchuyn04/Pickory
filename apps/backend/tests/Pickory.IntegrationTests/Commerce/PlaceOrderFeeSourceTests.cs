@@ -344,19 +344,19 @@ public sealed class PlaceOrderFeeSourceTests : IClassFixture<CheckoutWebApplicat
         var detail = await GetJsonAsync($"{OrdersPath}/{code}?t={Uri.EscapeDataString(token)}", anonymousId);
         Assert.False(ContainsProperty(detail, FeeSourceProperty), $"Chi tiết đơn lộ nguồn phí: {detail}");
 
-        // Tra cứu đơn bằng mã đơn và email. Route trả 202 và gửi liên kết xem đơn qua thư, nên thân phản hồi không có dữ liệu đơn.
+        // Tra cứu đơn bằng mã đơn và email. Route trả token để mở đơn ngay, không trả nguồn phí.
         var lookupRequest = new HttpRequestMessage(HttpMethod.Post, LookupPath);
         lookupRequest.Headers.Add("Origin", WebOrigin);
         lookupRequest.Content = new StringContent(
             JsonSerializer.Serialize(new { orderCode = code, email }), Encoding.UTF8, new MediaTypeHeaderValue("application/json"));
         var lookupResponse = await _client.SendAsync(lookupRequest);
         var lookup = await CartTestKit.ReadJsonAsync(lookupResponse);
-        Assert.Equal(HttpStatusCode.Accepted, lookupResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, lookupResponse.StatusCode);
         Assert.False(ContainsProperty(lookup, FeeSourceProperty), $"Tra cứu đơn lộ nguồn phí: {lookup}");
 
-        // Thư xác nhận đơn và thư liên kết tra cứu đều không nhắc tới phí dự phòng.
+        // Thư xác nhận đơn không nhắc tới phí dự phòng. Tra cứu không còn gửi thư riêng.
         var messages = _factory.EmailSender.MessagesTo(email);
-        Assert.Equal(2, messages.Count);
+        Assert.Single(messages);
         Assert.All(messages, message =>
         {
             Assert.DoesNotContain("dự phòng", message.Text, StringComparison.OrdinalIgnoreCase);

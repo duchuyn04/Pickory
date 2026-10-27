@@ -171,13 +171,12 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 - Khách vãng lai: email xác nhận có link `/orders/<mã>?t=<token>`. Token ngẫu nhiên, DB lưu hash. Link chỉ xem, không sửa thông tin giao hàng.
 - Khi khách xác thực email, các đơn vãng lai có cùng email được gắn vào tài khoản.
 
-**Tra cứu đơn:** khách mất email xác nhận thì nhập mã đơn và email ở trang tra cứu (`POST /api/order-lookups`). Server gửi link qua email và không hiện đơn trên trang. Mã đơn nằm trong nội dung chuyển khoản và mã vận đơn, nên mã đơn không phải bí mật. Trang hiện đơn ngay khi khớp sẽ lộ địa chỉ của khách.
+**Tra cứu đơn:** khách nhập mã đơn và email ở trang tra cứu (`POST /api/order-lookups`). Server trả token khi khớp; trang chuyển ngay tới `/orders/<mã>?t=<token>`. Mã đơn không phải bí mật, nên email là yếu tố thứ hai. Cách này hiện đơn cho người biết cả mã đơn và email.
 
 1. Server so mã đơn không phân biệt hoa thường. Server so email không phân biệt hoa thường, sau khi bỏ khoảng trắng hai đầu.
-2. Mã đơn và email liên hệ khớp: server tạo token xem đơn mới, thay hash cũ, rồi gửi link `/orders/<mã>?t=<token mới>` tới email của đơn. Link trong email cũ hết hiệu lực.
-3. Không khớp: server không gửi email và không đổi token của đơn nào.
-4. Khớp hay không khớp, route đều trả 202 với cùng một body. Body không có token, link hay dữ liệu đơn. Gửi email lỗi vẫn trả 202.
-5. Quá 5 lần trong 15 phút cho cùng IP, hoặc cho cùng email, thì trả 429. Giới hạn này chặn dò mã đơn hàng loạt.
+2. Khớp: server tạo token xem đơn mới, thay hash cũ, trả `{ code, accessToken }` với 200. Link cũ hết hiệu lực.
+3. Không khớp: server trả 404 `ORDER_NOT_FOUND` với cùng một thông điệp, không đổi token.
+4. Quá 5 lần trong 15 phút cho cùng IP, hoặc cho cùng email, thì trả 429. Giới hạn này chặn dò mã đơn hàng loạt.
 
 ### Sổ địa chỉ
 
@@ -262,7 +261,7 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 | GET | `/api/orders/:code` | chủ đơn, hoặc có token | Chi tiết đơn |
 | GET | `/api/orders/:code/payment` | chủ đơn, hoặc có token | Cho trang chờ thanh toán hỏi định kỳ |
 | POST | `/api/orders/:code/cancellation` | chủ đơn, hoặc có token | Khách tự hủy |
-| POST | `/api/order-lookups` | công khai | Tra cứu đơn bằng mã đơn và email, gửi link xem đơn qua email, luôn trả 202 |
+| POST | `/api/order-lookups` | công khai | Tra cứu đơn bằng mã đơn và email, trả token xem đơn |
 | GET · POST · PATCH · DELETE | `/api/me/addresses[/:id]` | khách đã đăng nhập | Sổ địa chỉ |
 | GET | `/api/products/:id/reviews` | công khai | Điểm trung bình, phân bố số sao và trang đánh giá đang hiện |
 | POST · PATCH | `/api/products/:id/reviews[/mine]` | người đã mua | Viết, sửa đánh giá |
@@ -353,7 +352,7 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerS
   - Đặt đơn với giá frontend gửi sai: server dùng giá đúng và trả 409 nếu khác preview.
   - Gửi cùng `Idempotency-Key` 2 lần chỉ tạo 1 đơn.
   - Kiểm địa chỉ khi đặt đơn: GHN từ chối thì trả `ADDRESS_NOT_DELIVERABLE`, không tạo đơn và không giữ hàng. GHN không gọi được thì đơn vẫn tạo.
-  - Tra cứu đơn: khớp và không khớp trả cùng response, token mới thay token cũ, quá giới hạn trả 429.
+  - Tra cứu đơn: khớp trả token mới và mở được đơn; không khớp trả 404; token cũ hết hiệu lực; quá giới hạn trả 429.
   - Webhook SePay đủ 5 trường hợp trong bảng; gửi lại cùng giao dịch không xử lý 2 lần; sai API key trả 401.
   - Job hết hạn hủy đơn và trả hàng; tiền về sau khi hủy được xử lý đúng.
   - Gộp giỏ khi đăng nhập; gắn đơn vãng lai sau khi xác thực email.

@@ -105,12 +105,13 @@ export function fetchCustomerOrders(page = 1, limit = 20): Promise<CustomerOrder
   return apiRequest<CustomerOrdersPagedResponse>(`/api/orders?page=${page}&limit=${limit}`);
 }
 
-// Kết quả cố định của route tra cứu đơn. Server trả cùng một câu cho mọi thông tin hợp lệ về định dạng.
+// Kết quả tra cứu khi mã đơn và email khớp. Trình duyệt dùng token để mở trang chi tiết đơn.
 export interface OrderLookupResult {
-  message: string;
+  code: string;
+  accessToken: string;
 }
 
-// Gọi API yêu cầu gửi lại link xem đơn qua email của đơn. Mã đơn và email phải đã chuẩn hóa ở nơi gọi.
+// Gọi API tra cứu đơn. Mã đơn và email phải đã chuẩn hóa ở nơi gọi.
 export function requestOrderLookup(orderCode: string, email: string): Promise<OrderLookupResult> {
   return apiRequest<OrderLookupResult>('/api/order-lookups', {
     method: 'POST',

@@ -85,25 +85,6 @@ const customerActor = {
 // Các màn kết quả dùng API giả vì mỗi màn cần một trạng thái khó tạo thật (link hết hạn, thư đã gửi).
 // Luồng thật của từng API đã có spec riêng.
 test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy', () => {
-  test('đã gửi yêu cầu tra cứu đơn', async ({ page }) => {
-    const issues = collectConsoleIssues(page);
-    await page.route('**/api/order-lookups', (route) =>
-      fulfillJson(route, 202, {
-        data: { message: 'Nếu thông tin đúng, link xem đơn đã được gửi tới email của đơn.' },
-      }),
-    );
-    await page.goto('/order-lookup');
-    await dismissConsent(page);
-    await page.getByLabel('Mã đơn hàng').fill('PKAB23CD45');
-    await page.getByLabel('Email đặt hàng').fill('khach@example.com');
-    await page.getByRole('button', { name: 'Gửi link xem đơn' }).click();
-    await expect(
-      page.getByRole('status').filter({ hasText: 'Nếu thông tin đúng, link xem đơn đã được gửi' }),
-    ).toBeVisible();
-    await checkLayoutAtBothWidths(page, 'order-lookup-sent');
-    expect(issues).toEqual([]);
-  });
-
   test('đã gửi yêu cầu quên mật khẩu', async ({ page }) => {
     const issues = collectConsoleIssues(page);
     await page.route('**/api/auth/password-resets', (route) =>

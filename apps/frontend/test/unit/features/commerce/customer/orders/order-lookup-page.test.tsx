@@ -1,15 +1,16 @@
 // @vitest-environment jsdom
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OrderLookupPage } from '../../../../../../src/features/commerce/customer/orders/order-lookup-page';
 import { settle } from '../cart-test-utils';
 
-const FIXED_SUCCESS_MESSAGE = 'Nếu thông tin đúng, link xem đơn đã được gửi tới email của đơn.';
 const RATE_LIMIT_MESSAGE = 'Bạn đã tra cứu quá nhiều lần. Vui lòng thử lại sau 15 phút.';
+const NOT_FOUND_MESSAGE = 'Không tìm thấy đơn hàng với mã và email này.';
 const VALID_ORDER_CODE = 'PKAB23CD45';
 const VALID_EMAIL = 'khach@example.com';
+const SUCCESS_TOKEN = 'token-abc';
 
 let container: HTMLDivElement;
 let root: Root;
@@ -38,13 +39,13 @@ interface LookupReply {
   body: unknown;
 }
 
-const acceptedReply: LookupReply = {
-  status: 202,
-  body: { data: { message: FIXED_SUCCESS_MESSAGE } },
+const successReply: LookupReply = {
+  status: 200,
+  body: { data: { code: VALID_ORDER_CODE, accessToken: SUCCESS_TOKEN } },
 };
 
 // API giả của route tra cứu: ghi lại mọi lệnh gọi. `reply` có thể trả `Promise` để giữ request đang chạy.
-function stubLookupApi(reply: () => LookupReply | Promise<LookupReply> = () => acceptedReply) {
+function stubLookupApi(reply: () => LookupReply | Promise<LookupReply> = () => successReply) {
   const calls: LookupCall[] = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     calls.push({
@@ -62,11 +63,28 @@ function stubLookupApi(reply: () => LookupReply | Promise<LookupReply> = () => a
   return calls;
 }
 
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+}
+
+// TypeScript của repo chưa có `Promise.withResolvers`, nên giữ một helper nhỏ cho test.
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
 async function renderPage() {
   await act(async () => {
     root.render(
       <MemoryRouter initialEntries={['/order-lookup']}>
-        <OrderLookupPage />
+        <Routes>
+          <Route path="/order-lookup" element={<OrderLookupPage />} />
+          <Route path="*" element={<LocationProbe />} />
+        </Routes>
       </MemoryRouter>,
     );
   });
@@ -102,12 +120,12 @@ async function fillAndSubmit(orderCode: string, email: string) {
 }
 
 describe('OrderLookupPage', () => {
-  it('hiện tiêu đề và câu giải thích về link gửi qua email', async () => {
+  it('hiện tiêu đề và hướng dẫn xem đơn ngay trên trang', async () => {
     stubLookupApi();
     await renderPage();
 
     expect(container.querySelector('h1')?.textContent).toBe('Tra cứu đơn hàng');
-    expect(container.textContent).toContain('email đã dùng khi đặt hàng');
+    expect(container.textContent).toContain('Nhập mã đơn và email đặt hàng để xem đơn ngay.');
   });
 
   it('hiện lỗi đúng ô và không gọi API khi form sai định dạng', async () => {
@@ -158,32 +176,35 @@ describe('OrderLookupPage', () => {
     });
   });
 
-  it('hiện đúng câu cố định khi nhận 202 và không lộ mã đơn hay email đã nhập', async () => {
+  it('khớp thông tin thì chuyển tới trang chi tiết đơn với token', async () => {
     stubLookupApi();
     await renderPage();
 
     await fillAndSubmit(VALID_ORDER_CODE, VALID_EMAIL);
 
-    expect(container.querySelector('[role="status"]')?.textContent).toBe(FIXED_SUCCESS_MESSAGE);
-    expect(container.textContent).not.toContain(VALID_ORDER_CODE);
-    expect(container.textContent).not.toContain(VALID_EMAIL);
-    expect(container.querySelector('form')).toBeNull();
+    expect(container.querySelector('[data-testid="location"]')?.textContent).toBe(
+      `/orders/${VALID_ORDER_CODE}?t=${SUCCESS_TOKEN}`,
+    );
   });
 
-  it('cho tra cứu đơn khác và quay về form trống sau khi gửi xong', async () => {
-    stubLookupApi();
+  it('hiện lỗi chung khi không tìm thấy đơn và giữ dữ liệu đã nhập', async () => {
+    stubLookupApi(() => ({
+      status: 404,
+      body: {
+        error: {
+          code: 'ORDER_NOT_FOUND',
+          message: 'Không tìm thấy đơn hàng với mã và email này.',
+        },
+      },
+    }));
     await renderPage();
+
     await fillAndSubmit(VALID_ORDER_CODE, VALID_EMAIL);
 
-    const anotherLookup = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Tra cứu đơn khác',
-    );
-    expect(anotherLookup).toBeDefined();
-    await act(async () => anotherLookup!.click());
-
-    expect(orderCodeInput().value).toBe('');
-    expect(emailInput().value).toBe('');
-    expect(container.querySelector('[role="status"]')).toBeNull();
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe(NOT_FOUND_MESSAGE);
+    expect(orderCodeInput().value).toBe(VALID_ORDER_CODE);
+    expect(emailInput().value).toBe(VALID_EMAIL);
+    expect(submitButton().disabled).toBe(false);
   });
 
   it('gắn lỗi từ server vào đúng ô theo details key', async () => {
@@ -210,10 +231,10 @@ describe('OrderLookupPage', () => {
     expect(container.querySelector('#order-lookup-email-error')?.textContent).toBe(
       'Email không đúng định dạng.',
     );
-    expect(container.querySelector('[role="status"]')).toBeNull();
+    expect(container.querySelector('[data-testid="location"]')).toBeNull();
   });
 
-  it('hiện câu thử lại sau và không hiện câu thành công khi nhận 429', async () => {
+  it('hiện câu thử lại sau và không chuyển trang khi nhận 429', async () => {
     stubLookupApi(() => ({
       status: 429,
       body: { error: { code: 'RATE_LIMITED', message: 'Thông điệp riêng của server.' } },
@@ -223,8 +244,7 @@ describe('OrderLookupPage', () => {
     await fillAndSubmit(VALID_ORDER_CODE, VALID_EMAIL);
 
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(RATE_LIMIT_MESSAGE);
-    expect(container.textContent).not.toContain(FIXED_SUCCESS_MESSAGE);
-    expect(container.querySelector('[role="status"]')).toBeNull();
+    expect(container.querySelector('[data-testid="location"]')).toBeNull();
     // Nút mở lại để khách thử lần sau.
     expect(submitButton().disabled).toBe(false);
   });
@@ -239,18 +259,12 @@ describe('OrderLookupPage', () => {
     await fillAndSubmit(VALID_ORDER_CODE, VALID_EMAIL);
 
     expect(container.querySelector('[role="alert"]')?.textContent).toBe('Đã có lỗi xảy ra.');
-    expect(container.querySelector('[role="status"]')).toBeNull();
     expect(submitButton().disabled).toBe(false);
   });
 
   it('khóa nút gửi khi request đang chạy và mở lại sau khi có kết quả', async () => {
-    let finishRequest: (reply: LookupReply) => void = () => {};
-    const calls = stubLookupApi(
-      () =>
-        new Promise<LookupReply>((resolve) => {
-          finishRequest = resolve;
-        }),
-    );
+    const reply = deferred<LookupReply>();
+    const calls = stubLookupApi(() => reply.promise);
     await renderPage();
 
     await typeInto(orderCodeInput(), VALID_ORDER_CODE);
@@ -263,7 +277,7 @@ describe('OrderLookupPage', () => {
     expect(calls).toHaveLength(1);
 
     await act(async () =>
-      finishRequest({
+      reply.resolve({
         status: 429,
         body: { error: { code: 'RATE_LIMITED', message: 'Thông điệp riêng của server.' } },
       }),

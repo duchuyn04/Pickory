@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
+using Pickory.Shared.Exceptions;
 using Pickory.Shared.Http;
 
 namespace Pickory.Modules.Commerce.Orders.Lookup;
@@ -28,13 +29,14 @@ internal static class OrderLookupEndpoints
         // Giới hạn tần suất gọi theo địa chỉ IP và email đã chuẩn hóa.
         rateLimiter.CheckAndConsume(context.GetClientIp(), input.Email);
 
-        // Tra cứu đơn hàng và gửi email nếu thông tin khớp.
-        await service.LookupAsync(input, context.RequestAborted);
+        // Tra cứu đơn. Không khớp mã hoặc email đều trả cùng một lỗi để không lộ trường nào sai.
+        var result = await service.LookupAsync(input, context.RequestAborted);
+        if (result is null)
+        {
+            throw new AppException("ORDER_NOT_FOUND", 404, "Không tìm thấy đơn hàng với mã và email này.");
+        }
 
-        // Luôn trả mã 202 cùng một thông điệp cố định để bảo vệ dữ liệu đơn hàng.
-        return Results.Json(
-            new ApiResponse<OrderLookupResponse>(
-                new OrderLookupResponse("Nếu thông tin đúng, link xem đơn đã được gửi tới email của đơn.")),
-            statusCode: StatusCodes.Status202Accepted);
+        // Trả token để trình duyệt chuyển ngay tới trang chi tiết đơn.
+        return Results.Ok(new ApiResponse<OrderLookupResponse>(result));
     }
 }

@@ -2,38 +2,34 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.IntegrationTests.Shipping;
 using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Entities;
 using Pickory.Modules.Commerce.Orders;
 using Pickory.Modules.Commerce.Orders.Lookup;
-using Pickory.Shared.Email;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Commerce;
 
-// COM-25: Tra cứu đơn hàng bằng mã đơn và email.
+// COM-25: Tra cứu đơn hàng bằng mã đơn và email, trả token để mở đơn ngay trên trình duyệt.
 [Collection(IntegrationDatabaseCollection.Name)]
-public sealed partial class OrderLookupTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
+public sealed class OrderLookupTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string LookupPath = "/api/order-lookups";
     private const string OrdersPath = "/api/orders";
     private const string PreviewPath = "/api/checkout/previews";
     private const string ProvinceCode = "1000001";
     private const string WardCode = "1003646";
+    private const string NotFoundMessage = "Không tìm thấy đơn hàng với mã và email này.";
 
     private readonly CheckoutWebApplicationFactory _factory;
     private readonly CartTestKit _kit;
     private readonly HttpClient _client;
     private readonly List<string> _keys = [];
-    private readonly List<WebApplicationFactory<Program>> _derivedFactories = [];
     private int _logsBefore;
 
     public OrderLookupTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
@@ -58,11 +54,6 @@ public sealed partial class OrderLookupTests : IClassFixture<CheckoutWebApplicat
 
     public async Task DisposeAsync()
     {
-        foreach (var derived in _derivedFactories)
-        {
-            derived.Dispose();
-        }
-
         await using (var commerce = _kit.Database.CreateCommerceContext())
         {
             var orderIds = await commerce.Orders
@@ -150,101 +141,71 @@ public sealed partial class OrderLookupTests : IClassFixture<CheckoutWebApplicat
         return await commerce.Orders.AsNoTracking().SingleOrDefaultAsync(order => order.Code == code);
     }
 
-    private static string TokenInLink(string text)
-    {
-        var match = LinkPattern().Match(text);
-        Assert.True(match.Success, $"Thân thư không có liên kết xem đơn: {text}");
-        return Uri.UnescapeDataString(match.Groups["token"].Value);
-    }
-
-    [GeneratedRegex(@"/orders/(?<code>[^?\s]+)\?t=(?<token>[^\s]+)")]
-    private static partial Regex LinkPattern();
-
     private IEnumerable<string> LogLinesOfThisTest() =>
         _factory.Logs.Entries.Skip(_logsBefore).SelectMany(entry => new[] { entry.Message, entry.Exception ?? string.Empty });
 
-    private HttpClient CreateHostWith(Action<IServiceCollection> configure)
-    {
-        var derived = _factory.WithWebHostBuilder(builder =>
-            builder.ConfigureTestServices(configure));
-        _derivedFactories.Add(derived);
-        return derived.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
-    }
-
-    private sealed class ThrowingEmailSender : IEmailSender
-    {
-        public const string FailureText = "Máy chủ thư không phản hồi.";
-        public EmailMessage? AttemptedMessage { get; private set; }
-
-        public Task SendAsync(EmailMessage message, CancellationToken cancellationToken)
-        {
-            AttemptedMessage = message;
-            throw new InvalidOperationException(FailureText);
-        }
-    }
+    private int LookupEmailCount(string email) =>
+        _factory.EmailSender.MessagesTo(email)
+            .Count(message => message.Metadata.TryGetValue("purpose", out var purpose) && purpose == "order-lookup");
 
     [Fact]
-    // Khớp và không khớp trả cùng mã 202 và chuỗi body giống hệt nhau.
-    public async Task OrderLookup_MatchAndNonMatch_ReturnSameStatusCode202AndExactSameBody()
-    {
-        var (code, token, contactEmail) = await CreateOrderAsync();
-
-        var matchResponse = await SendLookupAsync(_client, code, contactEmail);
-        var matchBody = await matchResponse.Content.ReadAsStringAsync();
-
-        var nonExistentResponse = await SendLookupAsync(_client, "PK99999999", "nonexistent@example.com");
-        var nonExistentBody = await nonExistentResponse.Content.ReadAsStringAsync();
-
-        var wrongEmailResponse = await SendLookupAsync(_client, code, "wrong@example.com");
-        var wrongEmailBody = await wrongEmailResponse.Content.ReadAsStringAsync();
-
-        Assert.Equal(HttpStatusCode.Accepted, matchResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.Accepted, nonExistentResponse.StatusCode);
-        Assert.Equal(HttpStatusCode.Accepted, wrongEmailResponse.StatusCode);
-
-        Assert.Equal(matchBody, nonExistentBody);
-        Assert.Equal(matchBody, wrongEmailBody);
-
-        Assert.DoesNotContain(token, matchBody);
-        Assert.DoesNotContain("?t=", matchBody);
-        Assert.DoesNotContain(code, matchBody);
-
-        using var doc = JsonDocument.Parse(matchBody);
-        var message = doc.RootElement.GetProperty("data").GetProperty("message").GetString();
-        Assert.Equal("Nếu thông tin đúng, link xem đơn đã được gửi tới email của đơn.", message);
-    }
-
-    [Fact]
-    // Khớp thông tin thì gửi link mới mở được đơn, link cũ bị vô hiệu hóa trả 404.
-    public async Task OrderLookup_Match_SendsEmailWithNewTokenAndInvalidatesOldToken()
+    // Khớp thông tin trả mã đơn và token mới, không gửi thư tra cứu, token cũ hết hiệu lực.
+    public async Task OrderLookup_Match_ReturnsCodeAndTokenWithoutSendingEmail()
     {
         var (code, oldToken, contactEmail) = await CreateOrderAsync();
 
         var response = await SendLookupAsync(_client, code, contactEmail);
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var messages = _factory.EmailSender.MessagesTo(contactEmail)
-            .Where(m => m.Metadata.TryGetValue("purpose", out var p) && p == "order-lookup")
-            .ToList();
-        var message = Assert.Single(messages);
-        Assert.Equal("order-lookup", message.Metadata["purpose"]);
-        Assert.Equal(code, message.Metadata["orderCode"]);
-
-        var newToken = TokenInLink(message.Text);
+        var json = await CartTestKit.ReadJsonAsync(response);
+        var data = json.GetProperty("data");
+        Assert.Equal(code, data.GetProperty("code").GetString());
+        var newToken = data.GetProperty("accessToken").GetString();
+        Assert.False(string.IsNullOrWhiteSpace(newToken));
         Assert.NotEqual(oldToken, newToken);
 
-        // Mở đơn bằng token mới nhận 200 OK.
-        var newLinkResponse = await _client.GetAsync($"/api/orders/{code}?t={newToken}");
+        // Không còn thư tra cứu. Thư xác nhận đơn đã gửi lúc tạo đơn không thuộc luồng này.
+        Assert.Equal(0, LookupEmailCount(contactEmail));
+
+        // Token mới mở được đơn, token cũ nhận 404.
+        var newLinkResponse = await _client.GetAsync($"/api/orders/{code}?t={Uri.EscapeDataString(newToken!)}");
         Assert.Equal(HttpStatusCode.OK, newLinkResponse.StatusCode);
 
-        // Mở đơn bằng token cũ nhận 404 ORDER_NOT_FOUND.
-        var oldLinkResponse = await _client.GetAsync($"/api/orders/{code}?t={oldToken}");
+        var oldLinkResponse = await _client.GetAsync($"/api/orders/{code}?t={Uri.EscapeDataString(oldToken)}");
         Assert.Equal(HttpStatusCode.NotFound, oldLinkResponse.StatusCode);
-        var oldJson = await CartTestKit.ReadJsonAsync(oldLinkResponse);
-        Assert.Equal("ORDER_NOT_FOUND", oldJson.GetProperty("error").GetProperty("code").GetString());
-        // Log của hệ thống không được chứa token mới.
+
+        // Token chỉ có trong response, không được ghi vào log.
         var lines = LogLinesOfThisTest().ToList();
-        Assert.DoesNotContain(lines, line => line.Contains(newToken));
+        Assert.DoesNotContain(lines, line => line.Contains(newToken!));
+        Assert.DoesNotContain(lines, line => line.Contains("?t="));
+    }
+
+    [Fact]
+    // Không khớp mã hoặc email trả cùng một lỗi 404, không đổi token và không gửi thư.
+    public async Task OrderLookup_NonMatch_Returns404AndDoesNotChangeToken()
+    {
+        var (code, _, contactEmail) = await CreateOrderAsync();
+        var orderBefore = await FindOrderAsync(code);
+        var hashBefore = orderBefore!.AccessTokenHash;
+
+        // Mã đơn không tồn tại.
+        var nonExistentResponse = await SendLookupAsync(_client, "PK99999999", contactEmail);
+        Assert.Equal(HttpStatusCode.NotFound, nonExistentResponse.StatusCode);
+
+        // Email không khớp.
+        var wrongEmailResponse = await SendLookupAsync(_client, code, "wrong@example.com");
+        Assert.Equal(HttpStatusCode.NotFound, wrongEmailResponse.StatusCode);
+
+        var nonExistentJson = await CartTestKit.ReadJsonAsync(nonExistentResponse);
+        var wrongEmailJson = await CartTestKit.ReadJsonAsync(wrongEmailResponse);
+        Assert.Equal("ORDER_NOT_FOUND", nonExistentJson.GetProperty("error").GetProperty("code").GetString());
+        Assert.Equal(NotFoundMessage, nonExistentJson.GetProperty("error").GetProperty("message").GetString());
+        Assert.Equal(nonExistentJson.GetRawText(), wrongEmailJson.GetRawText());
+
+        var orderAfter = await FindOrderAsync(code);
+        Assert.Equal(hashBefore, orderAfter!.AccessTokenHash);
+        Assert.Equal(0, LookupEmailCount(contactEmail));
+        Assert.Equal(0, LookupEmailCount("wrong@example.com"));
     }
 
     [Fact]
@@ -272,41 +233,12 @@ public sealed partial class OrderLookupTests : IClassFixture<CheckoutWebApplicat
         var lookupEmail = $"  {email.ToLowerInvariant()}  ";
 
         var response = await SendLookupAsync(_client, lookupCode, lookupEmail);
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        // Thư gửi tới email liên hệ đã lưu trên đơn.
-        var messages = _factory.EmailSender.MessagesTo(uppercaseWithSpaces.Trim())
-            .Where(m => m.Metadata.TryGetValue("purpose", out var p) && p == "order-lookup")
-            .ToList();
-        Assert.Single(messages);
-    }
-
-    [Fact]
-    // Không khớp mã hoặc email thì không gửi email và không đổi token của đơn nào.
-    public async Task OrderLookup_NonMatch_SendsNoEmailAndDoesNotChangeStoredTokenHash()
-    {
-        var (code, _, contactEmail) = await CreateOrderAsync();
-        var orderBefore = await FindOrderAsync(code);
-        var hashBefore = orderBefore!.AccessTokenHash;
-
-        // Mã đơn không tồn tại.
-        var nonExistentResponse = await SendLookupAsync(_client, "PK99999999", contactEmail);
-        Assert.Equal(HttpStatusCode.Accepted, nonExistentResponse.StatusCode);
-
-        // Email không khớp.
-        var wrongEmailResponse = await SendLookupAsync(_client, code, "wrong@example.com");
-        Assert.Equal(HttpStatusCode.Accepted, wrongEmailResponse.StatusCode);
-
-        // Hộp thư không có thư tra cứu mới.
-        var lookupMessages = _factory.EmailSender.MessagesTo(contactEmail)
-            .Where(m => m.Metadata.TryGetValue("purpose", out var p) && p == "order-lookup")
-            .ToList();
-        Assert.Empty(lookupMessages);
-        Assert.Empty(_factory.EmailSender.MessagesTo("wrong@example.com"));
-
-        // Hash trong DB không đổi.
-        var orderAfter = await FindOrderAsync(code);
-        Assert.Equal(hashBefore, orderAfter!.AccessTokenHash);
+        var json = await CartTestKit.ReadJsonAsync(response);
+        var token = json.GetProperty("data").GetProperty("accessToken").GetString();
+        var detailResponse = await _client.GetAsync($"/api/orders/{code}?t={Uri.EscapeDataString(token!)}");
+        Assert.Equal(HttpStatusCode.OK, detailResponse.StatusCode);
     }
 
     [Fact]
@@ -337,7 +269,7 @@ public sealed partial class OrderLookupTests : IClassFixture<CheckoutWebApplicat
         for (var attempt = 1; attempt <= 5; attempt++)
         {
             var response = await SendLookupAsync(_client, "PK23456789", $"email{attempt}@example.com");
-            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
         var sixthResponse = await SendLookupAsync(_client, "PK23456789", "email6@example.com");
@@ -360,7 +292,7 @@ public sealed partial class OrderLookupTests : IClassFixture<CheckoutWebApplicat
             var request = CreateLookupRequest("PK23456789", targetEmail);
             request.Headers.Add("X-Forwarded-For", $"198.51.100.{attempt}");
             var response = await proxiedClient.SendAsync(request);
-            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
 
         var sixthRequest = CreateLookupRequest("PK23456789", targetEmail);
@@ -368,6 +300,7 @@ public sealed partial class OrderLookupTests : IClassFixture<CheckoutWebApplicat
         var sixthResponse = await proxiedClient.SendAsync(sixthRequest);
         Assert.Equal(HttpStatusCode.TooManyRequests, sixthResponse.StatusCode);
     }
+
     [Fact]
     // Request lỗi định dạng 400 không bị tính vào lượt giới hạn của IP.
     public async Task OrderLookup_RateLimiting_ValidationErrorDoesNotConsumeQuota()
@@ -385,7 +318,7 @@ public sealed partial class OrderLookupTests : IClassFixture<CheckoutWebApplicat
         for (var attempt = 1; attempt <= 5; attempt++)
         {
             var validResponse = await SendLookupAsync(_client, "PK23456789", $"email{attempt}@example.com");
-            Assert.Equal(HttpStatusCode.Accepted, validResponse.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, validResponse.StatusCode);
         }
     }
 
@@ -404,43 +337,7 @@ public sealed partial class OrderLookupTests : IClassFixture<CheckoutWebApplicat
             var request = CreateLookupRequest("PK23456789", $"user{attempt}@example.com");
             request.Headers.Add("X-Forwarded-For", $"198.51.100.{attempt}");
             var response = await proxiedClient.SendAsync(request);
-            Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         }
-    }
-
-    [Fact]
-    // Bộ gửi email ném lỗi thì route vẫn trả 202 và log ghi mã đơn nhưng không chứa token hay link hay email.
-    public async Task OrderLookup_EmailSenderThrows_Returns202AndLogsWithoutToken()
-    {
-        var (code, oldToken, contactEmail) = await CreateOrderAsync();
-
-        ThrowingEmailSender? throwingSender = null;
-        var failingClient = CreateHostWith(services =>
-        {
-            services.RemoveAll<IEmailSender>();
-            throwingSender = new ThrowingEmailSender();
-            services.AddSingleton<IEmailSender>(throwingSender);
-        });
-
-        var response = await SendLookupAsync(failingClient, code, contactEmail);
-        Assert.Equal(HttpStatusCode.Accepted, response.StatusCode);
-        Assert.NotNull(throwingSender?.AttemptedMessage);
-        var token = TokenInLink(throwingSender!.AttemptedMessage!.Text);
-
-        // Lấy token mới từ DB qua hash.
-        var order = await FindOrderAsync(code);
-        Assert.NotNull(order);
-        Assert.NotEqual(OrderAccessToken.Hash(oldToken), order!.AccessTokenHash);
-
-        var errors = _factory.Logs.Entries.Skip(_logsBefore)
-            .Where(entry => entry.Level == Microsoft.Extensions.Logging.LogLevel.Error && entry.Message.Contains(code))
-            .ToList();
-        var error = Assert.Single(errors);
-        Assert.Contains(ThrowingEmailSender.FailureText, error.Exception);
-
-        var lines = LogLinesOfThisTest().ToList();
-        Assert.DoesNotContain(lines, line => line.Contains(token));
-        Assert.DoesNotContain(lines, line => line.Contains("?t="));
-        Assert.DoesNotContain(lines, line => line.Contains(contactEmail));
     }
 }
