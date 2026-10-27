@@ -111,6 +111,27 @@ public sealed class AdminOrderDetailTests : IClassFixture<PickoryWebApplicationF
     }
 
     [Fact]
+    // Lịch sử trả tên nhân viên thay vì chỉ mã, để màn chi tiết đọc được người làm.
+    public async Task Detail_ResolvesStaffNameInStatusHistory()
+    {
+        var (staff, _) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales", "com14actor");
+        var order = await _kit.AddOrderAsync("DT-ACTOR", CreatedAt);
+        await _kit.AddStatusHistoryAsync(
+            order.Id,
+            OrderStatus.PendingConfirmation,
+            OrderStatus.Confirmed,
+            CreatedAt.AddMinutes(10),
+            actorId: staff.Id,
+            reason: "Xác nhận đơn");
+
+        var data = await ReadDataAsync(await GetAsync("DT-ACTOR"));
+
+        var entry = Assert.Single(data.GetProperty("statusHistory").EnumerateArray());
+        Assert.Equal(staff.Id, entry.GetProperty("actorId").GetString());
+        Assert.Equal("Người dùng thử", entry.GetProperty("actorName").GetString());
+    }
+
+    [Fact]
     // Chi tiết có đủ mọi phần nhân viên cần để làm việc với đơn.
     public async Task Detail_ReturnsEveryPart()
     {

@@ -58,6 +58,7 @@ function fullOrder() {
         fromStatus: 'pending_confirmation',
         toStatus: 'confirmed',
         actorId: 'abcdef1234567890',
+        actorName: 'Người dùng thử',
         reason: 'Đã gọi xác nhận',
         createdAt: '2026-10-12T05:00:00Z',
       },
@@ -65,6 +66,7 @@ function fullOrder() {
         fromStatus: 'pending_payment',
         toStatus: 'pending_confirmation',
         actorId: null,
+        actorName: null,
         reason: null,
         createdAt: '2026-10-12T03:35:00Z',
       },
@@ -248,7 +250,7 @@ describe('màn chi tiết đơn hàng của nhân viên', () => {
     expect(text()).not.toContain('Khách đã trả');
   });
 
-  it('lịch sử theo thời gian tăng dần, hiện Hệ thống khi actorId null và mã rút gọn khi có', async () => {
+  it('lịch sử theo thời gian tăng dần, tô màu trạng thái và hiện tên nhân viên hoặc Hệ thống', async () => {
     await open(fullOrder());
     await waitFor(() => text().includes('PK-1001'), 'mã đơn');
 
@@ -258,9 +260,13 @@ describe('màn chi tiết đơn hàng của nhân viên', () => {
     expect(rows[0]!.textContent).toContain('Chờ thanh toán');
     expect(rows[0]!.textContent).toContain('Chờ xác nhận');
     expect(rows[0]!.textContent).toContain('Hệ thống');
-    // Mục sau: do nhân viên chuyển kèm lý do.
+    // Trạng thái trong lịch sử cũng dùng badge màu như phần tổng quan.
+    const firstBadges = [...rows[0]!.querySelectorAll('.badge')].map((badge) => badge.textContent);
+    expect(firstBadges).toEqual(['Chờ thanh toán', 'Chờ xác nhận']);
+    expect(rows[0]!.querySelector('.badge-warn')?.textContent).toBe('Chờ thanh toán');
+    // Mục sau: do nhân viên chuyển kèm lý do và tên nhân viên.
     expect(rows[1]!.textContent).toContain('Đã xác nhận');
-    expect(rows[1]!.textContent).toContain('Nhân viên abcdef12');
+    expect(rows[1]!.textContent).toContain('Người dùng thử');
     expect(rows[1]!.textContent).toContain('Đã gọi xác nhận');
   });
 

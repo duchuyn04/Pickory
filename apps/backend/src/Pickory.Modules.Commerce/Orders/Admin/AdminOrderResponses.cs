@@ -16,11 +16,12 @@ public sealed record AdminOrderListItemResponse(
     int LineCount);
 
 // Một lần đổi trạng thái, kèm người thực hiện và lý do để nhân viên biết đơn đã qua tay ai.
-// `ActorId` là `null` khi hệ thống hoặc khách vãng lai chuyển.
+// `ActorId` và `ActorName` là `null` khi hệ thống hoặc khách vãng lai chuyển.
 public sealed record AdminOrderStatusHistoryResponse(
     string FromStatus,
     string ToStatus,
     string? ActorId,
+    string? ActorName,
     string? Reason,
     DateTime CreatedAt);
 
