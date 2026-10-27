@@ -206,7 +206,7 @@ describe('màn đối soát: tab SePay', () => {
     await open();
     await waitFor(() => transactionRequests().length > 0, 'request đầu');
 
-    await selectOption(findField(harness.container, 'Cờ đơn')!, 'overpaid');
+    await selectOption(findField(harness.container, 'Ghi chú')!, 'overpaid');
     await waitFor(() => transactionRequests().length > 1, 'request sau khi đổi');
 
     expect(queryOf(transactionRequests().at(-1)!)).toEqual({

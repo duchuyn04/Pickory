@@ -177,7 +177,7 @@ export function AdminOrderDetailPage() {
           )}
           {order.flags.length > 0 && (
             <div>
-              <dt>Cờ đơn</dt>
+              <dt>Ghi chú</dt>
               <dd>
                 <div className="row-actions">
                   {order.flags.map((flag) => (
