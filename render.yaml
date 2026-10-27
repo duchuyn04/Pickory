@@ -30,9 +30,9 @@ services:
       - key: DATABASE_URL
         sync: false
       # Supabase Session pooler gói free cho 15 kết nối cùng lúc. Giới hạn này áp cho cả tiến trình API, gồm mọi module và worker nền.
-      # API giữ tối đa 10, để lại 5 cho lệnh chạy từ máy dev.
+      # API giữ tối đa 5, để hai instance trong lúc deploy dùng tối đa 10 kết nối.
       - key: DATABASE_POOL_MAX
-        value: "10"
+        value: "5"
       # Trang chủ gửi 11 request tới danh sách sản phẩm và cây danh mục. Gói free xử lý chậm khi nhiều request song song.
       # Cache 30 giây trong bộ nhớ API, và API xóa cache ngay khi admin đổi catalog hoặc tồn kho.
       - key: CATALOG_CACHE_SECONDS
