@@ -130,6 +130,12 @@ export function ProductView({ product }: { product: ProductDetail }) {
                   ) : (
                     <span className="badge badge-bad">Hết hàng</span>
                   )}
+                  {selectedSku.inStock && (
+                    <span className="muted small">
+                      {' '}
+                      Còn {selectedSku.stock.toLocaleString('vi-VN')} sản phẩm
+                    </span>
+                  )}
                 </p>
               )}
             </>

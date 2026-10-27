@@ -167,12 +167,14 @@ public sealed class CommerceReports(CommerceDbContext database, ILogger<Commerce
                 transaction.OrderId,
                 transaction.Order!.Total,
                 transaction.Order.PaymentStatus,
+                transaction.Order.PaymentMethod,
             })
             .Select(group => new
             {
                 OrderId = group.Key.OrderId!,
                 group.Key.Total,
                 group.Key.PaymentStatus,
+                group.Key.PaymentMethod,
                 PaidAtUtc = group.Min(transaction => transaction.ReceivedAt),
             })
             .Where(row => row.PaidAtUtc >= startUtc && row.PaidAtUtc < endExclusiveUtc)
@@ -186,20 +188,23 @@ public sealed class CommerceReports(CommerceDbContext database, ILogger<Commerce
                 history.OrderId,
                 history.Order!.Total,
                 history.Order.PaymentStatus,
+                history.Order.PaymentMethod,
             })
             .Select(group => new
             {
                 group.Key.OrderId,
                 group.Key.Total,
                 group.Key.PaymentStatus,
+                group.Key.PaymentMethod,
                 PaidAtUtc = group.Min(history => history.CreatedAt),
             })
             .Where(row => row.PaidAtUtc >= startUtc && row.PaidAtUtc < endExclusiveUtc)
             .ToListAsync(cancellationToken);
 
         return sepayRows
-            .Select(row => new OrderPaymentRow(row.OrderId, row.PaidAtUtc, row.Total, row.PaymentStatus))
-            .Concat(codRows.Select(row => new OrderPaymentRow(row.OrderId, row.PaidAtUtc, row.Total, row.PaymentStatus)))
+            .Select(row => new OrderPaymentRow(row.OrderId, row.PaidAtUtc, row.Total, row.PaymentStatus, row.PaymentMethod))
+            .Concat(codRows.Select(row => new OrderPaymentRow(
+                row.OrderId, row.PaidAtUtc, row.Total, row.PaymentStatus, row.PaymentMethod)))
             .ToList();
     }
 

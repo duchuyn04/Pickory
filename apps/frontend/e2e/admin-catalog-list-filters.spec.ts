@@ -18,12 +18,9 @@ async function waitForListLoaded(page: Page) {
 
 interface SeededProduct {
   name: string;
-  productId: string;
-  skuId: string;
-  skuCode: string;
 }
 
-// Tạo sản phẩm bằng API của admin. Tên có dấu tiếng Việt và tồn kho thấp, để tìm không dấu và lọc tồn kho có dữ liệu.
+// Tạo sản phẩm bằng API của admin. Tên có dấu tiếng Việt và tồn kho thấp, để tìm không dấu và lọc sắp hết hàng có dữ liệu.
 async function seedProduct(page: Page): Promise<SeededProduct> {
   const headers = { Origin: e2eEnvironment.webOrigin };
   const suffix = Date.now().toString(36);
@@ -53,6 +50,7 @@ async function seedProduct(page: Page): Promise<SeededProduct> {
         {
           optionValues: {},
           price: 9_000_000,
+          stock: 3,
           enabled: true,
           weightGrams: 400,
           lengthCm: 20,
@@ -64,22 +62,10 @@ async function seedProduct(page: Page): Promise<SeededProduct> {
     },
   });
   expect(created.status(), await created.text()).toBe(201);
-  const product = (await created.json()).data;
-  const sku = product.variants[0];
-
-  // Tồn kho 3 nằm trong ngưỡng sắp hết hàng. Lần điều chỉnh này cũng tạo một biến động loại `manual`.
-  const adjusted = await page.request.post(`/api/admin/skus/${sku.id}/movements`, {
-    headers,
-    data: { delta: 3, reason: 'Nhập kho E2E màn lọc' },
-  });
-  expect(adjusted.status(), await adjusted.text()).toBe(201);
-
-  return { name, productId: product.id, skuId: sku.id, skuCode: sku.code };
+  return { name };
 }
 
-test('FLT-UI3: màn sản phẩm, tồn kho và biến động kho giữ bộ lọc trên URL, không tràn trang', async ({
-  page,
-}, testInfo) => {
+test('FLT-UI3: màn sản phẩm giữ bộ lọc trên URL, không tràn trang', async ({ page }, testInfo) => {
   test.setTimeout(120000);
   const consoleIssues = collectConsoleIssues(page);
 
@@ -109,49 +95,16 @@ test('FLT-UI3: màn sản phẩm, tồn kho và biến động kho giữ bộ l�
     await expect.poll(() => rows.allInnerTexts()).toEqual(rowsBeforeReload);
   });
 
-  await test.step('Màn tồn kho lọc theo mã SKU từ link', async () => {
-    await page.goto(`/admin/inventory?search=${encodeURIComponent(seeded.skuCode)}`);
-    await expect(page.getByLabel('Tìm theo mã SKU hoặc tên sản phẩm')).toHaveValue(seeded.skuCode);
-    await waitForListLoaded(page);
-
-    const rows = page.locator('table.inventory-table tbody tr');
-    await expect(rows).toHaveCount(1);
-    await expect(rows.first()).toContainText(seeded.skuCode);
-  });
-
-  await test.step('Màn biến động kho lọc theo loại từ link', async () => {
-    const movementsPath = `/admin/products/${seeded.productId}/skus/${seeded.skuId}/inventory`;
-    await page.goto(`${movementsPath}?type=manual`);
-    await expect(page.getByLabel('Loại biến động')).toHaveValue('manual');
-    await waitForListLoaded(page);
-    await expect(page.locator('table.movement-table tbody tr')).toHaveCount(1);
-
-    // Loại không có biến động nào cho SKU này hiện thông báo rỗng của bộ lọc.
-    await page.goto(`${movementsPath}?type=return`);
-    await waitForListLoaded(page);
-    await expect(page.getByText('Không có kết quả phù hợp với bộ lọc.')).toBeVisible();
-  });
-
   for (const width of [1280, 375]) {
-    await test.step(`Ảnh chụp ba màn ở ${width}px không tràn ngang`, async () => {
+    await test.step(`Ảnh chụp màn sản phẩm ở ${width}px không tràn ngang`, async () => {
       await page.setViewportSize({ width, height: width === 375 ? 812 : 800 });
-      const screens = [
-        { path: '/admin/products?status=draft', name: 'products' },
-        { path: '/admin/inventory?search=a', name: 'inventory' },
-        {
-          path: `/admin/products/${seeded.productId}/skus/${seeded.skuId}/inventory?type=manual`,
-          name: 'movements',
-        },
-      ];
-      for (const screen of screens) {
-        await page.goto(screen.path);
-        await waitForListLoaded(page);
-        await expectNoHorizontalOverflow(page);
-        await page.screenshot({
-          path: testInfo.outputPath(`${screen.name}-filters-${width}.png`),
-          fullPage: true,
-        });
-      }
+      await page.goto('/admin/products?status=draft');
+      await waitForListLoaded(page);
+      await expectNoHorizontalOverflow(page);
+      await page.screenshot({
+        path: testInfo.outputPath(`products-filters-${width}.png`),
+        fullPage: true,
+      });
     });
   }
 

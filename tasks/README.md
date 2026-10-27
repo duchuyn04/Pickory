@@ -19,6 +19,7 @@ Spec của module nằm ở `spec/SPEC-<module>.md`. Thứ tự build theo `spec
 | `rest-routes/` | Đổi route cũ đặt theo hành động sang REST (mã `REST`) | Xong. Còn mục review với người dùng ở Checkpoint R1 và Checkpoint cuối |
 | `commerce/` | `commerce` (mã `COM`) | Đang ở Phase 7. COM-E2E0 tới COM-E2E4 xong. COM-E2E5 chuyển sang CBW-E2E1. Còn COM-24: ma trận quyền, coverage 97.9% và sandbox GHN đã đạt, còn chờ khóa SePay |
 | `activity-tracking/` | `activity-tracking` (mã `ACT`) | Chưa bắt đầu. Ngày 2026-10-20 chỉ còn bộ đếm tổng cho phễu |
+| `inventory/` | `inventory` (mã `INV`, `INV-UI`, `INV-E2E`) | Spec đã duyệt ngày 2026-10-22, INV-00 xong. Code chưa bắt đầu. Tách tồn kho khỏi `catalog`, thêm phiếu nhập, kiểm kê, ngưỡng theo SKU, giá vốn |
 | `smart-search/` | `smart-search` (mã `SRCH`) | Đã bỏ ngày 2026-10-14. Chỉ giữ để tra cứu lịch sử |
 | `recommendations/` | `recommendations` (mã `REC`) | Đã bỏ ngày 2026-10-14. Chỉ giữ để tra cứu lịch sử |
 | `personalized-content/` | `personalized-content` (mã `PCON`) | Đã bỏ ngày 2026-10-14. Chỉ giữ để tra cứu lịch sử |

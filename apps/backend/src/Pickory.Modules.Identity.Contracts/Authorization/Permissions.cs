@@ -14,7 +14,6 @@ public static class Permissions
     // catalog
     public const string ProductsRead = "products:read";
     public const string ProductsWrite = "products:write";
-    public const string InventoryWrite = "inventory:write";
 
     // commerce
     public const string OrdersRead = "orders:read";
@@ -54,7 +53,6 @@ public static class Permissions
         AuditLogsRead,
         ProductsRead,
         ProductsWrite,
-        InventoryWrite,
         OrdersRead,
         OrdersUpdateStatus,
         OrdersCancel,

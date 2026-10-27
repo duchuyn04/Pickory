@@ -7,8 +7,6 @@ import { CategoriesPage } from './features/catalog/admin/categories-page';
 import { CategoryPage } from './features/catalog/customer/category-page';
 import { ComparePage } from './features/catalog/customer/compare-page';
 import { ProductPage } from './features/catalog/customer/product-page';
-import { InventoryPage } from './features/catalog/admin/inventory-page';
-import { SkuInventoryPage } from './features/catalog/admin/sku-inventory-page';
 import { Navigate, Outlet, Route, Routes, useLocation } from 'react-router-dom';
 import { AccountPage } from './features/identity/customer/account-page';
 import { AdminDashboardPage } from './features/identity/admin/dashboard-page';
@@ -176,8 +174,6 @@ export function App() {
               </Suspense>
             }
           />
-          <Route path="inventory" element={<InventoryPage />} />
-          <Route path="products/:productId/skus/:skuId/inventory" element={<SkuInventoryPage />} />
           <Route path="categories" element={<CategoriesPage />} />
           <Route path="brands" element={<BrandsPage />} />
           <Route path="conversations" element={<SupportDeskPage />} />

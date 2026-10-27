@@ -9,6 +9,10 @@ public interface ICatalogReader
     // Giữ thứ tự của `ids`. Bỏ id lạ, id trùng và sản phẩm khách không thấy.
     Task<IReadOnlyList<ProductSummary>> GetProductsAsync(IReadOnlyList<string> ids, CancellationToken cancellationToken);
 
+    // Giữ thứ tự của `productIds`. Bỏ id lạ, id trùng và sản phẩm khách không thấy.
+    Task<IReadOnlyList<ProductCategoryInfo>> GetProductCategoriesAsync(
+        IReadOnlyList<string> productIds, CancellationToken cancellationToken);
+
     // Giữ thứ tự của `skuIds` và bỏ id lạ. Trả cả SKU tắt và sản phẩm không bán, kèm cờ để `commerce` hiện nhãn.
     Task<IReadOnlyList<SkuSnapshot>> GetSkusAsync(IReadOnlyList<string> skuIds, CancellationToken cancellationToken);
 

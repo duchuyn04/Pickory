@@ -1,4 +1,5 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { readSkuStock } from './catalog-admin-flow';
 import { e2eEnvironment } from './environment';
 import { readOrderConfirmation } from './outbox';
 
@@ -35,6 +36,7 @@ interface CommerceSettings {
 }
 
 interface SeededProduct {
+  productId: string;
   name: string;
   slug: string;
   skuId: string;
@@ -145,6 +147,7 @@ async function createProduct(
         {
           optionValues: {},
           price: input.price,
+          stock: input.stock,
           compareAtPrice: null,
           enabled: true,
           weightGrams: 500,
@@ -166,12 +169,6 @@ async function createProduct(
   };
   const skuId = product.variants[0]!.id;
 
-  const stocked = await page.request.post(`/api/admin/skus/${skuId}/movements`, {
-    headers: adminHeaders,
-    data: { delta: input.stock, reason: 'Nhập kho E2E đặt hàng' },
-  });
-  expect(stocked.status(), await stocked.text()).toBe(201);
-
   // Sản phẩm đi qua `active` mới hiện cho khách.
   const published = await page.request.put(`/api/admin/products/${product.id}/status`, {
     headers: adminHeaders,
@@ -179,7 +176,7 @@ async function createProduct(
   });
   expect(published.status(), await published.text()).toBe(200);
 
-  return { name: input.name, slug: product.slug, skuId, price: input.price };
+  return { productId: product.id, name: input.name, slug: product.slug, skuId, price: input.price };
 }
 
 async function seedCatalog(page: Page): Promise<SeededCatalog> {
@@ -258,14 +255,6 @@ async function applyCommerceSettings(
     data: { ...baselineCommerceSettings, ...overrides },
   });
   expect(saved.status(), await saved.text()).toBe(200);
-}
-
-// Đếm số lần giữ hàng của SKU. Mỗi đơn tạo đúng một dòng `order_reserve` cho mỗi SKU.
-async function countOrderReservations(adminPage: Page, skuId: string): Promise<number> {
-  const response = await adminPage.request.get(`/api/admin/skus/${skuId}/movements?limit=100`);
-  expect(response.status(), await response.text()).toBe(200);
-  const movements = (await response.json()).data.items as { type: string }[];
-  return movements.filter((movement) => movement.type === 'order_reserve').length;
 }
 
 async function addToCartFromProductPage(page: Page, product: SeededProduct) {
@@ -431,16 +420,24 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
         orderRequests.push(request.headers()['idempotency-key'] ?? '');
       }
     });
-    const reservationsBefore = await countOrderReservations(adminPage, catalog.laptop.skuId);
+    const stockBefore = await readSkuStock(
+      adminPage,
+      catalog.laptop.productId,
+      catalog.laptop.skuId,
+    );
 
     await placeOrderButton(page).dblclick();
 
     await expect(page).toHaveURL(/\/orders\/[^/]+\/success$/);
     expect(orderRequests).toHaveLength(1);
     expect(orderRequests[0]).toMatch(/^[A-Za-z0-9_-]{16,100}$/);
-    // Mỗi đơn giữ hàng đúng một lần cho SKU. Hai đơn sẽ có hai dòng giữ hàng mới.
-    const reservationsAfter = await countOrderReservations(adminPage, catalog.laptop.skuId);
-    expect(reservationsAfter - reservationsBefore).toBe(1);
+    // Hai lần bấm chỉ tạo một đơn, nên kho chỉ giảm đúng một đơn vị.
+    const stockAfter = await readSkuStock(
+      adminPage,
+      catalog.laptop.productId,
+      catalog.laptop.skuId,
+    );
+    expect(stockBefore - stockAfter).toBe(1);
 
     expect(issues).toEqual([]);
   });
@@ -655,7 +652,7 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
     const issues = collectConsoleIssues(page, [{ urlPattern: /\/api\/orders$/, status: 422 }]);
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
-    const reservationsBefore = await countOrderReservations(adminPage, catalog.mouse.skuId);
+    const stockBefore = await readSkuStock(adminPage, catalog.mouse.productId, catalog.mouse.skuId);
     await addToCartFromProductPage(page, catalog.mouse);
     await openCheckoutFromCart(page);
 
@@ -682,8 +679,10 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
     await expect(page.getByLabel('Số điện thoại', { exact: true })).toHaveValue('0912345678');
     await expect(page.getByLabel('Email', { exact: true })).toHaveValue('an@example.com');
     await expect(page).toHaveURL(/\/checkout$/);
-    // Đơn bị chặn trước khi giữ hàng, nên kho không có thêm dòng giữ hàng.
-    expect(await countOrderReservations(adminPage, catalog.mouse.skuId)).toBe(reservationsBefore);
+    // Đơn bị chặn trước khi giữ hàng, nên kho không đổi.
+    expect(await readSkuStock(adminPage, catalog.mouse.productId, catalog.mouse.skuId)).toBe(
+      stockBefore,
+    );
     await checkLayoutAtBothWidths(page, 'checkout-address-rejected');
 
     // Khách sửa dòng địa chỉ thành địa chỉ không có chuỗi đánh dấu rồi đặt lại.
@@ -695,8 +694,8 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
     await expect(
       page.getByRole('heading', { level: 1, name: 'Đặt hàng thành công' }),
     ).toBeVisible();
-    expect(await countOrderReservations(adminPage, catalog.mouse.skuId)).toBe(
-      reservationsBefore + 1,
+    expect(await readSkuStock(adminPage, catalog.mouse.productId, catalog.mouse.skuId)).toBe(
+      stockBefore - 1,
     );
     expect(issues).toEqual([]);
   });

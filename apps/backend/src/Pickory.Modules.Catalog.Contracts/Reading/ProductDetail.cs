@@ -36,14 +36,15 @@ public sealed record SpecEntry(
 
 public sealed record ProductOptionInfo(string Name, IReadOnlyList<string> Values);
 
-// SKU đang bật của sản phẩm. Khách chỉ biết còn hàng hay không, không biết số tồn chính xác.
+// SKU đang bật của sản phẩm. `Stock` là số bán được còn lại để trang khách hiện số lượng.
 public sealed record ProductSkuInfo(
     string Id,
     string Code,
     IReadOnlyDictionary<string, string> OptionValues,
     int Price,
     int? CompareAtPrice,
-    bool InStock);
+    bool InStock,
+    int Stock);
 
 // `SkuId` khác `null` khi ảnh gắn riêng cho một SKU.
 public sealed record ProductImageInfo(string Url, string Alt, string? SkuId);

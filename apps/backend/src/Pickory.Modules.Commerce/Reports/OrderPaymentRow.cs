@@ -8,5 +8,7 @@ internal sealed record OrderPaymentRow(
     DateTime PaidAtUtc,
     int Total,
     PaymentStatus PaymentStatus,
+    // Phương thức của dòng thanh toán để bộ đếm không lấy từ ngày tạo đơn.
+    PaymentMethod PaymentMethod,
     // Số lượng sản phẩm bán ra của đơn để tính vào ngày ghi nhận doanh thu.
     int SoldQuantity = 0);

@@ -146,10 +146,16 @@ public sealed class AdminSalesReportEndpointTests : IClassFixture<PickoryWebAppl
         Assert.Equal(0, totals.GetProperty("paidOrders").GetInt32());
         Assert.Equal(JsonValueKind.Null, totals.GetProperty("averageOrderValue").ValueKind);
         Assert.Equal(0, totals.GetProperty("soldQuantity").GetInt32());
+        Assert.Equal(JsonValueKind.Null, totals.GetProperty("paidByMethod").GetProperty("codRate").ValueKind);
+        Assert.Equal(JsonValueKind.Null, totals.GetProperty("paidByMethod").GetProperty("sepayRate").ValueKind);
+        Assert.Equal(JsonValueKind.Null, totals.GetProperty("cancellations").GetProperty("byCustomerRate").ValueKind);
+        Assert.Equal(JsonValueKind.Null, totals.GetProperty("cancellations").GetProperty("byShopRate").ValueKind);
+        Assert.Equal(JsonValueKind.Null, totals.GetProperty("cancellations").GetProperty("paymentExpiredRate").ValueKind);
 
         var buckets = data.GetProperty("buckets").EnumerateArray().ToList();
         Assert.Equal(3, buckets.Count);
         Assert.All(buckets, bucket => Assert.Equal(0, bucket.GetProperty("recognizedRevenue").GetInt64()));
+        Assert.Empty(data.GetProperty("topCategories").EnumerateArray());
     }
 
     [Fact]
@@ -319,6 +325,17 @@ public sealed class AdminSalesReportEndpointTests : IClassFixture<PickoryWebAppl
         Assert.Equal(300_000, unknownProducts[0].GetProperty("revenue").GetInt64());
         Assert.Equal(3, unknownProducts[0].GetProperty("quantity").GetInt32());
 
+        // Danh mục lá gộp doanh thu của mọi sản phẩm trong danh mục. Nhóm null nằm cuối danh sách.
+        var topCategories = data.GetProperty("topCategories").EnumerateArray().ToList();
+        Assert.Equal(2, topCategories.Count);
+        Assert.Equal(categoryId, topCategories[0].GetProperty("categoryId").GetString());
+        Assert.Equal("Thiết bị", topCategories[0].GetProperty("categoryName").GetString());
+        Assert.Equal(900_000, topCategories[0].GetProperty("revenue").GetInt64());
+        Assert.Equal(3, topCategories[0].GetProperty("quantity").GetInt32());
+        Assert.Equal(JsonValueKind.Null, topCategories[1].GetProperty("categoryId").ValueKind);
+        Assert.Equal(300_000, topCategories[1].GetProperty("revenue").GetInt64());
+        Assert.Equal(3, topCategories[1].GetProperty("quantity").GetInt32());
+
         // Top sản phẩm giữ đủ mọi sản phẩm và bổ sung thông tin từ catalog.
         var topProducts = data.GetProperty("topProducts").EnumerateArray().ToList();
         Assert.Equal(3, topProducts.Count);
@@ -327,6 +344,64 @@ public sealed class AdminSalesReportEndpointTests : IClassFixture<PickoryWebAppl
         Assert.Equal("Apple", topProducts[0].GetProperty("brandName").GetString());
         Assert.Equal("prod-unknown", topProducts[2].GetProperty("productId").GetString());
         Assert.Equal(JsonValueKind.Null, topProducts[2].GetProperty("name").ValueKind);
+
+        var totals = data.GetProperty("totals");
+        Assert.Equal(1, totals.GetProperty("orderStatuses").GetProperty("confirmed").GetInt32());
+        Assert.Equal(0, totals.GetProperty("cancellations").GetProperty("byCustomerRate").GetDecimal());
+        Assert.Equal(0, totals.GetProperty("cancellations").GetProperty("byShopRate").GetDecimal());
+        Assert.Equal(0, totals.GetProperty("cancellations").GetProperty("paymentExpiredRate").GetDecimal());
+        Assert.Equal(0, totals.GetProperty("paidByMethod").GetProperty("codRate").GetDecimal());
+        Assert.Equal(1, totals.GetProperty("paidByMethod").GetProperty("sepayRate").GetDecimal());
+        Assert.Equal(1_200_000, totals.GetProperty("placedOrderValue").GetInt64());
+        Assert.Equal(0, totals.GetProperty("shippingDiscount").GetInt64());
+    }
+
+    [Fact]
+    // Tổng và từng nhóm chỉ đếm đơn đã thanh toán theo phương thức. Đơn chưa thanh toán vẫn thuộc chỉ số đơn tạo.
+    public async Task Get_WithPaidAndUnpaidOrders_CountsOnlyPaidMethodsInTotalsAndBuckets()
+    {
+        var paidAtUtc = new DateTime(2040, 5, 10, 3, 0, 0, DateTimeKind.Utc);
+        // Đơn SePay đã thanh toán là đối chứng phải xuất hiện trong cả tổng và từng nhóm.
+        await CreateOrderWithPaymentAsync(
+            "ORDER-PAID-SEPAY",
+            paidAtUtc,
+            total: 300_000,
+            lines: [("prod-paid-sepay", 1, 300_000)]);
+        // Hai đơn chưa thanh toán phải được loại khỏi bộ đếm phương thức của cả COD và SePay.
+        await _orderKit.AddOrderAsync(
+            "ORDER-UNPAID-COD",
+            paidAtUtc.AddMinutes(1),
+            paymentMethod: PaymentMethod.Cod);
+        await _orderKit.AddOrderAsync(
+            "ORDER-UNPAID-SEPAY",
+            paidAtUtc.AddMinutes(2),
+            status: OrderStatus.PendingPayment,
+            paymentMethod: PaymentMethod.Sepay);
+
+        // Gọi endpoint trong cùng ngày để tổng và từng nhóm dùng chung bộ dữ liệu kiểm chứng.
+        var response = await GetAsync("range=custom&from=2040-05-10&to=2040-05-10&granularity=day", _salesCookie);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var document = await ActorHttp.ReadJsonAsync(response);
+        var data = document.RootElement.GetProperty("data");
+        var totals = data.GetProperty("totals");
+        Assert.Equal(300_000, totals.GetProperty("recognizedRevenue").GetInt64());
+        Assert.Equal(1, totals.GetProperty("paidOrders").GetInt32());
+        Assert.Equal(3, totals.GetProperty("createdOrders").GetInt32());
+        Assert.Equal(740_000, totals.GetProperty("placedOrderValue").GetInt64());
+        Assert.Equal(20_000, totals.GetProperty("shippingDiscount").GetInt64());
+        var totalMethods = totals.GetProperty("paidByMethod");
+        Assert.Equal(0, totalMethods.GetProperty("cod").GetInt32());
+        Assert.Equal(1, totalMethods.GetProperty("sepay").GetInt32());
+        Assert.Equal(0, totalMethods.GetProperty("codRate").GetDecimal());
+        Assert.Equal(1, totalMethods.GetProperty("sepayRate").GetDecimal());
+
+        var bucket = Assert.Single(data.GetProperty("buckets").EnumerateArray());
+        Assert.Equal(300_000, bucket.GetProperty("recognizedRevenue").GetInt64());
+        Assert.Equal(1, bucket.GetProperty("paidOrders").GetInt32());
+        var bucketMethods = bucket.GetProperty("paidByMethod");
+        Assert.Equal(0, bucketMethods.GetProperty("cod").GetInt32());
+        Assert.Equal(1, bucketMethods.GetProperty("sepay").GetInt32());
     }
 
     private async Task<HttpResponseMessage> GetAsync(string query, string? cookieHeader)

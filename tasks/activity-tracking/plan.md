@@ -89,30 +89,30 @@ Chi tiết từng task ở `tasks/activity-tracking/todo.md`.
 ### Checkpoint A1
 - [x] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
 - [x] Test kiến trúc chặn `ActivityTracking` tham chiếu module khác ngoài Contracts
-- [ ] Review với người dùng
+- [x] Review với người dùng
 
 ### Phase 2: Đếm
 - [x] ACT-06 · [x] ACT-UI1 · [x] ACT-07 · [x] ACT-14
 
 ### Checkpoint A2
-- [ ] Xem sản phẩm, thêm giỏ, đặt đơn: mỗi bộ đếm của hôm nay tăng đúng 1
-- [ ] Nhân viên và crawler không làm bộ đếm tăng
-- [ ] Review với người dùng
+- [x] Xem sản phẩm, thêm giỏ, đặt đơn: mỗi bộ đếm của hôm nay tăng đúng 1
+- [x] Nhân viên và crawler không làm bộ đếm tăng
+- [x] Review với người dùng
 
 ### Phase 3: Phễu
 - [x] ACT-11
 
 ### Checkpoint A3
-- [ ] API phễu trả đúng số và tỉ lệ với bộ dữ liệu dựng sẵn
-- [ ] Review với người dùng
+- [x] API phễu trả đúng số và tỉ lệ với bộ dữ liệu dựng sẵn
+- [x] Review với người dùng
 
 ### Phase 4: E2E và nghiệm thu
 - [x] ACT-E2E1 · [x] ACT-13
 
 ### Checkpoint cuối
-- [ ] Mọi dòng Traceability đạt
-- [ ] Coverage dòng của `Pickory.Modules.ActivityTracking` ít nhất 80%, không tính `Persistence/Migrations/`
-- [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+- [x] Mọi dòng Traceability đạt
+- [x] Coverage dòng của `Pickory.Modules.ActivityTracking` ít nhất 80%, không tính `Persistence/Migrations/`
+- [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
 - [ ] Review với người dùng, rồi mới bắt đầu `support-desk`
 
 ## Traceability: Success Criteria → Task

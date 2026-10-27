@@ -1,10 +1,13 @@
 namespace Pickory.Modules.Catalog.Images;
 
-// Luật tải ảnh sản phẩm theo `spec/SPEC-catalog.md`, mục "Ảnh (Cloudinary)".
+// Luật tải ảnh catalog theo `spec/SPEC-catalog.md`, mục "Ảnh (Cloudinary)".
 public static class ImageUploadRules
 {
     // Mọi ảnh sản phẩm nằm trong một thư mục. API chỉ nhận `publicId` thuộc thư mục này.
     public const string Folder = "pickory/products";
+
+    // Logo thương hiệu có thư mục riêng để không lẫn với ảnh sản phẩm.
+    public const string BrandFolder = "pickory/brands";
 
     // Cloudinary nhận chuỗi định dạng ngăn bằng dấu phẩy, không có khoảng trắng.
     public static readonly IReadOnlyList<string> AllowedFormats = ["jpg", "png", "webp"];

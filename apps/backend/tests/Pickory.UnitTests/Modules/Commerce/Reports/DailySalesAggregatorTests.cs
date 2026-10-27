@@ -26,8 +26,12 @@ public sealed class DailySalesAggregatorTests
         new(createdAtUtc, status, method, total, shippingDiscount, expiredFlag, cancelReason);
 
     private static OrderPaymentRow Payment(
-        DateTime paidAtUtc, int total = 100_000, PaymentStatus status = PaymentStatus.Paid, int soldQuantity = 0) =>
-        new("order-" + Guid.NewGuid().ToString("N"), paidAtUtc, total, status, soldQuantity);
+        DateTime paidAtUtc,
+        int total = 100_000,
+        PaymentStatus status = PaymentStatus.Paid,
+        int soldQuantity = 0,
+        PaymentMethod method = PaymentMethod.Cod) =>
+        new("order-" + Guid.NewGuid().ToString("N"), paidAtUtc, total, status, method, soldQuantity);
 
     private static DailySales DayOf(IReadOnlyList<DailySales> days, int dayOfMonth) =>
         days.Single(day => day.Day == new DateOnly(2026, 10, dayOfMonth));
@@ -49,6 +53,7 @@ public sealed class DailySalesAggregatorTests
             Assert.Equal(0, day.CreatedOrderCount);
             Assert.Equal(new CancellationCounts(0, 0, 0), day.Cancellations);
             Assert.Equal(new PaymentMethodCounts(0, 0), day.PaymentMethods);
+            Assert.Equal(new OrderStatusCounts(0, 0, 0, 0, 0, 0, 0), day.OrderStatuses);
             Assert.Equal(0, day.ShippingDiscount);
         });
     }
@@ -117,7 +122,7 @@ public sealed class DailySalesAggregatorTests
     }
 
     [Fact]
-    // Đơn hết hạn không vào giá trị đơn đặt, phương thức thanh toán và giảm phí ship. Đơn đó vẫn vào số đơn tạo và số đơn hủy.
+    // Đơn hết hạn không vào giá trị đơn đặt và giảm phí ship. Đơn chưa thanh toán không vào bộ đếm phương thức.
     public void Build_PaymentExpiredOrder_IsCreatedAndCancelledButNotPlaced()
     {
         CreatedOrderRow[] orders =
@@ -131,7 +136,7 @@ public sealed class DailySalesAggregatorTests
         Assert.Equal(2, day.CreatedOrderCount);
         Assert.Equal(200_000, day.PlacedOrderValue);
         Assert.Equal(5_000, day.ShippingDiscount);
-        Assert.Equal(new PaymentMethodCounts(Cod: 0, Sepay: 1), day.PaymentMethods);
+        Assert.Equal(new PaymentMethodCounts(Cod: 0, Sepay: 0), day.PaymentMethods);
         Assert.Equal(new CancellationCounts(ByCustomer: 0, ByShop: 0, PaymentExpired: 1), day.Cancellations);
     }
 
@@ -228,12 +233,31 @@ public sealed class DailySalesAggregatorTests
     }
 
     [Fact]
+    // Mỗi trạng thái hiện tại có một bộ đếm riêng để báo cáo phản ánh đúng các đơn tạo trong kỳ.
+    public void Build_CurrentOrderStatuses_CountsEveryStatus()
+    {
+        CreatedOrderRow[] orders = Enum.GetValues<OrderStatus>()
+            .Select(status => Created(MiddayOct5, status))
+            .ToArray();
+
+        var day = DayOf(DailySalesAggregator.Build(ThreeDays, [], orders), 5);
+
+        Assert.Equal(1, day.OrderStatuses.PendingPayment);
+        Assert.Equal(1, day.OrderStatuses.PendingConfirmation);
+        Assert.Equal(1, day.OrderStatuses.Confirmed);
+        Assert.Equal(1, day.OrderStatuses.Shipping);
+        Assert.Equal(1, day.OrderStatuses.Delivered);
+        Assert.Equal(1, day.OrderStatuses.Returned);
+        Assert.Equal(1, day.OrderStatuses.Cancelled);
+    }
+
+    [Fact]
     // Phương thức thanh toán chưa có bộ đếm phải ném lỗi, để không bị đếm nhầm thành COD một cách im lặng.
     public void Build_UnknownPaymentMethod_Throws()
     {
-        CreatedOrderRow[] orders = [Created(MiddayOct5, method: (PaymentMethod)99)];
+        OrderPaymentRow[] payments = [Payment(MiddayOct5, method: (PaymentMethod)99)];
 
-        Assert.Throws<InvalidOperationException>(() => DailySalesAggregator.Build(ThreeDays, [], orders));
+        Assert.Throws<InvalidOperationException>(() => DailySalesAggregator.Build(ThreeDays, payments, []));
     }
 
     [Fact]
@@ -242,18 +266,24 @@ public sealed class DailySalesAggregatorTests
     {
         Assert.All(Enum.GetValues<PaymentMethod>(), method =>
         {
-            CreatedOrderRow[] orders = [Created(MiddayOct5, method: method)];
+            OrderPaymentRow[] payments = [Payment(MiddayOct5, method: method)];
 
-            var day = DayOf(DailySalesAggregator.Build(ThreeDays, [], orders), 5);
+            var day = DayOf(DailySalesAggregator.Build(ThreeDays, payments, []), 5);
 
             Assert.Equal(1, day.PaymentMethods.Sepay + day.PaymentMethods.Cod);
         });
     }
 
     [Fact]
-    // Đếm đơn theo phương thức thanh toán và cộng giảm phí ship của các đơn đặt.
+    // Đếm phương thức từ dòng thanh toán và cộng giảm phí ship từ các đơn đặt.
     public void Build_CountsPaymentMethodsAndShippingDiscount()
     {
+        OrderPaymentRow[] payments =
+        [
+            Payment(MiddayOct5, method: PaymentMethod.Cod),
+            Payment(MiddayOct5, method: PaymentMethod.Sepay),
+            Payment(MiddayOct5, method: PaymentMethod.Sepay),
+        ];
         CreatedOrderRow[] orders =
         [
             Created(MiddayOct5, method: PaymentMethod.Cod, shippingDiscount: 10_000),
@@ -261,10 +291,55 @@ public sealed class DailySalesAggregatorTests
             Created(MiddayOct5, method: PaymentMethod.Sepay, shippingDiscount: 0),
         ];
 
-        var day = DayOf(DailySalesAggregator.Build(ThreeDays, [], orders), 5);
+        var day = DayOf(DailySalesAggregator.Build(ThreeDays, payments, orders), 5);
 
         Assert.Equal(new PaymentMethodCounts(Cod: 1, Sepay: 2), day.PaymentMethods);
         Assert.Equal(15_000, day.ShippingDiscount);
         Assert.Equal(3, day.CreatedOrderCount);
+    }
+
+    [Fact]
+    // Phương thức chỉ được đếm vào ngày thanh toán. Ngày tạo đơn không được giữ bộ đếm của đơn chưa thanh toán.
+    public void Build_OrderCreatedBeforePayment_CountsPaymentMethodsOnPaymentDay()
+    {
+        OrderPaymentRow[] payments =
+        [
+            Payment(MiddayOct6, method: PaymentMethod.Cod),
+            Payment(MiddayOct6, method: PaymentMethod.Sepay),
+        ];
+        CreatedOrderRow[] orders =
+        [
+            Created(MiddayOct5, method: PaymentMethod.Cod),
+            Created(MiddayOct5, method: PaymentMethod.Sepay),
+        ];
+
+        var days = DailySalesAggregator.Build(ThreeDays, payments, orders);
+
+        Assert.Equal(new PaymentMethodCounts(Cod: 0, Sepay: 0), DayOf(days, 5).PaymentMethods);
+        Assert.Equal(new PaymentMethodCounts(Cod: 1, Sepay: 1), DayOf(days, 6).PaymentMethods);
+    }
+
+    [Fact]
+    // Đơn chờ, đơn hủy và trạng thái không được ghi nhận doanh thu không được tăng bộ đếm COD hoặc SePay.
+    public void Build_PaymentMethods_ExcludePendingCancelledAndUnrecognizedPayments()
+    {
+        CreatedOrderRow[] orders =
+        [
+            Created(MiddayOct5, OrderStatus.PendingConfirmation, PaymentMethod.Cod),
+            Created(MiddayOct5, OrderStatus.Cancelled, PaymentMethod.Sepay, cancelReason: OrderReportMarkers.CustomerCancellationReason),
+            Created(MiddayOct5, OrderStatus.Delivered, PaymentMethod.Cod),
+            Created(MiddayOct5, OrderStatus.Returned, PaymentMethod.Sepay),
+            Created(MiddayOct5, OrderStatus.Delivered, PaymentMethod.Cod),
+        ];
+        OrderPaymentRow[] payments =
+        [
+            Payment(MiddayOct5, status: PaymentStatus.RefundPending, method: PaymentMethod.Cod),
+            Payment(MiddayOct5, status: PaymentStatus.Refunded, method: PaymentMethod.Sepay),
+            Payment(MiddayOct5, status: PaymentStatus.Unpaid, method: PaymentMethod.Cod),
+        ];
+
+        var day = DayOf(DailySalesAggregator.Build(ThreeDays, payments, orders), 5);
+
+        Assert.Equal(new PaymentMethodCounts(Cod: 0, Sepay: 0), day.PaymentMethods);
     }
 }

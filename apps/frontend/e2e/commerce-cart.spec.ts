@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
+import { setSkuStock } from './catalog-admin-flow';
 import { e2eEnvironment } from './environment';
 
 // Ảnh PNG 1x1 trả cho mọi yêu cầu ảnh sản phẩm, để trình duyệt không ghi lỗi tải ảnh vào console.
@@ -13,6 +14,7 @@ const screenshotDirectory = process.env.COM_UI1_SHOTS_DIR;
 const adminHeaders = { Origin: e2eEnvironment.webOrigin };
 
 interface SeededProduct {
+  productId: string;
   name: string;
   slug: string;
   skuId: string;
@@ -96,6 +98,7 @@ async function createProduct(
         {
           optionValues: {},
           price: input.price,
+          stock: input.stock,
           compareAtPrice: null,
           enabled: true,
           weightGrams: 500,
@@ -115,12 +118,6 @@ async function createProduct(
   };
   const skuId = product.variants[0]!.id;
 
-  const stocked = await page.request.post(`/api/admin/skus/${skuId}/movements`, {
-    headers: adminHeaders,
-    data: { delta: input.stock, reason: 'Nhập kho E2E giỏ hàng' },
-  });
-  expect(stocked.status(), await stocked.text()).toBe(201);
-
   // Sản phẩm đi qua `active` mới hiện cho khách.
   const published = await page.request.put(`/api/admin/products/${product.id}/status`, {
     headers: adminHeaders,
@@ -128,7 +125,7 @@ async function createProduct(
   });
   expect(published.status(), await published.text()).toBe(200);
 
-  return { name: input.name, slug: product.slug, skuId, price: input.price };
+  return { productId: product.id, name: input.name, slug: product.slug, skuId, price: input.price };
 }
 
 async function seedCatalog(page: Page): Promise<SeededCatalog> {
@@ -174,15 +171,6 @@ async function seedCatalog(page: Page): Promise<SeededCatalog> {
       'headset',
     ),
   };
-}
-
-// Trừ tồn kho bằng phiếu điều chỉnh âm, giống thao tác của nhân viên kho.
-async function removeStock(page: Page, skuId: string, quantity: number) {
-  const adjusted = await page.request.post(`/api/admin/skus/${skuId}/movements`, {
-    headers: adminHeaders,
-    data: { delta: -quantity, reason: 'Xuất kho E2E giỏ hàng' },
-  });
-  expect(adjusted.status(), await adjusted.text()).toBe(201);
 }
 
 async function addFromProductPage(page: Page, product: SeededProduct) {
@@ -381,8 +369,8 @@ test.describe('COM-UI1: giỏ hàng của khách', () => {
     const adminContext = await browser.newContext({ baseURL: e2eEnvironment.webOrigin });
     const adminPage = await adminContext.newPage();
     await loginAdmin(adminPage);
-    await removeStock(adminPage, catalog.outOfStock.skuId, 5);
-    await removeStock(adminPage, catalog.lowStock.skuId, 3);
+    await setSkuStock(adminPage, catalog.outOfStock.productId, catalog.outOfStock.skuId, 0);
+    await setSkuStock(adminPage, catalog.lowStock.productId, catalog.lowStock.skuId, 2);
     await adminContext.close();
 
     // Tải lại trang giỏ để lấy giá và tồn kho mới.

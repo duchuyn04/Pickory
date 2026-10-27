@@ -1,13 +1,23 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import React, { useState } from 'react';
+import { ActiveFilterBar, type ActiveFilter } from '../../../shared/active-filter-bar';
 import { apiRequest } from '../../../shared/api';
 import { FilteredEmptyState } from '../../../shared/filtered-empty-state';
+import { Pager } from '../../../shared/pager';
+import { rowNumber } from '../../../shared/row-number';
 import { SearchInput } from '../../../shared/search-input';
 import { useListFilters } from '../../../shared/use-list-filters';
 import { useCan } from '../../identity/hooks/use-actor';
 import { AdminFormDialog } from '../../../shared/admin-form-dialog';
+import { BrandLogoField } from './brand-logo-field';
 import { toCatalogErrorMessage } from './catalog-errors';
-import { filterBrands } from './catalog-filters';
+import { filterAndSortBrands } from './catalog-filters';
+import {
+  uploadToCloudinary,
+  validateImageFile,
+  type UploadedImage,
+  type UploadSignature,
+} from './image-upload';
 import { ErrorAlert } from '../../../shared/error-alert';
 import './catalog-admin.css';
 
@@ -17,25 +27,41 @@ export interface BrandItem {
   name: string;
   slug: string;
   logoPublicId: string | null;
+  logoUrl: string | null;
   createdAt: string;
   updatedAt: string;
 }
 
-// Tên tham số bộ lọc trên URL. Màn này lọc ở trình duyệt, nên API không nhận tham số này.
-const FILTER_NAMES = ['search'] as const;
+// Màn lọc trên dữ liệu đã tải. Các tham số này chỉ thuộc URL của trình duyệt.
+const FILTER_NAMES = ['search', 'logo', 'sort'] as const;
+const BRAND_PAGE_SIZE = 10;
+const LOGO_FILTER_LABELS: Record<string, string> = {
+  'with-logo': 'Có logo',
+  'without-logo': 'Chưa có logo',
+};
+const SORT_LABELS: Record<string, string> = {
+  'name-asc': 'Tên A-Z',
+  'name-desc': 'Tên Z-A',
+  newest: 'Mới nhất',
+  oldest: 'Cũ nhất',
+};
+
+type BrandFilterName = (typeof FILTER_NAMES)[number];
 
 // Màn hình quản lý danh sách và thông tin thương hiệu sản phẩm.
 export function BrandsPage() {
   const canWrite = useCan('products:write');
   const queryClient = useQueryClient();
-  // Từ khóa nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
-  const { values, setFilter } = useListFilters(FILTER_NAMES);
+  // Bộ lọc và số trang nằm trên URL. Mở lại link cho đúng phần danh sách đang xem.
+  const { values, page, setFilter, clearFilters, setPage } = useListFilters(FILTER_NAMES);
   const keyword = values.search;
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<BrandItem | null>(null);
   const [name, setName] = useState('');
-  const [logoPublicId, setLogoPublicId] = useState('');
+  const [logo, setLogo] = useState<UploadedImage | null>(null);
+  const [logoUploadError, setLogoUploadError] = useState<string | null>(null);
+  const [isLogoUploading, setIsLogoUploading] = useState(false);
 
   const [formError, setFormError] = useState<string | null>(null);
   const [pageError, setPageError] = useState<string | null>(null);
@@ -52,14 +78,38 @@ export function BrandsPage() {
     queryFn: () => apiRequest<BrandItem[]>('/api/brands'),
   });
 
-  // Lọc trên danh sách đã tải. Sau khi tạo, sửa hoặc xóa, danh sách tải lại vẫn áp từ khóa hiện tại.
-  const visibleBrands = filterBrands(brands, keyword);
+  // Lọc và sắp xếp sau mỗi lần tải lại để thao tác thêm, sửa hoặc xóa giữ điều kiện hiện tại.
+  const matchingBrands = filterAndSortBrands(brands, {
+    keyword,
+    logo: values.logo,
+    sort: values.sort,
+  });
+  // Chỉ cắt danh sách sau khi lọc. Tổng số kết quả quyết định số trang của `Pager`.
+  const pageBrands = matchingBrands.slice((page - 1) * BRAND_PAGE_SIZE, page * BRAND_PAGE_SIZE);
+  const hasFilters = keyword.trim() !== '' || values.logo !== '';
+  const activeFilters: ActiveFilter<BrandFilterName>[] = [];
+  if (keyword.trim()) activeFilters.push({ name: 'search', label: `Từ khóa: ${keyword.trim()}` });
+  if (values.logo) {
+    // Mã lạ trên URL vẫn cần một nhãn để có thể bỏ giá trị đó.
+    activeFilters.push({
+      name: 'logo',
+      label: `Logo: ${LOGO_FILTER_LABELS[values.logo] ?? values.logo}`,
+    });
+  }
+  if (values.sort) {
+    activeFilters.push({
+      name: 'sort',
+      label: `Sắp xếp: ${SORT_LABELS[values.sort] ?? values.sort}`,
+    });
+  }
 
   // Mở hộp thoại để tạo mới thương hiệu.
   function handleOpenCreate() {
     setEditingBrand(null);
     setName('');
-    setLogoPublicId('');
+    setLogo(null);
+    setLogoUploadError(null);
+    setIsLogoUploading(false);
     setFormError(null);
     setIsFormOpen(true);
   }
@@ -68,20 +118,63 @@ export function BrandsPage() {
   function handleOpenEdit(brand: BrandItem) {
     setEditingBrand(brand);
     setName(brand.name);
-    setLogoPublicId(brand.logoPublicId || '');
+    // Đưa logo đã lưu vào form để thao tác chỉ sửa tên không làm mất logo.
+    setLogo(
+      brand.logoPublicId && brand.logoUrl
+        ? { publicId: brand.logoPublicId, url: brand.logoUrl }
+        : null,
+    );
+    setLogoUploadError(null);
+    setIsLogoUploading(false);
     setFormError(null);
     setIsFormOpen(true);
   }
 
   // Đóng hộp thoại chỉnh sửa.
   function handleCloseForm() {
+    // Không đóng form trong lúc tải để kết quả chậm không ghi vào một lần mở form khác.
+    if (isLogoUploading) return;
     setIsFormOpen(false);
     setEditingBrand(null);
+  }
+
+  async function handleSelectLogo(file: File) {
+    setLogoUploadError(null);
+    // Chặn file sai trước khi xin chữ ký để không phát sinh request không cần thiết.
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      setLogoUploadError(validationError);
+      return;
+    }
+
+    // Khóa nút lưu trong lúc tải để form không ghi logo cũ trước khi ảnh mới sẵn sàng.
+    setIsLogoUploading(true);
+    try {
+      // Route riêng khóa thư mục `pickory/brands` trong chữ ký.
+      const signature = await apiRequest<UploadSignature>(
+        '/api/admin/uploads/brand-logo/signature',
+        {
+          method: 'POST',
+        },
+      );
+      // File đi thẳng tới Cloudinary và không đi qua API Pickory.
+      const uploaded = await uploadToCloudinary(file, signature);
+      // Chỉ thay logo đang hiện sau khi Cloudinary xác nhận tải thành công.
+      setLogo(uploaded);
+    } catch (error: unknown) {
+      // Giữ logo cũ khi tải thất bại để thao tác sửa tên vẫn không làm mất ảnh.
+      setLogoUploadError(toCatalogErrorMessage(error, 'Tải logo thất bại. Hãy thử lại.'));
+    } finally {
+      // Mở khóa nút lưu sau cả thành công lẫn thất bại để có thể tiếp tục hoặc thử lại.
+      setIsLogoUploading(false);
+    }
   }
 
   // Gửi thông tin tạo mới hoặc cập nhật thương hiệu lên máy chủ.
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
+    // Enter có thể gửi form trong lúc tải. Không lưu cho tới khi có kết quả upload.
+    if (isLogoUploading) return;
     setFormError(null);
 
     const trimmedName = name.trim();
@@ -95,7 +188,7 @@ export function BrandsPage() {
     try {
       const payload = {
         name: trimmedName,
-        logoPublicId: logoPublicId.trim() ? logoPublicId.trim() : null,
+        logoPublicId: logo?.publicId ?? null,
       };
 
       if (editingBrand) {
@@ -179,12 +272,42 @@ export function BrandsPage() {
               value={keyword}
               onSearch={(text) => setFilter('search', text)}
             />
+            <div className="field">
+              <label htmlFor="brand-logo-filter">Logo</label>
+              <select
+                id="brand-logo-filter"
+                value={values.logo}
+                onChange={(event) => setFilter('logo', event.target.value)}
+              >
+                <option value="">Tất cả</option>
+                <option value="with-logo">Có logo</option>
+                <option value="without-logo">Chưa có logo</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="brand-sort">Sắp xếp</label>
+              <select
+                id="brand-sort"
+                value={values.sort}
+                onChange={(event) => setFilter('sort', event.target.value)}
+              >
+                <option value="">Tên A-Z</option>
+                <option value="name-desc">Tên Z-A</option>
+                <option value="newest">Mới nhất</option>
+                <option value="oldest">Cũ nhất</option>
+              </select>
+            </div>
           </div>
-          {brands.length === 0 ? (
+          <ActiveFilterBar
+            filters={activeFilters}
+            summary={`${matchingBrands.length} thương hiệu`}
+            onRemove={(filterName) => setFilter(filterName, '')}
+            onClearAll={clearFilters}
+          />
+          {brands.length === 0 && !hasFilters ? (
             <p className="empty-state">Chưa có thương hiệu nào. Hãy tạo thương hiệu đầu tiên.</p>
-          ) : visibleBrands.length === 0 ? (
-            // Danh sách không phân trang nên nút Về trang 1 không hiện. Prop bắt buộc nên truyền hàm rỗng.
-            <FilteredEmptyState page={1} onFirstPage={() => undefined} />
+          ) : pageBrands.length === 0 ? (
+            <FilteredEmptyState page={page} onFirstPage={() => setPage(1)} />
           ) : (
             <div className="table-wrap">
               <table className="tbl">
@@ -202,10 +325,12 @@ export function BrandsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {visibleBrands.map((brand, index) => (
+                  {pageBrands.map((brand, index) => (
                     <tr key={brand.id}>
-                      {/* Danh sách không phân trang, và STT theo danh sách đang hiện. Lọc xong thì số đánh lại từ 1. */}
-                      <td className="num col-row-number">{index + 1}</td>
+                      {/* STT theo vị trí sau khi lọc và sắp xếp. Trang sau tiếp nối số của trang trước. */}
+                      <td className="num col-row-number">
+                        {rowNumber({ page, limit: BRAND_PAGE_SIZE }, index)}
+                      </td>
                       <td>
                         <strong>{brand.name}</strong>
                         {/* Slug và mã logo là chuỗi liền, phải ngắt được để trang không tràn ngang ở 375px. */}
@@ -242,6 +367,16 @@ export function BrandsPage() {
               </table>
             </div>
           )}
+          {/* Trang vượt giới hạn chỉ cần nút Về trang 1. Không hiện thanh phân trang có số trang sai. */}
+          {pageBrands.length > 0 && (
+            <Pager
+              page={page}
+              total={matchingBrands.length}
+              limit={BRAND_PAGE_SIZE}
+              onPageChange={setPage}
+              label="Phân trang thương hiệu"
+            />
+          )}
         </div>
       )}
 
@@ -254,6 +389,8 @@ export function BrandsPage() {
           formId="brand-form"
           onSubmit={handleSubmit}
           isSubmitting={isSubmitting}
+          submitDisabled={isLogoUploading}
+          closeDisabled={isLogoUploading}
           submitText={editingBrand ? 'Lưu thay đổi' : 'Tạo thương hiệu'}
           error={formError}
         >
@@ -269,16 +406,13 @@ export function BrandsPage() {
             />
           </div>
 
-          <div className="field">
-            <label htmlFor="brand-logo">Mã logo Cloudinary (tùy chọn)</label>
-            <input
-              id="brand-logo"
-              type="text"
-              value={logoPublicId}
-              onChange={(e) => setLogoPublicId(e.target.value)}
-              placeholder="pickory/brands/apple_logo"
-            />
-          </div>
+          <BrandLogoField
+            logo={logo}
+            brandName={name}
+            isUploading={isLogoUploading}
+            error={logoUploadError}
+            onSelect={handleSelectLogo}
+          />
         </AdminFormDialog>
       )}
     </div>

@@ -94,6 +94,25 @@ public sealed class CatalogReaderTests : IClassFixture<PickoryWebApplicationFact
     }
 
     [Fact]
+    public async Task GetProductCategories_KeepsRequestedOrder_AndDropsDuplicatesUnknownAndInvisibleProducts()
+    {
+        await AddProductAsync(1);
+        await AddProductAsync(2, inChild: false);
+        await AddProductAsync(3, ProductStatus.Draft);
+
+        // Thứ tự xáo trộn, có id trùng, id lạ và một sản phẩm khách không thấy.
+        var ids = new[] { ProductId(2), ProductId(1), ProductId(2), "khong-ton-tai", ProductId(3) };
+        var categories = await WithReaderAsync(
+            reader => reader.GetProductCategoriesAsync(ids, CancellationToken.None));
+
+        Assert.Equal([ProductId(2), ProductId(1)], categories.Select(item => item.ProductId));
+        Assert.Equal(_parentCategory.Id, categories[0].Category.Id);
+        Assert.Equal(_parentCategory.Name, categories[0].Category.Name);
+        Assert.Equal(_childCategory.Id, categories[1].Category.Id);
+        Assert.Equal(_childCategory.Name, categories[1].Category.Name);
+    }
+
+    [Fact]
     public async Task GetProducts_WithNoValidIds_ReturnsEmpty()
     {
         await AddProductAsync(1, ProductStatus.Draft);
@@ -445,7 +464,7 @@ public sealed class CatalogReaderTests : IClassFixture<PickoryWebApplicationFact
     }
 
     [Fact]
-    public async Task CountLowStock_MatchesTheAdminLowStockListTotal()
+    public async Task CountLowStock_CountsEnabledSkusAtOrBelowThreshold()
     {
         var before = await WithReaderAsync(reader => reader.CountLowStockAsync(CancellationToken.None));
 
@@ -455,19 +474,7 @@ public sealed class CatalogReaderTests : IClassFixture<PickoryWebApplicationFact
             new StockTestData.SkuSeed(0), new StockTestData.SkuSeed(2));
 
         var after = await WithReaderAsync(reader => reader.CountLowStockAsync(CancellationToken.None));
-        var adminTotal = await ReadAdminLowStockTotalAsync();
 
         Assert.Equal(before + 3, after);
-        Assert.Equal(adminTotal, after);
-    }
-
-    private async Task<int> ReadAdminLowStockTotalAsync()
-    {
-        await IdentityTestData.SeedRolesAsync(_database);
-        var (_, token) = await IdentityTestData.CreateStaffSessionAsync(_database, DefaultRoles.AdminCode, $"read-admin-{_suffix}");
-        var response = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, "/api/admin/inventory/low-stock?limit=1", $"pk_session={token}"));
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var json = await ActorHttp.ReadJsonAsync(response);
-        return json.RootElement.GetProperty("data").GetProperty("total").GetInt32();
     }
 }

@@ -31,7 +31,7 @@ Phân quyền RBAC: quyền khai báo trong code, role lưu trong database, admi
 |---|---|---|
 | `identity` | Đăng ký, đăng nhập, phiên làm việc, tài khoản nhân viên, RBAC (role, quyền), audit log, quản lý đồng ý thu thập dữ liệu | không có |
 | `ai-gateway` | Đang gỡ khỏi Pickory từ ngày 2026-10-18, xem `tasks/ai-gateway-removal/`. Trước đây: adapter gọi DeepSeek và API embedding | không có |
-| `catalog` | Sản phẩm, danh mục, thương hiệu, thông số kỹ thuật, ảnh, tồn kho, tìm theo từ khóa, API CRUD cho admin | identity |
+| `catalog` | Sản phẩm, danh mục, thương hiệu, thông số kỹ thuật, ảnh, tìm theo từ khóa, API CRUD cho admin. Quản lý số lượng bán được và giữ hàng cho đơn | identity |
 | `shipping` | Danh mục địa chỉ, tính phí, tạo và hủy vận đơn GHN, theo dõi trạng thái giao hàng. Không biết về đơn hàng, chỉ phát sự kiện | identity |
 | `commerce` | Giỏ hàng, checkout, đơn hàng, thanh toán COD + SePay (VietQR, webhook đối soát), đánh giá sau khi mua | identity, catalog, shipping |
 | `activity-tracking` | Đếm tổng lượt xem sản phẩm, thêm giỏ và đặt đơn theo ngày để dựng phễu cho báo cáo. Không lưu dữ liệu theo từng khách | identity, commerce |
@@ -64,13 +64,24 @@ Người dùng build chatbot RAG ở dự án riêng `chatbot-rag` (`C:\Users\ju
 - Ngày 2026-10-20 `activity-tracking` chỉ còn bộ đếm tổng theo ngày. Module không lưu sự kiện theo khách, nên không cần kiểm tra đồng ý hay xóa lịch sử.
 - COM-E2E5 của `commerce` chuyển thành CBW-E2E1: dịch vụ chatbot không gọi được thì khách vẫn mua hàng.
 
+### Thay đổi phạm vi ngày 2026-10-22
+
+Người dùng tách tồn kho ra khỏi `catalog` thành module `inventory`. Spec: `SPEC-inventory.md`. Plan: `tasks/inventory/`.
+
+- Mỗi SKU có ba con số: số trên kệ, số đã giữ, số bán được. Hàng rời kho khi đơn sang `shipping`.
+- Module mới có phiếu nhập, nhà cung cấp, kiểm kê, ngưỡng sắp hết theo SKU, giá vốn bình quân và giá trị tồn kho.
+- `catalog` giữ cột `skus.stock` làm bản sao số bán được. Trang khách, giỏ hàng và checkout không đổi.
+- `commerce` gọi `IInventoryService` thay cho `IStockService` của `catalog`.
+- `catalog` và `inventory` tham chiếu project Contracts của nhau. Hai project Contracts không tham chiếu nhau.
+
 ## Thứ tự build
 
 ```
 identity
   → catalog, shipping  (song song)
   → commerce
-  → activity-tracking, ai-gateway-removal  (song song)
+  → activity-tracking
+  → ai-gateway-removal
   → support-desk
   → admin-console
   → knowledge-base
@@ -84,6 +95,8 @@ Ngày 2026-10-20 người dùng chốt thứ tự trên:
 - `knowledge-base` nghiệm thu không cần `KB-14`.
 - `ai-gateway-removal` vẫn làm sớm. Gỡ code AI cũ trước giúp `support-desk` và `admin-console` xây trên code sạch.
 - `support-desk` làm trước nên dựng chân trang. `knowledge-base` thêm link chính sách vào chân trang đó.
+
+Ngày 2026-10-22 người dùng chèn `inventory` vào sau `activity-tracking`, trước `ai-gateway-removal`. Ngày 2026-10-27 người dùng bỏ module này; badge sắp hết vẫn đọc từ `catalog`.
 
 ## Nguyên tắc
 
@@ -103,6 +116,7 @@ Ngày 2026-10-20 người dùng chốt thứ tự trên:
 | `shipping` | `SPEC-shipping.md` | đã duyệt |
 | `commerce` | `SPEC-commerce.md` | đã duyệt |
 | `activity-tracking` | `SPEC-activity-tracking.md` | đã duyệt |
+| `inventory` | `SPEC-inventory.md` | không triển khai ngày 2026-10-27 |
 | `knowledge-base` | `SPEC-knowledge-base.md` | đã duyệt |
 | `shopping-assistant` | `SPEC-shopping-assistant.md` | đã bỏ ngày 2026-10-18 |
 | `chatbot-widget` | chưa có spec riêng, tiêu chí ở `tasks/chatbot-widget/` | chờ duyệt |

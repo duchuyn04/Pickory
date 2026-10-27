@@ -1,4 +1,5 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { stubImageProvider, tinyPng } from './catalog-admin-flow';
 import { e2eEnvironment } from './environment';
 import { readPasswordSetupLink } from './outbox';
 
@@ -117,6 +118,8 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
   });
 
   await test.step('Tạo thương hiệu mới bằng giao diện quản trị', async () => {
+    // Chỉ giả Cloudinary để test chạy độc lập, API thương hiệu vẫn lưu dữ liệu thật.
+    const imageProvider = await stubImageProvider(page, 'vinsmart', 'pickory/brands');
     // Chuyển sang màn hình quản lý thương hiệu qua menu.
     await goToAdminPage(page, 'Thương hiệu');
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin/brands`);
@@ -126,7 +129,13 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     const brandDialog = page.getByRole('dialog');
     await expect(brandDialog).toBeVisible();
     await brandDialog.getByLabel('Tên thương hiệu *', { exact: true }).fill('VinSmart E2E');
-    await brandDialog.getByLabel(/Mã logo Cloudinary/).fill('pickory/brands/vinsmart');
+    await brandDialog.getByLabel('Chọn ảnh từ máy').setInputFiles({
+      name: 'vinsmart.png',
+      mimeType: 'image/png',
+      buffer: tinyPng,
+    });
+    await expect(brandDialog.getByRole('img', { name: 'Logo của VinSmart E2E' })).toBeVisible();
+    expect(imageProvider.uploadCount()).toBe(1);
     await brandDialog.getByRole('button', { name: 'Tạo thương hiệu', exact: true }).click();
     await expect(brandDialog).toBeHidden();
     await expect(page.getByText('VinSmart E2E')).toBeVisible();

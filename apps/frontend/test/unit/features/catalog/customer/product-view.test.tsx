@@ -87,6 +87,7 @@ describe('ProductView: chọn biến thể', () => {
     expect(priceText()).toBe('20.000.000 đ');
     expect(listPriceText()).toBeNull();
     expect(stockBadgeText()).toBe('Còn hàng');
+    expect(container.querySelector('.product-stock')?.textContent).toContain('Còn 12 sản phẩm');
     expect(mainImageSrc()).toContain(imageBlack.url.split('/image/upload/')[1]);
   });
 
@@ -104,6 +105,7 @@ describe('ProductView: chọn biến thể', () => {
     expect(priceText()).toBe('24.000.000 đ');
     expect(listPriceText()).toBeNull();
     expect(stockBadgeText()).toBe('Hết hàng');
+    expect(container.querySelector('.product-stock')?.textContent).not.toContain('Còn 0 sản phẩm');
   });
 
   it('ghi SKU đang chọn vào ?sku= bằng replace và giữ tham số khác', async () => {

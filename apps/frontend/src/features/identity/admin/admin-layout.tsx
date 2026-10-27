@@ -129,7 +129,7 @@ export function AdminLayout() {
                 <ul className="admin-nav-list">
                   {group.items.map((item) => (
                     <li key={item.path}>
-                      {/* Mục cha vẫn sáng ở trang con như /admin/products/:id. Trang tồn kho SKU thuộc mục Tồn kho. */}
+                      {/* Mục cha vẫn sáng ở trang con như /admin/products/:id. */}
                       <Link
                         to={item.path}
                         aria-current={isNavItemActive(item, pathname) ? 'page' : undefined}

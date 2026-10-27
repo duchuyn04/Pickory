@@ -11,7 +11,8 @@ internal static class SalesReportAggregator
         ReportPeriod period,
         IReadOnlyList<DailySales> dailySales,
         IReadOnlyList<ProductSales> productSales,
-        IReadOnlyDictionary<string, ProductSummary> catalogMap)
+        IReadOnlyDictionary<string, ProductSummary> catalogMap,
+        IReadOnlyDictionary<string, CategoryRef> categoryMap)
     {
         // Tính tổng hợp toàn bộ khoảng thời gian báo cáo.
         var totals = AggregateTotals(dailySales);
@@ -21,6 +22,9 @@ internal static class SalesReportAggregator
 
         // Gộp doanh thu và số lượng của từng sản phẩm theo thương hiệu.
         var brands = AggregateBrands(productSales, catalogMap);
+
+        // Gộp doanh thu và số lượng của từng sản phẩm theo danh mục lá.
+        var topCategories = AggregateCategories(productSales, categoryMap);
 
         // Lấy danh sách sản phẩm bán chạy nhất giữ nguyên thứ tự sắp xếp từ cổng đọc.
         var topProducts = BuildTopProducts(productSales, catalogMap);
@@ -32,6 +36,7 @@ internal static class SalesReportAggregator
             totals,
             buckets,
             brands,
+            topCategories,
             topProducts);
     }
 
@@ -49,6 +54,13 @@ internal static class SalesReportAggregator
         var customerCancellations = 0;
         var shopCancellations = 0;
         var paymentExpiredCancellations = 0;
+        var pendingPaymentOrders = 0;
+        var pendingConfirmationOrders = 0;
+        var confirmedOrders = 0;
+        var shippingOrders = 0;
+        var deliveredOrders = 0;
+        var returnedOrders = 0;
+        var cancelledOrders = 0;
 
         foreach (var day in dailySales)
         {
@@ -64,10 +76,20 @@ internal static class SalesReportAggregator
             customerCancellations += day.Cancellations.ByCustomer;
             shopCancellations += day.Cancellations.ByShop;
             paymentExpiredCancellations += day.Cancellations.PaymentExpired;
+            // Cộng từng trạng thái riêng để hai đơn cùng ngày không bị gộp mất trạng thái hiện tại.
+            pendingPaymentOrders += day.OrderStatuses.PendingPayment;
+            pendingConfirmationOrders += day.OrderStatuses.PendingConfirmation;
+            confirmedOrders += day.OrderStatuses.Confirmed;
+            shippingOrders += day.OrderStatuses.Shipping;
+            deliveredOrders += day.OrderStatuses.Delivered;
+            returnedOrders += day.OrderStatuses.Returned;
+            cancelledOrders += day.OrderStatuses.Cancelled;
         }
 
         // Giá trị trung bình đơn trả null khi không có đơn nào thanh toán để tránh chia cho 0.
         long? averageOrderValue = paidOrders == 0 ? null : recognizedRevenue / paidOrders;
+        // Tỉ lệ phương thức dùng tổng đơn đã thanh toán làm mẫu số. Commerce chỉ đếm dòng đủ điều kiện ghi nhận doanh thu.
+        var paymentOrders = codOrders + sepayOrders;
 
         return new SalesReportTotals(
             recognizedRevenue,
@@ -77,8 +99,32 @@ internal static class SalesReportAggregator
             averageOrderValue,
             soldQuantity,
             shippingDiscount,
-            new SalesReportPaymentMethods(codOrders, sepayOrders),
-            new SalesReportCancellations(customerCancellations, shopCancellations, paymentExpiredCancellations));
+            new SalesReportPaymentMethodTotals(
+                codOrders,
+                sepayOrders,
+                CalculateRate(codOrders, paymentOrders),
+                CalculateRate(sepayOrders, paymentOrders)),
+            new SalesReportCancellationTotals(
+                customerCancellations,
+                shopCancellations,
+                paymentExpiredCancellations,
+                CalculateRate(customerCancellations, createdOrders),
+                CalculateRate(shopCancellations, createdOrders),
+                CalculateRate(paymentExpiredCancellations, createdOrders)),
+            new SalesReportOrderStatuses(
+                pendingPaymentOrders,
+                pendingConfirmationOrders,
+                confirmedOrders,
+                shippingOrders,
+                deliveredOrders,
+                returnedOrders,
+                cancelledOrders));
+    }
+
+    private static decimal? CalculateRate(int numerator, int denominator)
+    {
+        // Trả `null` khi mẫu số bằng 0 vì tỉ lệ không xác định, không phải tỉ lệ 0.
+        return denominator == 0 ? null : (decimal)numerator / denominator;
     }
 
     // Gộp số liệu từng ngày vào từng nhóm thời gian tương ứng.
@@ -175,6 +221,49 @@ internal static class SalesReportAggregator
             : sortedKnown.Append(otherBrand.ToReportBrand()).ToList();
     }
 
+    // Gộp doanh thu và số lượng theo danh mục lá, sắp giảm dần và đưa nhóm `null` về cuối.
+    public static IReadOnlyList<SalesReportCategory> AggregateCategories(
+        IReadOnlyList<ProductSales> productSales,
+        IReadOnlyDictionary<string, CategoryRef> categoryMap)
+    {
+        var knownCategories = new Dictionary<string, CategoryAccumulator>(StringComparer.Ordinal);
+        long unknownRevenue = 0;
+        var unknownQuantity = 0;
+        var hasUnknownProducts = false;
+
+        foreach (var item in productSales)
+        {
+            if (!categoryMap.TryGetValue(item.ProductId, out var category))
+            {
+                // Sản phẩm catalog không trả về vẫn giữ doanh thu trong báo cáo thay vì bị bỏ.
+                unknownRevenue += item.Revenue;
+                unknownQuantity += item.Quantity;
+                hasUnknownProducts = true;
+                continue;
+            }
+
+            if (!knownCategories.TryGetValue(category.Id, out var accumulator))
+            {
+                accumulator = new CategoryAccumulator(category.Id, category.Name);
+                knownCategories[category.Id] = accumulator;
+            }
+
+            // Cộng vào đúng danh mục lá để doanh thu và số lượng không bị tách khỏi tên catalog.
+            accumulator.Add(item.Revenue, item.Quantity);
+        }
+
+        // Danh mục có doanh thu cao đứng trước. Tên danh mục phá thế hòa để thứ tự luôn xác định.
+        var sortedKnown = knownCategories.Values
+            .OrderByDescending(category => category.Revenue)
+            .ThenByDescending(category => category.Quantity)
+            .ThenBy(category => category.CategoryName, StringComparer.Ordinal)
+            .Select(category => category.ToReportCategory());
+
+        return hasUnknownProducts
+            ? sortedKnown.Append(new SalesReportCategory(null, null, unknownRevenue, unknownQuantity)).ToList()
+            : sortedKnown.ToList();
+    }
+
     // Dựng danh sách sản phẩm bán chạy nhất kèm tên và thương hiệu.
     public static IReadOnlyList<SalesReportTopProduct> BuildTopProducts(
         IReadOnlyList<ProductSales> productSales,
@@ -236,5 +325,23 @@ internal static class SalesReportAggregator
         }
 
         public SalesReportBrand ToReportBrand() => new(brandId, brandName, Revenue, Quantity, _products);
+    }
+
+    // Bộ tích lũy số liệu của một danh mục lá.
+    private sealed class CategoryAccumulator(string categoryId, string categoryName)
+    {
+        public string CategoryId => categoryId;
+        public string CategoryName => categoryName;
+        public long Revenue { get; private set; }
+        public int Quantity { get; private set; }
+
+        public void Add(long revenue, int quantity)
+        {
+            // Cộng dồn doanh thu và số lượng của mọi sản phẩm trong danh mục.
+            Revenue += revenue;
+            Quantity += quantity;
+        }
+
+        public SalesReportCategory ToReportCategory() => new(categoryId, categoryName, Revenue, Quantity);
     }
 }

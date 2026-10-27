@@ -58,8 +58,13 @@ internal static class SalesReportEndpoints
         // Giữ bản ghi đầu nếu catalog trả trùng mã. Báo cáo không được lỗi chỉ vì dữ liệu đọc lặp.
         var catalogMap = catalogProducts.DistinctBy(product => product.Id).ToDictionary(product => product.Id);
 
+        // Đọc danh mục lá của cùng bộ sản phẩm một lần. Cổng đọc bỏ sản phẩm khách không thấy.
+        var productCategories = await catalogReader.GetProductCategoriesAsync(productIds, cancellationToken);
+        // Mỗi sản phẩm chỉ có một danh mục lá. Bản đồ giúp bước gộp không tra lại danh sách.
+        var categoryMap = productCategories.ToDictionary(item => item.ProductId, item => item.Category);
+
         // Tách phép gộp khỏi handler để kiểm tra bằng dữ liệu thuần. Handler chỉ điều phối các cổng đọc.
-        var reportData = SalesReportAggregator.Build(period, dailySales, productSales, catalogMap);
+        var reportData = SalesReportAggregator.Build(period, dailySales, productSales, catalogMap, categoryMap);
 
         return Results.Ok(new ApiResponse<SalesReportData>(reportData));
     }

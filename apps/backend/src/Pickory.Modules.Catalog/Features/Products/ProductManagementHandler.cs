@@ -9,10 +9,10 @@ using Pickory.Modules.Catalog.Descriptions;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Events;
-using Pickory.Modules.Catalog.Features.Inventory;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Catalog.Products;
 using Pickory.Modules.Catalog.Specs;
+using Pickory.Modules.Catalog.Stock;
 using Pickory.Modules.Identity.Contracts.Actors;
 using Pickory.Modules.Identity.Contracts.Audit;
 using Pickory.Shared.Events;
@@ -411,8 +411,68 @@ public sealed class ProductManagementHandler(
             await auditLogWriter.WriteAsync(entry, database.Database.CurrentTransaction!.GetDbTransaction(), cancellationToken);
         }
 
+        // SKU mới đã có dòng trong DB, nên sổ tồn kho ghi được số lượng ban đầu trong cùng transaction.
+        await ApplyStockChangesAsync(actor, product, plans, events, cancellationToken);
+
         // Gom đúng một sự kiện cho thao tác, không phát riêng sự kiện cho mỗi SKU.
         events.Emit(new ProductChangedEvent(product.Id, creating ? ProductChange.Created : ProductChange.Updated));
+    }
+
+    // Ghi số lượng đích vào sổ tồn kho. Chỉ SKU có trường `stock` khác tồn kho hiện tại mới tạo movement.
+    private async Task ApplyStockChangesAsync(
+        Actor actor, Product product, IReadOnlyList<VariantPlan> plans,
+        DomainEventCollector events, CancellationToken cancellationToken)
+    {
+        // Bỏ trống `stock` nghĩa là giữ nguyên. Nhờ vậy sửa giá không ghi đè hàng vừa bị đơn khác giữ.
+        var targets = plans
+            .Where(plan => plan.Variant.Stock is { } target && target != plan.Sku.Stock)
+            .ToList();
+        if (targets.Count == 0)
+        {
+            return;
+        }
+
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var transaction = database.Database.CurrentTransaction!.GetDbTransaction();
+        var reason = "Cập nhật số lượng trong trang sản phẩm";
+        // Số lượng đích trừ số hiện có. Sổ tồn kho tự kiểm lại số hiện có khi khóa dòng SKU.
+        var movements = targets.Select(plan => new StockMovementInput(
+            plan.Sku.Id, plan.Variant.Stock!.Value - plan.Sku.Stock, InventoryMovementType.Manual,
+            null, actor.UserId, reason)).ToList();
+
+        var result = await StockLedger.ApplyAsync(transaction, movements, now, cancellationToken);
+        if (!result.Applied)
+        {
+            // Số đích đã được validator chặn âm, nên lỗi ở đây là SKU biến mất giữa hai bước ghi.
+            throw new AppException("PRODUCT_STOCK_INVALID", 409, "Không cập nhật được số lượng của sản phẩm.");
+        }
+
+        var plansBySkuId = targets.ToDictionary(plan => plan.Sku.Id, StringComparer.Ordinal);
+        foreach (var change in result.Changes)
+        {
+            // Entity đang được theo dõi phải mang số mới, để phản hồi không trả số cũ.
+            var plan = plansBySkuId[change.SkuId];
+            plan.Sku.Stock = change.Stock;
+            plan.Sku.UpdatedAt = now;
+        }
+
+        // Sổ tồn kho đã tính lại giá trị cho sản phẩm. Mọi SKU dùng chung một cặp giá trị.
+        var firstChange = result.Changes[0];
+        product.MinPrice = firstChange.ProductMinPrice;
+        product.InStock = firstChange.ProductInStock;
+
+        foreach (var change in result.Changes)
+        {
+            // Mỗi lần đổi số lượng có một dòng audit truy được người sửa và số trước sau.
+            await auditLogWriter.WriteAsync(
+                new AuditLogEntry(actor.UserId!, "catalog.sku.stock_adjust", "sku", change.SkuId,
+                    new { stock = change.PreviousStock },
+                    new { stock = change.Stock, delta = change.Stock - change.PreviousStock, type = "manual", reason, source = "product_form" }),
+                transaction, cancellationToken);
+            events.Emit(new StockChangedEvent(
+                change.ProductId, change.SkuId, change.Stock, change.PreviousStock,
+                change.ProductInStock, change.ProductMinPrice));
+        }
     }
 
     private async Task ValidateContentAsync(CreateProductRequest target, CancellationToken cancellationToken)

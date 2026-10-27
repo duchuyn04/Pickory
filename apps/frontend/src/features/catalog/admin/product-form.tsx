@@ -27,6 +27,7 @@ import {
 import { ProductOptionsEditor } from './product-options-editor';
 import { ProductStatusPanel } from './product-status-panel';
 import type { ProductStatus } from './product-status';
+import { useLiveStock } from '../shared/stock-live';
 import { SpecFields } from './spec-fields';
 import { VariantTable } from './variant-table';
 import { ErrorAlert } from '../../../shared/error-alert';
@@ -68,6 +69,13 @@ export interface ProductDetail {
 }
 
 const emptyDescription: DescriptionDoc = { type: 'doc', content: [{ type: 'paragraph' }] };
+
+// Cờ sửa số lượng chỉ điều khiển payload. Bỏ cờ trước khi so sánh hoặc gửi lên máy chủ.
+function withoutStockEdited(variant: ProductVariant): ProductVariant {
+  const copy = { ...variant };
+  delete copy.stockEdited;
+  return copy;
+}
 
 interface ProductFormViewProps {
   categories: ProductCategory[];
@@ -116,6 +124,7 @@ export function ProductFormView({
   const [priceErrors, setPriceErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const liveStock = useLiveStock();
 
   // Ảnh chụp toàn bộ ô nhập. So ảnh chụp hiện tại với ảnh chụp lúc tải hoặc lúc lưu để biết còn thay đổi chưa lưu.
   const formSnapshot = JSON.stringify({
@@ -127,7 +136,8 @@ export function ProductFormView({
     description,
     specs,
     options,
-    variants,
+    // Cờ sửa số lượng chỉ điều khiển payload. Sự kiện realtime đổi cờ này không phải thay đổi chưa lưu.
+    variants: variants.map(withoutStockEdited),
     images,
   });
   const savedSnapshotRef = useRef(formSnapshot);
@@ -239,7 +249,7 @@ export function ProductFormView({
     // Khóa form trong lúc chờ máy chủ để tránh hai lần ghi cùng một bản nháp.
     setIsSaving(true);
     try {
-      // Tồn kho chỉ đọc, API chỉ nhận giá và thông tin đóng gói.
+      // Biến thể chưa sửa số lượng không có trường `stock`, nên máy chủ giữ nguyên tồn kho hiện tại.
       await onSave({
         categoryId,
         brandId,
@@ -253,6 +263,8 @@ export function ProductFormView({
         // Thứ tự trong danh sách là thứ tự hiển thị. Backend không nhận URL ảnh thu nhỏ.
         images: images.map(({ publicId, alt, skuId }) => ({ publicId, alt: alt.trim(), skuId })),
       });
+      // Số đã gửi lên máy chủ. Lần lưu sau không gửi lại số cũ nếu admin không sửa ô.
+      setVariants((current) => current.map(withoutStockEdited));
       // Lưu xong, dữ liệu trên máy chủ khớp với dữ liệu trong form. Vì vậy các nút trạng thái được mở lại.
       savedSnapshotRef.current = formSnapshot;
     } catch (error) {
@@ -443,8 +455,12 @@ export function ProductFormView({
       />
       <ProductOptionsEditor options={options} disabled={disabled} onChange={updateOptions} />
       <VariantTable
-        productId={product?.id}
         variants={variants}
+        liveStockBySku={Object.fromEntries(
+          Object.entries(liveStock.skus)
+            .filter(([, value]) => value.productId === product?.id)
+            .map(([skuId, value]) => [skuId, value.stock]),
+        )}
         disabled={disabled}
         priceErrors={priceErrors}
         onChange={setVariants}

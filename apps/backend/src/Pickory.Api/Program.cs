@@ -60,6 +60,7 @@ if (isBenchmarkCommand)
 if (isBenchmarkCommand
     || CatalogModule.IsCatalogSeedCommand(args)
     || ShippingModule.IsShippingCommand(args)
+    || CommerceModule.IsDemoOrdersCommand(args)
     || DatabaseMigrationCommand.IsCommand(args))
 {
     builder.Logging.ClearProviders();
@@ -143,6 +144,18 @@ if (CatalogModule.IsCatalogSeedCommand(args))
 if (ShippingModule.IsShippingCommand(args))
 {
     return await ShippingModule.RunShippingCommandAsync(app.Services);
+}
+
+// Lệnh `commerce:demo-orders` tạo hoặc xóa đơn mẫu cho báo cáo trên DB dev. Lệnh chạy xong thì thoát.
+if (CommerceModule.IsDemoOrdersCommand(args))
+{
+    return await CommerceModule.RunDemoOrdersCommandAsync(
+        app.Services,
+        args,
+        builder.Environment.IsProduction(),
+        Console.Out,
+        Console.Error,
+        CancellationToken.None);
 }
 
 // Lệnh `db:migrate` áp migration rồi thoát. Lệnh không mở cổng mạng và không chạy worker nền.

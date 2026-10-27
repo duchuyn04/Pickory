@@ -26,7 +26,7 @@ function product(id: string) {
     categoryId: 'cat-1',
     status: 'active',
     minPrice: 100000,
-    variants: [{ id: `sku-${id}`, code: `AO-${id}` }],
+    variants: [{ id: `sku-${id}`, code: `AO-${id}`, stock: 12, enabled: true }],
     images: [],
   };
 }
@@ -136,6 +136,26 @@ describe('màn sản phẩm giữ bộ lọc trên URL', () => {
 
     expect(harness.container.textContent).toContain('Không có sản phẩm phù hợp.');
     expect(harness.container.textContent).not.toContain('Không có kết quả phù hợp với bộ lọc.');
+  });
+
+  it('cột số lượng cộng tổng tồn kho của các biến thể', async () => {
+    harness = await open('/admin/products', [
+      {
+        ...product('1'),
+        variants: [
+          { id: 'sku-1', code: 'AO-1', stock: 3, enabled: true },
+          { id: 'sku-2', code: 'AO-2', stock: 4, enabled: true },
+        ],
+      },
+    ]);
+
+    const headers = [...harness.container.querySelectorAll('thead th')].map(
+      (header) => header.textContent,
+    );
+    expect(headers).toContain('Số lượng');
+    const row = harness.container.querySelector('tbody tr')!;
+    const quantityIndex = headers.indexOf('Số lượng');
+    expect([...row.children][quantityIndex]?.textContent).toContain('7');
   });
 
   it('bấm Trang sau ghi page=2 lên URL', async () => {

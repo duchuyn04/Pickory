@@ -38,16 +38,22 @@ const variants: ProductVariant[] = [
   { optionValues: { Màu: 'Xanh' }, price: 100, stock: 0, enabled: true },
 ];
 
-async function renderTable(productId: string | undefined) {
+interface RenderTableOptions {
+  variants?: ProductVariant[];
+  liveStockBySku?: Record<string, number>;
+  onChange?: (next: ProductVariant[]) => void;
+}
+
+async function renderTable(options: RenderTableOptions = {}) {
   await act(async () =>
     root.render(
       <MemoryRouter>
         <VariantTable
-          productId={productId}
-          variants={variants}
+          variants={options.variants ?? variants}
+          liveStockBySku={options.liveStockBySku ?? {}}
           disabled={false}
           priceErrors={{}}
-          onChange={() => {}}
+          onChange={options.onChange ?? (() => {})}
           onPriceChange={() => {}}
         />
       </MemoryRouter>,
@@ -55,19 +61,43 @@ async function renderTable(productId: string | undefined) {
   );
 }
 
-describe('VariantTable liên kết tồn kho', () => {
-  it('SKU đã lưu có liên kết Tồn kho tới đúng trang SKU', async () => {
-    await renderTable('prod-1');
-    const links = [...container.querySelectorAll('a')];
-    expect(links).toHaveLength(1);
-    expect(links[0]!.textContent).toBe('Tồn kho');
-    expect(links[0]!.getAttribute('aria-label')).toBe('Tồn kho Đỏ');
-    expect(links[0]!.getAttribute('href')).toBe('/admin/products/prod-1/skus/sku-do/inventory');
+function field(name: string): HTMLInputElement {
+  return container.querySelector<HTMLInputElement>(`input[name="${name}"]`)!;
+}
+
+async function enter(input: HTMLInputElement, text: string) {
+  await act(async () => {
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    input.focus();
+    setter.call(input, text);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+}
+
+describe('VariantTable ô số lượng', () => {
+  it('ô chưa sửa hiện số mới nhất từ luồng realtime', async () => {
+    await renderTable({ liveStockBySku: { 'sku-do': 7 } });
+    expect(field('variant-stock-0').value).toBe('7');
+    expect(field('variant-stock-0').type).toBe('number');
   });
 
-  it('sản phẩm chưa lưu thì không có liên kết nào', async () => {
-    await renderTable(undefined);
-    expect(container.querySelectorAll('a')).toHaveLength(0);
+  it('gõ số lượng trả số đích và đánh dấu ô đã sửa', async () => {
+    const onChange = vi.fn();
+    await renderTable({ onChange });
+
+    await enter(field('variant-stock-0'), '9');
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0]![0][0].stock).toBe(9);
+    expect(onChange.mock.calls[0]![0][0].stockEdited).toBe(true);
+  });
+
+  it('ô đã sửa giữ số admin nhập dù realtime đổi số', async () => {
+    await renderTable({
+      variants: [{ ...variants[0]!, stock: 4, stockEdited: true }],
+      liveStockBySku: { 'sku-do': 7 },
+    });
+    expect(field('variant-stock-0').value).toBe('4');
   });
 });
 
@@ -93,6 +123,7 @@ describe('VariantTable ô tiền VND', () => {
         <MemoryRouter>
           <VariantTable
             variants={pricedVariants}
+            liveStockBySku={{}}
             disabled={false}
             priceErrors={priceErrors}
             onChange={onChange}
@@ -101,19 +132,6 @@ describe('VariantTable ô tiền VND', () => {
         </MemoryRouter>,
       ),
     );
-  }
-
-  function field(name: string): HTMLInputElement {
-    return container.querySelector<HTMLInputElement>(`input[name="${name}"]`)!;
-  }
-
-  async function enter(input: HTMLInputElement, text: string) {
-    await act(async () => {
-      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
-      input.focus();
-      setter.call(input, text);
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
   }
 
   it('giá bán và giá niêm yết hiện dấu chấm nghìn, cân nặng giữ ô số', async () => {
@@ -183,6 +201,7 @@ describe('VariantTable căn lề ô tiền', () => {
                 enabled: true,
               },
             ]}
+            liveStockBySku={{}}
             disabled={false}
             priceErrors={{}}
             onChange={() => {}}

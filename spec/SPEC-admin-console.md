@@ -2,7 +2,7 @@
 
 > **Phạm vi đổi ngày 2026-10-18.** Module bỏ báo cáo hiệu quả AI (chatbot và chi phí AI). Phạm vi mới ở `tasks/admin-console/plan.md`.
 
-Module id: `admin-console` · Phụ thuộc: `identity`, `catalog`, `commerce`, `activity-tracking`, `shopping-assistant`, `support-desk`, `ai-gateway` · Quy ước chung: `SPEC.md`
+Module id: `admin-console` · Phụ thuộc: `identity`, `catalog`, `commerce`, `inventory`, `activity-tracking`, `shopping-assistant`, `support-desk`, `ai-gateway` · Quy ước chung: `SPEC.md`
 
 ## Objective
 
@@ -37,7 +37,7 @@ export const commerceMenu: AdminMenuItem[] = [
 ```
 
 - `admin-console` gom menu của mọi module, chỉ hiện mục người dùng có quyền (`useCan`). Route cũng được chặn theo quyền ở frontend; backend vẫn kiểm tra như mọi nơi khác.
-- **Badge:** `GET /api/admin/badges` trả số việc cần làm, mỗi số chỉ được tính nếu người gọi có quyền xem mục đó. Nguồn: `commerce` (đơn chờ xác nhận, giao dịch chưa khớp, COD chưa nhận), `catalog` (SKU sắp hết), `support-desk` (hội thoại chờ, gọi lại). Frontend làm mới mỗi 60 giây.
+- **Badge:** `GET /api/admin/badges` trả số việc cần làm, mỗi số chỉ được tính nếu người gọi có quyền xem mục đó. Nguồn: `commerce` (đơn chờ xác nhận, giao dịch chưa khớp, COD chưa nhận), `inventory` (SKU sắp hết, qua `IInventoryReader.CountLowStockAsync`), `support-desk` (hội thoại chờ, gọi lại). Frontend làm mới mỗi 60 giây.
 - **Trang chủ theo quyền:** ghép các thẻ việc cần làm và số liệu nhanh mà người dùng có quyền xem.
 - **Trang Cấu hình:** gom link tới cấu hình của từng module (AI, bán hàng, vận chuyển, CSKH), mỗi mục hiện theo quyền.
 

@@ -63,6 +63,28 @@ public sealed class BrandManagementTests : IClassFixture<PickoryWebApplicationFa
     }
 
     [Fact]
+    // API trả URL ảnh để form sửa hiển thị logo hiện tại mà không cần nhập hoặc dựng URL thủ công.
+    public async Task GetBrands_WithLogo_ReturnsCloudinaryLogoUrl()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var name = $"Brand Logo {suffix}";
+        var logoPublicId = $"pickory/brands/{suffix}";
+        var createRequest = ActorHttp.CreateJsonRequest(
+            HttpMethod.Post, "/api/admin/brands", new { name, logoPublicId }, _adminCookie);
+        var createResponse = await _client.SendAsync(createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+
+        var response = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, "/api/brands"));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        using var json = await ActorHttp.ReadJsonAsync(response);
+        var items = json.RootElement.GetProperty("data").EnumerateArray();
+        var brand = items.Single(item => item.GetProperty("name").GetString() == name);
+        var expectedUrl = $"https://res.cloudinary.com/{Pickory.Modules.Catalog.Images.FakeImageStorage.Credentials.CloudName}/image/upload/{logoPublicId}";
+        Assert.Equal(expectedUrl, brand.GetProperty("logoUrl").GetString());
+    }
+
+    [Fact]
     // Tạo thương hiệu thành công và sinh slug tương ứng.
     public async Task CreateBrand_SucceedsWithSlug()
     {

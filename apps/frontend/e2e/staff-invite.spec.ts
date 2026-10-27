@@ -68,7 +68,6 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
       'Đối soát',
       'Khách hàng',
       'Sản phẩm',
-      'Tồn kho',
       'Danh mục',
       'Thương hiệu',
       'Báo cáo tổng quan',

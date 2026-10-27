@@ -102,6 +102,7 @@ test('khách quét VietQR, sao chép và nhận xác nhận chuyển khoản t�
           {
             optionValues: {},
             price: 500000,
+            stock: 20,
             compareAtPrice: null,
             enabled: true,
             weightGrams: 500,
@@ -121,12 +122,6 @@ test('khách quét VietQR, sao chép và nhận xác nhận chuyển khoản t�
       slug: string;
       variants: { id: string }[];
     };
-    const skuId = product.variants[0]!.id;
-    const stockResponse = await adminPage.request.post(`/api/admin/skus/${skuId}/movements`, {
-      headers: adminHeaders,
-      data: { delta: 20, reason: 'Nhập kho E2E thanh toán' },
-    });
-    expect(stockResponse.status(), await stockResponse.text()).toBe(201);
     const published = await adminPage.request.put(`/api/admin/products/${product.id}/status`, {
       headers: adminHeaders,
       data: { status: 'active' },

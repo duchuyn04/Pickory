@@ -19,6 +19,7 @@ import {
 } from './product-status';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { ProductThumbnail } from './product-thumbnail';
+import { useLiveStock } from '../shared/stock-live';
 import './products.css';
 
 interface PagedProducts {
@@ -37,6 +38,18 @@ function skuCodesOf(product: ProductDetail): string {
     .map((variant) => variant.code)
     .filter(Boolean)
     .join(', ');
+}
+
+// Tổng số bán được của mọi biến thể. Biến thể tắt vẫn giữ hàng nên vẫn được cộng.
+function totalStockOf(product: ProductDetail): number {
+  return product.variants.reduce((total, variant) => total + (variant.stock ?? 0), 0);
+}
+
+// Có biến thể đang bật từ ngưỡng sắp hết trở xuống. Cùng định nghĩa với bộ lọc `lowStock`.
+function hasLowStock(product: ProductDetail): boolean {
+  return product.variants.some(
+    (variant) => variant.enabled && (variant.stock ?? 0) <= LOW_STOCK_THRESHOLD,
+  );
 }
 
 interface ActiveFilterSource {
@@ -98,6 +111,24 @@ export function ProductsPage() {
     placeholderData: keepPreviousData,
   });
   const products = productsQuery.data;
+  const liveStock = useLiveStock();
+  // Sự kiện tồn kho ghi đè số của đúng SKU, để số lượng trên bảng đổi ngay khi có đơn mới.
+  const displayProducts = products?.items.map((product) => {
+    let changed = false;
+    const variants = product.variants.map((variant) => {
+      const liveSku = variant.id ? liveStock.skus[variant.id] : undefined;
+      if (!liveSku) return variant;
+      changed = true;
+      return { ...variant, stock: liveSku.stock };
+    });
+    const liveProduct = liveStock.products[product.id];
+    if (!changed && !liveProduct) return product;
+    return {
+      ...product,
+      minPrice: liveProduct?.minPrice ?? product.minPrice,
+      variants,
+    };
+  });
   // Dữ liệu đang hiện là của truy vấn trước. Bảng mờ đi và ô tìm hiện vòng xoay cho tới khi kết quả mới về.
   const isStale = productsQuery.isPlaceholderData;
   const keyword = search.trim();
@@ -229,13 +260,16 @@ export function ProductsPage() {
                     <th scope="col" className="num">
                       Giá thấp nhất
                     </th>
+                    <th scope="col" className="num">
+                      Số lượng
+                    </th>
                     <th scope="col">
                       <span className="sr">Thao tác</span>
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {products.items.map((product, index) => (
+                  {displayProducts?.map((product, index) => (
                     <tr key={product.id}>
                       {/* STT theo `page` và `limit` của response đang hiện, không theo URL. Bảng cũ còn giữ STT cũ cho tới khi response mới về. */}
                       <td className="num col-row-number">{rowNumber(products, index)}</td>
@@ -271,6 +305,10 @@ export function ProductsPage() {
                         {product.minPrice === null
                           ? 'Chưa có'
                           : `${product.minPrice.toLocaleString('vi-VN')} đ`}
+                      </td>
+                      <td className="num">
+                        {totalStockOf(product).toLocaleString('vi-VN')}
+                        {hasLowStock(product) && <span className="badge badge-warn"> Sắp hết</span>}
                       </td>
                       <td className="num">
                         <Link className="btn btn-sm" to={`/admin/products/${product.id}`}>

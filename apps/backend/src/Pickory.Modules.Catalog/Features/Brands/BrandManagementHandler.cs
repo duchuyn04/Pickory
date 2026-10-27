@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using Pickory.Modules.Catalog.Caching;
 using Pickory.Modules.Catalog.Entities;
+using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Catalog.Products;
 using Pickory.Modules.Identity.Contracts.Actors;
@@ -15,7 +16,8 @@ public sealed class BrandManagementHandler(
     CatalogDbContext database,
     IAuditLogWriter auditLogWriter,
     TimeProvider timeProvider,
-    CatalogResponseCache responseCache)
+    CatalogResponseCache responseCache,
+    CloudinaryCredentials cloudinary)
 {
     // Đọc danh sách thương hiệu sắp xếp theo tên để phục vụ bộ lọc công khai.
     public async Task<IReadOnlyList<BrandResponse>> ListAsync(CancellationToken cancellationToken)
@@ -181,13 +183,18 @@ public sealed class BrandManagementHandler(
         return slug;
     }
 
-    private static BrandResponse ToResponse(Brand brand)
+    private BrandResponse ToResponse(Brand brand)
     {
+        // Chỉ dựng URL khi thương hiệu có logo để giao diện xem trước không phải tự suy ra Cloudinary cloud name.
+        var logoUrl = brand.LogoPublicId is null
+            ? null
+            : ProductImageUrl.Build(cloudinary, brand.LogoPublicId);
         return new BrandResponse(
             brand.Id,
             brand.Name,
             brand.Slug,
             brand.LogoPublicId,
+            logoUrl,
             brand.CreatedAt,
             brand.UpdatedAt);
     }

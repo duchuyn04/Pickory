@@ -41,6 +41,20 @@ internal static class DailySalesAggregator
                 totals.PaidOrderCount++;
                 // Số lượng sản phẩm bán ra chỉ tính khi đơn đủ điều kiện ghi nhận doanh thu.
                 totals.SoldQuantity += payment.SoldQuantity;
+                // Chỉ dòng đủ điều kiện ghi nhận doanh thu được đếm theo phương thức tại ngày thanh toán.
+                switch (payment.PaymentMethod)
+                {
+                    case PaymentMethod.Sepay:
+                        totals.SepayOrderCount++;
+                        break;
+                    case PaymentMethod.Cod:
+                        totals.CodOrderCount++;
+                        break;
+                    default:
+                        // Giá trị lạ phải ném lỗi để phương thức mới không bị đếm nhầm một cách im lặng.
+                        throw new InvalidOperationException(
+                            $"Phương thức thanh toán {payment.PaymentMethod} chưa có bộ đếm trong báo cáo.");
+                }
             }
         }
 
@@ -55,13 +69,41 @@ internal static class DailySalesAggregator
             // Số đơn tạo là mẫu số của tỉ lệ hủy, nên đếm mọi đơn kể cả đơn hết hạn.
             totals.CreatedOrderCount++;
 
+            // Đếm trạng thái hiện tại trước khi loại đơn hết hạn khỏi giá trị đơn đặt. Mọi đơn tạo đều thuộc báo cáo trạng thái.
+            switch (order.Status)
+            {
+                case OrderStatus.PendingPayment:
+                    totals.PendingPaymentOrderCount++;
+                    break;
+                case OrderStatus.PendingConfirmation:
+                    totals.PendingConfirmationOrderCount++;
+                    break;
+                case OrderStatus.Confirmed:
+                    totals.ConfirmedOrderCount++;
+                    break;
+                case OrderStatus.Shipping:
+                    totals.ShippingOrderCount++;
+                    break;
+                case OrderStatus.Delivered:
+                    totals.DeliveredOrderCount++;
+                    break;
+                case OrderStatus.Returned:
+                    totals.ReturnedOrderCount++;
+                    break;
+                case OrderStatus.Cancelled:
+                    totals.CancelledOrderCount++;
+                    break;
+                default:
+                    throw new InvalidOperationException($"Trạng thái đơn {order.Status} chưa có bộ đếm trong báo cáo.");
+            }
+
             // Lý do hủy chỉ có nghĩa với đơn đang ở trạng thái hủy. Đơn đã khôi phục có thể còn dòng lịch sử hủy cũ.
             if (order.Status == OrderStatus.Cancelled)
             {
                 CountCancellation(totals, order);
             }
 
-            // Đơn hết hạn thanh toán không vào giá trị đơn đặt, giảm ship và phương thức thanh toán. Số đơn tạo và số đơn hủy ở trên đã đếm đơn đó.
+            // Đơn hết hạn không vào giá trị đơn đặt và giảm ship. Số đơn tạo và số đơn hủy ở trên đã đếm đơn đó.
             if (!IsPlacedOrder(order))
             {
                 continue;
@@ -69,19 +111,6 @@ internal static class DailySalesAggregator
 
             totals.PlacedOrderValue += order.Total;
             totals.ShippingDiscount += order.ShippingDiscount;
-            // Mỗi phương thức có một bộ đếm riêng. Giá trị lạ ném lỗi để phương thức mới không bị đếm nhầm thành COD một cách im lặng.
-            switch (order.PaymentMethod)
-            {
-                case PaymentMethod.Sepay:
-                    totals.SepayOrderCount++;
-                    break;
-                case PaymentMethod.Cod:
-                    totals.CodOrderCount++;
-                    break;
-                default:
-                    throw new InvalidOperationException(
-                        $"Phương thức thanh toán {order.PaymentMethod} chưa có bộ đếm trong báo cáo.");
-            }
         }
 
         // Dictionary không đảm bảo thứ tự, nên sắp tăng dần theo ngày trước khi trả.
@@ -119,6 +148,13 @@ internal static class DailySalesAggregator
         public int PaidOrderCount { get; set; }
         public long PlacedOrderValue { get; set; }
         public int CreatedOrderCount { get; set; }
+        public int PendingPaymentOrderCount { get; set; }
+        public int PendingConfirmationOrderCount { get; set; }
+        public int ConfirmedOrderCount { get; set; }
+        public int ShippingOrderCount { get; set; }
+        public int DeliveredOrderCount { get; set; }
+        public int ReturnedOrderCount { get; set; }
+        public int CancelledOrderCount { get; set; }
         public int CustomerCancellations { get; set; }
         public int ShopCancellations { get; set; }
         public int PaymentExpiredCancellations { get; set; }
@@ -136,6 +172,14 @@ internal static class DailySalesAggregator
             new CancellationCounts(CustomerCancellations, ShopCancellations, PaymentExpiredCancellations),
             new PaymentMethodCounts(CodOrderCount, SepayOrderCount),
             ShippingDiscount,
-            SoldQuantity);
+            SoldQuantity,
+            new OrderStatusCounts(
+                PendingPaymentOrderCount,
+                PendingConfirmationOrderCount,
+                ConfirmedOrderCount,
+                ShippingOrderCount,
+                DeliveredOrderCount,
+                ReturnedOrderCount,
+                CancelledOrderCount));
     }
 }

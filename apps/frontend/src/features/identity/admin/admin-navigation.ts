@@ -7,10 +7,8 @@ export interface AdminNavItem {
   icon: IconName;
   // Không có quyền nghĩa là mọi nhân viên đều thấy mục này.
   requiredPermission?: string;
-  // Đường dẫn con thuộc mục khác dù bắt đầu bằng `path`, ví dụ trang tồn kho SKU nằm dưới `/admin/products`.
+  // Đường dẫn con thuộc mục khác dù bắt đầu bằng `path`.
   inactiveOn?: RegExp;
-  // Đường dẫn ngoài `path` nhưng vẫn thuộc mục này.
-  activeOn?: RegExp;
 }
 
 export interface AdminNavGroup {
@@ -18,9 +16,6 @@ export interface AdminNavGroup {
   label: string | null;
   items: AdminNavItem[];
 }
-
-// Trang tồn kho của một SKU. Trang này thuộc mục Tồn kho dù đường dẫn nằm dưới `/admin/products`.
-const SKU_INVENTORY_PATH = /^\/admin\/products\/[^/]+\/skus\/[^/]+\/inventory\/?$/;
 
 // Các trang báo cáo chi tiết nằm dưới `/admin/reports`. Mục tổng quan không nhận các trang này.
 const REPORT_DETAIL_PATH = /^\/admin\/reports\/.+/;
@@ -74,14 +69,6 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         path: '/admin/products',
         icon: 'package',
         requiredPermission: 'products:read',
-        inactiveOn: SKU_INVENTORY_PATH,
-      },
-      {
-        label: 'Tồn kho',
-        path: '/admin/inventory',
-        icon: 'inventory',
-        requiredPermission: 'products:read',
-        activeOn: SKU_INVENTORY_PATH,
       },
       {
         label: 'Danh mục',
@@ -177,7 +164,6 @@ export function filterNavGroupsByPermission(
 
 // Mục menu có đang mở không. `/admin` chỉ khớp đúng nó, các mục khác khớp cả trang con.
 export function isNavItemActive(item: AdminNavItem, pathname: string): boolean {
-  if (item.activeOn?.test(pathname)) return true;
   if (item.inactiveOn?.test(pathname)) return false;
   if (item.path === '/admin') return pathname === '/admin';
   return pathname === item.path || pathname.startsWith(`${item.path}/`);

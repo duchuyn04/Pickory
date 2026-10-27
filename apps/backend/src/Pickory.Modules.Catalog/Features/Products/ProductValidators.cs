@@ -9,10 +9,11 @@ public sealed class ProductVariantRequestValidator : AbstractValidator<ProductVa
 {
     public ProductVariantRequestValidator()
     {
-        // Biến thể không được chứa các trường cấm như tồn kho.
-        RuleFor(variant => variant.ExtensionData)
-            .Must(extension => extension == null || !extension.Keys.Any(key => key.Equals("stock", StringComparison.OrdinalIgnoreCase)))
-            .WithMessage("Không được phép cập nhật tồn kho qua API sản phẩm.");
+        // Tồn kho đích là số nguyên không âm. Bỏ trống nghĩa là giữ nguyên tồn kho hiện tại.
+        RuleFor(variant => variant.Stock)
+            .GreaterThanOrEqualTo(0).WithMessage("Số lượng tồn kho không được âm.")
+            .LessThanOrEqualTo(1_000_000).WithMessage("Số lượng tồn kho không được vượt quá 1.000.000.")
+            .When(variant => variant.Stock.HasValue);
 
         // Tập giá trị tùy chọn không được chứa khóa hoặc giá trị null.
         RuleFor(variant => variant.OptionValues)
@@ -99,12 +100,12 @@ public sealed class CreateProductRequestValidator : AbstractValidator<CreateProd
 {
     public CreateProductRequestValidator()
     {
-        // Chặn người dùng gửi các trường cấm như tồn kho hoặc trạng thái.
+        // Tồn kho phải nằm trong từng biến thể. Trạng thái do route đổi trạng thái quyết định.
         RuleFor(request => request.ExtensionData)
             .Must(extension => extension == null || !extension.Keys.Any(key =>
                 key.Equals("stock", StringComparison.OrdinalIgnoreCase) ||
                 key.Equals("status", StringComparison.OrdinalIgnoreCase)))
-            .WithMessage("Không được phép thiết lập tồn kho hoặc trạng thái khi tạo sản phẩm.");
+            .WithMessage("Tồn kho phải khai báo trong từng biến thể; không được thiết lập trạng thái khi tạo sản phẩm.");
 
         // Thiếu mã danh mục thì hệ thống không thể xác định bộ thuộc tính để thẩm định thông số.
         RuleFor(request => request.CategoryId)
@@ -177,12 +178,12 @@ public sealed class UpdateProductRequestValidator : AbstractValidator<UpdateProd
 {
     public UpdateProductRequestValidator()
     {
-        // Chặn client gửi kèm trường tồn kho hoặc trạng thái trong yêu cầu cập nhật.
+        // Tồn kho phải nằm trong từng biến thể. Trạng thái do route đổi trạng thái quyết định.
         RuleFor(request => request.ExtensionData)
             .Must(extension => extension == null || !extension.Keys.Any(key =>
                 key.Equals("stock", StringComparison.OrdinalIgnoreCase) ||
                 key.Equals("status", StringComparison.OrdinalIgnoreCase)))
-            .WithMessage("Không được phép cập nhật tồn kho hoặc trạng thái qua API này.");
+            .WithMessage("Tồn kho phải khai báo trong từng biến thể; không được cập nhật trạng thái qua API này.");
 
         // Không cho phép xóa rỗng mã danh mục khi trường này được gửi lên.
         RuleFor(request => request.CategoryId)

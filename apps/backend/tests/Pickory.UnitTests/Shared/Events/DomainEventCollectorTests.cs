@@ -28,7 +28,7 @@ public sealed class DomainEventCollectorTests
     {
         var dispatcher = new RecordingDispatcher();
         var collector = new DomainEventCollector(dispatcher);
-        collector.Emit(new StockChangedEvent("sku-1", 0, 5));
+        collector.Emit(new StockChangedEvent("prod-1", "sku-1", 0, 5, false, 100000));
 
         collector.Discard();
         await collector.FlushAsync(CancellationToken.None);
@@ -43,7 +43,7 @@ public sealed class DomainEventCollectorTests
         var dispatcher = new RecordingDispatcher();
         var collector = new DomainEventCollector(dispatcher);
         collector.Emit(new ProductChangedEvent("prod-1", ProductChange.Created));
-        collector.Emit(new StockChangedEvent("sku-1", 10, 0));
+        collector.Emit(new StockChangedEvent("prod-1", "sku-1", 10, 0, true, 100000));
 
         await collector.FlushAsync(CancellationToken.None);
 

@@ -20,7 +20,8 @@ public sealed class SalesReportAggregatorTests
         int codOrders = 0,
         int sepayOrders = 0,
         long shippingDiscount = 0,
-        int soldQuantity = 0) =>
+        int soldQuantity = 0,
+        OrderStatusCounts? orderStatuses = null) =>
         new(
             day,
             recognizedRevenue,
@@ -30,7 +31,8 @@ public sealed class SalesReportAggregatorTests
             new CancellationCounts(customerCancellations, shopCancellations, paymentExpiredCancellations),
             new PaymentMethodCounts(codOrders, sepayOrders),
             shippingDiscount,
-            soldQuantity);
+            soldQuantity,
+            orderStatuses ?? new OrderStatusCounts(0, 0, 0, 0, 0, 0, 0));
 
     private static ProductSummary CreateProductSummary(string id, string name, string? brandId = null, string? brandName = null) =>
         new(
@@ -44,8 +46,8 @@ public sealed class SalesReportAggregatorTests
             null);
 
     [Fact]
-    // Khi danh sách ngày rỗng, hàm trả về các giá trị bằng 0 và giá trị trung bình đơn là null.
-    public void AggregateTotals_WithEmptyDays_ReturnsZeroTotalsAndNullAov()
+    // Khi danh sách ngày rỗng, các tổng bằng 0 còn giá trị trung bình và tỉ lệ là null.
+    public void AggregateTotals_WithEmptyDays_ReturnsZeroTotalsAndNullRatios()
     {
         var totals = SalesReportAggregator.AggregateTotals([]);
 
@@ -61,6 +63,12 @@ public sealed class SalesReportAggregatorTests
         Assert.Equal(0, totals.Cancellations.ByCustomer);
         Assert.Equal(0, totals.Cancellations.ByShop);
         Assert.Equal(0, totals.Cancellations.PaymentExpired);
+        Assert.Null(totals.PaidByMethod.CodRate);
+        Assert.Null(totals.PaidByMethod.SepayRate);
+        Assert.Null(totals.Cancellations.ByCustomerRate);
+        Assert.Null(totals.Cancellations.ByShopRate);
+        Assert.Null(totals.Cancellations.PaymentExpiredRate);
+        Assert.Equal(new SalesReportOrderStatuses(0, 0, 0, 0, 0, 0, 0), totals.OrderStatuses);
     }
 
     [Fact]
@@ -79,7 +87,8 @@ public sealed class SalesReportAggregatorTests
             codOrders: 1,
             sepayOrders: 1,
             shippingDiscount: 20_000,
-            soldQuantity: 4);
+            soldQuantity: 4,
+            orderStatuses: new OrderStatusCounts(0, 0, 2, 0, 0, 0, 0));
 
         var day2 = CreateDay(
             new DateOnly(2026, 10, 2),
@@ -93,7 +102,8 @@ public sealed class SalesReportAggregatorTests
             codOrders: 0,
             sepayOrders: 2,
             shippingDiscount: 10_000,
-            soldQuantity: 2);
+            soldQuantity: 2,
+            orderStatuses: new OrderStatusCounts(0, 0, 1, 0, 0, 0, 0));
 
         var totals = SalesReportAggregator.AggregateTotals([day1, day2]);
 
@@ -109,6 +119,12 @@ public sealed class SalesReportAggregatorTests
         Assert.Equal(1, totals.Cancellations.ByCustomer);
         Assert.Equal(1, totals.Cancellations.ByShop);
         Assert.Equal(1, totals.Cancellations.PaymentExpired);
+        Assert.Equal(0.2m, totals.Cancellations.ByCustomerRate);
+        Assert.Equal(0.2m, totals.Cancellations.ByShopRate);
+        Assert.Equal(0.2m, totals.Cancellations.PaymentExpiredRate);
+        Assert.Equal(0.25m, totals.PaidByMethod.CodRate);
+        Assert.Equal(0.75m, totals.PaidByMethod.SepayRate);
+        Assert.Equal(3, totals.OrderStatuses.Confirmed);
     }
 
     [Fact]
@@ -242,6 +258,50 @@ public sealed class SalesReportAggregatorTests
     }
 
     [Fact]
+    // Các danh mục sắp xếp giảm dần theo doanh thu, và nhóm chưa có danh mục luôn nằm ở cuối.
+    public void AggregateCategories_SortsByRevenueDescending_AndPlacesUnknownCategoryAtTheEnd()
+    {
+        var productSales = new[]
+        {
+            new ProductSales("p1", 500_000, 2),
+            new ProductSales("p2", 800_000, 4),
+            new ProductSales("p3", 300_000, 1),
+            new ProductSales("p4", 900_000, 3),
+            new ProductSales("p5", 200_000, 1),
+        };
+
+        var categoryMap = new Dictionary<string, CategoryRef>
+        {
+            ["p1"] = new CategoryRef("c1", "Thiết bị", "thiet-bi"),
+            ["p2"] = new CategoryRef("c2", "Phụ kiện", "phu-kien"),
+            ["p4"] = new CategoryRef("c1", "Thiết bị", "thiet-bi"),
+            ["p5"] = new CategoryRef("c2", "Phụ kiện", "phu-kien"),
+            // p3 không có trong catalog nên sẽ gộp vào nhóm null
+        };
+
+        var categories = SalesReportAggregator.AggregateCategories(productSales, categoryMap);
+
+        Assert.Equal(3, categories.Count);
+
+        // c1 (Thiết bị) có doanh thu 1.400.000, cao hơn c2 (Phụ kiện) 1.000.000.
+        Assert.Equal("c1", categories[0].CategoryId);
+        Assert.Equal("Thiết bị", categories[0].CategoryName);
+        Assert.Equal(1_400_000, categories[0].Revenue);
+        Assert.Equal(5, categories[0].Quantity);
+
+        Assert.Equal("c2", categories[1].CategoryId);
+        Assert.Equal("Phụ kiện", categories[1].CategoryName);
+        Assert.Equal(1_000_000, categories[1].Revenue);
+        Assert.Equal(5, categories[1].Quantity);
+
+        // Nhóm null gồm p3 (300.000) và nằm cuối danh sách.
+        Assert.Null(categories[2].CategoryId);
+        Assert.Null(categories[2].CategoryName);
+        Assert.Equal(300_000, categories[2].Revenue);
+        Assert.Equal(1, categories[2].Quantity);
+    }
+
+    [Fact]
     // Danh sách sản phẩm bán chạy nhất giữ nguyên thứ tự sắp xếp ban đầu và bổ sung tên cùng thương hiệu.
     public void BuildTopProducts_PreservesInitialOrder_AndFillsMetadataFromCatalog()
     {
@@ -300,8 +360,12 @@ public sealed class SalesReportAggregatorTests
         {
             ["p1"] = CreateProductSummary("p1", "Tai nghe", "b1", "Sony"),
         };
+        var categoryMap = new Dictionary<string, CategoryRef>
+        {
+            ["p1"] = new CategoryRef("c1", "Âm thanh", "am-thanh"),
+        };
 
-        var report = SalesReportAggregator.Build(period, [day], productSales, catalogMap);
+        var report = SalesReportAggregator.Build(period, [day], productSales, catalogMap, categoryMap);
 
         Assert.Equal(from, report.From);
         Assert.Equal(to, report.To);
@@ -309,6 +373,7 @@ public sealed class SalesReportAggregatorTests
         Assert.Equal(100_000, report.Totals.RecognizedRevenue);
         Assert.Single(report.Buckets);
         Assert.Single(report.Brands);
+        Assert.Equal("Âm thanh", Assert.Single(report.TopCategories).CategoryName);
         Assert.Single(report.TopProducts);
     }
 }

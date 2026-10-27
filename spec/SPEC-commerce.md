@@ -1,6 +1,6 @@
 # Spec: commerce
 
-Module id: `commerce` · Phụ thuộc: `identity`, `catalog`, `shipping` · Quy ước chung: `SPEC.md`
+Module id: `commerce` · Phụ thuộc: `identity`, `catalog`, `shipping`, `inventory` · Quy ước chung: `SPEC.md`
 
 ## Objective
 
@@ -53,7 +53,7 @@ Biến ý định mua thành đơn hàng đã giao: giỏ hàng, checkout, đơn
    - GHN không gọi được hoặc hết thời gian chờ: khách vẫn đặt được đơn. Server ghi log cảnh báo, vì lỗi của GHN không phải lỗi của khách.
 6. Server làm trong 1 transaction. Bước 4 và 5 chạy trước transaction, vì lời gọi GHN có thể chờ mạng và không được giữ khóa DB.
    - Khóa giỏ. Giỏ đã đổi từ lúc tính tiền thì trả 409 `ORDER_TOTAL_CHANGED`, kể cả khi tổng tiền bằng nhau.
-   - `stock.reserve(orderId, items)`. Thiếu hàng thì trả 409 `INSUFFICIENT_STOCK` kèm danh sách SKU thiếu.
+   - `IInventoryService.ReserveAsync(orderId, items)` của `inventory`. Thiếu hàng thì trả 409 `INSUFFICIENT_STOCK` kèm danh sách SKU thiếu.
    - Tạo đơn với snapshot: tên sản phẩm, SKU, giá, ảnh, địa chỉ (tên và mã), phí ship.
    - Xóa các dòng đã đặt khỏi giỏ.
 7. Gửi email xác nhận đơn. Email lỗi không làm đặt đơn thất bại.
@@ -127,8 +127,11 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 - Nhân viên hủy được tới trước `delivered`. Đơn đang `shipping` thì phải hủy vận đơn GHN thành công trước.
 - GHN tự hủy vận đơn khi đơn đang `shipping`: đơn về `confirmed` và có cờ `shipment_cancelled`. `sales` tạo lại vận đơn hoặc hủy đơn. Khi `sales` tạo vận đơn mới, server gỡ cờ này.
 - Sự kiện của vận đơn cũ đến sau khi đã có vận đơn mới thì bị bỏ qua. Handler so `ShipmentId` của sự kiện với vận đơn hiện tại của đơn.
-- Hủy đơn thì `stock.release(orderId)`. Đơn đã `paid` khi hủy thì chuyển `refund_pending`.
-- `returned` thì hàng **không** tự nhập lại kho. `sales` kiểm hàng rồi nhập lại bằng điều chỉnh tồn kho của `catalog` (loại `return`).
+- Hủy đơn thì gọi `IInventoryService.ReleaseAsync(orderId)`. Đơn đã `paid` khi hủy thì chuyển `refund_pending`.
+- Đơn sang `shipping` thì gọi `IInventoryService.CommitAsync(orderId)`: hàng rời kho. Lời gọi chạy trong transaction đổi trạng thái.
+- Đơn từ `shipping` về `confirmed` (nhân viên hoặc GHN hủy vận đơn) thì gọi `IInventoryService.UncommitAsync(orderId)`: hàng về kho.
+- `returned` thì hàng **không** tự nhập lại kho. Nhân viên có `products:write` kiểm hàng rồi sửa số lượng trong form sản phẩm.
+- Bảng đầy đủ giữa trạng thái đơn và số lượng nằm ở mục "Giữ hàng cho đơn" của `SPEC-inventory.md`.
 - Job mỗi phút: đơn `pending_payment` quá 30 phút thì hủy và trả hàng.
 
 ### Thanh toán SePay
@@ -389,8 +392,13 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerS
 
 ## Open Questions
 
-1. Định dạng chính xác của webhook SePay (tên trường, cách gửi API key, response mong đợi) và URL ảnh QR: cần xác minh theo tài liệu SePay hiện tại.
-   - Chưa chốt: COM-00 đối chiếu tài liệu. Phần cần khóa SePay thật chờ COM-24.
+1. Định dạng webhook SePay và URL ảnh QR.
+   - Đã chốt (2026-10-27) bằng webhook ở test mode, không chỉ đọc tài liệu.
+   - Header xác thực: `Authorization: Apikey <key>`.
+   - Body có 12 trường: `id`, `gateway`, `transactionDate`, `accountNumber`, `subAccount`, `code`, `content`, `transferType`, `description`, `transferAmount`, `accumulated`, `referenceCode`.
+   - Response: HTTP 200, body `{"success": true}`.
+   - Ảnh QR: `https://vietqr.app/img` với `acc`, `bank`, `amount`, `des`.
+   - Còn chờ: khóa webhook production (COM-24).
 2. Ngưỡng miễn phí ship 500.000 đ và hạn mức COD 20.000.000 đ có hợp lý không?
    - Đã chốt (mục 10 phần Câu hỏi mở của `tasks/commerce/plan.md`): giữ hai mức mặc định. Admin sửa được trong cấu hình.
 3. Có cần chính sách đổi trả (khách gửi yêu cầu đổi trả trên web) trong MVP không?

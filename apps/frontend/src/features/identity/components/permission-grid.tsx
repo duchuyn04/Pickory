@@ -11,7 +11,7 @@ export interface PermissionItem {
 // Tên nhóm tiếng Việt thân thiện cho từng module; nhóm nào chưa có tên ở đây sẽ hiện theo mã nhóm.
 const MODULE_GROUP_NAMES: Record<string, string> = {
   identity: 'Tài khoản & Phân quyền',
-  catalog: 'Sản phẩm & Tồn kho',
+  catalog: 'Sản phẩm',
   commerce: 'Đơn hàng & Thanh toán',
   'support-desk': 'Hỗ trợ khách hàng (CSKH)',
   shipping: 'Vận chuyển',

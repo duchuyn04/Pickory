@@ -43,19 +43,22 @@ O17 Sepay  Confirmed            Paid          D2 16:00   không có giao dịch 
 O18 Sepay  Delivered            Unpaid        D2 17:00   -                          130.000      0
 O19 Sepay  Confirmed            Paid          D3 11:00   D3 11:05 (giao dịch)       730.000      0
 
-Bảng tính tay theo ngày (đơn trong khoảng tạo ngày nào thì tính ngày đó, doanh thu theo ngày thanh toán):
+Bảng tính tay theo ngày. Giá trị đơn đặt theo ngày tạo, doanh thu và phương thức theo ngày thanh toán:
 
 D1: tạo O01 O02 O03 O10 O15 = 5 đơn, không đơn hủy.
     Giá trị đơn đặt = 1.010.000 + 480.000 + 320.000 + 130.000 + 230.000 = 2.170.000.
-    Giảm ship = 20.000 + 10.000 = 30.000. Phương thức: COD (O03 O15) = 2, Sepay (O01 O02 O10) = 3.
+    Giảm ship = 20.000 + 10.000 = 30.000.
+    Phương thức đã thanh toán: COD = 0, Sepay (O01 O12) = 2.
     Doanh thu = O01 1.010.000 + O12 480.000 = 1.490.000 trên 2 đơn.
 D2: tạo O04 O05 O06 O07 O16 O17 O18 = 7 đơn. Hủy: O07 shop = 1, O06 hết hạn = 1.
     Giá trị đơn đặt bỏ O06 = 230.000 + 470.000 + 230.000 + 230.000 + 130.000 + 130.000 = 1.420.000.
-    Giảm ship = O05 10.000. Phương thức (bỏ O06): COD (O04 O05 O16) = 3, Sepay (O07 O17 O18) = 3.
+    Giảm ship = O05 10.000.
+    Phương thức đã thanh toán: COD (O03) = 1, Sepay (O02) = 1.
     Doanh thu = O02 480.000 + O03 320.000 = 800.000 trên 2 đơn. O06 và O07 không tính vì RefundPending và Refunded.
 D3: tạo O08 O09 O11 O13 O19 = 5 đơn. Hủy: O08 khách = 1, O09 hết hạn = 1.
     Giá trị đơn đặt bỏ O09 = 220.000 + 430.000 + 480.000 + 730.000 = 1.860.000.
-    Giảm ship = O08 10.000. Phương thức (bỏ O09): COD (O08 O11) = 2, Sepay (O13 O19) = 2.
+    Giảm ship = O08 10.000.
+    Phương thức đã thanh toán: COD (O04) = 1, Sepay (O10 O19) = 2.
     Doanh thu = O04 230.000 + O10 130.000 + O19 730.000 = 1.090.000 trên 3 đơn.
 
 Bán theo sản phẩm (đơn Paid có ngày thanh toán trong khoảng: O01 O02 O03 O04 O10 O12 O19):
@@ -307,8 +310,10 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
     private static DailySales Day(
         int dayOfMonth, long revenue, int paidCount, long placedValue, int createdCount,
         CancellationCounts cancellations, PaymentMethodCounts methods, long shippingDiscount,
-        int soldQuantity = 0) =>
-        new(new DateOnly(2040, 3, dayOfMonth), revenue, paidCount, placedValue, createdCount, cancellations, methods, shippingDiscount, soldQuantity);
+        int soldQuantity = 0, OrderStatusCounts? orderStatuses = null) =>
+        new(
+            new DateOnly(2040, 3, dayOfMonth), revenue, paidCount, placedValue, createdCount, cancellations, methods,
+            shippingDiscount, soldQuantity, orderStatuses ?? new OrderStatusCounts(0, 0, 0, 0, 0, 0, 0));
 
     // ---------- GetDailySalesAsync ----------
 
@@ -322,9 +327,12 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
 
         Assert.Equal(
             [
-                Day(10, 1_490_000, 2, 2_170_000, 5, new CancellationCounts(0, 0, 0), new PaymentMethodCounts(2, 3), 30_000, 4),
-                Day(11, 800_000, 2, 1_420_000, 7, new CancellationCounts(0, 1, 1), new PaymentMethodCounts(3, 3), 10_000, 4),
-                Day(12, 1_090_000, 3, 1_860_000, 5, new CancellationCounts(1, 0, 1), new PaymentMethodCounts(2, 2), 10_000, 5),
+                Day(10, 1_490_000, 2, 2_170_000, 5, new CancellationCounts(0, 0, 0), new PaymentMethodCounts(0, 2), 30_000, 4,
+                    new OrderStatusCounts(0, 3, 1, 0, 1, 0, 0)),
+                Day(11, 800_000, 2, 1_420_000, 7, new CancellationCounts(0, 1, 1), new PaymentMethodCounts(1, 1), 10_000, 4,
+                    new OrderStatusCounts(0, 0, 1, 0, 4, 0, 2)),
+                Day(12, 1_090_000, 3, 1_860_000, 5, new CancellationCounts(1, 0, 1), new PaymentMethodCounts(1, 2), 10_000, 5,
+                    new OrderStatusCounts(0, 0, 2, 1, 0, 0, 2)),
             ],
             days);
     }
@@ -339,7 +347,8 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
         var days = await WithReportsAsync(reports => reports.GetDailySalesAsync(onlyD2, CancellationToken.None));
 
         Assert.Equal(
-            [Day(11, 800_000, 2, 1_420_000, 7, new CancellationCounts(0, 1, 1), new PaymentMethodCounts(3, 3), 10_000, 4)],
+            [Day(11, 800_000, 2, 1_420_000, 7, new CancellationCounts(0, 1, 1), new PaymentMethodCounts(1, 1), 10_000, 4,
+                new OrderStatusCounts(0, 0, 1, 0, 4, 0, 2))],
             days);
     }
 
@@ -353,7 +362,9 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
 
         Assert.Equal(3, days.Count);
         Assert.All(days, day => Assert.Equal(
-            new DailySales(day.Day, 0, 0, 0, 0, new CancellationCounts(0, 0, 0), new PaymentMethodCounts(0, 0), 0, 0), day));
+            new DailySales(
+                day.Day, 0, 0, 0, 0, new CancellationCounts(0, 0, 0), new PaymentMethodCounts(0, 0), 0, 0,
+                new OrderStatusCounts(0, 0, 0, 0, 0, 0, 0)), day));
     }
 
     [Fact]
@@ -413,8 +424,10 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
 
         Assert.Equal(0, days[0].RecognizedRevenue);
         Assert.Equal(200_000, days[0].PlacedOrderValue);
+        Assert.Equal(new PaymentMethodCounts(Cod: 0, Sepay: 0), days[0].PaymentMethods);
         Assert.Equal(200_000, days[1].RecognizedRevenue);
         Assert.Equal(0, days[1].PlacedOrderValue);
+        Assert.Equal(new PaymentMethodCounts(Cod: 0, Sepay: 1), days[1].PaymentMethods);
     }
 
     [Fact]
@@ -727,9 +740,9 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
         var day = Assert.Single(days);
         Assert.Equal(4, day.CreatedOrderCount);
         Assert.Equal(new CancellationCounts(ByCustomer: 1, ByShop: 1, PaymentExpired: 1), day.Cancellations);
-        // Đơn hết hạn không vào giá trị đơn đặt và phương thức thanh toán. Ba đơn COD còn lại vào.
+        // Đơn hết hạn không vào giá trị đơn đặt. Hai đơn COD đã hủy cũng không vào bộ đếm phương thức.
         Assert.Equal(customerCancelled.Total + staffCancelled.Total + codDelivered.Total, day.PlacedOrderValue);
-        Assert.Equal(new PaymentMethodCounts(Cod: 3, Sepay: 0), day.PaymentMethods);
+        Assert.Equal(new PaymentMethodCounts(Cod: 1, Sepay: 0), day.PaymentMethods);
         // Chỉ đơn COD đã nhận tiền có doanh thu, xếp theo ngày nhận tiền.
         Assert.Equal(codDelivered.Total, day.RecognizedRevenue);
         Assert.Equal(1, day.PaidOrderCount);

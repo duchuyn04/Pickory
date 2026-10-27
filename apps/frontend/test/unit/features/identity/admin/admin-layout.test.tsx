@@ -102,7 +102,6 @@ describe('AdminLayout', () => {
       'CSKH',
       'Đánh giá',
       'Sản phẩm',
-      'Tồn kho',
       'Danh mục',
       'Thương hiệu',
       'Báo cáo tổng quan',
@@ -152,7 +151,6 @@ describe('AdminLayout', () => {
       'Đơn hàng',
       'Khách hàng',
       'Sản phẩm',
-      'Tồn kho',
       'Danh mục',
       'Thương hiệu',
     ]);
@@ -167,18 +165,6 @@ describe('AdminLayout', () => {
     expect(navLink('Sản phẩm').getAttribute('aria-current')).toBe('page');
     expect(navLink('Tổng quan').getAttribute('aria-current')).toBeNull();
     expect(navLink('Danh mục').getAttribute('aria-current')).toBeNull();
-  });
-
-  it('trang tồn kho của một SKU đánh dấu mục Tồn kho thay cho mục Sản phẩm', async () => {
-    await renderLayout(adminActor, '/admin/products/abc/skus/xyz/inventory');
-    expect(navLink('Tồn kho').getAttribute('aria-current')).toBe('page');
-    expect(navLink('Sản phẩm').getAttribute('aria-current')).toBeNull();
-  });
-
-  it('danh sách tồn kho chỉ đánh dấu mục Tồn kho', async () => {
-    await renderLayout(adminActor, '/admin/inventory');
-    expect(navLink('Tồn kho').getAttribute('aria-current')).toBe('page');
-    expect(navLink('Sản phẩm').getAttribute('aria-current')).toBeNull();
   });
 
   it('chỉ đánh dấu Tổng quan khi đang ở trang tổng quan', async () => {

@@ -21,7 +21,7 @@ export const staffActor: ActorData = {
   userId: 'user-1',
   kind: 'staff',
   roles: ['sales'],
-  permissions: ['products:read', 'products:write', 'inventory:write'],
+  permissions: ['products:read', 'products:write'],
   consent: { personalization: false, marketing: false },
 };
 
@@ -59,6 +59,8 @@ export async function renderCatalogPage(options: RenderOptions): Promise<Catalog
       if ((init?.method ?? 'GET') === 'GET') requestedUrls.push(`${url.pathname}${url.search}`);
       // Chờ kết quả của `respond`. Nếu là `Promise` do test điều khiển, response chỉ về khi test cho phép.
       const data = await options.respond(url, init);
+      // Cloudinary trả `public_id` trực tiếp, không dùng bao `data` của API Pickory.
+      if (data instanceof Response) return data;
       return new Response(JSON.stringify({ data: data ?? [] }));
     }),
   );

@@ -19,7 +19,6 @@ public static class PermissionCatalog
         // catalog
         new(Permissions.ProductsRead, "catalog", "Xem sản phẩm", "Xem sản phẩm bao gồm cả sản phẩm ẩn"),
         new(Permissions.ProductsWrite, "catalog", "Sửa sản phẩm", "Tạo, sửa thông tin sản phẩm và danh mục"),
-        new(Permissions.InventoryWrite, "catalog", "Sửa tồn kho", "Cập nhật số lượng tồn kho sản phẩm"),
 
         // commerce
         new(Permissions.OrdersRead, "commerce", "Xem đơn hàng", "Xem danh sách và chi tiết đơn hàng"),

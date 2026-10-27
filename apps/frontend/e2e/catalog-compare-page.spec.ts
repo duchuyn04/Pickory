@@ -126,6 +126,7 @@ async function createActiveProduct(
         {
           optionValues: {},
           price: 15_000_000,
+          stock: 3,
           enabled: true,
           weightGrams: 1500,
           lengthCm: 35,
@@ -142,12 +143,6 @@ async function createActiveProduct(
     slug: string;
     variants: { id: string }[];
   };
-  const skuId = product.variants[0]?.id;
-  const adjusted = await page.request.post(`/api/admin/skus/${skuId}/movements`, {
-    headers: adminHeaders,
-    data: { delta: 3, reason: 'Nhập kho E2E trang so sánh' },
-  });
-  expect(adjusted.status(), await adjusted.text()).toBe(201);
   const activated = await page.request.put(`/api/admin/products/${product.id}/status`, {
     headers: adminHeaders,
     data: { status: 'active' },
