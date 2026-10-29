@@ -61,15 +61,18 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
     // Chỉ lấy menu quản trị (`aria-label` là `Quản trị`). Link trong `<nav>` khác, như phân trang, không làm sai kết quả.
     const navigation = page.getByRole('navigation', { name: 'Quản trị', exact: true });
     // Danh sách lấy từ `ADMIN_NAV_GROUPS` luôn khớp menu đang chạy, nên test không bắt được lỗi quyền. Vì vậy danh sách này viết tay.
+    // `sales` có `reports:read` trong bảng quyền mặc định, nên ba mục báo cáo nằm trong danh sách được thấy.
     const salesMenuLabels = [
       'Tổng quan',
       'Đơn hàng',
       'Đối soát',
       'Khách hàng',
       'Sản phẩm',
-      'Tồn kho',
       'Danh mục',
       'Thương hiệu',
+      'Báo cáo tổng quan',
+      'Doanh thu thương hiệu',
+      'Doanh thu theo kỳ',
     ];
     // `sales` không có quyền mặc định cho các trang này. Thấy mục nào ở đây nghĩa là menu hiện trang của quyền `sales` không có.
     const salesHiddenMenuLabels = [

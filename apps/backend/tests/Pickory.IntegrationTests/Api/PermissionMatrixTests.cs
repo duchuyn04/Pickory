@@ -14,6 +14,8 @@ using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Roles;
 using Pickory.Modules.Shipping;
+using Pickory.Modules.SupportDesk;
+using Pickory.Modules.AdminConsole;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Api;
@@ -101,11 +103,14 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "PATCH", "/api/admin/products/dummy-id", [Permissions.ProductsWrite] },
         { "PUT", "/api/admin/products/dummy-id/status", [Permissions.ProductsWrite] },
         { "DELETE", "/api/admin/products/dummy-id", [Permissions.ProductsWrite] },
+        { "POST", "/api/admin/products/dummy-id/restoration", [Permissions.ProductsWrite] },
         { "POST", "/api/admin/uploads/signature", [Permissions.ProductsWrite] },
-        { "POST", "/api/admin/skus/dummy-id/movements", [Permissions.InventoryWrite] },
-        { "GET", "/api/admin/skus/dummy-id/movements", [Permissions.ProductsRead] },
-        { "GET", "/api/admin/inventory/low-stock", [Permissions.ProductsRead] },
+        { "POST", "/api/admin/uploads/brand-logo/signature", [Permissions.ProductsWrite] },
         { "GET", "/api/admin/analytics/funnel", [Permissions.ReportsRead] },
+        { "GET", "/api/admin/reports/sales", [Permissions.ReportsRead] },
+        { "GET", "/api/admin/support/events", [Permissions.ConversationsRead] },
+        { "PUT", "/api/admin/support/presence", [Permissions.ConversationsReply] },
+        { "GET", "/api/admin/support/presence", [Permissions.ConversationsReply] },
     };
     [Theory]
     [MemberData(nameof(BackofficeEndpoints))]
@@ -169,7 +174,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         var hasAccess = requiredPermissions.All(permission => supportPermissions.Contains(permission));
 
         var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, BodyFor(method, path), cookieHeader: _supportCookie);
-        var response = await _client.SendAsync(request);
+        using var response = await SendReadingHeadersOnlyAsync(request);
 
         if (hasAccess)
         {
@@ -196,7 +201,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     {
         _ = requiredPermissions;
         var request = ActorHttp.CreateJsonRequest(new HttpMethod(method), path, BodyFor(method, path), cookieHeader: _adminCookie);
-        var response = await _client.SendAsync(request);
+        using var response = await SendReadingHeadersOnlyAsync(request);
 
         Assert.NotEqual(HttpStatusCode.Unauthorized, response.StatusCode);
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
@@ -270,16 +275,49 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             "activity-tracking",
             typeof(ActivityTrackingModule).Assembly,
             "Pickory.Modules.ActivityTracking",
-            [Permissions.ReportsRead]);
+            [Permissions.ReportsRead],
+            [typeof(AdminConsoleModule).Assembly]);
+    }
+
+    [Fact]
+    // SD-03: route back-office của support-desk phải có trong ma trận, kể cả route thêm sau này.
+    public void BackofficeEndpoints_CoversAllSupportDeskAdminEndpoints()
+    {
+        // Support-desk dùng hai quyền của identity: `conversations:read` cho luồng sự kiện và `conversations:reply` cho trạng thái trực.
+        AssertMatrixMatchesModuleAdminEndpoints(
+            "support-desk",
+            typeof(SupportDeskModule).Assembly,
+            "Pickory.Modules.SupportDesk",
+            [Permissions.ConversationsRead, Permissions.ConversationsReply]);
+    }
+
+    [Fact]
+    // ADM-12: route back-office của admin-console phải có trong ma trận, kể cả route thêm sau này.
+    public void BackofficeEndpoints_CoversAllAdminConsoleAdminEndpoints()
+    {
+        // Admin-console dùng quyền `reports:read` cho báo cáo doanh thu. Quyền này nằm trong danh sách chung của identity.
+        AssertMatrixMatchesModuleAdminEndpoints(
+            "admin-console",
+            typeof(AdminConsoleModule).Assembly,
+            "Pickory.Modules.AdminConsole",
+            [Permissions.ReportsRead],
+            [typeof(ActivityTrackingModule).Assembly]);
     }
 
     // Đối chiếu hai chiều giữa route `/api/admin/` của một module và các dòng ma trận dùng quyền của module đó.
     private void AssertMatrixMatchesModuleAdminEndpoints(
-        string moduleName, Assembly moduleAssembly, string moduleNamespace, IEnumerable<string> modulePermissions)
+        string moduleName,
+        Assembly moduleAssembly,
+        string moduleNamespace,
+        IEnumerable<string> modulePermissions,
+        IEnumerable<Assembly>? sharedPermissionModules = null)
     {
         // Dùng endpoint của ứng dụng thật để route mới không cần thêm vào danh sách kiểm thử riêng.
         var endpointDataSource = _factory.Services.GetRequiredService<EndpointDataSource>();
         var moduleAdminEndpoints = new List<(string Method, string Pattern)>();
+        var otherModuleAdminEndpoints = new HashSet<(string Method, string Path)>();
+        // Chỉ module khai báo dùng chung quyền mới được bỏ qua. Route của module khác vẫn phải bắt dòng ma trận sai.
+        var sharedPermissionModuleSet = sharedPermissionModules?.ToHashSet() ?? new HashSet<Assembly>();
 
         foreach (var endpoint in endpointDataSource.Endpoints)
         {
@@ -299,6 +337,12 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             // Ma trận luôn ghi đường dẫn với dấu `/` đầu tiên; `RoutePattern` có thể không ghi dấu đó.
             var normalizedPattern = rawPattern.StartsWith('/') ? rawPattern : "/" + rawPattern;
 
+            // Route công khai không yêu cầu quyền quản trị và không có trong ma trận.
+            if (!normalizedPattern.StartsWith("/api/admin/", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
             // Kiểu khai báo của handler giúp giới hạn phép kiểm vào module đang xét.
             var methodInfo = endpoint.Metadata.GetMetadata<MethodInfo>()
                 ?? endpoint.Metadata.OfType<Delegate>().FirstOrDefault()?.Method
@@ -308,18 +352,8 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             var isModuleEndpoint = declaringType != null &&
                 (declaringType.Assembly == moduleAssembly ||
                  declaringType.Namespace?.StartsWith(moduleNamespace, StringComparison.Ordinal) == true);
-
-            // Route của module khác do phép kiểm của module đó đối chiếu.
-            if (!isModuleEndpoint)
-            {
-                continue;
-            }
-
-            // Route công khai không yêu cầu quyền quản trị và không có trong ma trận.
-            if (!normalizedPattern.StartsWith("/api/admin/", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
+            var isSharedPermissionModuleEndpoint = declaringType != null &&
+                sharedPermissionModuleSet.Contains(declaringType.Assembly);
 
             // Route thiếu phương thức HTTP không có cặp phương thức và đường dẫn để đối chiếu.
             var httpMethodMetadata = endpoint.Metadata.GetMetadata<IHttpMethodMetadata>();
@@ -332,7 +366,14 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             // Một route có thể chấp nhận nhiều phương thức HTTP, mỗi phương thức cần một dòng ma trận.
             foreach (var method in httpMethods)
             {
-                moduleAdminEndpoints.Add((method.ToUpperInvariant(), normalizedPattern));
+                if (isModuleEndpoint)
+                {
+                    moduleAdminEndpoints.Add((method.ToUpperInvariant(), normalizedPattern));
+                }
+                else if (isSharedPermissionModuleEndpoint)
+                {
+                    otherModuleAdminEndpoints.Add((method.ToUpperInvariant(), NormalizeRoutePatternForMatrix(normalizedPattern)));
+                }
             }
         }
 
@@ -379,6 +420,8 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         var unknownMatrixRoutes = matrixRows
             .Where(row => row.RequiredPermissions.Any(permission => modulePermissionSet.Contains(permission)))
             .Where(row => !registeredModuleRoutes.Contains((row.Method, row.Path)))
+            // Chỉ bỏ qua route của module đã khai báo dùng chung quyền. Dòng gán nhầm cho route khác vẫn bị báo lỗi.
+            .Where(row => !otherModuleAdminEndpoints.Contains((row.Method, row.Path)))
             .Select(row => $"{row.Method} {row.Path}")
             .ToList();
 
@@ -388,11 +431,26 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
             $"Ma trận BackofficeEndpoints chứa route {moduleName} không tồn tại: {string.Join(", ", unknownMatrixRoutes)}");
     }
 
-    // Route `PATCH` khóa tài khoản đọc body trước khi chạy nghiệp vụ, nên dòng ma trận cần body hợp lệ. Các route còn lại không cần body.
+    // Route `PATCH` khóa tài khoản và `PUT` trạng thái trực đọc body trước khi chạy nghiệp vụ, nên dòng ma trận cần body hợp lệ. Các route còn lại không cần body.
     private static object? BodyFor(string method, string path)
     {
         var isLockRoute = method == "PATCH" && (path == "/api/admin/staff/dummy-id" || path == "/api/admin/customers/dummy-id");
-        return isLockRoute ? new { locked = true } : null;
+        if (isLockRoute)
+        {
+            return new { locked = true };
+        }
+
+        // Gửi `away` để dòng trực của tài khoản thử không thành `available` giữa các test khác.
+        var isPresenceRoute = method == "PUT" && path == "/api/admin/support/presence";
+        return isPresenceRoute ? new { status = "away" } : null;
+    }
+
+    // Route SSE không bao giờ tự kết thúc. Đọc hết body sẽ treo test, nên chỉ chờ header rồi để `using` đóng response.
+    private async Task<HttpResponseMessage> SendReadingHeadersOnlyAsync(HttpRequestMessage request)
+    {
+        // Hạn chờ để request lỗi header làm test đỏ thay vì treo.
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+        return await _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, timeout.Token);
     }
 
     // Ma trận dùng `dummy-id` trong request thử quyền nên cần cùng định dạng với route ứng dụng.

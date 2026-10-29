@@ -90,7 +90,9 @@ public sealed class StockService(CatalogDbContext database, IEventDispatcher dis
         // Mỗi SKU đổi tồn kho phát đúng một sự kiện. Collector chỉ phát sau khi bên sở hữu transaction commit.
         foreach (var change in result.Changes)
         {
-            events.Emit(new StockChangedEvent(change.SkuId, change.Stock, change.PreviousStock));
+            events.Emit(new StockChangedEvent(
+                change.ProductId, change.SkuId, change.Stock, change.PreviousStock,
+                change.ProductInStock, change.ProductMinPrice));
         }
     }
 

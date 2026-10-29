@@ -1,9 +1,85 @@
 import { describe, expect, it } from 'vitest';
 import {
   buildCategoryTree,
+  filterAndSortBrands,
   filterBrands,
   filterCategoryTree,
 } from '../../../../../src/features/catalog/admin/catalog-filters';
+
+describe('filterAndSortBrands', () => {
+  const brands = [
+    {
+      id: '1',
+      name: 'Samsung',
+      slug: 'samsung',
+      logoPublicId: null,
+      createdAt: '2026-01-01T00:00:00Z',
+    },
+    {
+      id: '2',
+      name: 'Apple',
+      slug: 'apple',
+      logoPublicId: 'pickory/brands/apple',
+      createdAt: '2026-03-01T00:00:00Z',
+    },
+    {
+      id: '3',
+      name: 'Asus',
+      slug: 'asus',
+      logoPublicId: '   ',
+      createdAt: '2026-02-01T00:00:00Z',
+    },
+  ];
+
+  it('chỉ giữ thương hiệu có mã logo khi lọc Có logo', () => {
+    const result = filterAndSortBrands(brands, { keyword: '', logo: 'with-logo', sort: '' });
+
+    expect(ids(result)).toEqual(['2']);
+  });
+
+  it('coi mã logo rỗng hoặc chỉ có khoảng trắng là Chưa có logo', () => {
+    const result = filterAndSortBrands(brands, { keyword: '', logo: 'without-logo', sort: '' });
+
+    expect(ids(result)).toEqual(['3', '1']);
+  });
+
+  it('kết hợp từ khóa với bộ lọc logo', () => {
+    const result = filterAndSortBrands(brands, {
+      keyword: 'samsung',
+      logo: 'without-logo',
+      sort: '',
+    });
+
+    expect(ids(result)).toEqual(['1']);
+  });
+
+  it('sắp xếp tên theo cả hai chiều mà không đổi danh sách đầu vào', () => {
+    const ascending = filterAndSortBrands(brands, { keyword: '', logo: '', sort: 'name-asc' });
+    const descending = filterAndSortBrands(brands, { keyword: '', logo: '', sort: 'name-desc' });
+
+    expect(ids(ascending)).toEqual(['2', '3', '1']);
+    expect(ids(descending)).toEqual(['1', '3', '2']);
+    expect(ids(brands)).toEqual(['1', '2', '3']);
+  });
+
+  it('sắp xếp ngày tạo theo cả hai chiều', () => {
+    const newest = filterAndSortBrands(brands, { keyword: '', logo: '', sort: 'newest' });
+    const oldest = filterAndSortBrands(brands, { keyword: '', logo: '', sort: 'oldest' });
+
+    expect(ids(newest)).toEqual(['2', '3', '1']);
+    expect(ids(oldest)).toEqual(['1', '3', '2']);
+  });
+
+  it('giá trị lọc lạ không làm mất dữ liệu và giá trị sắp xếp lạ dùng thứ tự tên', () => {
+    const result = filterAndSortBrands(brands, {
+      keyword: '',
+      logo: 'unexpected',
+      sort: 'unexpected',
+    });
+
+    expect(ids(result)).toEqual(['2', '3', '1']);
+  });
+});
 
 function category(id: string, name: string, parentId: string | null = null, position = 0) {
   return { id, name, slug: name.toLowerCase().replaceAll(' ', '-'), parentId, position };

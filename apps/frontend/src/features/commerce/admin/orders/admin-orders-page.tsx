@@ -117,7 +117,7 @@ export function AdminOrdersPage() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="order-flag">Cờ đơn</label>
+            <label htmlFor="order-flag">Ghi chú</label>
             <select
               id="order-flag"
               value={values.flag}
@@ -185,7 +185,7 @@ export function AdminOrdersPage() {
                     </th>
                     <th scope="col">Trạng thái</th>
                     <th scope="col">Thanh toán</th>
-                    <th scope="col">Cờ</th>
+                    <th scope="col">Ghi chú</th>
                   </tr>
                 </thead>
                 <tbody>

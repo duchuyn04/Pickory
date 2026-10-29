@@ -20,13 +20,9 @@ async function textAlignOf(cell: Locator) {
 
 interface SeededCatalog {
   categoryId: string;
-  // SKU của sản phẩm đầu tiên. Màn tồn kho lọc theo mã này, màn biến động kho mở đúng SKU này.
-  productId: string;
-  skuId: string;
-  skuCode: string;
 }
 
-// Tạo danh mục riêng với 21 sản phẩm, đủ để danh sách có hai trang. Sản phẩm đầu có hai lần điều chỉnh tồn kho.
+// Tạo danh mục riêng với 21 sản phẩm, đủ để danh sách có hai trang.
 async function seedCatalog(page: Page): Promise<SeededCatalog> {
   const headers = { Origin: e2eEnvironment.webOrigin };
   const suffix = Date.now().toString(36);
@@ -44,7 +40,6 @@ async function seedCatalog(page: Page): Promise<SeededCatalog> {
   expect(brand.status(), await brand.text()).toBe(201);
   const brandId = (await brand.json()).data.id;
 
-  let firstProduct: { id: string; variants: { id: string; code: string }[] } | null = null;
   for (let number = 1; number <= PRODUCT_COUNT; number += 1) {
     const created = await page.request.post('/api/admin/products', {
       headers,
@@ -70,20 +65,9 @@ async function seedCatalog(page: Page): Promise<SeededCatalog> {
       },
     });
     expect(created.status(), await created.text()).toBe(201);
-    if (firstProduct === null) firstProduct = (await created.json()).data;
-  }
-  const sku = firstProduct!.variants[0]!;
-
-  // Hai lần điều chỉnh cho hai biến động có thứ tự. Tồn kho cuối là 5, nằm trong ngưỡng sắp hết hàng của màn tồn kho.
-  for (const delta of [3, 2]) {
-    const adjusted = await page.request.post(`/api/admin/skus/${sku.id}/movements`, {
-      headers,
-      data: { delta, reason: `Nhập kho E2E màn STT ${delta}` },
-    });
-    expect(adjusted.status(), await adjusted.text()).toBe(201);
   }
 
-  return { categoryId, productId: firstProduct!.id, skuId: sku.id, skuCode: sku.code };
+  return { categoryId };
 }
 
 // Chụp cả trang ở hai bề rộng. Mỗi lần kiểm trang không tràn ngang.
@@ -102,7 +86,7 @@ async function captureBothWidths(
   await page.setViewportSize({ width: 1280, height: 800 });
 }
 
-test('FLT-UI8: màn sản phẩm, tồn kho và biến động kho có cột STT', async ({ page }, testInfo) => {
+test('FLT-UI8: màn sản phẩm có cột STT', async ({ page }, testInfo) => {
   test.setTimeout(180000);
   const consoleIssues = collectConsoleIssues(page);
 
@@ -129,36 +113,6 @@ test('FLT-UI8: màn sản phẩm, tồn kho và biến động kho có cột STT
     // Trang 2 giữ bảng cũ cho tới khi response về, nên chờ tới khi chỉ còn một dòng của trang 2.
     await expect(rows).toHaveCount(1);
     await expect(rows.first().locator('td').first()).toHaveText('21');
-  });
-
-  await test.step('Màn tồn kho: lọc theo mã SKU của spec, dòng đầu STT 1', async () => {
-    await page.goto(`/admin/inventory?search=${encodeURIComponent(seeded.skuCode)}`);
-    const rows = page.locator('table.inventory-table tbody tr');
-    await expect(rows).toHaveCount(1);
-
-    const headerCell = page.locator('table.inventory-table thead th').first();
-    await expect(headerCell).toHaveText('STT');
-    expect(await textAlignOf(headerCell)).toBe('right');
-    await expect(rows.first().locator('td').first()).toHaveText('1');
-    expect(await textAlignOf(rows.first().locator('td').first())).toBe('right');
-
-    await captureBothWidths(page, 'inventory', testInfo.outputPath.bind(testInfo), headerCell);
-  });
-
-  await test.step('Màn biến động kho: STT 1, 2 theo thứ tự đang hiện', async () => {
-    await page.goto(`/admin/products/${seeded.productId}/skus/${seeded.skuId}/inventory`);
-    const rows = page.locator('table.movement-table tbody tr');
-    // Hai lần điều chỉnh của spec. Sản phẩm mới tạo chưa có biến động nào khác.
-    await expect(rows).toHaveCount(2);
-
-    const headerCell = page.locator('table.movement-table thead th').first();
-    await expect(headerCell).toHaveText('STT');
-    expect(await textAlignOf(headerCell)).toBe('right');
-    await expect(rows.nth(0).locator('td').first()).toHaveText('1');
-    await expect(rows.nth(1).locator('td').first()).toHaveText('2');
-    expect(await textAlignOf(rows.first().locator('td').first())).toBe('right');
-
-    await captureBothWidths(page, 'movements', testInfo.outputPath.bind(testInfo), headerCell);
   });
 
   expect(consoleIssues).toEqual([]);

@@ -21,13 +21,8 @@ public static class ProductDetailAssembler
             .Where(sku => sku.Enabled)
             .OrderBy(sku => sku.CreatedAt).ThenBy(sku => sku.Id)
             .Select(sku => new ProductSkuInfo(
-                sku.Id,
-                sku.Code,
-                ReadOptionValues(sku.OptionValues),
-                sku.Price,
-                sku.CompareAtPrice,
-                sku.Stock > 0,
-                sku.Stock))
+                sku.Id, sku.Code, ReadOptionValues(sku.OptionValues), sku.Price, sku.CompareAtPrice,
+                sku.Stock > 0, sku.Stock))
             .ToList();
 
         var options = JsonSerializer.Deserialize<List<ProductOptionInfo>>(

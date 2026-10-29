@@ -141,6 +141,19 @@
   --color-info-soft: #e5efff;
   --color-star: #f5a524;
 
+  /*
+   * Màu phân loại của biểu đồ báo cáo. Sáu màu đủ tách nhau trên nền trắng.
+   * `--color-chart-other` là nhóm "Khác", màu xám đậm để chữ trắng trên lát vẫn đọc được.
+   */
+  --color-chart-1: #2a6fd6;
+  --color-chart-2: #d70018;
+  --color-chart-3: #0f6b36;
+  --color-chart-4: #8a5300;
+  --color-chart-5: #6b3fa0;
+  --color-chart-6: #0b7285;
+  --color-chart-other: #5b6470;
+  --color-chart-label: #ffffff;
+
   /* Lớp phủ và bóng: chỉ panel nổi có bóng rõ, thẻ chỉ có bóng rất nhẹ. */
   --color-overlay: rgba(10, 14, 20, 0.45);
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);

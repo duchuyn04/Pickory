@@ -87,6 +87,7 @@ describe('ProductView: chọn biến thể', () => {
     expect(priceText()).toBe('20.000.000 đ');
     expect(listPriceText()).toBeNull();
     expect(stockBadgeText()).toBe('Còn hàng');
+    expect(container.querySelector('.product-stock')?.textContent).toContain('Còn 12 sản phẩm');
     expect(mainImageSrc()).toContain(imageBlack.url.split('/image/upload/')[1]);
   });
 
@@ -104,24 +105,8 @@ describe('ProductView: chọn biến thể', () => {
     expect(priceText()).toBe('24.000.000 đ');
     expect(listPriceText()).toBeNull();
     expect(stockBadgeText()).toBe('Hết hàng');
-  });
-
-  it('hiển thị số lượng tồn của SKU và cập nhật khi đổi biến thể', async () => {
-    await renderProduct(buildProductDetail());
-    expect(container.querySelector('.product-stock-quantity')?.textContent).toBe(
-      'Tồn kho: 12 sản phẩm',
-    );
-
-    await choose('Màu', 'Bạc');
-    expect(container.querySelector('.product-stock-quantity')?.textContent).toBe(
-      'Tồn kho: 3 sản phẩm',
-    );
-
-    await choose('Màu', 'Đen');
-    await choose('Bộ nhớ', '512GB');
-    expect(container.querySelector('.product-stock-quantity')?.textContent).toBe(
-      'Tồn kho: 0 sản phẩm',
-    );
+    // Hết hàng thì không có dòng đếm tồn kho, nên không hiện "Còn 0 sản phẩm".
+    expect(container.querySelector('.product-stock')).toBeNull();
   });
 
   it('ghi SKU đang chọn vào ?sku= bằng replace và giữ tham số khác', async () => {

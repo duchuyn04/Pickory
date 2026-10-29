@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
+import { act } from 'react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { BrandsPage } from '../../../../../src/features/catalog/admin/brands-page';
 import { CategoriesPage } from '../../../../../src/features/catalog/admin/categories-page';
-import { findField, renderCatalogPage, type CatalogListHarness } from './catalog-list-test-kit';
+import {
+  findField,
+  renderCatalogPage,
+  selectOption,
+  type CatalogListHarness,
+} from './catalog-list-test-kit';
 
 let harness: CatalogListHarness;
 
@@ -220,5 +226,116 @@ describe('màn thương hiệu có cột STT', () => {
 
     expect(rowNumbers()).toEqual(['1']);
     expect(harness.container.querySelector('tbody tr strong')!.textContent).toBe('Samsung');
+  });
+});
+
+describe('màn thương hiệu lọc, sắp xếp và phân trang', () => {
+  const brands = Array.from({ length: 12 }, (_, index) => {
+    const number = index + 1;
+    const suffix = String(number).padStart(2, '0');
+    return {
+      id: String(number),
+      name: `Brand ${suffix}`,
+      slug: `brand-${suffix}`,
+      logoPublicId: number % 2 === 0 ? `pickory/brands/brand-${suffix}` : null,
+      createdAt: `2026-01-${suffix}T00:00:00Z`,
+      updatedAt: `2026-01-${suffix}T00:00:00Z`,
+    };
+  });
+
+  function rows() {
+    return [...harness.container.querySelectorAll('tbody tr')];
+  }
+
+  function brandNames() {
+    return rows().map((row) => row.querySelector('strong')!.textContent);
+  }
+
+  function rowNumbers() {
+    return rows().map((row) => row.firstElementChild!.textContent);
+  }
+
+  function buttonByText(text: string) {
+    return [...harness.container.querySelectorAll<HTMLButtonElement>('button')].find(
+      (button) => button.textContent === text,
+    )!;
+  }
+
+  it('mở URL lọc Có logo thì chỉ hiện thương hiệu có logo và nhãn bộ lọc', async () => {
+    harness = await openBrands('/admin/brands?logo=with-logo', brands);
+
+    expect(brandNames()).toEqual([
+      'Brand 02',
+      'Brand 04',
+      'Brand 06',
+      'Brand 08',
+      'Brand 10',
+      'Brand 12',
+    ]);
+    expect(findField(harness.container, 'Logo')!.value).toBe('with-logo');
+    const filterBar = harness.container.querySelector('[aria-label="Bộ lọc đang áp dụng"]')!;
+    expect(filterBar.textContent).toContain('Logo: Có logo');
+    expect(filterBar.textContent).toContain('6 thương hiệu');
+  });
+
+  it('đổi bộ lọc thì xóa số trang và cập nhật URL', async () => {
+    harness = await openBrands('/admin/brands?page=2', brands);
+
+    await selectOption(findField(harness.container, 'Logo')!, 'with-logo');
+
+    const searchParams = new URLSearchParams(harness.currentSearch());
+    expect(searchParams.get('logo')).toBe('with-logo');
+    expect(searchParams.has('page')).toBe(false);
+    expect(brandNames()).toHaveLength(6);
+  });
+
+  it('mỗi trang có 10 dòng và trang sau tiếp tục STT của trang trước', async () => {
+    harness = await openBrands('/admin/brands', brands);
+
+    expect(rows()).toHaveLength(10);
+    expect(
+      harness.container.querySelector('nav[aria-label="Phân trang thương hiệu"]')!.textContent,
+    ).toContain('Trang 1 / 2');
+    expect(rowNumbers().at(-1)).toBe('10');
+
+    await act(async () => buttonByText('Trang sau').click());
+
+    expect(new URLSearchParams(harness.currentSearch()).get('page')).toBe('2');
+    expect(brandNames()).toEqual(['Brand 11', 'Brand 12']);
+    expect(rowNumbers()).toEqual(['11', '12']);
+  });
+
+  it('mở lại URL có sắp xếp và số trang thì hiện đúng phần danh sách', async () => {
+    harness = await openBrands('/admin/brands?sort=name-desc&page=2', brands);
+
+    expect(findField(harness.container, 'Sắp xếp')!.value).toBe('name-desc');
+    expect(brandNames()).toEqual(['Brand 02', 'Brand 01']);
+    expect(rowNumbers()).toEqual(['11', '12']);
+  });
+
+  it('trang vượt giới hạn có nút quay về trang 1', async () => {
+    harness = await openBrands('/admin/brands?page=3', brands);
+
+    expect(rows()).toHaveLength(0);
+    await act(async () => buttonByText('Về trang 1').click());
+
+    expect(new URLSearchParams(harness.currentSearch()).has('page')).toBe(false);
+    expect(rows()).toHaveLength(10);
+    expect(rowNumbers()[0]).toBe('1');
+  });
+
+  it('xóa bộ lọc thì đặt lại tìm kiếm, logo, sắp xếp và số trang', async () => {
+    harness = await openBrands(
+      '/admin/brands?search=brand&logo=with-logo&sort=name-desc&page=2',
+      brands,
+    );
+
+    await act(async () => buttonByText('Xóa bộ lọc').click());
+
+    expect(harness.currentSearch()).toBe('');
+    expect(findField(harness.container, brandSearchLabel)!.value).toBe('');
+    expect(findField(harness.container, 'Logo')!.value).toBe('');
+    expect(findField(harness.container, 'Sắp xếp')!.value).toBe('');
+    expect(rows()).toHaveLength(10);
   });
 });

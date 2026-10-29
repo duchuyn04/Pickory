@@ -305,7 +305,7 @@ describe('ProductFormView', () => {
       ),
     ).toBe(true);
   });
-  it('tồn kho của biến thể chỉ đọc và không gửi trong payload lưu', async () => {
+  it('ô số lượng sửa được và chỉ gửi khi admin thay đổi', async () => {
     const existingProduct: ProductDetail = {
       id: 'prod-1',
       categoryId: 'headset',
@@ -338,20 +338,24 @@ describe('ProductFormView', () => {
     const onSave = vi.fn();
     await renderForm(true, onSave, existingProduct);
 
-    const row = container.querySelector('[data-variant-row]')!;
-    expect(row).not.toBeNull();
-    expect(row.textContent).toContain('42');
+    const stockInput = container.querySelector<HTMLInputElement>('input[name="variant-stock-0"]')!;
+    expect(stockInput.value).toBe('42');
 
-    const stockInputs = container.querySelectorAll('input[aria-label^="Tồn kho"]');
-    expect(stockInputs).toHaveLength(0);
-
+    // Chưa sửa ô thì payload không gửi số cũ, để đơn đang xử lý không bị ghi đè.
     await act(async () =>
       container.querySelector<HTMLButtonElement>('button[type="submit"]')!.click(),
     );
     expect(onSave).toHaveBeenCalledTimes(1);
-    const payload = onSave.mock.calls[0]![0] as { variants: Record<string, unknown>[] };
-    expect(payload.variants).toHaveLength(1);
-    expect('stock' in payload.variants[0]!).toBe(false);
+    const firstPayload = onSave.mock.calls[0]![0] as { variants: Record<string, unknown>[] };
+    expect('stock' in firstPayload.variants[0]!).toBe(false);
+
+    await change('input[name="variant-stock-0"]', '50');
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('button[type="submit"]')!.click(),
+    );
+    expect(onSave).toHaveBeenCalledTimes(2);
+    const secondPayload = onSave.mock.calls[1]![0] as { variants: Record<string, unknown>[] };
+    expect(secondPayload.variants[0]!.stock).toBe(50);
   });
 
   function productWithImages(alts: string[]): ProductDetail {

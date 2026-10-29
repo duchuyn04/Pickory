@@ -1,6 +1,6 @@
 # Spec: commerce
 
-Module id: `commerce` · Phụ thuộc: `identity`, `catalog`, `shipping` · Quy ước chung: `SPEC.md`
+Module id: `commerce` · Phụ thuộc: `identity`, `catalog`, `shipping`, `inventory` · Quy ước chung: `SPEC.md`
 
 ## Objective
 
@@ -53,7 +53,7 @@ Biến ý định mua thành đơn hàng đã giao: giỏ hàng, checkout, đơn
    - GHN không gọi được hoặc hết thời gian chờ: khách vẫn đặt được đơn. Server ghi log cảnh báo, vì lỗi của GHN không phải lỗi của khách.
 6. Server làm trong 1 transaction. Bước 4 và 5 chạy trước transaction, vì lời gọi GHN có thể chờ mạng và không được giữ khóa DB.
    - Khóa giỏ. Giỏ đã đổi từ lúc tính tiền thì trả 409 `ORDER_TOTAL_CHANGED`, kể cả khi tổng tiền bằng nhau.
-   - `stock.reserve(orderId, items)`. Thiếu hàng thì trả 409 `INSUFFICIENT_STOCK` kèm danh sách SKU thiếu.
+   - `IInventoryService.ReserveAsync(orderId, items)` của `inventory`. Thiếu hàng thì trả 409 `INSUFFICIENT_STOCK` kèm danh sách SKU thiếu.
    - Tạo đơn với snapshot: tên sản phẩm, SKU, giá, ảnh, địa chỉ (tên và mã), phí ship.
    - Xóa các dòng đã đặt khỏi giỏ.
 7. Gửi email xác nhận đơn. Email lỗi không làm đặt đơn thất bại.
@@ -127,8 +127,11 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 - Nhân viên hủy được tới trước `delivered`. Đơn đang `shipping` thì phải hủy vận đơn GHN thành công trước.
 - GHN tự hủy vận đơn khi đơn đang `shipping`: đơn về `confirmed` và có cờ `shipment_cancelled`. `sales` tạo lại vận đơn hoặc hủy đơn. Khi `sales` tạo vận đơn mới, server gỡ cờ này.
 - Sự kiện của vận đơn cũ đến sau khi đã có vận đơn mới thì bị bỏ qua. Handler so `ShipmentId` của sự kiện với vận đơn hiện tại của đơn.
-- Hủy đơn thì `stock.release(orderId)`. Đơn đã `paid` khi hủy thì chuyển `refund_pending`.
-- `returned` thì hàng **không** tự nhập lại kho. `sales` kiểm hàng rồi nhập lại bằng điều chỉnh tồn kho của `catalog` (loại `return`).
+- Hủy đơn thì gọi `IInventoryService.ReleaseAsync(orderId)`. Đơn đã `paid` khi hủy thì chuyển `refund_pending`.
+- Đơn sang `shipping` thì gọi `IInventoryService.CommitAsync(orderId)`: hàng rời kho. Lời gọi chạy trong transaction đổi trạng thái.
+- Đơn từ `shipping` về `confirmed` (nhân viên hoặc GHN hủy vận đơn) thì gọi `IInventoryService.UncommitAsync(orderId)`: hàng về kho.
+- `returned` thì hàng **không** tự nhập lại kho. Nhân viên có `products:write` kiểm hàng rồi sửa số lượng trong form sản phẩm.
+- Bảng đầy đủ giữa trạng thái đơn và số lượng nằm ở mục "Giữ hàng cho đơn" của `SPEC-inventory.md`.
 - Job mỗi phút: đơn `pending_payment` quá 30 phút thì hủy và trả hàng.
 
 ### Thanh toán SePay
@@ -168,13 +171,12 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 - Khách vãng lai: email xác nhận có link `/orders/<mã>?t=<token>`. Token ngẫu nhiên, DB lưu hash. Link chỉ xem, không sửa thông tin giao hàng.
 - Khi khách xác thực email, các đơn vãng lai có cùng email được gắn vào tài khoản.
 
-**Tra cứu đơn:** khách mất email xác nhận thì nhập mã đơn và email ở trang tra cứu (`POST /api/order-lookups`). Server gửi link qua email và không hiện đơn trên trang. Mã đơn nằm trong nội dung chuyển khoản và mã vận đơn, nên mã đơn không phải bí mật. Trang hiện đơn ngay khi khớp sẽ lộ địa chỉ của khách.
+**Tra cứu đơn:** khách nhập mã đơn và email ở trang tra cứu (`POST /api/order-lookups`). Server trả token khi khớp; trang chuyển ngay tới `/orders/<mã>?t=<token>`. Mã đơn không phải bí mật, nên email là yếu tố thứ hai. Cách này hiện đơn cho người biết cả mã đơn và email.
 
 1. Server so mã đơn không phân biệt hoa thường. Server so email không phân biệt hoa thường, sau khi bỏ khoảng trắng hai đầu.
-2. Mã đơn và email liên hệ khớp: server tạo token xem đơn mới, thay hash cũ, rồi gửi link `/orders/<mã>?t=<token mới>` tới email của đơn. Link trong email cũ hết hiệu lực.
-3. Không khớp: server không gửi email và không đổi token của đơn nào.
-4. Khớp hay không khớp, route đều trả 202 với cùng một body. Body không có token, link hay dữ liệu đơn. Gửi email lỗi vẫn trả 202.
-5. Quá 5 lần trong 15 phút cho cùng IP, hoặc cho cùng email, thì trả 429. Giới hạn này chặn dò mã đơn hàng loạt.
+2. Khớp: server tạo token xem đơn mới, thay hash cũ, trả `{ code, accessToken }` với 200. Link cũ hết hiệu lực.
+3. Không khớp: server trả 404 `ORDER_NOT_FOUND` với cùng một thông điệp, không đổi token.
+4. Quá 5 lần trong 15 phút cho cùng IP, hoặc cho cùng email, thì trả 429. Giới hạn này chặn dò mã đơn hàng loạt.
 
 ### Sổ địa chỉ
 
@@ -259,7 +261,7 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 | GET | `/api/orders/:code` | chủ đơn, hoặc có token | Chi tiết đơn |
 | GET | `/api/orders/:code/payment` | chủ đơn, hoặc có token | Cho trang chờ thanh toán hỏi định kỳ |
 | POST | `/api/orders/:code/cancellation` | chủ đơn, hoặc có token | Khách tự hủy |
-| POST | `/api/order-lookups` | công khai | Tra cứu đơn bằng mã đơn và email, gửi link xem đơn qua email, luôn trả 202 |
+| POST | `/api/order-lookups` | công khai | Tra cứu đơn bằng mã đơn và email, trả token xem đơn |
 | GET · POST · PATCH · DELETE | `/api/me/addresses[/:id]` | khách đã đăng nhập | Sổ địa chỉ |
 | GET | `/api/products/:id/reviews` | công khai | Điểm trung bình, phân bố số sao và trang đánh giá đang hiện |
 | POST · PATCH | `/api/products/:id/reviews[/mine]` | người đã mua | Viết, sửa đánh giá |
@@ -350,7 +352,7 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerS
   - Đặt đơn với giá frontend gửi sai: server dùng giá đúng và trả 409 nếu khác preview.
   - Gửi cùng `Idempotency-Key` 2 lần chỉ tạo 1 đơn.
   - Kiểm địa chỉ khi đặt đơn: GHN từ chối thì trả `ADDRESS_NOT_DELIVERABLE`, không tạo đơn và không giữ hàng. GHN không gọi được thì đơn vẫn tạo.
-  - Tra cứu đơn: khớp và không khớp trả cùng response, token mới thay token cũ, quá giới hạn trả 429.
+  - Tra cứu đơn: khớp trả token mới và mở được đơn; không khớp trả 404; token cũ hết hiệu lực; quá giới hạn trả 429.
   - Webhook SePay đủ 5 trường hợp trong bảng; gửi lại cùng giao dịch không xử lý 2 lần; sai API key trả 401.
   - Job hết hạn hủy đơn và trả hàng; tiền về sau khi hủy được xử lý đúng.
   - Gộp giỏ khi đăng nhập; gắn đơn vãng lai sau khi xác thực email.
@@ -389,8 +391,13 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerS
 
 ## Open Questions
 
-1. Định dạng chính xác của webhook SePay (tên trường, cách gửi API key, response mong đợi) và URL ảnh QR: cần xác minh theo tài liệu SePay hiện tại.
-   - Chưa chốt: COM-00 đối chiếu tài liệu. Phần cần khóa SePay thật chờ COM-24.
+1. Định dạng webhook SePay và URL ảnh QR.
+   - Đã chốt (2026-10-27) bằng webhook ở test mode, không chỉ đọc tài liệu.
+   - Header xác thực: `Authorization: Apikey <key>`.
+   - Body có 12 trường: `id`, `gateway`, `transactionDate`, `accountNumber`, `subAccount`, `code`, `content`, `transferType`, `description`, `transferAmount`, `accumulated`, `referenceCode`.
+   - Response: HTTP 200, body `{"success": true}`.
+   - Ảnh QR: `https://vietqr.app/img` với `acc`, `bank`, `amount`, `des`.
+   - Còn chờ: khóa webhook production (COM-24).
 2. Ngưỡng miễn phí ship 500.000 đ và hạn mức COD 20.000.000 đ có hợp lý không?
    - Đã chốt (mục 10 phần Câu hỏi mở của `tasks/commerce/plan.md`): giữ hai mức mặc định. Admin sửa được trong cấu hình.
 3. Có cần chính sách đổi trả (khách gửi yêu cầu đổi trả trên web) trong MVP không?

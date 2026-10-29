@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Pickory.Modules.Catalog.Contracts.Reading;
 using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Persistence;
+using Pickory.Modules.Identity.Contracts.Staff;
 using Pickory.Modules.Shipping.Contracts;
 using Pickory.Shared.Calendar;
 using Pickory.Shared.Exceptions;
@@ -15,7 +16,8 @@ public sealed class AdminOrderService(
     CommerceDbContext database,
     ICatalogReader catalogReader,
     IShippingService shipping,
-    OrderParcelResolver parcels)
+    OrderParcelResolver parcels,
+    IStaffDirectory staffDirectory)
 {
     private const string OrderNotFoundMessage = "Không tìm thấy đơn hàng.";
 
@@ -136,16 +138,35 @@ public sealed class AdminOrderService(
         // Bảng `orders` không có cột vận đơn. Tra module Shipping theo mã đơn, và nhận `null` khi chưa có vận đơn còn hiệu lực.
         var shipment = await shipping.GetShipmentByRefAsync(order.Code, cancellationToken);
 
+        // Gom mã người thực hiện để tra tên một lần, thay vì gọi Identity cho từng dòng lịch sử.
+        var actorIds = order.StatusHistory
+            .Where(entry => entry.ActorId is not null)
+            .Select(entry => entry.ActorId!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+        var actorNames = await staffDirectory.GetNamesAsync(actorIds, cancellationToken);
+
         // Lịch sử theo thời gian tăng dần. Cùng thời điểm thì theo `Id` để thứ tự không đổi giữa các lần đọc.
         var history = order.StatusHistory
             .OrderBy(entry => entry.CreatedAt)
             .ThenBy(entry => entry.Id)
-            .Select(entry => new AdminOrderStatusHistoryResponse(
-                OrderLabels.ToLabel(entry.FromStatus),
-                OrderLabels.ToLabel(entry.ToStatus),
-                entry.ActorId,
-                entry.Reason,
-                entry.CreatedAt))
+            .Select(entry =>
+            {
+                // Tài khoản đã xóa hoặc không còn trong danh mục nhân viên thì trả tên rỗng; frontend tự có nhãn dự phòng.
+                string? actorName = null;
+                if (entry.ActorId is not null && actorNames.TryGetValue(entry.ActorId, out var name))
+                {
+                    actorName = name;
+                }
+
+                return new AdminOrderStatusHistoryResponse(
+                    OrderLabels.ToLabel(entry.FromStatus),
+                    OrderLabels.ToLabel(entry.ToStatus),
+                    entry.ActorId,
+                    actorName,
+                    entry.Reason,
+                    entry.CreatedAt);
+            })
             .ToList();
 
         // Gợi ý kiện chỉ có nghĩa khi đơn sắp tạo vận đơn. Trạng thái khác không tốn truy vấn catalog.

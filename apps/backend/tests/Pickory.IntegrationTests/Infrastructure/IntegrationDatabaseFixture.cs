@@ -5,6 +5,7 @@ using Pickory.Modules.ActivityTracking.Persistence;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Commerce.Persistence;
+using Pickory.Modules.SupportDesk.Persistence;
 using Pickory.Modules.Shipping.Persistence;
 using Pickory.Shared.Persistence;
 using Xunit;
@@ -53,7 +54,7 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
             await using var schemasCommand = new NpgsqlCommand("""
                 SELECT nspname FROM pg_namespace
                 WHERE nspname NOT LIKE 'pg_%' AND nspname NOT IN
-                  ('information_schema', 'public', 'ef_identity', 'ef_ai_gateway', 'ef_catalog', 'ef_shipping', 'ef_commerce', 'ef_activity_tracking')
+                  ('information_schema', 'public', 'ef_identity', 'ef_ai_gateway', 'ef_catalog', 'ef_shipping', 'ef_commerce', 'ef_activity_tracking', 'ef_support_desk')
                 ORDER BY nspname
                 """, _lockConnection);
             var unexpectedSchemas = new List<string>();
@@ -80,6 +81,7 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
                     DROP SCHEMA IF EXISTS ef_shipping CASCADE;
                     DROP SCHEMA IF EXISTS ef_commerce CASCADE;
                     DROP SCHEMA IF EXISTS ef_activity_tracking CASCADE;
+                    DROP SCHEMA IF EXISTS ef_support_desk CASCADE;
                     DROP SCHEMA public CASCADE;
                     CREATE SCHEMA public AUTHORIZATION pg_database_owner;
                     COMMENT ON SCHEMA public IS 'standard public schema';
@@ -111,6 +113,8 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
             await commerce.Database.MigrateAsync();
             await using var activityTracking = CreateActivityTrackingContext();
             await activityTracking.Database.MigrateAsync();
+            await using var supportDesk = CreateSupportDeskContext();
+            await supportDesk.Database.MigrateAsync();
             Initialized = true;
         }
         catch
@@ -223,6 +227,14 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
         var options = new DbContextOptionsBuilder<ActivityTrackingDbContext>();
         ActivityTrackingDbContext.ConfigureOptions(options, ConnectionString);
         return new ActivityTrackingDbContext(options.Options);
+    }
+
+    internal SupportDeskDbContext CreateSupportDeskContext()
+    {
+        // Dùng cùng tùy chọn module để lịch sử và ánh xạ enum không khác ứng dụng thật.
+        var options = new DbContextOptionsBuilder<SupportDeskDbContext>();
+        SupportDeskDbContext.ConfigureOptions(options, ConnectionString);
+        return new SupportDeskDbContext(options.Options);
     }
 
     public async Task DisposeAsync()

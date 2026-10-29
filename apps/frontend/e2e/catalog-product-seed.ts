@@ -128,6 +128,7 @@ async function createProduct(
       variants: input.variants.map((variant) => ({
         optionValues: variant.optionValues,
         price: variant.price,
+        stock: variant.stock,
         compareAtPrice: variant.compareAtPrice ?? null,
         enabled: variant.enabled ?? true,
         weightGrams: 1500,
@@ -151,16 +152,6 @@ async function createProduct(
     variants: ApiVariant[];
   };
 
-  // Nhập kho theo từng SKU. Tồn 0 nghĩa là không nhập, nên SKU hết hàng.
-  for (const variantSeed of input.variants) {
-    if (variantSeed.stock === 0) continue;
-    const skuId = skuIdOf(product.variants, variantSeed.optionValues);
-    const adjusted = await page.request.post(`/api/admin/skus/${skuId}/movements`, {
-      headers: adminHeaders,
-      data: { delta: variantSeed.stock, reason: 'Nhập kho E2E trang sản phẩm' },
-    });
-    expect(adjusted.status(), await adjusted.text()).toBe(201);
-  }
   return product;
 }
 

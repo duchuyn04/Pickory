@@ -15,13 +15,18 @@ Quy ước:
 ## Phase 1: Nền tảng
 
 ### ADM-01: Khoảng thời gian và độ chia
-**Mô tả:** Hàm thuần `ReportRange` đọc khoảng thời gian (hôm nay, 7 ngày, 30 ngày, tháng này, tùy chọn) và độ chia (ngày, tuần, tháng). Hàm trả biên UTC theo giờ `Asia/Ho_Chi_Minh` và danh sách nhóm thời gian.
+**Mô tả:** Hàm thuần `ReportRange` đọc khoảng thời gian (hôm nay, 7 ngày, 30 ngày, tháng này, một tháng chọn được, 6 tháng gần nhất, tùy chọn) và độ chia (ngày, tuần, tháng). Hàm trả biên UTC theo giờ `Asia/Ho_Chi_Minh` và danh sách nhóm thời gian. Ngày 2026-10-26 task thêm `month` và `6m` cho dashboard (quyết định 23 của plan).
 **Tiêu chí nghiệm thu:**
-- [ ] Ngày bắt đầu lúc 00:00 giờ Việt Nam, tức 17:00 UTC của ngày trước
-- [ ] Đơn tạo lúc 23:59 và 00:00 giờ Việt Nam rơi vào hai ngày khác nhau
-- [ ] Tuần bắt đầu thứ Hai. Tháng theo lịch
-- [ ] Khoảng tùy chọn có `from` sau `to`, hoặc dài hơn 366 ngày, trả 400 `VALIDATION_ERROR`
-- [ ] Giá trị `range` hoặc `granularity` lạ trả 400 `VALIDATION_ERROR`
+- [x] Ngày bắt đầu lúc 00:00 giờ Việt Nam, tức 17:00 UTC của ngày trước
+- [x] Đơn tạo lúc 23:59 và 00:00 giờ Việt Nam rơi vào hai ngày khác nhau
+- [x] Tuần bắt đầu thứ Hai. Tháng theo lịch
+- [x] Khoảng tùy chọn có `from` sau `to`, hoặc dài hơn 366 ngày, trả 400 `VALIDATION_ERROR`
+  - HTTP 400 kiểm ở test tích hợp của ADM-12
+- [x] Giá trị `range` hoặc `granularity` lạ trả 400 `VALIDATION_ERROR`
+  - HTTP 400 kiểm ở test tích hợp của ADM-12
+- [x] `range=month&month=2026-09` trả tháng lịch 9/2026. `range=6m` trả 6 tháng lịch gần nhất, gồm tháng này
+- [x] `range=month` thiếu `month`, hoặc `month` sai định dạng `YYYY-MM`, trả 400 `VALIDATION_ERROR`
+  - HTTP 400 kiểm ở test tích hợp của ADM-12
 **Kiểm tra:** unit test
 **Phụ thuộc:** không · **Quy mô:** S
 **File:** `apps/backend/src/Pickory.Modules.AdminConsole/Reports/ReportRange.cs`, test trong `apps/backend/tests/Pickory.UnitTests/Modules/AdminConsole/`
@@ -55,6 +60,7 @@ Quy ước:
 **Mô tả:** Tạo `Pickory.Modules.AdminConsole`, `AdminConsoleModule.cs`, `AdminConsoleDbContext` và migration đầu tiên cho các bảng `report_daily_*`.
 **Tiêu chí nghiệm thu:**
 - [ ] Bảng `report_daily_sales`, `report_daily_products`, `report_daily_support` theo Data Model của spec. Ngày 2026-10-18 bỏ `report_daily_ai`
+- [ ] `report_daily_products` có thêm `product_name`, `brand_id`, `brand_name` (quyết định 24 của plan). `brand_id` cho phép rỗng
 - [ ] Cột phân vị lưu histogram theo nhóm thời gian cố định (quyết định 5), không lưu một số p50 hoặc p90
 - [ ] Tiền VND là `int`
 - [ ] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
@@ -168,6 +174,7 @@ Quy ước:
 - [ ] Doanh thu ghi nhận bằng tổng `total` của đơn `paid` theo ngày thanh toán, trừ đơn `refunded`
 - [ ] Giá trị đơn đặt không tính đơn hủy vì quá hạn thanh toán
 - [ ] Tỉ lệ hủy tách theo lý do: khách hủy, shop hủy, quá hạn
+- [ ] Mỗi dòng `report_daily_products` có tên sản phẩm và thương hiệu lấy từ `ICatalogReader`. Sản phẩm catalog không trả về có `brand_id` rỗng
 - [ ] Số liệu khớp số tính tay trên bộ dữ liệu dựng sẵn, ghi trong fixture của test
 - [ ] Chạy processor 2 lần cho cùng ngày cho cùng kết quả, không tạo dòng trùng
 - [ ] Đơn chuyển `refunded` 10 ngày sau ngày thanh toán làm giảm doanh thu của ngày thanh toán sau lần chạy đêm kế tiếp
@@ -210,47 +217,108 @@ Quy ước:
 **Phụ thuộc:** ADM-08, ADM-10 · **Quy mô:** S
 
 ### ADM-12: API báo cáo doanh thu
-**Mô tả:** `GET /api/admin/reports/sales?range=&from=&to=&granularity=` đọc `report_daily_sales` và `report_daily_products`.
+**Mô tả:** `GET /api/admin/reports/sales?range=&month=&from=&to=&granularity=` đọc thẳng `ICommerceReports` và `ICatalogReader` (quyết định 25 của plan). Task tạo khung module tối thiểu: `AdminConsoleModule.cs` có `AddAdminConsoleModule` và `MapAdminConsoleEndpoints`, chưa có `DbContext`. Ngày 2026-10-26 task đổi nguồn từ bảng `report_daily_*` sang cổng đọc.
 **Tiêu chí nghiệm thu:**
-- [ ] Thiếu `reports:read` trả 403. Endpoint có trong ma trận quyền
-- [ ] Tham số sai trả 400 `VALIDATION_ERROR`
-- [ ] Response có các chỉ số sau:
+- [x] `Program.cs` chỉ gọi `AddAdminConsoleModule` và `MapAdminConsoleEndpoints`
+- [x] `DailySales` của `commerce` có `SoldQuantity`. Test của `CommerceReports` kiểm số này
+- [x] Thiếu `reports:read` trả 403. Endpoint có trong ma trận quyền
+- [x] Tham số sai trả 400 `VALIDATION_ERROR`
+- [x] Response có các chỉ số sau:
   - doanh thu ghi nhận và giá trị đơn đặt;
   - số đơn theo trạng thái;
   - tỉ lệ hủy theo lý do;
   - giá trị trung bình đơn;
   - top sản phẩm và top danh mục;
+  - Top danh mục gộp theo danh mục lá mà `ICatalogReader.GetProductCategoriesAsync` trả. Sản phẩm không có trong catalog gộp vào nhóm `null`. Dashboard không cần số này.
   - tỉ lệ COD và SePay;
   - phí ship shop chịu.
-- [ ] Gộp tuần và tháng khớp số tính tay, kể cả biên nửa đêm giờ Việt Nam
-- [ ] Route không đọc bảng của module khác (test đếm truy vấn chỉ thấy bảng `report_daily_*`)
+- [x] Response có chuỗi theo nhóm thời gian của `granularity` cho dashboard (quyết định 23 của plan). Mỗi nhóm có:
+  - doanh thu ghi nhận;
+  - số đơn đã thanh toán, tách COD và SePay;
+  - số đơn hủy theo lý do;
+  - số lượng sản phẩm bán ra.
+- [x] Response có doanh thu và số lượng theo thương hiệu. Mỗi thương hiệu có danh sách sản phẩm kèm tên, doanh thu, số lượng. Sản phẩm có `brand_id` rỗng gộp vào nhóm `null`
+- [x] Gộp tuần và tháng khớp số tính tay, kể cả biên nửa đêm giờ Việt Nam
+- [x] Route chỉ đọc số liệu qua `ICommerceReports` và `ICatalogReader`. `Pickory.ArchitectureTests` chặn `AdminConsole` tham chiếu module khác ngoài project Contracts
 **Kiểm tra:** test tích hợp
-**Phụ thuộc:** ADM-08 · **Quy mô:** M
+**Phụ thuộc:** ADM-01 · **Quy mô:** M
 
-### ADM-UI5: Khung trang báo cáo và trang doanh thu
-**Mô tả:** Task này làm bộ chọn thời gian lưu trên URL theo quyết định 21 của plan. Task làm component biểu đồ có bảng số liệu và trang `/admin/reports/sales`. Task cần Recharts đã được duyệt.
+### ADM-19: Lệnh tạo đơn mẫu cho báo cáo
+**Mô tả:** Lệnh `dotnet run --project apps/backend/src/Pickory.Api -- commerce:demo-orders` tạo đơn mẫu trong 6 tháng gần nhất cho DB dev. Code nằm trong module `commerce`, vì chỉ `commerce` được ghi bảng đơn hàng. Task thêm ngày 2026-10-26 (quyết định 25 của plan).
 **Tiêu chí nghiệm thu:**
-- [ ] Đổi khoảng thời gian cập nhật URL. Mở lại URL cho cùng báo cáo
-- [ ] Mỗi biểu đồ có bảng số liệu bên dưới, đọc được bằng trình đọc màn hình
-- [ ] Bộ chọn thời gian dùng được bằng bàn phím, có `label`
-- [ ] Giá hiện dạng VND, ngày hiện theo giờ Việt Nam
-- [ ] Người thiếu `reports:read` không thấy menu báo cáo. Mở thẳng URL thấy trang không đủ quyền
-- [ ] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px trang không tràn ngang
-- [ ] Playwright console 0 lỗi và 0 cảnh báo
-**Kiểm tra:** Vitest; ảnh chụp 1280 px, 768 px và 375 px
-**Phụ thuộc:** ADM-12, ADM-UI1 · **Quy mô:** M
+- [x] Lệnh tạo đơn trên sản phẩm có sẵn của `catalog:seed`, rải đều 6 tháng gần nhất, gồm nhiều thương hiệu
+- [x] Đơn mẫu có đủ các trạng thái mà báo cáo đọc: đã thanh toán COD, đã thanh toán SePay, khách hủy, shop hủy, quá hạn thanh toán
+- [x] Sau khi chạy lệnh, `ICommerceReports` trả doanh thu, số đơn và số lượng khác 0 cho mỗi tháng trong 6 tháng
+- [x] Mọi đơn mẫu có dấu nhận biết riêng. Chạy lệnh lần hai không tạo thêm đơn trùng
+- [x] Lệnh `commerce:demo-orders --reset` xóa đúng các đơn mẫu, không xóa đơn thật
+- [x] Lệnh từ chối chạy khi môi trường là `Production`, và in lỗi tiếng Việt
+**Kiểm tra:** test tích hợp gọi hàm của lệnh; chạy lệnh trên DB dev sau khi người dùng đồng ý
+**Phụ thuộc:** ADM-12 · **Quy mô:** M
+
+### ADM-UI5: Khung trang báo cáo và trang Doanh thu
+**Mô tả:** Task này làm khung trang báo cáo theo quyết định 21 và 23 của plan. Mỗi báo cáo là một trang và một biểu đồ. Trang `/admin/reports/revenue/brands` có bộ chọn tháng và biểu đồ tròn doanh thu theo thương hiệu. Trang `/admin/reports/revenue/periods` có bộ chọn khoảng thời gian, độ chia và biểu đồ cột doanh thu mỗi kỳ. Mỗi biểu đồ có bảng số liệu. Hai bộ chọn lưu trên URL. Trang `/admin/reports/revenue` chuyển về trang thương hiệu. Bỏ trang `/admin/reports/sales` và bảng sản phẩm chi tiết. Người dùng đã duyệt Recharts. Ngày 2026-10-27 người dùng tách mỗi biểu đồ thành một trang riêng.
+**Tiêu chí nghiệm thu:**
+- [x] Mỗi báo cáo là một trang một biểu đồ: thương hiệu ở `/admin/reports/revenue/brands`, theo kỳ ở `/admin/reports/revenue/periods`
+- [x] Trang thương hiệu chỉ thống kê doanh thu ghi nhận của một tháng, mặc định tháng này. Biểu đồ tròn gộp quá 6 thương hiệu vào lát "Khác"
+- [x] Trang theo kỳ mặc định 6 tháng gần nhất, chia theo tháng. Biểu đồ cột hiện doanh thu mỗi kỳ
+- [x] Không còn bảng sản phẩm chi tiết hay biểu đồ thứ hai trên một trang
+- [x] Tháng không có số liệu hiện "Chưa có dữ liệu trong tháng này". Khoảng không có số liệu hiện "Chưa có dữ liệu trong khoảng này". Không vẽ biểu đồ rỗng
+- [x] Đổi tháng, khoảng thời gian hoặc độ chia cập nhật URL. Mở lại URL cho cùng báo cáo
+- [x] Mỗi biểu đồ có bảng số liệu bên dưới, đọc được bằng trình đọc màn hình
+- [x] Bộ chọn thời gian dùng được bằng bàn phím, có `label`
+- [x] Giá hiện dạng VND, ngày hiện theo giờ Việt Nam
+- [x] Người thiếu `reports:read` không thấy menu báo cáo. Mở thẳng URL thấy trang không đủ quyền
+- [x] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px hai trang không tràn ngang
+- [x] Playwright console 0 lỗi và 0 cảnh báo
+- [x] Đường dẫn cũ `/admin/reports/revenue` chuyển về trang thương hiệu và giữ tháng
+**Kiểm tra:** Vitest; ảnh chụp 1280 px, 768 px và 375 px cho cả hai trang
+**Phụ thuộc:** ADM-UI11 · **Quy mô:** M
 
 ### ADM-UI9: Phễu chuyển đổi trên trang doanh thu
-**Mô tả:** Thêm khối phễu vào trang `/admin/reports/sales`. Khối đọc `GET /api/admin/analytics/funnel` của ACT-11 với khoảng thời gian của bộ chọn chung. Task thêm ngày 2026-10-18, vì `activity-tracking` chỉ còn phần đo chuyển đổi.
+**Mô tả:** Thêm khối phễu vào trang `/admin/reports/revenue/periods`. Ngày 2026-10-26 trang này thay trang `/admin/reports/sales`. Ngày 2026-10-27 trang doanh thu tách hai trang, nên khối phễu nằm trên trang theo kỳ và dùng khoảng thời gian của trang đó. Khối đọc `GET /api/admin/analytics/funnel` của ACT-11. Task thêm ngày 2026-10-18, vì `activity-tracking` chỉ còn phần đo chuyển đổi.
 **Tiêu chí nghiệm thu:**
-- [ ] Khối hiện số lượt từng bước của phễu: xem sản phẩm, thêm giỏ, đặt đơn
-- [ ] Khối hiện tỉ lệ chuyển giữa hai bước liền nhau. Bước trước có 0 lượt thì khối hiện "Chưa có dữ liệu"
-- [ ] Đổi khoảng thời gian thì khối tải lại theo khoảng mới
-- [ ] Khối có bảng số liệu bên dưới biểu đồ, đọc được bằng trình đọc màn hình
-- [ ] API phễu lỗi thì khối hiện thông báo lỗi. Các biểu đồ doanh thu vẫn hiện
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Playwright console 0 lỗi và 0 cảnh báo
+- [x] Khối hiện số lượt từng bước của phễu: xem sản phẩm, thêm giỏ, đặt đơn
+- [x] Khối hiện tỉ lệ chuyển giữa hai bước liền nhau. Bước trước có 0 lượt thì khối hiện "Chưa có dữ liệu"
+- [x] Đổi khoảng thời gian thì khối tải lại theo khoảng mới
+- [x] Khối có bảng số liệu bên dưới biểu đồ, đọc được bằng trình đọc màn hình
+- [x] API phễu lỗi thì khối hiện thông báo lỗi. Các biểu đồ doanh thu vẫn hiện
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Playwright console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; ảnh chụp 1280 px và 375 px
 **Phụ thuộc:** ADM-UI5, ACT-11 · **Quy mô:** S
+**File:** `apps/frontend/src/features/admin-console/reports/revenue-funnel-panel.tsx`, `apps/frontend/src/features/admin-console/reports/report-funnel-chart.tsx`, `apps/frontend/src/features/admin-console/reports/funnel-steps.ts`
+
+### ADM-UI10: Ba trang báo cáo còn lại
+**Mô tả:** Sáu trang của ba báo cáo dùng khung và component của ADM-UI5 (quyết định 23 của plan). Mỗi trang chỉ thống kê một loại số liệu. Ngày 2026-10-27 áp dụng quy tắc một biểu đồ một trang của ADM-UI5: mỗi báo cáo có một trang biểu đồ tròn và một trang biểu đồ cột. Task bỏ nhấn cột đổi tháng. Task thêm ngày 2026-10-26.
+**Tiêu chí nghiệm thu:**
+- [x] Đơn đã thanh toán có hai trang. `/admin/reports/orders/payments` chia số đơn theo COD và SePay của một tháng. `/admin/reports/orders/periods` hiện số đơn mỗi kỳ
+- [x] Đơn hủy có hai trang. `/admin/reports/cancellations/reasons` có ba lát: khách hủy, shop hủy, quá hạn thanh toán. `/admin/reports/cancellations/periods` hiện số đơn hủy mỗi kỳ
+- [x] Sản phẩm bán ra có hai trang. `/admin/reports/products/top` có 5 sản phẩm bán nhiều nhất và lát "Khác". `/admin/reports/products/periods` hiện số lượng mỗi kỳ
+- [x] Nhấn lát phương thức thanh toán hoặc lát lý do hủy thì bảng hiện số đơn của nhóm đó theo từng ngày trong tháng
+- [x] Nhấn lát sản phẩm thì bảng hiện doanh thu, số lượng, thương hiệu của sản phẩm đó. Nhấn lát "Khác" thì bảng liệt kê các sản phẩm trong nhóm đó
+- [x] Trang giữ hành vi của khung: mặc định thời gian và URL mở lại cho cùng báo cáo. Tham số chọn lát nằm trên URL: `method`, `reason`, `product`
+- [x] Một nhóm giữ cùng màu trên dashboard và trang chi tiết. Mỗi phương thức thanh toán và mỗi lý do hủy có màu cố định theo mã nhóm
+- [x] Tháng không có số liệu hiện "Chưa có dữ liệu trong tháng này". Khoảng không có số liệu hiện "Chưa có dữ liệu trong khoảng này". Trang không vẽ biểu đồ rỗng
+- [x] Ba đường dẫn gốc `/admin/reports/orders`, `/admin/reports/cancellations`, `/admin/reports/products` chuyển về trang biểu đồ tròn và giữ tham số tháng
+- [x] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px trang không tràn ngang
+- [x] Playwright console 0 lỗi và 0 cảnh báo
+**Kiểm tra:** Vitest; ảnh chụp 1280 px, 768 px và 375 px
+**Phụ thuộc:** ADM-UI5 · **Quy mô:** M
+**Bằng chứng (2026-10-27):** Vitest đạt 40/40 test của ba báo cáo: 13 test nhóm, 10 test đơn đã thanh toán, 8 test đơn hủy, 9 test sản phẩm. `pnpm exec playwright test admin-reports-orders.spec.ts` đạt 3/3. Lượt chạy sinh 18 ảnh chụp cho sáu trang ở 1280, 768 và 375 px. Playwright console 0 lỗi.
+
+### ADM-UI11: Dashboard báo cáo
+**Mô tả:** Trang `/admin/reports` có 4 thẻ theo quyết định 23 của plan, mỗi thẻ là một báo cáo. Recharts và component biểu đồ tròn có bảng số liệu đã có từ ADM-UI5, nên task này dùng lại. Task thêm mục `Báo cáo tổng quan` vào `ADMIN_NAV_GROUPS`. Mỗi thẻ gọi báo cáo riêng, nên một thẻ lỗi không làm trống ba thẻ còn lại. Task thêm ngày 2026-10-26.
+**Tiêu chí nghiệm thu:**
+- [x] Trang có 4 thẻ: doanh thu, đơn đã thanh toán, đơn hủy, sản phẩm bán ra
+- [x] Mỗi thẻ hiện biểu đồ tròn của tháng này và tổng của tháng này, ví dụ tổng doanh thu tháng này
+- [x] Nhấn thẻ mở trang chi tiết của báo cáo đó
+- [x] Nhấn một lát mở trang chi tiết đã chọn sẵn lát đó: `brand`, `method`, `reason` hoặc `product`
+- [x] Một thẻ lỗi API thì thẻ đó hiện thông báo lỗi. Các thẻ khác vẫn hiện
+- [x] Người thiếu `reports:read` không thấy menu Báo cáo. Mở thẳng URL thấy trang không đủ quyền
+- [x] Ảnh chụp 1280 px và 768 px không tràn ngang. Ở 375 px các thẻ xếp một cột và trang không tràn ngang
+- [x] Playwright console 0 lỗi và 0 cảnh báo
+**Kiểm tra:** Vitest; E2E nhấn từng thẻ; ảnh chụp 1280 px, 768 px và 375 px
+**Phụ thuộc:** ADM-12, ADM-19 · **Quy mô:** M
+**Bằng chứng (2026-10-27):** Vitest đạt 5/5 test dashboard, cả thư mục `reports` đạt 89/89. `pnpm exec playwright test admin-reports-dashboard.spec.ts` đạt 3/3: thẻ và lát mở đúng trang, thẻ lỗi hiện thông báo, tài khoản thiếu quyền thấy trang 403. Ảnh chụp `dashboard-1280.png`, `dashboard-768.png` và `dashboard-375.png`. Playwright console 0 lỗi.
 
 ### ADM-13: API báo cáo AI
 **Mô tả:** `GET /api/admin/reports/ai` trả số liệu chatbot và chi phí AI. Ngày 2026-10-14 task bỏ phần gợi ý, bảng so sánh nhóm và tìm kiếm, vì `recommendations` và `smart-search` đã bỏ.

@@ -128,31 +128,35 @@ export function ProductView({ product }: { product: ProductDetail }) {
           <div className="product-buy-top">
             <PriceBlock sku={selectedSku} />
             {selectedSku !== null && !isDiscontinued && (
-              <p className="product-stock">
+              <p className="product-stock-badge">
                 {selectedSku.inStock ? (
                   <span className="badge badge-ok">Còn hàng</span>
                 ) : (
                   <span className="badge badge-bad">Hết hàng</span>
                 )}
-                <span className="product-stock-quantity">
-                  Tồn kho: {selectedSku.stock} sản phẩm
-                </span>
               </p>
             )}
           </div>
 
           {selectedSku !== null && (
-            <p className="product-sku muted small">Mã phiên bản: {selectedSku.code}</p>
-          )}
-
-          {selectedSku !== null && product.options.length > 0 && (
-            <VariantPicker
-              options={product.options}
-              skus={product.skus}
-              selection={selectedSku.optionValues}
-              readOnly={isDiscontinued}
-              onSelect={handleSelectOption}
-            />
+            <>
+              <p className="product-sku muted small">Mã phiên bản: {selectedSku.code}</p>
+              {product.options.length > 0 && (
+                <VariantPicker
+                  options={product.options}
+                  skus={product.skus}
+                  selection={selectedSku.optionValues}
+                  readOnly={isDiscontinued}
+                  onSelect={handleSelectOption}
+                />
+              )}
+              {/* Sản phẩm ngừng kinh doanh không hiện tồn kho, vì "Còn hàng" mâu thuẫn với dòng ngừng kinh doanh. */}
+              {!isDiscontinued && selectedSku.inStock && (
+                <p className="product-stock muted small">
+                  Còn {selectedSku.stock.toLocaleString('vi-VN')} sản phẩm
+                </p>
+              )}
+            </>
           )}
 
           {isDiscontinued && <p className="muted small">Sản phẩm đã ngừng kinh doanh.</p>}

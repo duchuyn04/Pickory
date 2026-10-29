@@ -19,7 +19,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
     // Cấu hình Swagger UI ghi danh sách phương thức được gửi. Danh sách rỗng nghĩa là không có nút gửi request.
     private const string EmptySubmitMethods = "\"supportedSubmitMethods\":[]";
 
-    private static readonly string[] AllowedTags = ["System", "Identity", "Catalog", "Shipping", "Commerce", "ActivityTracking"];
+    private static readonly string[] AllowedTags = ["System", "Identity", "Catalog", "Shipping", "Commerce", "ActivityTracking", "SupportDesk", "AdminConsole"];
 
     private async Task<JsonDocument> ReadDocumentAsync()
     {
@@ -101,6 +101,18 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
     }
 
     [Fact]
+    public async Task Document_DescribesTheSupportEventsRouteAsAnEventStream()
+    {
+        using var document = await ReadDocumentAsync();
+
+        var ok = document.RootElement.GetProperty("paths").GetProperty("/api/admin/support/events")
+            .GetProperty("get").GetProperty("responses").GetProperty("200");
+
+        // Luồng SSE phải khai báo kiểu nội dung `text/event-stream`, nếu không client sinh từ OpenAPI không biết đây là luồng sự kiện.
+        Assert.True(ok.GetProperty("content").TryGetProperty("text/event-stream", out _));
+    }
+
+    [Fact]
     public async Task Document_TagsRoutesByModule()
     {
         using var document = await ReadDocumentAsync();
@@ -115,6 +127,7 @@ public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : I
         Assert.Equal("Commerce", FirstTag(paths, "/api/admin/commerce/settings", "get"));
         Assert.Equal("ActivityTracking", FirstTag(paths, "/api/events", "post"));
         Assert.Equal("ActivityTracking", FirstTag(paths, "/api/admin/analytics/funnel", "get"));
+        Assert.Equal("AdminConsole", FirstTag(paths, "/api/admin/reports/sales", "get"));
     }
 
     [Fact]

@@ -45,11 +45,12 @@ export interface AdminOrderItem {
   lineTotal: number;
 }
 
-// Một lần đổi trạng thái. `actorId` là `null` khi hệ thống hoặc khách vãng lai chuyển.
+// Một lần đổi trạng thái. `actorId` và `actorName` là `null` khi hệ thống hoặc khách vãng lai chuyển.
 export interface AdminOrderHistoryEntry {
   fromStatus: string;
   toStatus: string;
   actorId: string | null;
+  actorName: string | null;
   reason: string | null;
   createdAt: string;
 }

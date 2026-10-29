@@ -53,7 +53,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     const price = page.locator('.product-price strong');
     const listPrice = page.locator('.product-price-list');
     const stock = page.locator('.product-buy .badge');
-    const stockQuantity = page.locator('.product-stock-quantity');
     const mainImage = page.locator('.gallery-main img');
 
     // SKU đang mở: Đen 256GB, còn hàng, không có giá niêm yết, ảnh riêng của màu đen.
@@ -61,7 +60,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await expect(price).toHaveText('20.000.000 đ');
     await expect(listPrice).toHaveCount(0);
     await expect(stock).toHaveText('Còn hàng');
-    await expect(stockQuantity).toHaveText('Tồn kho: 5 sản phẩm');
     await expect(mainImage).toHaveAttribute('src', new RegExp(`e2e-c2-${catalog.suffix}-den`));
     await saveScreenshot(page, 'product-1280-default.png');
 
@@ -79,7 +77,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await page.getByRole('group', { name: 'Bộ nhớ' }).getByRole('radio', { name: '512GB' }).click();
     await expect(price).toHaveText('24.000.000 đ');
     await expect(stock).toHaveText('Hết hàng');
-    await expect(stockQuantity).toHaveText('Tồn kho: 0 sản phẩm');
     await expect(listPrice).toHaveCount(0);
     await expect(mainImage).toHaveAttribute('src', new RegExp(`e2e-c2-${catalog.suffix}-den`));
     await saveScreenshot(page, 'product-1280-out-of-stock.png');

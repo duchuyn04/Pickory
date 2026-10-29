@@ -12,13 +12,13 @@ using Pickory.Modules.Catalog.Caching;
 using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Features.Brands;
 using Pickory.Modules.Catalog.Features.Categories;
-using Pickory.Modules.Catalog.Features.Inventory;
 using Pickory.Modules.Catalog.Features.Products;
 using Pickory.Modules.Catalog.Features.Storefront;
 using Pickory.Modules.Catalog.Features.Uploads;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Catalog.Reading;
+using Pickory.Modules.Catalog.Realtime;
 using Pickory.Modules.Catalog.Seeding;
 using Pickory.Modules.Catalog.Stock;
 using Pickory.Modules.Catalog.Contracts.Reading;
@@ -44,9 +44,13 @@ public static class CatalogModule
         services.AddValidatorsFromAssemblyContaining<CreateCategoryRequestValidator>();
         // Cache phản hồi công khai của hai route danh sách. Singleton qua factory để container giải phóng khi tắt.
         services.AddSingleton(_ => new CatalogResponseCache(TimeSpan.FromSeconds(config.CatalogCacheSeconds)));
-        // Sản phẩm và tồn kho phát sự kiện sau commit. Handler xóa cache ở đúng thời điểm đó.
+        // Sản phẩm và tồn kho phát sự kiện sau commit. Handler xóa cache và đẩy sự kiện tồn kho ra SSE.
         services.AddScoped<IDomainEventHandler<ProductChangedEvent>, CatalogCacheInvalidationHandler>();
         services.AddScoped<IDomainEventHandler<StockChangedEvent>, CatalogCacheInvalidationHandler>();
+        services.AddScoped<IDomainEventHandler<StockChangedEvent>, StockEventBroadcastHandler>();
+        // Hub và streamer sống theo tiến trình, để mọi request SSE dùng chung danh sách kết nối.
+        services.AddSingleton<StockEventHub>();
+        services.AddSingleton<StockEventStreamer>();
         services.AddScoped<CategoryManagementHandler>();
         services.AddScoped<BrandManagementHandler>();
         services.AddScoped<ProductManagementHandler>();
@@ -65,7 +69,6 @@ public static class CatalogModule
         }
 
         // Tồn kho: handler cho API quản trị, và `IStockService` cho module `commerce`.
-        services.AddScoped<InventoryHandler>();
         services.AddScoped<IStockService, StockService>();
         // Kho ảnh chọn theo khóa Cloudinary. Worker chạy nền xóa ảnh mà sản phẩm đã bỏ.
         services.AddCatalogImageStorage(config, isProduction);
@@ -102,7 +105,7 @@ public static class CatalogModule
         // Hai route trang SEO trả HTML, nên không thuộc tài liệu API.
         MapPublicPagesWhenConfigured(endpoints.MapGroup(string.Empty).ExcludeFromDescription());
         UploadSignatureEndpoint.Map(moduleRoutes);
-        InventoryEndpoints.Map(moduleRoutes);
+        StockEventsEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 

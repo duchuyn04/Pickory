@@ -32,3 +32,18 @@
   color: var(--color-brand);
   font-weight: 700;
 }
+
+/* Badge số cạnh nhãn tab. Chữ trắng trên nền thương hiệu đủ tương phản cả ở tab đang chọn lẫn tab thường. */
+.tab-list-count {
+  display: inline-block;
+  min-width: 18px;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: var(--radius-pill);
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}

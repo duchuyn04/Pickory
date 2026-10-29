@@ -15,6 +15,7 @@ using Pickory.Modules.Shipping.Addresses;
 using Pickory.Modules.Shipping.Contracts.Events;
 using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Shipping.Sync;
+using Pickory.Modules.SupportDesk.Presence;
 using Pickory.Modules.Identity.GoogleOAuth;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.Events;
@@ -197,6 +198,14 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             if (shipmentSyncWorkerRegistration is not null)
             {
                 services.Remove(shipmentSyncWorkerRegistration);
+            }
+
+            // Bỏ worker chuyển nhân viên sang `away`. Test gọi `StaffPresenceTimeoutProcessor` trực tiếp, để dòng trực không đổi giữa lúc test đang kiểm.
+            var presenceTimeoutWorkerRegistration = services.SingleOrDefault(descriptor =>
+                descriptor.ServiceType == typeof(IHostedService) && descriptor.ImplementationType == typeof(StaffPresenceTimeoutWorker));
+            if (presenceTimeoutWorkerRegistration is not null)
+            {
+                services.Remove(presenceTimeoutWorkerRegistration);
             }
         });
     }

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Icon } from '../../../shared/icons';
 import { buildCloudinarySrcSet, withCloudinaryTransform } from '../shared/image-url';
 import { ProductImage } from '../shared/product-image';
+import { useLiveStock } from '../shared/stock-live';
 import type { ProductListItem } from './catalog-api';
 import { formatProductPrice, getProductBadges } from './product-display';
 // Thẻ mang CSS riêng, vì trang danh mục và trang chủ cùng dùng thẻ này.
@@ -15,7 +16,13 @@ const IMAGE_FALLBACK_WIDTH = 400;
 const TRIMMED = { trim: true };
 
 export function ProductCard({ product }: { product: ProductListItem }) {
-  const badges = getProductBadges(product);
+  const liveStock = useLiveStock();
+  const liveProduct = liveStock.products[product.id];
+  // Có sự kiện mới thì nhãn hết hàng và giá thấp nhất đổi ngay, không chờ tải lại danh sách.
+  const shownProduct = liveProduct
+    ? { ...product, inStock: liveProduct.inStock, minPrice: liveProduct.minPrice }
+    : product;
+  const badges = getProductBadges(shownProduct);
   const mediaRef = useRef<HTMLDivElement>(null);
 
   function handlePointerMove(event: PointerEvent<HTMLElement>) {
@@ -68,12 +75,12 @@ export function ProductCard({ product }: { product: ProductListItem }) {
         <h3 className="product-card-name">{product.name}</h3>
         <p
           className={
-            product.minPrice === null
+            shownProduct.minPrice === null
               ? 'product-card-price product-card-price-contact'
               : 'product-card-price'
           }
         >
-          {formatProductPrice(product.minPrice)}
+          {formatProductPrice(shownProduct.minPrice)}
         </p>
         {badges.length > 0 && (
           <div className="product-card-badges">

@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Pickory.UnitTests" />
+    <InternalsVisibleTo Include="Pickory.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Pickory.Shared\Pickory.Shared.csproj" />
+    <ProjectReference Include="..\Pickory.Modules.Commerce.Contracts\Pickory.Modules.Commerce.Contracts.csproj" />
+    <ProjectReference Include="..\Pickory.Modules.Catalog.Contracts\Pickory.Modules.Catalog.Contracts.csproj" />
+    <ProjectReference Include="..\Pickory.Modules.Identity.Contracts\Pickory.Modules.Identity.Contracts.csproj" />
+  </ItemGroup>
+
+</Project>

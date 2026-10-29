@@ -161,6 +161,28 @@ public sealed class ProductImageTests : IClassFixture<PickoryWebApplicationFacto
     }
 
     [Fact]
+    // Chữ ký logo phải khóa đúng thư mục thương hiệu để không tải nhầm vào thư mục sản phẩm.
+    public async Task BrandLogoSignature_Admin_ReturnsBrandFolderAndVerifiableSignature()
+    {
+        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(
+            HttpMethod.Post, "/api/admin/uploads/brand-logo/signature", null, _adminCookie));
+        var body = await response.Content.ReadAsStringAsync();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.DoesNotContain(FakeImageStorage.Credentials.ApiSecret, body);
+        using var json = JsonDocument.Parse(body);
+        var data = json.RootElement.GetProperty("data");
+        Assert.Equal(ImageUploadRules.BrandFolder, data.GetProperty("folder").GetString());
+        var expected = CloudinarySignature.Sign(new Dictionary<string, string>
+        {
+            ["allowed_formats"] = "jpg,png,webp",
+            ["folder"] = ImageUploadRules.BrandFolder,
+            ["timestamp"] = data.GetProperty("timestamp").GetInt64().ToString(),
+        }, FakeImageStorage.Credentials.ApiSecret);
+        Assert.Equal(expected, data.GetProperty("signature").GetString());
+    }
+
+    [Fact]
     public async Task Signature_SalesWithoutProductsWrite_Returns403()
     {
         var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(

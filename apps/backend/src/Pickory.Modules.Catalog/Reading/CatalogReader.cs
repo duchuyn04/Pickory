@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Pickory.Modules.Catalog.Contracts.Reading;
-using Pickory.Modules.Catalog.Features.Inventory;
+using Pickory.Modules.Catalog.Products;
 using Pickory.Modules.Catalog.Features.Storefront;
 using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Catalog.Persistence;
@@ -28,6 +28,28 @@ public sealed class CatalogReader(
     {
         var rows = await summaryReader.ReadByIdsAsync(ids, cancellationToken);
         return rows.Select(row => row.Summary).ToList();
+    }
+
+    public async Task<IReadOnlyList<ProductCategoryInfo>> GetProductCategoriesAsync(
+        IReadOnlyList<string> productIds, CancellationToken cancellationToken)
+    {
+        var requestedIds = RequestedIdOrder.Normalize(productIds);
+        if (requestedIds.Count == 0)
+        {
+            return [];
+        }
+
+        // Lọc cùng điều kiện với `GetProductsAsync`. Báo cáo không tách nhóm theo sản phẩm khách không thấy.
+        var rows = await database.Products.AsNoTracking()
+            .VisibleToCustomers()
+            .Where(product => requestedIds.Contains(product.Id))
+            .Select(product => new ProductCategoryInfo(
+                product.Id,
+                new CategoryRef(product.Category!.Id, product.Category.Name, product.Category.Slug)))
+            .ToListAsync(cancellationToken);
+
+        // DB không giữ thứ tự của `productIds`. Sắp lại để người gọi nhận đúng thứ tự đã yêu cầu.
+        return RequestedIdOrder.Arrange(requestedIds, rows, row => row.ProductId);
     }
 
     public async Task<IReadOnlyList<SkuSnapshot>> GetSkusAsync(

@@ -125,6 +125,7 @@ async function seedCatalog(page: Page): Promise<SeededProduct> {
         {
           optionValues: {},
           price: 1_500_000,
+          stock: 100,
           compareAtPrice: null,
           enabled: true,
           weightGrams: 500,
@@ -143,12 +144,6 @@ async function seedCatalog(page: Page): Promise<SeededProduct> {
     variants: { id: string }[];
   };
   const skuId = productData.variants[0]!.id;
-
-  // Nhập tồn kho để sản phẩm có sẵn cho khách đặt hàng.
-  await page.request.post(`/api/admin/skus/${skuId}/movements`, {
-    headers: adminHeaders,
-    data: { delta: 100, reason: 'Nhập kho E2E đơn hàng' },
-  });
 
   // Kích hoạt sản phẩm để khách hàng nhìn thấy trên trang mua sắm.
   await page.request.put(`/api/admin/products/${productData.id}/status`, {

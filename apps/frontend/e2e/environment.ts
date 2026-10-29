@@ -63,6 +63,9 @@ export const e2eEnvironment = {
   fulfillmentSupportEmail: 'e2e-fulfillment-support@pickory.local',
   reviewsSalesEmail: 'e2e-reviews-sales@pickory.local',
   reviewsSupportEmail: 'e2e-reviews-support@pickory.local',
+  // Spec màn CSKH dùng hai nhân viên riêng: `support` có quyền CSKH, `sales` không có `conversations:read`.
+  supportDeskSupportEmail: 'e2e-support-desk-support@pickory.local',
+  supportDeskSalesEmail: 'e2e-support-desk-sales@pickory.local',
   accountPassword: process.env.E2E_ACCOUNT_PASSWORD,
   outboxDirectory: fileURLToPath(
     new URL('../../backend/.dev-outbox/e2e-identity/', import.meta.url),

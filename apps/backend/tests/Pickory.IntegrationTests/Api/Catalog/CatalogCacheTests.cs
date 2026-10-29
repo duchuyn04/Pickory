@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.DependencyInjection;
 using Pickory.IntegrationTests.Api.Identity;
 using Pickory.IntegrationTests.Infrastructure;
+using Pickory.Modules.Catalog.Contracts.Stock;
 using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Identity.Roles;
 using Xunit;
@@ -182,16 +183,20 @@ public sealed class CatalogCacheTests : IClassFixture<PickoryWebApplicationFacto
     }
 
     [Fact]
-    public async Task AdminAdjustsStock_NextReadSeesTheNewAvailability()
+    public async Task OrderReservesLastUnits_NextReadSeesTheNewAvailability()
     {
         var before = await ListItemsAsync(string.Empty);
         Assert.True(before.Single(item => item.GetProperty("id").GetString() == _inStock.ProductId).GetProperty("inStock").GetBoolean());
 
-        var response = await AdminAsync(HttpMethod.Post, $"/api/admin/skus/{_inStock.SkuIds[0]}/movements",
-            new { delta = -3, reason = "Bán hết" });
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var after = await ListItemsAsync(string.Empty);
+        // Đặt hết số đang có để sản phẩm chuyển sang hết hàng và phát sự kiện xóa cache.
+        var stock = await _data.StockOfAsync(_inStock.SkuIds[0]);
+        await using var scope = _cachedFactory.Services.CreateAsyncScope();
+        var stockService = scope.ServiceProvider.GetRequiredService<IStockService>();
+        var reservation = await stockService.ReserveAsync(
+            Guid.NewGuid().ToString("N"), [new StockItem(_inStock.SkuIds[0], stock)], null, CancellationToken.None);
+        Assert.True(reservation.Ok);
 
+        var after = await ListItemsAsync(string.Empty);
         Assert.False(after.Single(item => item.GetProperty("id").GetString() == _inStock.ProductId).GetProperty("inStock").GetBoolean());
     }
 

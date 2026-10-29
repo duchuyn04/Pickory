@@ -54,6 +54,7 @@ async function seedProducts(page: Page): Promise<SeededProducts> {
           {
             optionValues: {},
             price: 9_000_000,
+            stock: 3,
             enabled: true,
             weightGrams: 400,
             lengthCm: 20,
@@ -66,15 +67,6 @@ async function seedProducts(page: Page): Promise<SeededProducts> {
     });
     expect(created.status(), await created.text()).toBe(201);
     const product = (await created.json()).data;
-    // Tồn kho 3 nằm trong ngưỡng sắp hết hàng, để bộ lọc sắp hết hàng vẫn giữ sản phẩm này.
-    const adjusted = await page.request.post(
-      `/api/admin/skus/${product.variants[0].id}/movements`,
-      {
-        headers,
-        data: { delta: 3, reason: 'Nhập kho E2E màn sản phẩm' },
-      },
-    );
-    expect(adjusted.status(), await adjusted.text()).toBe(201);
     return product;
   }
 

@@ -245,6 +245,7 @@ async function seedCatalog(page: Page): Promise<SeededCatalog> {
           {
             optionValues: {},
             price: seed.price,
+            stock: seed.stock,
             enabled: true,
             weightGrams: 1500,
             lengthCm: 35,
@@ -260,16 +261,6 @@ async function seedCatalog(page: Page): Promise<SeededCatalog> {
     expect(created.status(), await created.text()).toBe(201);
     const product = (await created.json()).data;
 
-    if (seed.stock > 0) {
-      const adjusted = await page.request.post(
-        `/api/admin/skus/${product.variants[0].id}/movements`,
-        {
-          headers,
-          data: { delta: seed.stock, reason: 'Nhập kho E2E trang danh mục' },
-        },
-      );
-      expect(adjusted.status(), await adjusted.text()).toBe(201);
-    }
     if (seed.finalStatus === 'draft') continue;
 
     // Sản phẩm phải `active` trước. Ngừng kinh doanh là bước chuyển tiếp từ `active`.

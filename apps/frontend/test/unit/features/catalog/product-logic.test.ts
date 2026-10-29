@@ -374,8 +374,7 @@ describe('getLeafCategoryAttributes', () => {
 });
 
 describe('toProductVariantRequest', () => {
-  it('loại bỏ trường tồn kho và định dạng giá trị số cho payload tạo biến thể', () => {
-    // Nghiệp vụ tồn kho thuộc kho vận nên không gửi kèm trong request cập nhật catalog.
+  it('chỉ gửi số lượng khi admin sửa ô và định dạng giá trị số cho payload', () => {
     const variant: ProductVariant = {
       id: 'var-123',
       code: '  IP-15-PRO  ',
@@ -383,6 +382,7 @@ describe('toProductVariantRequest', () => {
       price: '25000000',
       compareAtPrice: '28000000',
       stock: 100,
+      stockEdited: false,
       enabled: true,
       weightGrams: '210',
       lengthCm: '16',
@@ -404,6 +404,18 @@ describe('toProductVariantRequest', () => {
       heightCm: 1,
     });
     expect('stock' in request).toBe(false);
+  });
+
+  it('gửi số lượng đích khi admin đã sửa ô', () => {
+    const variant: ProductVariant = {
+      optionValues: {},
+      price: 100000,
+      stock: 12,
+      stockEdited: true,
+      enabled: true,
+    };
+
+    expect(toProductVariantRequest(variant).stock).toBe(12);
   });
 
   it('xử lý các trường kích thước và giá niêm yết để trống thành null', () => {

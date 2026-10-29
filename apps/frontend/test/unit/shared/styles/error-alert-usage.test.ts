@@ -17,6 +17,8 @@ const allowedAlerts: Record<string, RegExp> = {
   'features/catalog/admin/attribute-editor.tsx': /className="form-error"/,
   'features/catalog/admin/description-editor.tsx':
     /className="form-error description-editor-error"/,
+  // Lỗi đổi trạng thái sẵn sàng nằm trên thanh trên cùng cao 48px, không đủ chỗ cho khung `ErrorAlert` có icon.
+  'features/support-desk/admin/presence-toggle.tsx': /className="presence-toggle-error"/,
 };
 
 function listTsxFiles(directory: string): string[] {

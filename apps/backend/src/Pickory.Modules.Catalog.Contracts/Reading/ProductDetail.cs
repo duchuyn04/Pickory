@@ -36,7 +36,7 @@ public sealed record SpecEntry(
 
 public sealed record ProductOptionInfo(string Name, IReadOnlyList<string> Values);
 
-// SKU đang bật của sản phẩm. Khách đọc được trạng thái còn hàng và số tồn chính xác.
+// SKU đang bật của sản phẩm. `Stock` là số bán được còn lại để trang khách hiện số lượng.
 public sealed record ProductSkuInfo(
     string Id,
     string Code,

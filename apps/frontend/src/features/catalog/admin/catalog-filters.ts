@@ -77,3 +77,51 @@ export function filterBrands<T extends { name: string; slug: string }>(
   if (normalizedKeyword === '') return brands;
   return brands.filter((brand) => matchesKeyword([brand.name, brand.slug], normalizedKeyword));
 }
+
+interface BrandListItem {
+  name: string;
+  slug: string;
+  logoPublicId: string | null;
+  createdAt: string;
+}
+
+export interface BrandListFilters {
+  keyword: string;
+  logo: string;
+  sort: string;
+}
+
+const BRAND_SORTERS = {
+  'name-asc': (a: BrandListItem, b: BrandListItem) => a.name.localeCompare(b.name, 'vi'),
+  'name-desc': (a: BrandListItem, b: BrandListItem) => b.name.localeCompare(a.name, 'vi'),
+  newest: (a: BrandListItem, b: BrandListItem) => Date.parse(b.createdAt) - Date.parse(a.createdAt),
+  oldest: (a: BrandListItem, b: BrandListItem) => Date.parse(a.createdAt) - Date.parse(b.createdAt),
+};
+
+type BrandSort = keyof typeof BRAND_SORTERS;
+
+function hasBrandLogo(brand: BrandListItem): boolean {
+  // Mã logo chỉ gồm khoảng trắng không trỏ tới ảnh. Thương hiệu đó thuộc nhóm chưa có logo.
+  return brand.logoPublicId !== null && brand.logoPublicId.trim() !== '';
+}
+
+export function filterAndSortBrands<T extends BrandListItem>(
+  brands: T[],
+  filters: BrandListFilters,
+): T[] {
+  // Áp từ khóa trước để bộ lọc logo và phép sắp xếp chỉ duyệt các thương hiệu đã khớp.
+  let matchingBrands = filterBrands(brands, filters.keyword);
+  // Chỉ nhận hai mã lọc đã biết. Giá trị lạ trên URL không được làm mất dữ liệu.
+  if (filters.logo === 'with-logo') {
+    matchingBrands = matchingBrands.filter(hasBrandLogo);
+  } else if (filters.logo === 'without-logo') {
+    matchingBrands = matchingBrands.filter((brand) => !hasBrandLogo(brand));
+  }
+
+  // Giá trị `sort` có thể được nhập tay. Dùng tên tăng dần khi giá trị không thuộc các lựa chọn.
+  const sort: BrandSort = Object.hasOwn(BRAND_SORTERS, filters.sort)
+    ? (filters.sort as BrandSort)
+    : 'name-asc';
+  // Sao chép danh sách trước khi sắp xếp để không thay đổi dữ liệu trong cache của React Query.
+  return [...matchingBrands].sort(BRAND_SORTERS[sort]);
+}

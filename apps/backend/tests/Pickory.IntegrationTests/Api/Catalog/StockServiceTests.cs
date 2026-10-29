@@ -385,9 +385,9 @@ public sealed class StockServiceTests : IClassFixture<PickoryWebApplicationFacto
         Assert.Equal(3, await _data.StockOfAsync(first));
         Assert.Equal(4, await _data.StockOfAsync(second));
         var firstEvent = Assert.Single(StockEventsOf(first));
-        Assert.Equal(new StockChangedEvent(first, 3, 5), firstEvent);
+        Assert.Equal(new StockChangedEvent(product.ProductId, first, 3, 5, true, 1_000_000), firstEvent);
         var secondEvent = Assert.Single(StockEventsOf(second));
-        Assert.Equal(new StockChangedEvent(second, 4, 7), secondEvent);
+        Assert.Equal(new StockChangedEvent(product.ProductId, second, 4, 7, true, 1_000_000), secondEvent);
     }
 
     [Fact]

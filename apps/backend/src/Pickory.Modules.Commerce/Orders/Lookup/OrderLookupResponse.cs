@@ -1,4 +1,4 @@
 namespace Pickory.Modules.Commerce.Orders.Lookup;
 
-// Phản hồi của route tra cứu đơn. Mọi request hợp lệ đều nhận cùng thông điệp.
-public sealed record OrderLookupResponse(string Message);
+// Phản hồi thành công của route tra cứu. Token chỉ trả một lần để trình duyệt mở đơn ngay.
+public sealed record OrderLookupResponse(string Code, string AccessToken);

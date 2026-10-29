@@ -1,0 +1,63 @@
+/* Công tắc bật tắt của màn CSKH. Màu lấy từ token, trạng thái bật đổi cả vị trí nút gạt, không chỉ đổi màu. */
+.support-switch {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-1);
+  border: 0;
+  border-radius: var(--radius-control);
+  background: none;
+  color: var(--color-ink-secondary);
+  font: inherit;
+  font-size: var(--text-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.support-switch:hover {
+  background: var(--color-neutral-soft);
+}
+
+.support-switch[aria-disabled='true'] {
+  cursor: progress;
+  opacity: 0.6;
+}
+
+.support-switch-track {
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+  transition: background var(--duration-fast) var(--ease-out-soft);
+}
+
+.support-switch-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
+  transition: transform var(--duration-fast) var(--ease-out-soft);
+}
+
+.support-switch[aria-checked='true'] .support-switch-track {
+  background: var(--color-success);
+}
+
+.support-switch[aria-checked='true'] .support-switch-thumb {
+  transform: translateX(14px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .support-switch-track,
+  .support-switch-thumb {
+    transition: none;
+  }
+}

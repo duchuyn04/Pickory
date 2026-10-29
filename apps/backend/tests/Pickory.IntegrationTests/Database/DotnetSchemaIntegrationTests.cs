@@ -10,6 +10,7 @@ using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Shipping.Persistence;
+using Pickory.Modules.SupportDesk.Persistence;
 using Pickory.Shared.Persistence;
 using Xunit;
 
@@ -29,11 +30,13 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
         var shipping = scope.ServiceProvider.GetRequiredService<ShippingDbContext>();
         var commerce = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
         var activityTracking = scope.ServiceProvider.GetRequiredService<ActivityTrackingDbContext>();
+        var supportDesk = scope.ServiceProvider.GetRequiredService<SupportDeskDbContext>();
         AssertTestConnection(identity);
         AssertTestConnection(catalog);
         AssertTestConnection(shipping);
         AssertTestConnection(commerce);
         AssertTestConnection(activityTracking);
+        AssertTestConnection(supportDesk);
 
         // Mỗi module chỉ được sở hữu bảng đã chỉ định, không kéo quan hệ module khác vào model.
         AssertModuleTables(identity, ApplicationDatabaseSchema.IdentityTables);
@@ -41,9 +44,10 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
         AssertModuleTables(shipping, ApplicationDatabaseSchema.ShippingTables);
         AssertModuleTables(commerce, ApplicationDatabaseSchema.CommerceTables);
         AssertModuleTables(activityTracking, ApplicationDatabaseSchema.ActivityTrackingTables);
-        var model = ApplicationDatabaseSchema.ReadModel([identity, catalog, shipping, commerce, activityTracking]);
-        // Mỗi module sở hữu số bảng cố định: identity 9, catalog 8, shipping 7, commerce 10, activity-tracking 1. Ba bảng AI đã gỡ nên tổng là 35.
-        Assert.Equal(35, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
+        AssertModuleTables(supportDesk, ApplicationDatabaseSchema.SupportDeskTables);
+        var model = ApplicationDatabaseSchema.ReadModel([identity, catalog, shipping, commerce, activityTracking, supportDesk]);
+        // Mỗi module sở hữu số bảng cố định: identity 9, catalog 8, shipping 7, commerce 10, activity-tracking 1, support-desk 7. Ba bảng AI đã gỡ nên tổng là 42.
+        Assert.Equal(42, model.Keys.Count(key => key.StartsWith("table:", StringComparison.Ordinal)));
 
         // Metadata thực phải khớp dump, kể cả thứ tự cột, cập nhật khóa ngoại và mô tả extension.
         var actual = await ApplicationDatabaseSchema.ReadAsync(identity);
@@ -59,14 +63,15 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
             var baseline = await ApplicationDatabaseSchema.ReadAsync(identity);
             var baselineWithoutNewModules = baseline.Where(entry => !ApplicationDatabaseSchema.IsShippingObject(entry.Key) &&
                 !ApplicationDatabaseSchema.IsCommerceObject(entry.Key) &&
-                !ApplicationDatabaseSchema.IsActivityTrackingObject(entry.Key))
+                !ApplicationDatabaseSchema.IsActivityTrackingObject(entry.Key) &&
+                !ApplicationDatabaseSchema.IsSupportDeskObject(entry.Key))
                 .ToDictionary(entry => entry.Key, entry => entry.Value, StringComparer.Ordinal);
             ApplicationDatabaseSchema.AssertEqual(reference, baselineWithoutNewModules);
             // Rollback khôi phục index mới trước khi so model hiện tại với DB.
             await baselineTransaction.RollbackAsync();
         }
 
-        // Phép so model với DB thật xét cả shipping, commerce và activity-tracking, nên đây là nơi kiểm schema của ba module đó.
+        // Phép so model với DB thật xét cả shipping, commerce, activity-tracking và support-desk, nên đây là nơi kiểm schema của bốn module đó.
         // Metadata Entity Framework Core không biểu diễn thứ tự cột vật lý hoặc mô tả extension.
         var modeledActual = actual.Where(entry => !entry.Key.StartsWith("ordinal:", StringComparison.Ordinal) &&
                                                    !entry.Key.StartsWith("extension:", StringComparison.Ordinal) &&

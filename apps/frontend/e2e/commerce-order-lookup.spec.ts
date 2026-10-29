@@ -1,8 +1,6 @@
 import { expect, test, type BrowserContext, type Page } from '@playwright/test';
-import { rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import { e2eEnvironment } from './environment';
-import { readOrderConfirmation, readOrderLookupLink } from './outbox';
+import { readOrderConfirmation } from './outbox';
 
 // Ảnh PNG 1x1 trả cho mọi yêu cầu ảnh sản phẩm để tránh lỗi tải tài nguyên vào console.
 const tinyPng = Buffer.from(
@@ -128,6 +126,7 @@ async function seedCatalog(page: Page): Promise<SeededProduct> {
         {
           optionValues: {},
           price: 1_500_000,
+          stock: 100,
           compareAtPrice: null,
           enabled: true,
           weightGrams: 500,
@@ -146,12 +145,6 @@ async function seedCatalog(page: Page): Promise<SeededProduct> {
     variants: { id: string }[];
   };
   const skuId = productData.variants[0]!.id;
-
-  // Nhập tồn kho để sản phẩm có sẵn cho khách đặt hàng.
-  await page.request.post(`/api/admin/skus/${skuId}/movements`, {
-    headers: adminHeaders,
-    data: { delta: 100, reason: 'Nhập kho E2E đơn hàng' },
-  });
 
   // Kích hoạt sản phẩm để khách hàng nhìn thấy trên trang mua sắm.
   await page.request.put(`/api/admin/products/${productData.id}/status`, {
@@ -215,7 +208,6 @@ async function fillContact(page: Page) {
 }
 
 const guestContactEmail = 'khach@example.com';
-const lookupSuccessMessage = 'Nếu thông tin đúng, link xem đơn đã được gửi tới email của đơn.';
 const lookupRateLimitMessage = 'Bạn đã tra cứu quá nhiều lần. Vui lòng thử lại sau 15 phút.';
 
 // Khách vãng lai đặt một đơn COD và trả về mã đơn. Dữ liệu liên hệ lấy từ `fillContact`.
@@ -262,7 +254,7 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
   });
 
   // Đây là request tra cứu thật duy nhất của cả suite. Giới hạn tần suất của API tính theo IP 127.0.0.1.
-  test('khách mất link tra cứu bằng mã đơn viết thường, nhận link mới trong thư, link cũ hết hiệu lực', async ({
+  test('khách tra cứu bằng mã đơn viết thường, mở đơn ngay trên UI, link cũ hết hiệu lực', async ({
     page,
     browser,
   }) => {
@@ -293,22 +285,14 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
     // Nhập mã đơn viết thường và email có khoảng trắng hai đầu. Trang phải chuẩn hóa trước khi gửi.
     await lookupPage.getByLabel('Mã đơn hàng').fill(orderCode.toLowerCase());
     await lookupPage.getByLabel('Email đặt hàng').fill(`  ${guestContactEmail}  `);
-    await lookupPage.getByRole('button', { name: 'Gửi link xem đơn' }).click();
+    await lookupPage.getByRole('button', { name: 'Xem đơn hàng' }).click();
 
-    const status = lookupPage.getByRole('status');
-    await expect(status).toHaveText(lookupSuccessMessage);
-    // Màn đã gửi không được lộ mã đơn hay email của đơn.
-    const pageText = await lookupPage.locator('body').innerText();
-    expect(pageText).not.toContain(orderCode);
-    expect(pageText).not.toContain(guestContactEmail);
-    await checkLayoutAtBothWidths(lookupPage, 'sent');
-
-    // Link trong thư tra cứu mở được đơn.
-    const lookupLink = await readOrderLookupLink(guestContactEmail, orderCode);
-    await lookupPage.goto(lookupLink);
+    // Khớp thông tin thì trang chuyển ngay tới chi tiết đơn, không chờ email.
+    await expect(lookupPage).toHaveURL(new RegExp(`/orders/${orderCode}\\?t=.+`));
     await expect(
       lookupPage.getByRole('heading', { level: 1, name: `Đơn hàng #${orderCode}` }),
     ).toBeVisible();
+    await checkLayoutAtBothWidths(lookupPage, 'detail');
 
     // Link cũ trong thư xác nhận không còn token hợp lệ nên trang báo không tìm thấy đơn.
     await lookupPage.goto(confirmation.link);
@@ -320,7 +304,7 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
     await lookupContext.close();
   });
 
-  test('429 hiện câu thử lại sau, không hiện câu thành công và mở lại nút gửi', async ({
+  test('429 hiện câu thử lại sau và mở lại nút gửi', async ({
     page,
   }) => {
     const issues = collectConsoleIssues(page, [
@@ -354,29 +338,9 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
     releaseResponse();
 
     await expect(page.getByRole('alert').filter({ hasText: lookupRateLimitMessage })).toBeVisible();
-    await expect(page.getByText(lookupSuccessMessage)).toHaveCount(0);
     await expect(submitButton).toBeEnabled();
+    await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/order-lookup`);
     expect(issues).toEqual([]);
-  });
-
-  test('hàm đọc outbox từ chối thư tra cứu có link sang origin khác', async () => {
-    // Thư giả dùng mã đơn riêng của test này, nên không lẫn với thư thật của các test khác.
-    const forgedOrderCode = 'PKFORGED99';
-    const forgedMessage = {
-      to: guestContactEmail,
-      subject: 'Thư giả của test',
-      text: `Xem đơn tại https://evil.example.com/orders/${forgedOrderCode}?t=token-gia`,
-      metadata: { purpose: 'order-lookup', orderCode: forgedOrderCode },
-    };
-    const forgedFile = join(e2eEnvironment.outboxDirectory, `zz-forged-${Date.now()}.json`);
-    await writeFile(forgedFile, JSON.stringify(forgedMessage), 'utf8');
-    try {
-      // Hàm đọc phải từ chối thay vì trả link ngoài web E2E.
-      await expect(readOrderLookupLink(guestContactEmail, forgedOrderCode)).rejects.toThrow();
-    } finally {
-      // Xóa thư giả để outbox không còn dữ liệu thừa sau test.
-      await rm(forgedFile, { force: true });
-    }
   });
 
   test('link Tra cứu đơn ở header và ở trang Đơn hàng của tôi dẫn tới trang tra cứu', async ({

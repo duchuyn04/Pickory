@@ -45,7 +45,30 @@ public sealed class CommerceReports(CommerceDbContext database, ILogger<Commerce
         // Cảnh báo chỉ ở hàm theo ngày, vì đây là báo cáo chính của màn hình quản trị. Hàm theo sản phẩm không lặp lại cảnh báo.
         await WarnAboutPaidOrdersWithoutPaymentTimeAsync(startUtc, endExclusiveUtc, cancellationToken);
 
-        return DailySalesAggregator.Build(range, payments, createdOrders);
+        // Chỉ đơn đủ điều kiện ghi nhận doanh thu mới cần tính số lượng sản phẩm bán ra.
+        var recognizedOrderIds = payments
+            .Where(payment => DailySalesAggregator.CountsAsRecognizedRevenue(payment.PaymentStatus))
+            .Select(payment => payment.OrderId)
+            .ToList();
+
+        // Đọc số lượng sản phẩm của từng đơn để gộp vào ngày ghi nhận doanh thu.
+        var quantitiesByOrderId = recognizedOrderIds.Count == 0
+            ? new Dictionary<string, int>()
+            : await database.OrderItems.AsNoTracking()
+                .Where(item => recognizedOrderIds.Contains(item.OrderId))
+                .GroupBy(item => item.OrderId)
+                .Select(group => new { OrderId = group.Key, Quantity = group.Sum(item => item.Quantity) })
+                .ToDictionaryAsync(item => item.OrderId, item => item.Quantity, cancellationToken);
+
+        // Gắn số lượng vào từng dòng thanh toán trước khi chuyển sang lớp gom.
+        var paymentsWithQuantities = payments
+            .Select(payment => payment with
+            {
+                SoldQuantity = quantitiesByOrderId.GetValueOrDefault(payment.OrderId, 0),
+            })
+            .ToList();
+
+        return DailySalesAggregator.Build(range, paymentsWithQuantities, createdOrders);
     }
 
     public async Task<IReadOnlyList<ProductSales>> GetProductSalesAsync(DateRange range, CancellationToken cancellationToken)
@@ -144,12 +167,14 @@ public sealed class CommerceReports(CommerceDbContext database, ILogger<Commerce
                 transaction.OrderId,
                 transaction.Order!.Total,
                 transaction.Order.PaymentStatus,
+                transaction.Order.PaymentMethod,
             })
             .Select(group => new
             {
                 OrderId = group.Key.OrderId!,
                 group.Key.Total,
                 group.Key.PaymentStatus,
+                group.Key.PaymentMethod,
                 PaidAtUtc = group.Min(transaction => transaction.ReceivedAt),
             })
             .Where(row => row.PaidAtUtc >= startUtc && row.PaidAtUtc < endExclusiveUtc)
@@ -163,20 +188,23 @@ public sealed class CommerceReports(CommerceDbContext database, ILogger<Commerce
                 history.OrderId,
                 history.Order!.Total,
                 history.Order.PaymentStatus,
+                history.Order.PaymentMethod,
             })
             .Select(group => new
             {
                 group.Key.OrderId,
                 group.Key.Total,
                 group.Key.PaymentStatus,
+                group.Key.PaymentMethod,
                 PaidAtUtc = group.Min(history => history.CreatedAt),
             })
             .Where(row => row.PaidAtUtc >= startUtc && row.PaidAtUtc < endExclusiveUtc)
             .ToListAsync(cancellationToken);
 
         return sepayRows
-            .Select(row => new OrderPaymentRow(row.OrderId, row.PaidAtUtc, row.Total, row.PaymentStatus))
-            .Concat(codRows.Select(row => new OrderPaymentRow(row.OrderId, row.PaidAtUtc, row.Total, row.PaymentStatus)))
+            .Select(row => new OrderPaymentRow(row.OrderId, row.PaidAtUtc, row.Total, row.PaymentStatus, row.PaymentMethod))
+            .Concat(codRows.Select(row => new OrderPaymentRow(
+                row.OrderId, row.PaidAtUtc, row.Total, row.PaymentStatus, row.PaymentMethod)))
             .ToList();
     }
 

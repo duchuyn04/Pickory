@@ -11,8 +11,16 @@ namespace Pickory.Modules.Catalog.Stock;
 internal sealed record StockMovementInput(
     string SkuId, int Delta, InventoryMovementType Type, string? OrderId, string? ActorId, string Reason);
 
-// Kết quả ghi của một SKU: tồn kho sau và trước, kèm movement vừa tạo.
-internal sealed record StockChange(string SkuId, int Stock, int PreviousStock, string MovementId, DateTime CreatedAt);
+// Kết quả ghi của một SKU: tồn kho sau và trước, kèm movement vừa tạo và giá trị tính sẵn của sản phẩm.
+internal sealed record StockChange(
+    string ProductId,
+    string SkuId,
+    int Stock,
+    int PreviousStock,
+    string MovementId,
+    DateTime CreatedAt,
+    bool ProductInStock = false,
+    int? ProductMinPrice = null);
 
 // Kết quả của `StockLedger.ApplyAsync`. Khi `Applied` là false, ledger chưa ghi gì.
 internal sealed record StockLedgerResult(
@@ -60,16 +68,24 @@ internal static class StockLedger
             var stockAfter = await UpdateStockAsync(connection, npgsqlTransaction, movement, now, cancellationToken);
             var movementId = Guid.NewGuid().ToString("N");
             await InsertMovementAsync(connection, npgsqlTransaction, movementId, movement, now, cancellationToken);
-            changes.Add(new StockChange(movement.SkuId, stockAfter, stockAfter - movement.Delta, movementId, now));
+            changes.Add(new StockChange(
+                productIdsBySku[movement.SkuId], movement.SkuId, stockAfter, stockAfter - movement.Delta, movementId, now));
         }
 
         // Tính lại giá trị tính sẵn trong cùng transaction. Khóa sản phẩm đã giữ từ đầu nên không ghi đè bằng dữ liệu cũ.
+        var pricingByProduct = new Dictionary<string, DisplayPrice>(StringComparer.Ordinal);
         foreach (var productId in productIdsBySku.Values.Distinct(StringComparer.Ordinal))
         {
-            await RecomputeProductAsync(connection, npgsqlTransaction, productId, cancellationToken);
+            pricingByProduct[productId] = await RecomputeProductAsync(connection, npgsqlTransaction, productId, cancellationToken);
         }
 
-        return new StockLedgerResult([], [], changes);
+        // Gắn kết quả tính sẵn vào từng lần đổi. Mọi SKU của cùng sản phẩm nhận cùng một cặp giá và trạng thái còn hàng.
+        var pricedChanges = changes.Select(change => change with
+        {
+            ProductInStock = pricingByProduct[change.ProductId].InStock,
+            ProductMinPrice = pricingByProduct[change.ProductId].MinPrice,
+        }).ToList();
+        return new StockLedgerResult([], [], pricedChanges);
     }
 
     private static NpgsqlCommand Command(NpgsqlConnection connection, NpgsqlTransaction transaction, string sql)
@@ -161,7 +177,7 @@ internal static class StockLedger
         await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    private static async Task RecomputeProductAsync(
+    private static async Task<DisplayPrice> RecomputeProductAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction, string productId, CancellationToken cancellationToken)
     {
         // Hàm gọi đã khóa dòng sản phẩm. Đọc SKU ở đây thấy cả thay đổi chưa commit của chính transaction này.
@@ -185,5 +201,6 @@ internal static class StockLedger
         updateCommand.Parameters.AddWithValue("inStock", display.InStock);
         updateCommand.Parameters.AddWithValue("id", productId);
         await updateCommand.ExecuteNonQueryAsync(cancellationToken);
+        return display;
     }
 }

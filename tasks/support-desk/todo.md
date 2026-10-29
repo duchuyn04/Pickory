@@ -26,13 +26,13 @@ Quy ước:
 - `Percentile.Of(values, p)`: phân vị cho p50 và p90.
 
 **Tiêu chí nghiệm thu:**
-- [ ] 7:59 và 21:00 giờ Việt Nam là ngoài giờ. 8:00 và 20:59 là trong giờ
-- [ ] Ngày nghỉ trong `holidays` là ngoài giờ cả ngày theo giờ Việt Nam
-- [ ] Đầu vào UTC lúc 00:30 ngày D là 7:30 ngày D giờ Việt Nam
-- [ ] Không có nhân viên sẵn sàng thì `WaitEstimator` không chia cho 0
-- [ ] Chưa có dữ liệu 7 ngày thì ước tính dùng 5 phút cho mỗi phiên
-- [ ] Biến không có giá trị giữ nguyên chuỗi `{ten_khach}`, không ném lỗi
-- [ ] `Percentile.Of` trả `null` với danh sách rỗng và đúng giá trị với danh sách 1 phần tử
+- [x] 7:59 và 21:00 giờ Việt Nam là ngoài giờ. 8:00 và 20:59 là trong giờ
+- [x] Ngày nghỉ trong `holidays` là ngoài giờ cả ngày theo giờ Việt Nam
+- [x] Đầu vào UTC lúc 00:30 ngày D là 7:30 ngày D giờ Việt Nam
+- [x] Không có nhân viên sẵn sàng thì `WaitEstimator` không chia cho 0
+- [x] Chưa có dữ liệu 7 ngày thì ước tính dùng 5 phút cho mỗi phiên
+- [x] Biến không có giá trị giữ nguyên chuỗi `{ten_khach}`, không ném lỗi
+- [x] `Percentile.Of` trả `null` với danh sách rỗng và đúng giá trị với danh sách 1 phần tử
 **Kiểm tra:** unit test với `FakeTimeProvider`
 **Phụ thuộc:** không · **Quy mô:** S
 **File:** `apps/backend/src/Pickory.Modules.SupportDesk/{Scheduling/WorkingHoursCalendar.cs, Scheduling/WaitEstimator.cs, CannedResponses/CannedResponseTemplate.cs, Metrics/Percentile.cs}`, test trong `apps/backend/tests/Pickory.UnitTests/Modules/SupportDesk/`
@@ -40,46 +40,48 @@ Quy ước:
 ### SD-02: Khung module, Contracts và schema
 **Mô tả:** Tạo `Pickory.Modules.SupportDesk` và `Pickory.Modules.SupportDesk.Contracts`. Thêm `SupportDeskDbContext` với schema lịch sử `ef_support_desk`, migration đầu tiên và `SupportDeskModule.cs`. Contracts có `ISupportMetrics`, `SupportMetricsSnapshot`, `SupportPendingCounts`. Ngày 2026-10-18 task bỏ bảng `draft_logs` và thêm hai bảng hội thoại theo quyết định 24.
 **Tiêu chí nghiệm thu:**
-- [ ] Bảng `support_sessions`, `callback_requests`, `canned_responses`, `staff_presence`, `support_settings` theo Data Model của spec
-- [ ] Bảng `support_conversations` và `support_messages` theo quyết định 24
-- [ ] `support_sessions` có thêm `handoff_in_hours`, `customer_user_id`, `anonymous_id` theo quyết định 10
-- [ ] Chỉ mục unique một phần chặn hai phiên mở (`closed_at` rỗng) cho cùng `conversation_id`
-- [ ] Chỉ mục unique một phần chặn hai hội thoại `open` cho cùng `anonymous_id`
-- [ ] `support_settings` có một dòng mặc định: 8:00 đến 21:00 mỗi ngày, nhắc lại 10 phút, tự đóng 30 phút
-- [ ] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
-- [ ] `Pickory.ArchitectureTests` chặn `SupportDesk` tham chiếu module khác ngoài project Contracts
-- [ ] `SupportDesk` không tham chiếu `Pickory.Modules.AiGateway.Contracts`
-- [ ] `Program.cs` chỉ gọi `AddSupportDeskModule` và `MapSupportDeskEndpoints`
+- [x] Bảng `support_sessions`, `callback_requests`, `canned_responses`, `staff_presence`, `support_settings` theo Data Model của spec
+- [x] Bảng `support_conversations` và `support_messages` theo quyết định 24
+- [x] `support_sessions` có thêm `handoff_in_hours`, `customer_user_id`, `anonymous_id` theo quyết định 10
+- [x] Chỉ mục unique một phần chặn hai phiên mở (`closed_at` rỗng) cho cùng `conversation_id`
+- [x] Chỉ mục unique một phần chặn hai hội thoại `open` cho cùng `anonymous_id`
+- [x] `support_settings` có một dòng mặc định: 8:00 đến 21:00 mỗi ngày, nhắc lại 10 phút, tự đóng 30 phút
+- [x] Migration chạy trên DB sạch. Lệnh `e2e:start` và fixture test tích hợp dựng được schema mới
+- [x] `Pickory.ArchitectureTests` chặn `SupportDesk` tham chiếu module khác ngoài project Contracts
+- [x] `SupportDesk` không tham chiếu `Pickory.Modules.AiGateway.Contracts`
+- [x] `Program.cs` chỉ gọi `AddSupportDeskModule` và `MapSupportDeskEndpoints`
 **Kiểm tra:** build, test kiến trúc, test tích hợp schema
 **Phụ thuộc:** SD-01 · **Quy mô:** M
 
 ### SD-03: Hub SSE nhân viên và trạng thái sẵn sàng
 **Mô tả:** `SupportEventHub` giữ kết nối SSE của từng nhân viên. `GET /api/admin/support/events` mở luồng SSE. `PUT /api/admin/support/presence` đổi `available` hoặc `away`. `GET /api/admin/support/presence` trả nhân viên đang sẵn sàng. Job mỗi 30 giây chuyển `away` khi mất nhịp tim quá 2 phút.
 **Tiêu chí nghiệm thu:**
-- [ ] `sales` gọi `GET /api/admin/support/events` nhận 403. Khách nhận 401
-- [ ] `PUT /api/admin/support/presence` cần `conversations:reply`. Giá trị khác `available` và `away` trả 400 `VALIDATION_ERROR`
-- [ ] Kết nối SSE gửi nhịp tim mỗi 30 giây và cập nhật `last_seen_at`
-- [ ] Ngắt kết nối hơn 2 phút thì job chuyển nhân viên sang `away` và phát sự kiện SSE cho người khác
-- [ ] Một nhân viên mở 2 tab: đóng 1 tab không chuyển `away`
-- [ ] Response SSE có `Content-Type: text/event-stream` và `Cache-Control: no-cache`
-- [ ] Endpoint mới có trong ma trận quyền
+- [x] `sales` gọi `GET /api/admin/support/events` nhận 403. Khách nhận 401
+- [x] `PUT /api/admin/support/presence` cần `conversations:reply`. Giá trị khác `available` và `away` trả 400 `VALIDATION_ERROR`
+- [x] Kết nối SSE gửi nhịp tim mỗi 30 giây và cập nhật `last_seen_at`
+- [x] Ngắt kết nối hơn 2 phút thì job chuyển nhân viên sang `away` và phát sự kiện SSE cho người khác
+- [x] Một nhân viên mở 2 tab: đóng 1 tab không chuyển `away`
+- [x] Response SSE có `Content-Type: text/event-stream` và `Cache-Control: no-cache`
+- [x] Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp; test gọi processor với `FakeTimeProvider`
 **Phụ thuộc:** SD-02 · **Quy mô:** M
 
 ### SD-UI1: Khung màn CSKH, hàng chờ và công tắc sẵn sàng
 **Mô tả:** Thay `AdminPlaceholderPage` ở `/admin/conversations` bằng màn CSKH 3 cột. Task này làm cột hàng chờ (tab Đang chờ, Của tôi, Gọi lại), client SSE, `PresenceToggle`, thông báo trình duyệt và âm báo. Hai cột còn lại là khung trống có tiêu đề.
 **Tiêu chí nghiệm thu:**
-- [ ] Mục menu "CSKH" giữ đường dẫn `/admin/conversations`. Người thiếu `conversations:read` không thấy menu
-- [ ] Mở thẳng URL khi thiếu quyền thấy trang không đủ quyền
-- [ ] `PresenceToggle` hiện trên thanh trên cùng của `AdminLayout` khi người dùng có `conversations:reply`
-- [ ] Hội thoại mới vào hàng chờ hiện trong tab Đang chờ mà không tải lại trang
-- [ ] Badge trên tab Đang chờ khớp số phiên đang chờ
-- [ ] Trình duyệt chỉ hỏi quyền thông báo khi nhân viên bấm nút bật thông báo
-- [ ] Nhân viên tắt được âm báo. Lựa chọn còn sau khi tải lại trang
-- [ ] Mất SSE thì client tự kết nối lại và hiện trạng thái "Mất kết nối"
-- [ ] Dùng được bằng bàn phím. Tab có vai trò `tablist`
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang
-- [ ] Playwright console có 0 lỗi và 0 cảnh báo
+- [x] Mục menu "CSKH" giữ đường dẫn `/admin/conversations`. Người thiếu `conversations:read` không thấy menu
+- [x] Mở thẳng URL khi thiếu quyền thấy trang không đủ quyền
+- [x] `PresenceToggle` hiện trên thanh trên cùng của `AdminLayout` khi người dùng có `conversations:reply`
+- [x] Hội thoại mới vào hàng chờ hiện trong tab Đang chờ mà không tải lại trang
+  Kiểm đầu cuối với backend thật ở SD-E2E1.
+- [x] Badge trên tab Đang chờ khớp số phiên đang chờ
+  Kiểm đầu cuối với backend thật ở SD-E2E1.
+- [x] Trình duyệt chỉ hỏi quyền thông báo khi nhân viên bấm nút bật thông báo
+- [x] Nhân viên tắt được âm báo. Lựa chọn còn sau khi tải lại trang
+- [x] Mất SSE thì client tự kết nối lại và hiện trạng thái "Mất kết nối"
+- [x] Dùng được bằng bàn phím. Tab có vai trò `tablist`
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang
+- [x] Playwright console có 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest cho hook SSE và bộ lọc tab; ảnh chụp; Playwright `--headed`
 **Phụ thuộc:** SD-03 · **Quy mô:** M
 **File:** `apps/frontend/src/features/support-desk/admin/`, `apps/frontend/src/app.tsx`
@@ -102,17 +104,17 @@ Quy ước:
 
 Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài khoản.
 **Tiêu chí nghiệm thu:**
-- [ ] Lần đầu trả 201 kèm hội thoại mới trạng thái `open`. Lần sau trả 200 kèm hội thoại đang mở
-- [ ] Response lần đầu có cờ `showRetentionNotice` bằng `true`. Lần sau cờ bằng `false`
-- [ ] Khách vãng lai khác `pk_anon` đọc lịch sử hoặc gửi tin nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
-- [ ] Khách đăng nhập khác tài khoản nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
-- [ ] Khách vãng lai đăng nhập sau: `UserLinkedEvent` gắn hội thoại, và khách thấy hội thoại cũ bằng tài khoản
-- [ ] Tin rỗng hoặc dài hơn 2.000 ký tự trả 400 `VALIDATION_ERROR`
-- [ ] Gửi tin vào hội thoại `closed` trả 409 `SUPPORT_CONVERSATION_CLOSED`
-- [ ] Gửi vượt giới hạn của quyết định 27 trả 429 `SUPPORT_MESSAGE_RATE_LIMITED`. Tin bị chặn không được lưu
-- [ ] Lịch sử phân trang theo con trỏ, mới nhất ở cuối
-- [ ] Lịch sử không có ghi chú nội bộ của nhân viên
-- [ ] Nhân viên gọi route phía khách nhận 403
+- [x] Lần đầu trả 201 kèm hội thoại mới trạng thái `open`. Lần sau trả 200 kèm hội thoại đang mở
+- [x] Response lần đầu có cờ `showRetentionNotice` bằng `true`. Lần sau cờ bằng `false`
+- [x] Khách vãng lai khác `pk_anon` đọc lịch sử hoặc gửi tin nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
+- [x] Khách đăng nhập khác tài khoản nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
+- [x] Khách vãng lai đăng nhập sau: `UserLinkedEvent` gắn hội thoại, và khách thấy hội thoại cũ bằng tài khoản
+- [x] Tin rỗng hoặc dài hơn 2.000 ký tự trả 400 `VALIDATION_ERROR`
+- [x] Gửi tin vào hội thoại `closed` trả 409 `SUPPORT_CONVERSATION_CLOSED`
+- [x] Gửi vượt giới hạn của quyết định 27 trả 429 `SUPPORT_MESSAGE_RATE_LIMITED`. Tin bị chặn không được lưu
+- [x] Lịch sử phân trang theo con trỏ, mới nhất ở cuối
+- [x] Lịch sử không có ghi chú nội bộ của nhân viên
+- [x] Nhân viên gọi route phía khách nhận 403
 **Kiểm tra:** test tích hợp với hai `pk_anon` khác nhau; test giới hạn với `FakeTimeProvider`
 **Phụ thuộc:** SD-02 · **Quy mô:** M
 

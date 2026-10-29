@@ -1222,14 +1222,14 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
     }
 
     [Fact]
-    // Gửi trường status hoặc stock trong yêu cầu tạo mới phải bị từ chối bằng mã 400.
-    public async Task CreateProduct_AttemptToWriteStatusOrStock_Returns400()
+    // Trạng thái ở thân yêu cầu tạo bị từ chối; số lượng trong từng biến thể được nhận và ghi sổ.
+    public async Task CreateProduct_RejectsRootStatus_AndAppliesVariantStock()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var category = await CreateCategoryInDbAsync($"Danh Mục {suffix}", null, []);
         var brand = await CreateBrandInDbAsync($"Thương Hiệu {suffix}");
 
-        // Yêu cầu cố tình gửi trường status không được phép.
+        // Trạng thái chỉ đổi qua route riêng, nên trường này ở thân yêu cầu tạo phải bị từ chối.
         var statusPayload = new
         {
             categoryId = category.Id,
@@ -1247,11 +1247,11 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
             }
         };
 
-        var statusReq = ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/products", statusPayload, _adminCookie);
-        var statusRes = await _client.SendAsync(statusReq);
-        Assert.Equal(HttpStatusCode.BadRequest, statusRes.StatusCode);
+        var statusRequest = ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/products", statusPayload, _adminCookie);
+        var statusResponse = await _client.SendAsync(statusRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, statusResponse.StatusCode);
 
-        // Yêu cầu cố tình gửi trường stock không được phép.
+        // Số lượng trong biến thể là số đích. Tạo sản phẩm và nhập 500 cái trong cùng một request.
         var stockPayload = new
         {
             categoryId = category.Id,
@@ -1268,19 +1268,36 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
             }
         };
 
-        var stockReq = ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/products", stockPayload, _adminCookie);
-        var stockRes = await _client.SendAsync(stockReq);
-        Assert.Equal(HttpStatusCode.BadRequest, stockRes.StatusCode);
+        var stockRequest = ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/products", stockPayload, _adminCookie);
+        var stockResponse = await _client.SendAsync(stockRequest);
+        Assert.Equal(HttpStatusCode.Created, stockResponse.StatusCode);
+        using var stockJson = await ActorHttp.ReadJsonAsync(stockResponse);
+        var data = stockJson.RootElement.GetProperty("data");
+        var productId = data.GetProperty("id").GetString()!;
+        _createdProductIds.Add(productId);
+        var variant = data.GetProperty("variants")[0];
+        var skuId = variant.GetProperty("id").GetString()!;
+        Assert.Equal(500, variant.GetProperty("stock").GetInt32());
+        Assert.True(data.GetProperty("inStock").GetBoolean());
+        Assert.Equal(100000, data.GetProperty("minPrice").GetInt32());
 
-        // Kiểm tra cơ sở dữ liệu không lưu sản phẩm từ các yêu cầu ghi đè trái phép.
         await using var catalogDatabase = _database.CreateCatalogContext();
-        var exists = await catalogDatabase.Products.AnyAsync(product => product.Name.Contains(suffix));
-        Assert.False(exists);
+        var saved = await catalogDatabase.Products.Include(item => item.Skus)
+            .SingleAsync(item => item.Id == productId);
+        Assert.Equal(500, saved.Skus.Single().Stock);
+        Assert.True(saved.InStock);
+
+        // Sổ tồn kho giữ đúng một dòng nhập ban đầu, nên bất biến stock bằng tổng delta vẫn đúng.
+        var movement = await catalogDatabase.InventoryMovements
+            .SingleAsync(item => item.SkuId == skuId && item.Type == InventoryMovementType.Manual);
+        Assert.Equal(500, movement.Delta);
+        Assert.Contains(_factory.DomainEvents.OfType<StockChangedEvent>(),
+            item => item.SkuId == skuId && item.Stock == 500 && item.PreviousStock == 0);
     }
 
     [Fact]
-    // Gửi trường status hoặc stock trong PATCH bị từ chối bằng mã 400 và giữ nguyên dữ liệu.
-    public async Task UpdateProduct_AttemptToWriteStatusOrStock_Returns400_PreservesExistingState()
+    // Sửa số lượng trong PATCH ghi sổ; PATCH không gửi số lượng thì giữ nguyên tồn kho hiện tại.
+    public async Task UpdateProduct_RejectsRootStatus_AppliesVariantStock_AndKeepsStockWhenOmitted()
     {
         var suffix = Guid.NewGuid().ToString("N")[..8];
         var category = await CreateCategoryInDbAsync($"Danh Mục {suffix}", null, []);
@@ -1291,14 +1308,15 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
             new SkuSeed($"LOCK-{suffix}", new Dictionary<string, string>(), 100000, 15, true)
         ]);
         _createdProductIds.Add(product.Id);
+        var skuId = product.Skus.Single().Id;
 
-        // Cố tình gửi status trong PATCH phải bị từ chối bằng mã 400.
+        // Trạng thái chỉ đổi qua route riêng, nên PATCH có trường này phải bị từ chối.
         var statusPatch = new { status = "active" };
-        var statusReq = ActorHttp.CreateJsonRequest(HttpMethod.Patch, $"/api/admin/products/{product.Id}", statusPatch, _adminCookie);
-        var statusRes = await _client.SendAsync(statusReq);
-        Assert.Equal(HttpStatusCode.BadRequest, statusRes.StatusCode);
+        var statusRequest = ActorHttp.CreateJsonRequest(HttpMethod.Patch, $"/api/admin/products/{product.Id}", statusPatch, _adminCookie);
+        var statusResponse = await _client.SendAsync(statusRequest);
+        Assert.Equal(HttpStatusCode.BadRequest, statusResponse.StatusCode);
 
-        // Cố tình gửi stock trong PATCH phải bị từ chối bằng mã 400.
+        // Gửi số đích 999. Ledger ghi thêm 984 vì SKU đang có 15.
         var stockPatch = new
         {
             variants = new[]
@@ -1316,15 +1334,53 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
                 }
             }
         };
-        var stockReq = ActorHttp.CreateJsonRequest(HttpMethod.Patch, $"/api/admin/products/{product.Id}", stockPatch, _adminCookie);
-        var stockRes = await _client.SendAsync(stockReq);
-        Assert.Equal(HttpStatusCode.BadRequest, stockRes.StatusCode);
+        var stockRequest = ActorHttp.CreateJsonRequest(HttpMethod.Patch, $"/api/admin/products/{product.Id}", stockPatch, _adminCookie);
+        var stockResponse = await _client.SendAsync(stockRequest);
+        Assert.Equal(HttpStatusCode.OK, stockResponse.StatusCode);
+        using var stockJson = await ActorHttp.ReadJsonAsync(stockResponse);
+        var stockData = stockJson.RootElement.GetProperty("data");
+        Assert.Equal(999, stockData.GetProperty("variants")[0].GetProperty("stock").GetInt32());
+        Assert.True(stockData.GetProperty("inStock").GetBoolean());
 
-        // Kiểm tra trạng thái và tồn kho trong cơ sở dữ liệu được bảo toàn nguyên vẹn.
+        Assert.Contains(_factory.DomainEvents.OfType<StockChangedEvent>(),
+            item => item.SkuId == skuId && item.Stock == 999 && item.PreviousStock == 15
+                && item.ProductInStock && item.ProductMinPrice == 100000);
+
+        // PATCH chỉ đổi giá không được gửi lại số cũ, nếu không đơn đã giữ hàng sẽ bị hoàn kho sai.
+        var pricePatch = new
+        {
+            variants = new[]
+            {
+                new
+                {
+                    optionValues = new Dictionary<string, string>(),
+                    price = 120000,
+                    enabled = true,
+                    weightGrams = (int?)200,
+                    lengthCm = (int?)15,
+                    widthCm = (int?)10,
+                    heightCm = (int?)5
+                }
+            }
+        };
+        var priceRequest = ActorHttp.CreateJsonRequest(HttpMethod.Patch, $"/api/admin/products/{product.Id}", pricePatch, _adminCookie);
+        var priceResponse = await _client.SendAsync(priceRequest);
+        Assert.Equal(HttpStatusCode.OK, priceResponse.StatusCode);
+        using var priceJson = await ActorHttp.ReadJsonAsync(priceResponse);
+        Assert.Equal(999, priceJson.RootElement.GetProperty("data").GetProperty("variants")[0].GetProperty("stock").GetInt32());
+
         await using var catalogDatabase = _database.CreateCatalogContext();
-        var currentProduct = await catalogDatabase.Products.Include(candidate => candidate.Skus).FirstAsync(candidate => candidate.Id == product.Id);
+        var currentProduct = await catalogDatabase.Products.Include(candidate => candidate.Skus)
+            .SingleAsync(candidate => candidate.Id == product.Id);
         Assert.Equal(ProductStatus.Draft, currentProduct.Status);
-        Assert.Equal(15, currentProduct.Skus.First().Stock);
+        Assert.Equal(999, currentProduct.Skus.Single().Stock);
+        Assert.Equal(120000, currentProduct.MinPrice);
+        // Chỉ lần ghi số lượng tạo movement. Lần sửa giá không tạo thêm dòng sổ.
+        var stockMovements = await catalogDatabase.InventoryMovements
+            .Where(item => item.SkuId == skuId && item.Reason == "Cập nhật số lượng trong trang sản phẩm")
+            .ToListAsync();
+        Assert.Single(stockMovements);
+        Assert.Equal(984, stockMovements[0].Delta);
     }
 
     [Fact]

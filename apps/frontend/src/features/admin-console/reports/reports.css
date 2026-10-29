@@ -1,0 +1,195 @@
+/*
+ * Trang báo cáo: hàng chọn thời gian, khối biểu đồ và bảng số liệu.
+ * Màu và khoảng cách chỉ lấy từ token trong `tokens.css`.
+ */
+
+/* Ô chọn xếp ngang khi đủ chỗ. Mỗi ô co đều để nhãn dài không đẩy tràn thẻ. */
+.report-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.report-controls .field {
+  flex: 1 1 160px;
+  /* Một ô chọn không kéo rộng hết thẻ trên màn lớn. */
+  max-width: 320px;
+  min-width: 0;
+  margin: 0;
+}
+
+/* Khối biểu đồ không được rộng hơn thẻ, kể cả khi bảng bên trong cuộn ngang. */
+.report-panel {
+  min-width: 0;
+}
+
+/* Ghi chú khoảng thời gian nằm cạnh tiêu đề khối. Chữ nhỏ để không tranh với số liệu. */
+.report-note {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  text-align: right;
+}
+
+.report-status {
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+/* Khung vẽ theo bề rộng thẻ. `min-width: 0` để biểu đồ co được trong flex và grid. */
+.report-chart-canvas {
+  width: 100%;
+  min-width: 0;
+}
+
+/* Nhãn phần trăm nằm trong lát. Bỏ nhận chuột để nhãn không che lát. */
+.report-chart-label {
+  fill: var(--color-chart-label);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  pointer-events: none;
+}
+
+/* Chú giải hiện tên và phần trăm của từng lát, để màu không phải cách duy nhất để phân biệt. */
+.report-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 var(--space-4);
+  padding: 0;
+  list-style: none;
+}
+
+.report-legend-item {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  font-size: var(--text-label);
+}
+
+.report-legend-swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+}
+
+.report-legend-percent {
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Chú giải có nút khi trang mở bảng chi tiết. Nút giữ bố cục chữ của chú giải tĩnh. */
+.report-legend-button {
+  display: inline-flex;
+  gap: var(--space-2);
+  align-items: center;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Nút đang chọn hiện gạch chân để người xem biết bảng chi tiết của lát nào đang mở. */
+.report-legend-item.is-selected .report-legend-name {
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+/* Bảng chi tiết mở sau khi người xem chọn một lát. Tách khỏi bảng số liệu của biểu đồ. */
+.report-drilldown {
+  margin-top: var(--space-4);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border-subtle);
+  min-width: 0;
+}
+
+/* Bảng chi tiết có thể dài cả tháng. Giới hạn chiều cao để trang không dài theo số ngày. */
+.report-drilldown .table-wrap {
+  max-height: 352px;
+  overflow-y: auto;
+}
+
+/* Giữ tiêu đề cột khi cuộn bảng chi tiết, để người đọc không mất tên cột. */
+.report-drilldown .report-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--color-surface);
+}
+
+.report-drilldown h3 {
+  margin: 0 0 var(--space-2);
+  font-size: var(--text-label);
+}
+
+/* Tiêu đề bảng nói rõ bảng của biểu đồ nào và của thời gian nào. */
+.report-table caption {
+  padding: 10px var(--space-3);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  text-align: left;
+}
+
+/* Thẻ báo cáo xếp hai cột trên màn rộng và một cột trên màn hẹp. */
+.report-cards {
+  display: grid;
+  gap: var(--space-4);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.report-card {
+  /* Điểm neo cho lớp phủ của link mở báo cáo. */
+  position: relative;
+  min-width: 0;
+}
+
+/* Lớp phủ lấp kín thẻ, để nhấn vào chỗ trống trong thẻ cũng mở báo cáo. */
+.report-card-link::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+
+/* Khối biểu đồ nằm trên lớp phủ để lát và nút chú giải vẫn nhận nhấn. */
+.report-card .report-chart-block {
+  position: relative;
+  z-index: 1;
+}
+
+/* Tổng của tháng đứng trước biểu đồ, đọc nhanh hơn nhìn phần trăm từng lát. */
+.report-card-total {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  align-items: baseline;
+  margin: var(--space-2) 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}
+
+.report-card-total strong {
+  color: var(--color-ink);
+  font-size: var(--text-lg);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 1023px) {
+  /* Máy tính bảng và điện thoại chỉ đủ chỗ cho một thẻ mỗi hàng. */
+  .report-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 767px) {
+  .report-note {
+    text-align: left;
+  }
+
+  /* Nhãn trục nhỏ hơn một cỡ để sáu cột vẫn tách nhau trên điện thoại. */
+  .report-chart-canvas .recharts-cartesian-axis-tick text {
+    font-size: 11px;
+  }
+}

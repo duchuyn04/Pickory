@@ -13,6 +13,8 @@ export interface AdminFormDialogProps {
   isSubmitting?: boolean;
   // Tắt nút gửi khi form chưa đủ điều kiện, ví dụ chưa tra được đơn cần gắn.
   submitDisabled?: boolean;
+  // Chặn đóng khi tác vụ đang chạy có thể ghi kết quả cũ vào lần mở form tiếp theo.
+  closeDisabled?: boolean;
   submitText?: string;
   cancelText?: string;
   error?: string | null;
@@ -30,6 +32,7 @@ export function AdminFormDialog({
   onSubmit,
   isSubmitting = false,
   submitDisabled = false,
+  closeDisabled = false,
   submitText = 'Lưu',
   cancelText = 'Hủy',
   error,
@@ -59,7 +62,13 @@ export function AdminFormDialog({
       >
         <div className="dialog-head">
           <h2 id={`${formId}-dialog-title`}>{title}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Đóng">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onClose}
+            aria-label="Đóng"
+            disabled={closeDisabled}
+          >
             <Icon name="close" />
           </button>
         </div>
@@ -74,7 +83,12 @@ export function AdminFormDialog({
         </div>
 
         <div className="dialog-foot">
-          <button type="button" className="btn" onClick={onClose} disabled={isSubmitting}>
+          <button
+            type="button"
+            className="btn"
+            onClick={onClose}
+            disabled={isSubmitting || closeDisabled}
+          >
             {cancelText}
           </button>
           {/* Khóa nút gửi khi đang lưu để một lần bấm không tạo hai bản ghi. */}

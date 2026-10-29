@@ -52,7 +52,7 @@ Admin tạo thêm được role mới (ví dụ "Quản lý kho") và chọn quy
 | | `roles:manage` | Tạo, sửa, xóa role |
 | | `customers:read`, `customers:manage` | Xem thông tin khách; khóa/mở tài khoản khách |
 | | `audit-logs:read` | Xem nhật ký thao tác |
-| catalog | `products:read`, `products:write`, `inventory:write` | Xem sản phẩm ẩn; sửa sản phẩm; sửa tồn kho |
+| catalog | `products:read`, `products:write` | Xem sản phẩm ẩn; sửa sản phẩm |
 | commerce | `orders:read`, `orders:update-status`, `orders:cancel` | Xem; cập nhật trạng thái; hủy đơn |
 | | `payments:read`, `payments:reconcile` | Xem giao dịch; khớp tay giao dịch SePay không tự khớp được |
 | | `reviews:moderate` | Ẩn, hiện review |
@@ -79,7 +79,7 @@ Danh mục này mở rộng khi viết spec các module sau. Thêm quyền mới
 | `customers:read` | ✓ | ✓ | ✓ |
 | `customers:manage` | ✓ | | |
 | `products:read` | ✓ | ✓ | ✓ |
-| `products:write`, `inventory:write` | ✓ | | |
+| `products:write` | ✓ | | |
 | `orders:read` | ✓ | ✓ | ✓ |
 | `orders:update-status`, `orders:cancel`, `orders:fulfill` | ✓ | ✓ | |
 | `payments:read`, `payments:reconcile` | ✓ | ✓ | |

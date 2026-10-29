@@ -44,6 +44,26 @@ internal static class ApplicationDatabaseSchema
     // Bảng của activity-tracking cũng không có trong `reference-schema.sql`, nên phép so với file đó phải bỏ qua nó. Module không có enum.
     internal static readonly string[] ActivityTrackingTables = ["daily_counters"];
 
+    // Bảng và enum của support-desk cũng không có trong `reference-schema.sql`, nên phép so với file đó phải bỏ qua chúng.
+    internal static readonly string[] SupportDeskTables =
+    [
+        "callback_requests", "canned_responses", "staff_presence", "support_conversations", "support_messages",
+        "support_sessions", "support_settings"
+    ];
+
+    internal static readonly string[] SupportDeskEnums =
+    [
+        "SupportConversationStatus", "SupportMessageRole", "CallbackRequestStatus", "StaffPresenceStatus"
+    ];
+
+    // Khóa metadata thuộc support-desk có cùng dạng với khóa của commerce. Khớp theo ranh giới tên, không theo tiền tố.
+    internal static bool IsSupportDeskObject(string key)
+    {
+        return SupportDeskTables.Any(table => key.EndsWith($":public.{table}", StringComparison.Ordinal) ||
+                                              key.Contains($":public.{table}.", StringComparison.Ordinal)) ||
+               SupportDeskEnums.Any(name => key.EndsWith($":public.{name}", StringComparison.Ordinal));
+    }
+
     // Khóa metadata thuộc activity-tracking có cùng dạng với khóa của commerce. Khớp theo ranh giới tên, không theo tiền tố.
     internal static bool IsActivityTrackingObject(string key)
     {

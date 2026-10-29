@@ -132,6 +132,7 @@ public sealed record CreateProductRequest(
 }
 
 // Yêu cầu khai báo hoặc cập nhật thông tin của một biến thể sản phẩm.
+// `Stock` là số lượng đích. Bỏ trống nghĩa là giữ nguyên tồn kho hiện tại.
 public sealed record ProductVariantRequest(
     IReadOnlyDictionary<string, string>? OptionValues = null,
     string? Code = null,
@@ -141,9 +142,10 @@ public sealed record ProductVariantRequest(
     int? WeightGrams = null,
     int? LengthCm = null,
     int? WidthCm = null,
-    int? HeightCm = null)
+    int? HeightCm = null,
+    int? Stock = null)
 {
-    // Bắt trường tồn kho gửi kèm để từ chối vì quyền ghi kho thuộc nghiệp vụ riêng.
+    // Giữ các trường ngoài mô hình để phát hiện tên trường viết sai.
     [JsonExtensionData]
     public Dictionary<string, JsonElement>? ExtensionData { get; init; }
 }

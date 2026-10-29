@@ -6,6 +6,7 @@ public sealed record BrandResponse(
     string Name,
     string Slug,
     string? LogoPublicId,
+    string? LogoUrl,
     DateTime CreatedAt,
     DateTime UpdatedAt);
 

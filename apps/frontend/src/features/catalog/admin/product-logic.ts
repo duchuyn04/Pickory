@@ -23,8 +23,9 @@ export interface ProductVariant {
   // Ô nhập giá trong form cho phép để trống chuỗi rỗng khi vừa thêm tổ hợp mới.
   price: number | string;
   compareAtPrice?: number | string | null;
-  // Số lượng tồn kho chỉ dùng hiển thị tham khảo, không gửi lên API chỉnh sửa sản phẩm.
+  // Số lượng tồn kho hiện tại. `stockEdited` cho biết admin đã sửa ô này nên payload mới gửi `stock`.
   stock?: number;
+  stockEdited?: boolean;
   enabled: boolean;
   weightGrams?: number | string | null;
   lengthCm?: number | string | null;
@@ -38,6 +39,8 @@ export interface ProductVariantRequest {
   code?: string | null;
   price: number;
   compareAtPrice?: number | null;
+  // Chỉ gửi khi admin sửa ô số lượng. Bỏ trống để máy chủ giữ nguyên tồn kho hiện tại.
+  stock?: number;
   enabled: boolean;
   weightGrams?: number | null;
   lengthCm?: number | null;
@@ -135,6 +138,8 @@ export function mergeProductVariants(
         price: existing.price !== undefined ? existing.price : '',
         compareAtPrice: existing.compareAtPrice !== undefined ? existing.compareAtPrice : null,
         stock: existing.stock ?? 0,
+        // Giữ cờ đã sửa để lần gửi form vẫn gửi số đích. Biến thể chưa sửa không có khóa này.
+        ...(existing.stockEdited ? { stockEdited: true } : {}),
         enabled: existing.enabled ?? true,
         weightGrams: existing.weightGrams !== undefined ? existing.weightGrams : null,
         lengthCm: existing.lengthCm !== undefined ? existing.lengthCm : null,
@@ -216,12 +221,14 @@ export function toProductVariantRequest(variant: ProductVariant): ProductVariant
   const priceNumber =
     typeof variant.price === 'number' ? variant.price : Number(variant.price) || 0;
 
-  // Tạo payload loại trừ hoàn toàn trường tồn kho vì lý do phân quyền kho vận.
+  // Chỉ gửi `stock` khi admin sửa ô số lượng. Bỏ trống để máy chủ giữ nguyên số hiện tại.
+  const stockRequest = variant.stockEdited ? { stock: variant.stock ?? 0 } : {};
   return {
     optionValues: variant.optionValues,
     code: variant.code && variant.code.trim().length > 0 ? variant.code.trim() : null,
     price: priceNumber,
     compareAtPrice: parseOptionalNumber(variant.compareAtPrice),
+    ...stockRequest,
     enabled: variant.enabled ?? true,
     weightGrams: parseOptionalNumber(variant.weightGrams),
     lengthCm: parseOptionalNumber(variant.lengthCm),

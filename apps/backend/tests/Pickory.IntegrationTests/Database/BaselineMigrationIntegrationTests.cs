@@ -9,6 +9,7 @@ using Pickory.Modules.Catalog.Persistence;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Identity.Persistence;
 using Pickory.Modules.Shipping.Persistence;
+using Pickory.Modules.SupportDesk.Persistence;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Database;
@@ -17,14 +18,15 @@ namespace Pickory.IntegrationTests.Database;
 public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFactory factory)
     : IClassFixture<PickoryWebApplicationFactory>
 {
-    private static readonly string[] HistorySchemas = ["ef_identity", "ef_catalog", "ef_shipping", "ef_commerce", "ef_activity_tracking"];
+    private static readonly string[] HistorySchemas = ["ef_identity", "ef_catalog", "ef_shipping", "ef_commerce", "ef_activity_tracking", "ef_support_desk"];
 
     [Theory]
     [InlineData("identity", "ef_identity", "20261019190331_RemoveAiPermissions")]
-    [InlineData("catalog", "ef_catalog", "20261013124840_EnableUnaccentExtension")]
+    [InlineData("catalog", "ef_catalog", "20261027074126_SoftDeleteProducts")]
     [InlineData("shipping", "ef_shipping", "20261019123657_AddShippingQuoteCache")]
     [InlineData("commerce", "ef_commerce", "20261019144909_AddOrderShippingFeeSource")]
     [InlineData("activity-tracking", "ef_activity_tracking", "20261020093013_InitialActivityTracking")]
+    [InlineData("support-desk", "ef_support_desk", "20261026031746_SupportConversationOwnerIndexes")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(
         string module, string historySchema, string migrationId)
     {
@@ -37,6 +39,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
             "shipping" => scope.ServiceProvider.GetRequiredService<ShippingDbContext>(),
             "commerce" => scope.ServiceProvider.GetRequiredService<CommerceDbContext>(),
             "activity-tracking" => scope.ServiceProvider.GetRequiredService<ActivityTrackingDbContext>(),
+            "support-desk" => scope.ServiceProvider.GetRequiredService<SupportDeskDbContext>(),
             _ => throw new ArgumentOutOfRangeException(nameof(module))
         };
         DotnetSchemaIntegrationTests.AssertTestConnection(context);
@@ -129,6 +132,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
             "shipping" => ApplicationDatabaseSchema.ShippingTables,
             "commerce" => ApplicationDatabaseSchema.CommerceTables,
             "activity-tracking" => ApplicationDatabaseSchema.ActivityTrackingTables,
+            "support-desk" => ApplicationDatabaseSchema.SupportDeskTables,
             _ => throw new ArgumentOutOfRangeException(nameof(module))
         };
         var enums = module switch
@@ -137,6 +141,7 @@ public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFacto
             "catalog" => new[] { "ProductStatus", "InventoryMovementType" },
             "shipping" => ApplicationDatabaseSchema.ShippingEnums,
             "commerce" => ApplicationDatabaseSchema.CommerceEnums,
+            "support-desk" => ApplicationDatabaseSchema.SupportDeskEnums,
             _ => Array.Empty<string>()
         };
         // Ranh giới tên ngăn `users` vô tình khớp bảng có tiền tố tương tự.

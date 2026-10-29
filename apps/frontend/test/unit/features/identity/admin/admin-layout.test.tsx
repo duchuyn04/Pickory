@@ -93,7 +93,7 @@ describe('AdminLayout', () => {
     const groupLabels = Array.from(container.querySelectorAll('nav [data-nav-group-label]')).map(
       (label) => label.textContent,
     );
-    expect(groupLabels).toEqual(['Bán hàng', 'Sản phẩm', 'Hệ thống']);
+    expect(groupLabels).toEqual(['Bán hàng', 'Sản phẩm', 'Báo cáo', 'Hệ thống']);
     expect(navLabels()).toEqual([
       'Tổng quan',
       'Đơn hàng',
@@ -102,9 +102,11 @@ describe('AdminLayout', () => {
       'CSKH',
       'Đánh giá',
       'Sản phẩm',
-      'Tồn kho',
       'Danh mục',
       'Thương hiệu',
+      'Báo cáo tổng quan',
+      'Doanh thu thương hiệu',
+      'Doanh thu theo kỳ',
       'Nhân viên',
       'Quản lý Role',
       'Vận chuyển',
@@ -149,7 +151,6 @@ describe('AdminLayout', () => {
       'Đơn hàng',
       'Khách hàng',
       'Sản phẩm',
-      'Tồn kho',
       'Danh mục',
       'Thương hiệu',
     ]);
@@ -166,21 +167,15 @@ describe('AdminLayout', () => {
     expect(navLink('Danh mục').getAttribute('aria-current')).toBeNull();
   });
 
-  it('trang tồn kho của một SKU đánh dấu mục Tồn kho thay cho mục Sản phẩm', async () => {
-    await renderLayout(adminActor, '/admin/products/abc/skus/xyz/inventory');
-    expect(navLink('Tồn kho').getAttribute('aria-current')).toBe('page');
-    expect(navLink('Sản phẩm').getAttribute('aria-current')).toBeNull();
-  });
-
-  it('danh sách tồn kho chỉ đánh dấu mục Tồn kho', async () => {
-    await renderLayout(adminActor, '/admin/inventory');
-    expect(navLink('Tồn kho').getAttribute('aria-current')).toBe('page');
-    expect(navLink('Sản phẩm').getAttribute('aria-current')).toBeNull();
-  });
-
   it('chỉ đánh dấu Tổng quan khi đang ở trang tổng quan', async () => {
     await renderLayout(adminActor, '/admin');
     expect(navLink('Tổng quan').getAttribute('aria-current')).toBe('page');
+  });
+
+  it('đánh dấu đúng mục báo cáo đang mở', async () => {
+    await renderLayout(adminActor, '/admin/reports/revenue/brands');
+    expect(navLink('Doanh thu thương hiệu').getAttribute('aria-current')).toBe('page');
+    expect(navLink('Doanh thu theo kỳ').getAttribute('aria-current')).toBeNull();
   });
 
   it('khối người dùng hiện tên, role và nút đăng xuất có nhãn truy cập', async () => {

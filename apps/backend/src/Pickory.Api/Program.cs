@@ -10,6 +10,8 @@ using Pickory.Modules.Catalog.Seeding;
 using Pickory.Modules.Commerce;
 using Pickory.Modules.Identity;
 using Pickory.Modules.Shipping;
+using Pickory.Modules.SupportDesk;
+using Pickory.Modules.AdminConsole;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.DependencyInjection;
 using Pickory.Shared.Email;
@@ -58,6 +60,7 @@ if (isBenchmarkCommand)
 if (isBenchmarkCommand
     || CatalogModule.IsCatalogSeedCommand(args)
     || ShippingModule.IsShippingCommand(args)
+    || CommerceModule.IsDemoOrdersCommand(args)
     || DatabaseMigrationCommand.IsCommand(args))
 {
     builder.Logging.ClearProviders();
@@ -94,6 +97,9 @@ builder.Services.AddShippingModule(databaseConnectionString, config, builder.Env
 builder.Services.AddCommerceModule(databaseConnectionString, config, builder.Environment.IsProduction());
 // ActivityTracking chỉ cần chuỗi kết nối, vì module không có biến cấu hình bắt buộc.
 builder.Services.AddActivityTrackingModule(databaseConnectionString);
+// SupportDesk chỉ cần chuỗi kết nối ở bước đăng ký này, vì module chưa có biến cấu hình bắt buộc.
+builder.Services.AddSupportDeskModule(databaseConnectionString);
+builder.Services.AddAdminConsoleModule();
 
 // Development luôn có tài liệu. Môi trường khác chỉ sinh tài liệu khi `API_DOCS_ENABLED` bật, vì tài liệu liệt kê cả route admin.
 var apiDocumentationMode = ApiDocumentation.SelectMode(
@@ -140,6 +146,18 @@ if (ShippingModule.IsShippingCommand(args))
     return await ShippingModule.RunShippingCommandAsync(app.Services);
 }
 
+// Lệnh `commerce:demo-orders` tạo hoặc xóa đơn mẫu cho báo cáo trên DB dev. Lệnh chạy xong thì thoát.
+if (CommerceModule.IsDemoOrdersCommand(args))
+{
+    return await CommerceModule.RunDemoOrdersCommandAsync(
+        app.Services,
+        args,
+        builder.Environment.IsProduction(),
+        Console.Out,
+        Console.Error,
+        CancellationToken.None);
+}
+
 // Lệnh `db:migrate` áp migration rồi thoát. Lệnh không mở cổng mạng và không chạy worker nền.
 if (DatabaseMigrationCommand.IsCommand(args))
 {
@@ -179,6 +197,8 @@ if (E2eStartup.IsCommand(args))
 }
 app.MapCommerceEndpoints();
 app.MapActivityTrackingEndpoints();
+app.MapSupportDeskEndpoints();
+app.MapAdminConsoleEndpoints();
 
 // Lệnh benchmark cần đủ route để đo `GET /api/products`, nên chạy sau khi route đã gắn.
 if (isBenchmarkCommand)

@@ -486,6 +486,8 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
     public async Task Delete_WithOrderReserveMovement_SoftDeletesAndRestoreKeepsEverything()
     {
         var productId = await SeedProductAsync(ProductStatus.Active, imageCount: 2);
+        // Route công khai tra theo slug. `SeedProductAsync` đặt slug theo id, nên test dựng lại cùng chuỗi.
+        var productSlug = $"trang-thai-{productId}";
         await AddMovementAsync(productId, InventoryMovementType.Manual, null);
         await AddMovementAsync(productId, InventoryMovementType.OrderReserve, $"order-{_suffix}");
 
@@ -505,7 +507,7 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
         Assert.Equal(ProductChange.Deleted, Assert.Single(EventsOf(productId)).Change);
 
         // Sản phẩm xóa mềm không xuất hiện công khai và không được đổi trạng thái cho tới khi khôi phục.
-        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"/api/products/{productId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"/api/products/{productSlug}")).StatusCode);
         await AssertErrorAsync(await ChangeStatusAsync(productId, new { status = "hidden" }), HttpStatusCode.Conflict, "PRODUCT_DELETED");
 
         var restoreResponse = await RestoreAsync(productId);
@@ -514,7 +516,7 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
         Assert.True(restoreResponse.StatusCode == HttpStatusCode.OK, $"Mong đợi 200, nhận {restoreResponse.StatusCode}: {restoreBody}");
         using var restoration = JsonDocument.Parse(restoreBody);
         Assert.Equal(JsonValueKind.Null, restoration.RootElement.GetProperty("data").GetProperty("deletedAt").ValueKind);
-        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync($"/api/products/{productId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync($"/api/products/{productSlug}")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await ChangeStatusAsync(productId, new { status = "hidden" })).StatusCode);
         Assert.Equal([ProductChange.Deleted, ProductChange.Status, ProductChange.Status], EventsOf(productId).Select(item => item.Change));
     }

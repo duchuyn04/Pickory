@@ -29,7 +29,7 @@ export const skuSilver256: ProductSkuInfo = {
   price: 21_000_000,
   compareAtPrice: 25_000_000,
   inStock: true,
-  stock: 3,
+  stock: 4,
 };
 export const skuSilver512: ProductSkuInfo = {
   id: 'sku-silver-512',
@@ -38,7 +38,7 @@ export const skuSilver512: ProductSkuInfo = {
   price: 26_000_000,
   compareAtPrice: null,
   inStock: true,
-  stock: 8,
+  stock: 7,
 };
 
 export const imageBlack = {

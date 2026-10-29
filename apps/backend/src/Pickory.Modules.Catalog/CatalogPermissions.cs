@@ -9,6 +9,5 @@ public static class CatalogPermissions
     [
         Permissions.ProductsRead,
         Permissions.ProductsWrite,
-        Permissions.InventoryWrite,
     ];
 }

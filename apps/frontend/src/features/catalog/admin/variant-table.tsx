@@ -1,11 +1,10 @@
-import { Link } from 'react-router-dom';
 import { MoneyInput } from '../../../shared/money-input';
 import { toCombinationKey, type ProductVariant } from './product-logic';
 
 interface VariantTableProps {
-  // Có mã sản phẩm thì SKU đã lưu có liên kết tới màn tồn kho. Sản phẩm mới chưa có mã nên không có liên kết.
-  productId?: string;
   variants: ProductVariant[];
+  // Số lượng mới nhất từ luồng realtime, theo mã SKU. Ô chưa bị sửa hiện số này.
+  liveStockBySku: Record<string, number>;
   disabled: boolean;
   priceErrors: Record<string, string>;
   onChange: (variants: ProductVariant[]) => void;
@@ -28,8 +27,8 @@ function toMoneyValue(value: number | string | null | undefined): number | null 
 
 // Bảng dùng cùng khóa tổ hợp với form để gắn lỗi giá đúng SKU.
 export function VariantTable({
-  productId,
   variants,
+  liveStockBySku,
   disabled,
   priceErrors,
   onChange,
@@ -47,7 +46,7 @@ export function VariantTable({
   return (
     <section className="card product-section">
       <h2>Biến thể</h2>
-      <p>Tồn kho chỉ xem. Điều chỉnh tồn kho ở màn tồn kho với lý do và nhật ký.</p>
+      <p>Số lượng bán được của từng biến thể. Đơn hàng mới tự trừ số này.</p>
       <div className="table-wrap product-table-scroll">
         <table className="tbl product-table">
           <thead>
@@ -55,7 +54,7 @@ export function VariantTable({
               <th scope="col">Tổ hợp</th>
               <th scope="col">Mã SKU</th>
               <th scope="col">Giá bán</th>
-              <th scope="col">Tồn kho</th>
+              <th scope="col">Số lượng</th>
               <th scope="col">Trạng thái</th>
               {numericColumns.map((column) => (
                 <th scope="col" key={column.field}>
@@ -70,6 +69,10 @@ export function VariantTable({
               const combinationKey = toCombinationKey(variant.optionValues);
               const combinationName = Object.values(variant.optionValues).join(' / ') || 'Mặc định';
               const priceError = priceErrors[combinationKey];
+              // Ô chưa bị sửa hiện số mới nhất từ luồng realtime. Ô đã sửa giữ giá trị admin đang nhập.
+              const liveStock =
+                !variant.stockEdited && variant.id ? liveStockBySku[variant.id] : undefined;
+              const stockValue = liveStock ?? variant.stock ?? 0;
               const priceErrorId = `variant-price-${index}-error`;
               return (
                 <tr key={combinationKey} data-variant-row>
@@ -106,19 +109,23 @@ export function VariantTable({
                       </span>
                     )}
                   </td>
-                  {/* Tồn kho chỉ đọc vì chỉnh tồn phải qua nghiệp vụ ghi nhận lý do. */}
+                  {/* Sửa số lượng thì payload gửi số đích. Bỏ sửa thì máy chủ giữ nguyên tồn kho. */}
                   <td>
-                    {variant.stock ?? 0}
-                    {/* SKU chưa lưu chưa có id từ máy chủ nên chưa có trang tồn kho. */}
-                    {productId && variant.id && (
-                      <Link
-                        className="cell-link"
-                        aria-label={`Tồn kho ${combinationName}`}
-                        to={`/admin/products/${productId}/skus/${variant.id}/inventory`}
-                      >
-                        Tồn kho
-                      </Link>
-                    )}
+                    <input
+                      aria-label={`Số lượng ${combinationName}`}
+                      name={`variant-stock-${index}`}
+                      type="number"
+                      min={0}
+                      step={1}
+                      value={stockValue}
+                      disabled={disabled}
+                      onChange={(event) => {
+                        // Ô trống được hiểu là 0, để admin xóa hết số cũ rồi nhập số mới.
+                        const nextStock =
+                          event.target.value === '' ? 0 : Number(event.target.value);
+                        updateVariant(index, { stock: nextStock, stockEdited: true });
+                      }}
+                    />
                   </td>
                   <td>
                     <label className="check">

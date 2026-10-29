@@ -96,7 +96,7 @@ public sealed class AdminRolesTests : IClassFixture<PickoryWebApplicationFactory
         var response = await SendAsync(
             HttpMethod.Post,
             "/api/admin/roles",
-            new { code = $"  {code}  ", name = " Quản lý kho ", permissions = new[] { Permissions.ProductsRead, Permissions.InventoryWrite, Permissions.ProductsRead } },
+            new { code = $"  {code}  ", name = " Quản lý kho ", permissions = new[] { Permissions.ProductsRead, Permissions.ProductsWrite, Permissions.ProductsRead } },
             adminSession);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
@@ -106,7 +106,7 @@ public sealed class AdminRolesTests : IClassFixture<PickoryWebApplicationFactory
         Assert.Equal(code.ToLowerInvariant(), role.GetProperty("code").GetString());
         Assert.Equal("Quản lý kho", role.GetProperty("name").GetString());
         Assert.False(role.GetProperty("isSystem").GetBoolean());
-        Assert.Equal([Permissions.InventoryWrite, Permissions.ProductsRead], role.GetProperty("permissions").EnumerateArray().Select(permission => permission.GetString()));
+        Assert.Equal([Permissions.ProductsRead, Permissions.ProductsWrite], role.GetProperty("permissions").EnumerateArray().Select(permission => permission.GetString()));
         Assert.Equal(0, role.GetProperty("userCount").GetInt32());
 
         // Nhật ký ghi người tạo và bộ quyền sau khi tạo.

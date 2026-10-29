@@ -28,15 +28,19 @@ import {
 } from './order-badges';
 import './admin-orders.css';
 
-// Người làm của một lần đổi trạng thái. Chỉ có mã người dùng nên rút gọn 8 ký tự, mã đầy đủ nằm ở `title`.
-function HistoryActor({ actorId }: { actorId: string | null }) {
+// Người làm của một lần đổi trạng thái. Backend trả tên nhân viên; mã đầy đủ nằm trong `title` để đối chiếu.
+function HistoryActor({ actorId, actorName }: { actorId: string | null; actorName: string | null }) {
   // `null` nghĩa là hệ thống hoặc khách vãng lai chuyển, không có nhân viên nào đứng tên.
   if (actorId === null) return <span>Hệ thống</span>;
-  return (
-    <span className="mono" title={actorId}>
-      Nhân viên {actorId.slice(0, 8)}
-    </span>
-  );
+  // Tài khoản đã xóa hoặc ngoài danh mục nhân viên thì lùi về mã rút gọn.
+  if (!actorName) {
+    return (
+      <span className="mono" title={actorId}>
+        Nhân viên {actorId.slice(0, 8)}
+      </span>
+    );
+  }
+  return <span title={actorId}>{actorName}</span>;
 }
 
 // Sắp lịch sử theo thời điểm tăng dần để đọc từ lúc đặt đơn tới hiện tại.
@@ -173,7 +177,7 @@ export function AdminOrderDetailPage() {
           )}
           {order.flags.length > 0 && (
             <div>
-              <dt>Cờ đơn</dt>
+              <dt>Ghi chú</dt>
               <dd>
                 <div className="row-actions">
                   {order.flags.map((flag) => (
@@ -247,11 +251,19 @@ export function AdminOrderDetailPage() {
                     {history.map((entry, index) => (
                       <tr key={`${entry.createdAt}-${index}`}>
                         <td className="order-time">{formatVietnamDateTime(entry.createdAt)}</td>
-                        <td>{formatOrderStatus(entry.fromStatus)}</td>
-                        <td>{formatOrderStatus(entry.toStatus)}</td>
+                        <td>
+                          <span className={orderStatusBadgeClass(entry.fromStatus)}>
+                            {formatOrderStatus(entry.fromStatus)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={orderStatusBadgeClass(entry.toStatus)}>
+                            {formatOrderStatus(entry.toStatus)}
+                          </span>
+                        </td>
                         <td className="wrap-anywhere">{entry.reason ?? ''}</td>
                         <td>
-                          <HistoryActor actorId={entry.actorId} />
+                          <HistoryActor actorId={entry.actorId} actorName={entry.actorName} />
                         </td>
                       </tr>
                     ))}

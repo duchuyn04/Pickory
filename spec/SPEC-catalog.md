@@ -4,7 +4,9 @@ Module id: `catalog` · Phụ thuộc: `identity` · Quy ước chung: `SPEC.md`
 
 ## Objective
 
-Quản lý và hiển thị sản phẩm điện tử: danh mục, thương hiệu, thông số kỹ thuật theo từng danh mục, biến thể (SKU), ảnh và tồn kho. Đây là nguồn dữ liệu sản phẩm duy nhất. `commerce` lấy giá và giữ hàng từ đây.
+Quản lý và hiển thị sản phẩm điện tử: danh mục, thương hiệu, thông số kỹ thuật theo từng danh mục, biến thể (SKU) và ảnh. Đây là nguồn dữ liệu sản phẩm duy nhất. `commerce` lấy giá từ đây.
+
+Tồn kho nằm trong `catalog`: một số bán được cho mỗi SKU. Ngày 2026-10-27 người dùng bỏ hướng tách module `inventory`, xem mục "Tồn kho".
 
 **User stories**
 
@@ -17,12 +19,12 @@ Quản lý và hiển thị sản phẩm điện tử: danh mục, thương hi�
 *Quản trị viên (hoặc role có `products:write`)*
 - Tôi tạo danh mục và định nghĩa bộ thông số cho danh mục đó (laptop có CPU, RAM, GPU; tai nghe có kiểu kết nối, thời lượng pin...).
 - Tôi tạo sản phẩm, form tự hiện đúng các ô thông số của danh mục đã chọn.
-- Tôi khai báo các tùy chọn (dung lượng, màu), hệ thống sinh sẵn các biến thể để tôi điền giá và tồn kho.
+- Tôi khai báo các tùy chọn (dung lượng, màu), hệ thống sinh sẵn các biến thể để tôi điền giá và số lượng.
 - Tôi tải ảnh lên, sắp xếp thứ tự, gắn ảnh cho từng màu.
 - Tôi lưu nháp rồi mới đăng bán, ẩn tạm hoặc ngừng kinh doanh một sản phẩm.
 
-*Role có `inventory:write`*
-- Tôi điều chỉnh tồn kho kèm lý do, và xem lịch sử nhập xuất của từng SKU.
+*Role có `products:write`*
+- Tôi sửa số lượng trong form sản phẩm.
 
 *Nhân viên `sales`, `support` (có `products:read`)*
 - Tôi xem được cả sản phẩm nháp và đã ẩn để trả lời khách, nhưng không sửa được.
@@ -84,41 +86,17 @@ export type AttributeDefinition = {
 
 ### Tồn kho
 
-- MVP có 1 kho. Tồn kho theo từng SKU.
-- Mọi thay đổi tồn kho ghi vào `inventory_movements` (SKU, số lượng thay đổi, loại, người làm hoặc mã đơn, lý do, thời điểm). Tồn kho hiện tại phải bằng tổng các movement.
-- Điều chỉnh tay cần quyền `inventory:write` và bắt buộc nhập lý do.
-- Ngưỡng sắp hết hàng mặc định là 5, hiện cảnh báo trong trang quản lý.
+Ngày 2026-10-27 người dùng bỏ hướng tách module `inventory`. Tồn kho nằm trong `catalog` với một số bán được cho mỗi SKU (`skus.stock`). `SPEC-inventory.md` giữ làm nghiên cứu, không triển khai.
 
-**Interface giữ hàng cho `commerce`:**
-
-Interface nằm trong project `Pickory.Modules.Catalog.Contracts` (thư mục `Stock/`). Module `commerce` gọi qua `IStockService`.
-
-```csharp
-public interface IStockService
-{
-    // Giữ hàng cho đơn. Tất cả hoặc không: thiếu 1 SKU thì không giữ SKU nào.
-    Task<ReserveResult> ReserveAsync(
-        string orderId, IReadOnlyList<StockItem> items, StockCallerTransaction? caller, CancellationToken cancellationToken);
-
-    // Trả lại hàng đã giữ (đơn hủy, quá hạn thanh toán). Gọi lặp lại không trả hàng 2 lần.
-    Task ReleaseAsync(string orderId, StockCallerTransaction? caller, CancellationToken cancellationToken);
-}
-
-public sealed record StockItem(string SkuId, int Quantity);
-public sealed record StockShortage(string SkuId, int Requested, int Available);
-public sealed record ReserveResult(bool Ok, IReadOnlyList<StockShortage> Shortages);
-
-// Transaction của bên gọi. Catalog ghi trong transaction này và gom StockChangedEvent vào Events.
-public sealed record StockCallerTransaction(DbTransaction Transaction, DomainEventCollector Events);
-```
-
-- `caller` bằng `null`: catalog tự mở transaction và tự phát sự kiện sau commit.
-- `caller` có giá trị: bên gọi tự commit rồi gọi `Events.FlushAsync`. Bên gọi rollback thì gọi `Events.Discard`, và không có sự kiện nào được phát.
-- `Quantity` phải lớn hơn 0. Mục trùng `SkuId` được cộng số lượng. Số lượng không dương làm `ReserveAsync` ném `ArgumentException`.
-- `reserve` khóa dòng SKU theo thứ tự `id`, kiểm đủ hàng rồi mới ghi, và dùng câu lệnh cập nhật có điều kiện (`stock + delta >= 0`). Thiếu hàng thì catalog chưa ghi gì, nên 2 người mua cùng lúc không bán vượt tồn kho.
-- `reserve` và `release` idempotent theo `orderId`. Đầu mỗi hàm lấy khóa `pg_advisory_xact_lock` theo `orderId`, nên hai lời gọi cùng đơn chạy nối tiếp.
-- Đơn đã `release` mà gọi `reserve` lại cùng `orderId` nhận `Ok` nhưng không giữ hàng, vì đã có movement `order_reserve`. Module `commerce` phải dùng `orderId` mới khi đặt lại.
-- Hàng đã giao không cần bước riêng: khi đã giữ thì tồn kho đã trừ. Đổi trả hàng nhập lại bằng điều chỉnh tay (loại `return`).
+- `skus.stock` là số bán được. Đặt đơn giữ hàng ngay, nên số này giảm trong transaction tạo đơn.
+- Cột `products.inStock` và `products.minPrice` là giá trị tính sẵn từ `skus.stock`, cập nhật trong cùng transaction khi số lượng hoặc biến thể đổi.
+- `StockLedger.ApplyAsync` là nơi duy nhất ghi `skus.stock`. Mọi thay đổi ghi thêm một dòng `inventory_movements` và audit log.
+- Admin sửa số lượng trong form sản phẩm. `ProductVariantRequest.Stock` là số đích; bỏ trống nghĩa là giữ nguyên tồn kho hiện tại.
+- Chỉ gửi `stock` khi admin thật sự sửa ô. Sửa giá hoặc thông tin khác không ghi đè hàng vừa bị đơn khác giữ.
+- `StockChangedEvent(ProductId, SkuId, Stock, PreviousStock, ProductInStock, ProductMinPrice)` phát sau commit.
+- `GET /api/stock-events` trả SSE. Mỗi sự kiện `stock.changed` có `productId`, `skuId`, `stock`, `productInStock`, `minPrice`.
+- Trang khách hiện số còn lại của SKU đang chọn. Thẻ sản phẩm và trang quản lý sản phẩm cập nhật khi nhận sự kiện.
+- API điều chỉnh và lịch sử tồn kho riêng đã xóa. Mọi thao tác quản trị đi qua `PATCH /api/admin/products/{id}` với trường `stock` của biến thể.
 
 ### Interface đọc cho các module khác
 
@@ -140,6 +118,8 @@ export { onStockChanged } from './events';     // { skuId, stock, previousStock 
 export { catalogPermissions } from './permissions';
 ```
 
+- Ngày 2026-10-27 tồn kho ở lại `catalog`: `ICatalogReader.CountLowStockAsync` và `StockChangedEvent` giữ nguyên. `SkuSnapshot.Stock` đọc từ `skus.stock`.
+
 - Ngày 2026-10-14 người dùng bỏ `smart-search` và `recommendations`, là hai module từng nghe `onProductChanged`. Hiện chưa có module nào nghe sự kiện này. Catalog vẫn phát sự kiện cho module sau này dùng.
 - `ListForIndexingAsync` của bản .NET chỉ phục vụ `smart-search`. `knowledge-base` và các module còn lại không dùng hàm này. Hàm không còn cần. Xóa code của hàm ở một task sau.
 - `ProductFilters` của bản .NET có thêm trường `Query`: từ khóa, cùng ý nghĩa với tham số `q` của `GET /api/products`. Người dùng duyệt đổi Contracts này ngày 2026-10-14, khi bỏ `smart-search`. Tool `search_products` của `shopping-assistant` dùng trường này.
@@ -149,6 +129,9 @@ export { catalogPermissions } from './permissions';
 
 - Trình duyệt tải ảnh thẳng lên Cloudinary bằng chữ ký do backend cấp (`POST /api/admin/uploads/signature`, cần `products:write`). Ảnh không đi qua server API.
 - Chữ ký ký cả `folder=pickory/products` và `allowed_formats=jpg,png,webp`. Phản hồi không chứa `CLOUDINARY_API_SECRET`.
+- Logo thương hiệu dùng `POST /api/admin/uploads/brand-logo/signature`, cần `products:write`. Chữ ký khóa `folder=pickory/brands`.
+- Form thương hiệu chỉ nhận file JPG, PNG hoặc WebP, tối đa 5 MB. Không nhập URL hoặc `logoPublicId` thủ công.
+- `GET /api/brands` trả thêm `logoUrl` để hiển thị logo. `logoPublicId` vẫn là giá trị được lưu khi tạo hoặc sửa thương hiệu.
 - Backend chỉ lưu `publicId`, alt text, thứ tự, và biến thể gắn với ảnh (nếu có).
 - Ảnh gửi kèm trường `images` của `POST` và `PATCH /api/admin/products`. Thứ tự trong danh sách là thứ tự hiển thị. `PATCH` không gửi `images` thì giữ ảnh cũ.
 - Mỗi ảnh trong phản hồi sản phẩm có `url` giao ảnh gốc. Giao diện chèn `f_auto,q_auto,w_<rộng>` sau `/image/upload/` để lấy ảnh vừa kích thước.
@@ -211,19 +194,19 @@ sort=newest|price_asc|price_desc                     page=1  pageSize=24 (tối 
 
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
-| GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, kể cả sản phẩm xóa mềm. Tìm theo tên hoặc SKU. Lọc bằng `status`, `categoryId` (gồm danh mục con), `lowStock=true` (SKU bật có `stock <= 5`). |
+| GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, kể cả sản phẩm xóa mềm. Tìm theo tên hoặc SKU. Lọc bằng `status`, `categoryId` (gồm danh mục con), `lowStock=true` (sản phẩm có SKU đang bật với `stock` từ 5 trở xuống). |
 | GET | `/api/admin/products/:id` | `products:read` | Chi tiết để sửa, kể cả khi đang xóa mềm |
 | POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể, ảnh (`images`). Sửa sản phẩm xóa mềm trả 409 `PRODUCT_DELETED`. |
 | PUT | `/api/admin/products/:id/status` | `products:write` | Đặt trạng thái của sản phẩm. Body `{ "status": "draft" \| "active" \| "hidden" \| "discontinued" }`. Lỗi: 400 `VALIDATION_ERROR`, 404 `PRODUCT_NOT_FOUND`, 409 `INVALID_STATUS_TRANSITION` hoặc `PRODUCT_DELETED`, 422 `PRODUCT_NOT_PUBLISHABLE` (danh sách lý do trong `details`). Đổi sang đúng trạng thái hiện tại trả 200, không ghi audit. |
-| DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng khi chưa có đơn; xóa mềm khi đã có đơn. Trả `outcome` là `hard_deleted` hoặc `soft_deleted`. |
+| DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng khi chưa có đơn; xóa mềm khi đã có đơn. Trả 200 kèm `outcome` là `hard_deleted` hoặc `soft_deleted`. Lỗi: 404 `PRODUCT_NOT_FOUND`. |
 | POST | `/api/admin/products/:id/restoration` | `products:write` | Khôi phục sản phẩm xóa mềm, trả chi tiết đã mở khóa |
 | GET | `/api/admin/categories` | `products:read` | Danh sách phẳng, mỗi danh mục kèm đủ thuộc tính riêng |
 | POST · PATCH · DELETE | `/api/admin/categories[/:id]` | `products:write` | Quản lý danh mục và bộ thuộc tính |
 | POST · PATCH · DELETE | `/api/admin/brands[/:id]` | `products:write` | Quản lý thương hiệu |
 | POST | `/api/admin/uploads/signature` | `products:write` | Chữ ký tải ảnh lên Cloudinary: `cloudName`, `apiKey`, `uploadUrl`, `timestamp`, `folder`, `allowedFormats`, `maxFileBytes`, `signature` |
-| POST | `/api/admin/skus/:id/movements` | `inventory:write` | Điều chỉnh tồn kho bằng cách tạo một dòng biến động. Body `{ "delta": int, "reason": string, "type": "manual" \| "return" }`, `type` mặc định `manual`. `delta` khác 0, `reason` từ 1 đến 500 ký tự, `return` cần `delta` dương. Trả 201 với `skuId`, `stock` mới và `movement`. Lỗi: 400 `VALIDATION_ERROR`, 404 `SKU_NOT_FOUND`, 409 `INSUFFICIENT_STOCK` (tồn kho sẽ âm). |
-| GET | `/api/admin/skus/:id/movements` | `products:read` | Lịch sử tồn kho, mới nhất trước, phân trang `page` và `limit`. Mỗi dòng có `id`, `delta`, `type`, `orderId`, `actorId`, `reason`, `createdAt`. Lỗi: 404 `SKU_NOT_FOUND`. |
-| GET | `/api/admin/inventory/low-stock` | `products:read` | SKU đang bật có `stock <= 5`, sắp theo `stock` tăng dần rồi theo `code`, phân trang `page` và `limit`. Mỗi dòng có `skuId`, `code`, `productId`, `productName`, `optionValues`, `stock`. |
+| POST | `/api/admin/uploads/brand-logo/signature` | `products:write` | Chữ ký tải logo với `folder=pickory/brands`. Response có cùng các trường với chữ ký ảnh sản phẩm |
+
+Ba route tồn kho cũ (`POST` và `GET /api/admin/skus/:id/movements`, `GET /api/admin/inventory/low-stock`) đã xóa ngày 2026-10-27. Số lượng sửa qua `PATCH /api/admin/products/:id`. Route SSE công khai là `GET /api/stock-events`.
 
 ## Data Model (Prisma, rút gọn)
 
@@ -268,7 +251,7 @@ model Sku {
   optionValues   Json                  // { 'Dung lượng': '1TB', 'Màu': 'Đen' }
   price          Int
   compareAtPrice Int?
-  stock          Int      @default(0)  // CHECK (stock >= 0)
+  stock          Int      @default(0)  // số bán được, CHECK (stock >= 0)
   enabled        Boolean  @default(true)
   weightGrams    Int?                  // bắt buộc khi enabled = true
   lengthCm       Int?
@@ -279,11 +262,11 @@ model Sku {
 
 model ProductImage      { /* productId, skuId?, publicId, alt, position */ }
 model ProductSlugHistory { /* oldSlug @unique, productId */ }
-model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_release|return), orderId?, actorId?, reason, createdAt; @@unique([orderId, skuId, type]) */ }
+model InventoryMovement { /* bảng cũ, chỉ đọc từ ngày 2026-10-22: skuId, delta, type(manual|order_reserve|order_release|return), orderId?, actorId?, reason, createdAt */ }
 ```
 
 - Lọc theo thông số dùng chỉ mục GIN trên `products.specs`.
-- `minPrice` và `inStock` là cột tính sẵn, cập nhật trong cùng transaction khi biến thể hoặc tồn kho đổi.
+- `minPrice` và `inStock` là cột tính sẵn. Hai cột cập nhật trong cùng transaction khi biến thể đổi hoặc khi `StockLedger` ghi `skus.stock`.
 
 ## Frontend
 
@@ -300,7 +283,7 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 - Bấm nút trạng thái khi có bản nháp sẽ tự lưu trước, rồi mới gửi trạng thái đích.
 - Sản phẩm xóa mềm chỉ đọc và có nút khôi phục. Bỏ ảnh cần xác nhận trước khi rời khỏi bản nháp.
 - Quản lý danh mục kèm trình soạn bộ thuộc tính; quản lý thương hiệu.
-- Màn hình tồn kho: điều chỉnh có lý do, lịch sử movement.
+- Bảng biến thể có ô số lượng sửa được. Số lượng mới từ SSE hiện ngay khi ô chưa bị sửa. Danh sách sản phẩm có cột tổng số lượng và nhãn sắp hết.
 - Nút và menu ẩn hoặc hiện theo `useCan(...)`.
 
 ## Dữ liệu mẫu
@@ -319,17 +302,16 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
   - Slug cũ trả 301.
   - Không xóa cứng được sản phẩm đã có đơn.
   - Chặn xóa thuộc tính đang được dùng.
-- Đồng thời: 20 request `reserve` cùng lúc cho SKU còn 5 cái thì đúng 5 thành công, tồn kho về 0, không âm.
-- Idempotent: gọi `reserve` hoặc `release` 2 lần cùng `orderId` không đổi tồn kho lần thứ 2.
-- Tồn kho mỗi SKU bằng tổng movement sau mọi test.
+- Test giữ hàng đồng thời, idempotent và bất biến `stock = tổng delta`.
+- Đồng thời: sửa sản phẩm chạy cùng lúc với giữ hàng không deadlock, `inStock` và `minPrice` khớp số bán được.
 - Cloudinary: test chữ ký bằng secret giả; không gọi Cloudinary thật trong test thường.
 - E2E: admin tạo danh mục có bộ thuộc tính → tạo sản phẩm 2 tùy chọn → đăng bán → khách lọc thấy sản phẩm → chọn biến thể thấy đúng giá.
 
 ## Boundaries (riêng module)
 
-- **Always:** validate thông số theo bộ thuộc tính trước khi lưu; ghi movement cho mọi thay đổi tồn kho; ghi audit log khi đổi giá, đổi trạng thái, điều chỉnh tồn kho.
-- **Ask first:** thêm kho thứ hai; thêm trục tùy chọn thứ 4; đổi cách tính giá hiển thị.
-- **Never:** sửa trực tiếp cột `stock` mà không có movement; cho tồn kho âm; lưu HTML thô từ người nhập; dùng `dangerouslySetInnerHTML` cho nội dung do người nhập; để Cloudinary API secret ra frontend.
+- **Always:** validate thông số theo bộ thuộc tính trước khi lưu; ghi audit log khi đổi giá, đổi trạng thái, đổi số lượng; ghi số lượng qua `StockLedger.ApplyAsync`.
+- **Ask first:** thêm trục tùy chọn thứ 4; đổi cách tính giá hiển thị.
+- **Never:** ghi cột `stock` ngoài `StockLedger.ApplyAsync`; cho tồn kho âm; lưu HTML thô từ người nhập; dùng `dangerouslySetInnerHTML` cho nội dung do người nhập; để Cloudinary API secret ra frontend.
 
 ## Success Criteria
 
@@ -341,7 +323,7 @@ model InventoryMovement { /* skuId, delta, type(manual|order_reserve|order_relea
 - [ ] 20 request giữ hàng đồng thời không làm bán vượt tồn kho.
 - [ ] Nhân viên `sales` xem được sản phẩm nháp nhưng gọi API sửa nhận 403.
 - [ ] Đổi slug thì link cũ redirect 301.
-- [ ] Mỗi lần đổi giá, đổi trạng thái hoặc điều chỉnh tồn kho có đúng 1 dòng audit log.
+- [ ] Mỗi lần đổi giá, đổi trạng thái hoặc đổi số lượng có đúng 1 dòng audit log.
 - [ ] `onProductChanged` phát đúng 1 lần sau mỗi lần lưu thành công, không phát khi lưu lỗi.
 - [ ] `GET /api/products` có p95 dưới 300 ms với 500 sản phẩm trên máy dev.
 - [ ] Mô tả có tiêu đề cấp 1 đến 3, chữ đậm và chữ nghiêng: soạn được trong trình soạn thảo, lưu được, hiện đúng trên trang sản phẩm; tài liệu có nút lạ (ví dụ `script`) bị API từ chối.

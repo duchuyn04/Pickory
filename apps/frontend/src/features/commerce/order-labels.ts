@@ -70,6 +70,7 @@ export const ORDER_FLAG_CODES = [
 
 // Bảng ánh xạ cờ đơn sang tiếng Việt. Cờ ghi lại điều bất thường nhân viên cần chú ý.
 const ORDER_FLAG_LABELS: Record<string, string> = {
+  demo_order: 'Đơn mẫu',
   underpaid: 'Thanh toán thiếu',
   overpaid: 'Thanh toán dư',
   late_payment: 'Thanh toán trễ',

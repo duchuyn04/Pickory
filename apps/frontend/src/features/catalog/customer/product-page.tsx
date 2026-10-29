@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ApiError, apiRequest } from '../../../shared/api';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { useTrackProductView } from '../../activity-tracking/use-track-product-view';
+import { applyLiveProductStock, useLiveStock } from '../shared/stock-live';
 import type { ProductDetail } from './catalog-api';
 import { ProductView } from './product-view';
 import './category-page.css';
@@ -50,6 +51,7 @@ function ProductSkeleton() {
 function ProductContent({ slug }: { slug: string }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const liveStock = useLiveStock();
   const product = useQuery<ProductDetail, ApiError>({
     queryKey: ['product', slug],
     // Slug cũ được API trả 301. `fetch` tự đi theo và trả chi tiết với slug mới.
@@ -64,7 +66,9 @@ function ProductContent({ slug }: { slug: string }) {
   }, [currentSlug, slug, location.search, navigate]);
 
   // Chỉ có sản phẩm khi query không lỗi và dữ liệu mang đúng slug này. Query lỗi vẫn có thể giữ `data` cũ trong cache, nhưng trang lúc đó hiện lỗi.
-  const shownProduct = !product.isError && product.data?.slug === slug ? product.data : undefined;
+  const loadedProduct = !product.isError && product.data?.slug === slug ? product.data : undefined;
+  // Sự kiện tồn kho ghi đè số lượng và trạng thái còn hàng, để trang đổi ngay khi người khác đặt đơn.
+  const shownProduct = loadedProduct ? applyLiveProductStock(loadedProduct, liveStock) : undefined;
 
   // Chỉ đếm khi sản phẩm đang hiện thật. Trang 404, trang lỗi và khung chuyển slug cũ không phải lượt xem.
   useTrackProductView(shownProduct !== undefined);

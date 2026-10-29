@@ -106,9 +106,9 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 **File:** `apps/backend/src/Pickory.Shared/Throttling/RateLimiter.cs`, `apps/backend/src/Pickory.Modules.ActivityTracking/Features/CollectEvents/{ProductViewRateLimiter.cs, CollectEventsEndpoints.cs}`
 
 ### Checkpoint A2
-- [ ] Xem sản phẩm, thêm giỏ, đặt đơn: mỗi bộ đếm của hôm nay tăng đúng 1
-- [ ] Nhân viên và crawler không làm bộ đếm tăng
-- [ ] Review với người dùng
+- [x] Xem sản phẩm, thêm giỏ, đặt đơn: mỗi bộ đếm của hôm nay tăng đúng 1
+- [x] Nhân viên và crawler không làm bộ đếm tăng
+- [x] Review với người dùng
 
 ---
 
@@ -128,8 +128,8 @@ Ngày 2026-10-20 module chỉ còn đếm tổng theo ngày (xem "Thay đổi ph
 **File:** `apps/backend/src/Pickory.Modules.ActivityTracking/Features/AdminAnalytics/`, `apps/backend/src/Pickory.Modules.ActivityTracking/Metrics/ActivityMetrics.cs`
 
 ### Checkpoint A3
-- [ ] API phễu trả đúng số và tỉ lệ với bộ dữ liệu dựng sẵn
-- [ ] Review với người dùng
+- [x] API phễu trả đúng số và tỉ lệ với bộ dữ liệu dựng sẵn
+- [x] Review với người dùng
 
 ---
 
@@ -207,9 +207,9 @@ Ghi chú cho dòng 3 của bảng:
 - Bỏ tạm `.RequirePermission(Permissions.ReportsRead)` làm 3 dòng ma trận của route này đỏ: `Guest_Receives401Unauthorized`, `Customer_Receives403Forbidden`, `Support_HasAccessOnlyWhenAuthorized`. Code đã hoàn tác.
 
 ## Checkpoint cuối
-- [ ] Mọi dòng Traceability đạt
-- [ ] Coverage dòng của `Pickory.Modules.ActivityTracking` ít nhất 80%, không tính `Persistence/Migrations/`
-- [ ] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
+- [x] Mọi dòng Traceability đạt
+- [x] Coverage dòng của `Pickory.Modules.ActivityTracking` ít nhất 80%, không tính `Persistence/Migrations/`
+- [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
 - [ ] Review với người dùng, rồi mới bắt đầu `support-desk`
 
 ---

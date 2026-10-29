@@ -11,6 +11,9 @@ These rules apply to all work in this repository, including code, tests, comment
 - MUST NOT write U+2014 (em dash) or U+2013 (en dash) in any newly authored or modified content, including chat responses and examples.
 - MUST check changed content for both prohibited characters before reporting completion.
 - MUST NOT copy prohibited punctuation from source material into new content.
+- MUST NOT separate the final `i` after an accented vowel in a Vietnamese word.
+- MUST run `node scripts/check-agent-text.mjs <file...>` on every changed text file before reporting completion.
+- MUST check chat responses with the same rule as `scripts/check-agent-text.mjs` before sending them.
 
 ## 2. Playwright Manual Test Cases
 
@@ -140,8 +143,16 @@ if (!user) throw new Error('Email hoặc mật khẩu không đúng.');
 Before reporting completion, MUST check every changed file and the final response against all applicable sections above.
 
 - Verify punctuation, descriptive names, and Vietnamese explanations for each meaningful processing step.
+- Run `node scripts/check-agent-text.mjs <file...>` on changed text files. Scan the final response for a separated `i` after an accented vowel.
 - Verify that new or modified comments and documentation follow section 5: sentence length, one instruction per sentence, consistent terms, and imperative procedures.
 - For requested manual tests, verify the case limit, required fields, priority order, status values, and execution evidence.
 - Fix violations in your own changes before handing off work. Do not label noncompliant work complete.
 - If a requirement cannot be met, report the exact unmet requirement and blocker. Do not silently weaken the rule or fabricate evidence.
 - When delegating repository work, MUST include these requirements in the handoff and check the returned changes against them.
+
+## 7. Subagent Model and Effort
+
+- MUST run every spawned subagent on the main session's model and effort. Set `model` and `effort` to those values explicitly, because an agent definition can pin different values.
+- MUST use a different model or effort only when the user names that value in the prompt.
+- A fork always runs the main session's model and effort. MUST NOT use a fork when the user asks for a different model or effort.
+- The Herdr builder runs the model and effort that the user has set up. MUST NOT change them unless the user names a value in the prompt.

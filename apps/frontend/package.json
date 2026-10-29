@@ -22,15 +22,16 @@
     "@tiptap/extension-bold": "3.31.4",
     "@tiptap/extension-document": "3.31.4",
     "@tiptap/extension-heading": "3.31.4",
-    "@tiptap/extensions": "3.31.4",
     "@tiptap/extension-italic": "3.31.4",
     "@tiptap/extension-paragraph": "3.31.4",
     "@tiptap/extension-text": "3.31.4",
+    "@tiptap/extensions": "3.31.4",
     "@tiptap/pm": "3.31.4",
     "@tiptap/react": "3.31.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "react-router-dom": "^7.18.4",
+    "recharts": "^3.10.1",
     "zod": "^4.6.5"
   },
   "devDependencies": {

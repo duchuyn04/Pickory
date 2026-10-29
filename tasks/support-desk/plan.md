@@ -78,8 +78,8 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
 3. Phiên hỗ trợ là nguồn sự thật của việc nhận hội thoại. Mỗi lần khách cần nhân viên, module tạo một dòng `support_sessions`. Chỉ mục unique một phần trên `conversation_id` khi `closed_at` rỗng chặn hai phiên mở cho một hội thoại. Hai tin của khách đến cùng lúc không tạo phiên thứ hai.
 4. Nhận hội thoại bằng UPDATE có điều kiện. Lệnh là `UPDATE support_sessions SET staff_id = @me, claimed_at = now() WHERE id = @id AND staff_id IS NULL AND closed_at IS NULL`. Số dòng bằng 0 nghĩa là người khác đã nhận, API trả 409 `SUPPORT_SESSION_ALREADY_CLAIMED`.
 5. Đã bỏ ngày 2026-10-18. Bù trừ khi gọi `shopping-assistant` lỗi không còn cần. Phiên, hội thoại và tin nằm chung `SupportDeskDbContext`, nên nhận phiên và ghi tin hệ thống chạy trong một transaction.
-6. Hub SSE trong tiến trình. `SupportEventHub` giữ một `Channel` cho mỗi kết nối của nhân viên. `CustomerEventHub` giữ một `Channel` cho mỗi kết nối của khách. MVP chạy một instance, giống quyết định 6 của `tasks/identity-ai-gateway/plan.md`. Route SSE dùng `TypedResults.ServerSentEvents` của ASP.NET Core 10, không thêm package.
-7. Trạng thái sẵn sàng theo nhịp tim. Kết nối SSE cập nhật `staff_presence.last_seen_at` mỗi 30 giây. Job chạy mỗi 30 giây chuyển nhân viên sang `away` khi `last_seen_at` cũ hơn 2 phút. Identity không phát sự kiện đăng xuất. Đăng xuất đóng trang, nên SSE ngắt và job chuyển `away` sau 2 phút.
+6. Hub SSE trong tiến trình. `SupportEventHub` giữ một `Channel` cho mỗi kết nối của nhân viên. `CustomerEventHub` giữ một `Channel` cho mỗi kết nối của khách. MVP chạy một instance, giống quyết định 6 của `tasks/identity-ai-gateway/plan.md`. Route nhân viên dùng `SupportEventStreamResult`, viết bằng `SseFormatter` của ASP.NET Core 10 và không thêm package. Lý do: `TypedResults.ServerSentEvents` không gửi header trước sự kiện đầu tiên, nên trình duyệt phải chờ nhịp tim đầu mới biết đã kết nối.
+7. Trạng thái sẵn sàng theo nhịp tim. Kết nối SSE cập nhật `staff_presence.last_seen_at` mỗi 30 giây. Job chạy mỗi 30 giây chuyển nhân viên sang `away` khi `last_seen_at` cũ hơn 2 phút. Identity không phát sự kiện đăng xuất. Đăng xuất đóng trang, nên SSE ngắt và job chuyển `away` sau 2 phút. Luồng SSE cũng tự đóng sau 5 phút (`MaxConnectionLifetime`). `EventSource` tự kết nối lại, và lần kết nối lại kiểm phiên cùng quyền. Nhờ vậy tài khoản bị khóa, mất quyền hoặc đăng xuất ở máy khác không giữ luồng quá 5 phút. Nhân viên đăng xuất ở máy khác có thể còn `available` tối đa khoảng 7 phút: 5 phút tới khi luồng đóng, cộng 2 phút tới khi job chuyển `away`. Sự kiện phát lúc `EventSource` đang kết nối lại bị mất, vì hub chỉ gửi cho kết nối đã đăng ký. Vì vậy client đọc lại `GET /api/admin/support/presence` mỗi lần `EventSource` mở lại. Các task sau cũng đọc lại danh sách phiên ở thời điểm đó.
 8. Giờ làm việc là hàm thuần có `TimeProvider`. `WorkingHoursCalendar` đổi giờ UTC sang `Asia/Ho_Chi_Minh`, rồi so với khung giờ và ngày nghỉ. Khung giờ là nửa mở: 8:00 thuộc trong giờ, 21:00 thuộc ngoài giờ. "Trong giờ" còn cần ít nhất một nhân viên `available`.
 9. Ước tính thời gian chờ. N bằng thời gian chờ trung bình 7 ngày nhân số phiên đang chờ cộng 1, chia số nhân viên sẵn sàng, làm tròn lên. Chưa có dữ liệu 7 ngày thì dùng 5 phút cho mỗi phiên. Hằng số này nằm trong `SupportSettings` để admin chỉnh sau.
 10. Phiên lưu thêm cột cho báo cáo. Spec chưa có các cột này. `support_sessions` thêm `handoff_in_hours`, `customer_user_id`, `anonymous_id`. Báo cáo đếm phiên trong giờ mà không cần tính lại lịch cũ. Hai cột định danh cho phép xóa dữ liệu khi nhận `UserDeletedEvent`.
@@ -114,7 +114,11 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
     - `SUPPORT_CONVERSATION_CLOSED` (409): khách gửi tin vào hội thoại đã đóng.
     - `SUPPORT_MESSAGE_RATE_LIMITED` (429): khách gửi tin vượt giới hạn ở quyết định 27.
     - Đã bỏ ngày 2026-10-18: `SUPPORT_DRAFT_UNAVAILABLE` và `SUPPORT_UNAVAILABLE`.
-13. Chủ hội thoại. Route phía khách đọc `support_conversations` của module. Khách đăng nhập là chủ khi `customer_user_id` bằng `Actor.UserId`. Khách vãng lai là chủ khi `anonymous_id` bằng `Actor.AnonymousId`. Không khớp thì trả 404 `SUPPORT_CONVERSATION_NOT_FOUND`, để không lộ hội thoại có tồn tại.
+13. Chủ hội thoại. Route phía khách đọc `support_conversations` của module. Khách đăng nhập là chủ khi `customer_user_id` bằng `Actor.UserId`. Khách vãng lai là chủ khi `customer_user_id` rỗng và `anonymous_id` bằng `Actor.AnonymousId`. Không khớp thì trả 404 `SUPPORT_CONVERSATION_NOT_FOUND`, để không lộ hội thoại có tồn tại.
+    Cập nhật ngày 2026-10-26:
+    - Điều kiện `customer_user_id` rỗng của khách vãng lai là mới.
+    - Đăng xuất không đổi cookie `pk_anon`.
+    - Thiếu điều kiện này, người dùng chung trình duyệt đọc được hội thoại của chủ tài khoản vừa đăng xuất.
 14. Giới hạn 3 yêu cầu gọi lại mỗi ngày. Module đếm dòng `callback_requests` theo `anonymous_id` trong ngày giờ Việt Nam. Bộ đếm nằm trong DB, nên khởi động lại API không xóa giới hạn. Số điện thoại kiểm bằng `ContactFieldRules` và lưu dạng `0xxxxxxxxx`.
 15. Đã bỏ ngày 2026-10-18. Dữ liệu gửi AI không còn, vì `SD-12` đã bỏ.
 16. Tin tối đa 2.000 ký tự. Giới hạn áp cho tin của nhân viên và tin của khách. Spec không ghi giới hạn này. Plan chọn 2.000 ký tự, bằng giới hạn nhận xét của review trong `commerce`.
@@ -142,17 +146,29 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
 
     Ghi chú nội bộ khi chuyển phiên nằm ở `support_sessions`, không nằm ở `support_messages`. Khách không đọc được ghi chú này.
 25. Vòng đời hội thoại. Mỗi chủ có tối đa một hội thoại `open`. Hội thoại im lặng 24 giờ thì job chuyển `closed`. Tin tiếp theo của khách tạo hội thoại mới. Trong một hội thoại, mỗi lần khách cần nhân viên mở một phiên mới. Khách gửi tin khi không có phiên mở thì module mở phiên chờ.
+    Cập nhật ngày 2026-10-26:
+    - `support_conversations_anonymousId_open_key` chỉ tính hội thoại `open` có `customer_user_id` rỗng.
+    - `support_conversations_customerUserId_open_key` chỉ tính hội thoại `open` có `customer_user_id` khác rỗng.
+    - Chỉ mục cũ theo `anonymous_id` chặn khách vãng lai tạo hội thoại mới sau khi chủ tài khoản đăng xuất, vì `pk_anon` không đổi.
 26. Thời hạn lưu 90 ngày. Job hằng ngày xóa hội thoại có `last_message_at` cũ hơn 90 ngày, cùng tin và phiên của hội thoại. `UserDeletedEvent` xóa hội thoại của người dùng đó. Hạn này thay Câu hỏi mở 6 cũ và giữ luật "Never" của spec về lịch sử hỗ trợ.
 27. Chống spam tin của khách. Route gửi tin và tạo hội thoại mở công khai cho khách vãng lai. Module dùng `RateLimiter` của `Pickory.Shared` theo `anonymous_id`. Đề xuất 10 tin mỗi phút và 200 tin mỗi ngày, chờ chốt ở Câu hỏi mở 10.
 28. Gắn hội thoại vãng lai vào tài khoản. Module nghe `UserLinkedEvent` và gán `customer_user_id` cho hội thoại `open` của `anonymous_id` đó. Khách đăng nhập giữa chừng vẫn thấy hội thoại cũ.
 29. Thông báo lưu hội thoại. Response tạo hội thoại lần đầu có cờ `showRetentionNotice`. Trang `/support` hiện câu báo hội thoại được lưu 90 ngày. Cách làm giữ theo SA-03 của plan `shopping-assistant` đã bỏ.
+30. Hợp đồng dữ liệu của hàng chờ. SD-UI1 chốt hợp đồng này ở frontend. SD-04, SD-05 và SD-06 làm backend theo đúng hợp đồng.
+    - `GET /api/admin/support/sessions?view=waiting` và `view=mine` trả `{ data: [{ id, conversationId, preview, waitingSeconds, handoffAt }] }`. `preview` là 200 ký tự đầu của tin đầu tiên (tiêu chí SD-06).
+    - `GET /api/admin/support/callback-requests` trả `{ data: [{ id, phone, status, createdAt }] }`. Tab "Gọi lại" chỉ hiện dòng có `status` bằng `pending`.
+    - Luồng SSE của nhân viên gửi ba sự kiện của phiên: `session.waiting`, `session.assigned`, `session.closed`. Dữ liệu của mỗi sự kiện là `{ sessionId }`.
+    - Client nhận một trong ba sự kiện thì đọc lại danh sách. Client không dùng dữ liệu nào khác trong sự kiện.
+    - Client kiểm dữ liệu trả về bằng `zod`. Dữ liệu sai hợp đồng hiện như một lỗi tải, kèm nút "Thử lại".
+    - Route chưa có trả 404. Cột hàng chờ hiện lỗi ngắn và trang không vỡ.
+    - Mỗi lần luồng SSE mở lại, client đọc lại `GET /api/admin/support/presence` và danh sách của tab đang mở (quyết định 7).
 
 ## Task List
 
 Chi tiết từng task ở `tasks/support-desk/todo.md`.
 
 ### Phase 1: Nền tảng
-- [ ] SD-01 · [ ] SD-02 · [ ] SD-03 · [ ] SD-UI1
+- [x] SD-01 · [x] SD-02 · [x] SD-03 · [x] SD-UI1
 
 ### Checkpoint SD1
 - [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
@@ -161,7 +177,7 @@ Chi tiết từng task ở `tasks/support-desk/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 2: Hội thoại phía khách, tiếp nhận và trả lời
-- [ ] SD-15 · [ ] SD-16 · [ ] SD-UI7 · [ ] SD-04 · [ ] SD-05 · [ ] SD-06 · [ ] SD-07 · [ ] SD-UI2 · [ ] SD-08 · [ ] SD-09 · [ ] SD-11 · [ ] SD-UI3 · [ ] SD-UI4 · [ ] SD-UI6 · [ ] SD-17
+- [x] SD-15 · [ ] SD-16 · [ ] SD-UI7 · [ ] SD-04 · [ ] SD-05 · [ ] SD-06 · [ ] SD-07 · [ ] SD-UI2 · [ ] SD-08 · [ ] SD-09 · [ ] SD-11 · [ ] SD-UI3 · [ ] SD-UI4 · [ ] SD-UI6 · [ ] SD-17
 
 ### Checkpoint SD2
 - [ ] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`

@@ -5,6 +5,8 @@ export interface TabItem {
   // Mã tab. Chuỗi rỗng là tab "tất cả" không lọc.
   code: string;
   label: string;
+  // Số hiện thành badge cạnh nhãn. Không có hoặc `null` thì không hiện badge.
+  count?: number | null;
 }
 
 interface TabListProps {
@@ -63,6 +65,8 @@ export function TabList({ label, idPrefix, panelId, tabs, selected, onSelect }: 
             onClick={() => onSelect(tab.code)}
           >
             {tab.label}
+            {/* Badge là chữ nằm trong nút, nên tên truy cập của tab đọc cả số, ví dụ "Đang chờ 3". */}
+            {tab.count != null && <span className="tab-list-count">{tab.count}</span>}
           </button>
         );
       })}

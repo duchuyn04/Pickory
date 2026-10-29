@@ -57,6 +57,7 @@ export async function seedProduct(page: Page, price = 450_000): Promise<SeededPr
         {
           optionValues: {},
           price,
+          stock: 50,
           compareAtPrice: null,
           enabled: true,
           weightGrams: 200,
@@ -76,11 +77,6 @@ export async function seedProduct(page: Page, price = 450_000): Promise<SeededPr
   };
 
   const skuId = product.variants[0]!.id;
-  const stocked = await page.request.post(`/api/admin/skus/${skuId}/movements`, {
-    headers: adminHeaders,
-    data: { delta: 50, reason: 'Nhập kho E2E đơn admin' },
-  });
-  expect(stocked.status(), await stocked.text()).toBe(201);
   const published = await page.request.put(`/api/admin/products/${product.id}/status`, {
     headers: adminHeaders,
     data: { status: 'active' },

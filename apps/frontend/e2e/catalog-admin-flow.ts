@@ -51,11 +51,13 @@ export interface ImageProviderStub {
 export async function stubImageProvider(
   page: Page,
   publicIdPrefix: string,
+  folder = 'pickory/products',
 ): Promise<ImageProviderStub> {
   let uploadCount = 0;
   await page.route('https://api.cloudinary.com/**', async (route) => {
     uploadCount += 1;
-    const publicId = `pickory/products/${publicIdPrefix}-${Date.now()}-${uploadCount}`;
+    // Thư mục của ảnh giả phải khớp loại ảnh đang test để payload có thể được kiểm tra lại.
+    const publicId = `${folder}/${publicIdPrefix}-${Date.now()}-${uploadCount}`;
     await route.fulfill({
       json: {
         public_id: publicId,
@@ -132,4 +134,64 @@ export async function createBrand(page: Page, name: string) {
   await dialog.getByLabel('Tên thương hiệu *').fill(name);
   await dialog.getByRole('button', { name: 'Tạo thương hiệu' }).click();
   await expect(dialog).toBeHidden();
+}
+
+interface AdminProductVariant {
+  id: string;
+  code: string;
+  optionValues: Record<string, string>;
+  price: number;
+  compareAtPrice: number | null;
+  stock: number;
+  enabled: boolean;
+  weightGrams: number | null;
+  lengthCm: number | null;
+  widthCm: number | null;
+  heightCm: number | null;
+}
+
+interface AdminProductDetail {
+  id: string;
+  variants: AdminProductVariant[];
+}
+
+async function readAdminProduct(page: Page, productId: string): Promise<AdminProductDetail> {
+  const response = await page.request.get(`/api/admin/products/${productId}`);
+  expect(response.status(), await response.text()).toBe(200);
+  return (await response.json()).data as AdminProductDetail;
+}
+
+// Đọc số bán được hiện tại của một biến thể qua API quản trị.
+export async function readSkuStock(page: Page, productId: string, skuId: string): Promise<number> {
+  const product = await readAdminProduct(page, productId);
+  const variant = product.variants.find((candidate) => candidate.id === skuId);
+  expect(variant, `Không thấy SKU ${skuId} trong sản phẩm ${productId}`).toBeTruthy();
+  return variant!.stock;
+}
+
+// Đặt số lượng đích cho một biến thể. PATCH gửi đủ biến thể vì API yêu cầu cả danh sách.
+export async function setSkuStock(
+  page: Page,
+  productId: string,
+  skuId: string,
+  stock: number,
+): Promise<void> {
+  const product = await readAdminProduct(page, productId);
+  const variants = product.variants.map((variant) => ({
+    optionValues: variant.optionValues,
+    code: variant.code,
+    price: variant.price,
+    compareAtPrice: variant.compareAtPrice,
+    stock: variant.id === skuId ? stock : variant.stock,
+    enabled: variant.enabled,
+    weightGrams: variant.weightGrams,
+    lengthCm: variant.lengthCm,
+    widthCm: variant.widthCm,
+    heightCm: variant.heightCm,
+  }));
+  const response = await page.request.patch(`/api/admin/products/${productId}`, {
+    headers: { Origin: e2eEnvironment.webOrigin },
+    data: { variants },
+  });
+  expect(response.status(), await response.text()).toBe(200);
 }

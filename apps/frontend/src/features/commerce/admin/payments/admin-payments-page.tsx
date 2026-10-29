@@ -125,7 +125,7 @@ export function AdminPaymentsPage() {
               </select>
             </div>
             <div className="field">
-              <label htmlFor="payment-order-flag">Cờ đơn</label>
+              <label htmlFor="payment-order-flag">Ghi chú</label>
               <select
                 id="payment-order-flag"
                 value={values.orderFlag}

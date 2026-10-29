@@ -61,7 +61,7 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
             specs = new { },
             options = Array.Empty<object>(),
             warrantyMonths = 12,
-            variants = new[] { new { optionValues = new Dictionary<string, string>(), price = 100000, enabled = true } },
+            variants = new[] { new { optionValues = new Dictionary<string, string>(), price = 100000, stock, enabled = true } },
         };
         var created = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/products", payload, _adminCookie));
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
@@ -71,9 +71,6 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
         var skuId = data.GetProperty("variants")[0].GetProperty("id").GetString()!;
         _data.TrackProduct(productId);
 
-        var adjusted = await _client.SendAsync(ActorHttp.CreateJsonRequest(
-            HttpMethod.Post, $"/api/admin/skus/{skuId}/movements", new { delta = stock, reason = "Nhập kho cho test" }, _adminCookie));
-        Assert.Equal(HttpStatusCode.Created, adjusted.StatusCode);
         return new CreatedProduct(productId, skuId);
     }
 
@@ -161,7 +158,7 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
             specs = new { },
             options = new[] { new { name = "Màu", values = new[] { "Đỏ", "Xanh" } } },
             warrantyMonths = 12,
-            variants = TwoVariants(100000),
+            variants = TwoVariantsWithStock(100000),
         };
         var created = await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/products", payload, _adminCookie));
         Assert.Equal(HttpStatusCode.Created, created.StatusCode);
@@ -169,25 +166,23 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
         var data = json.RootElement.GetProperty("data");
         var productId = data.GetProperty("id").GetString()!;
         _data.TrackProduct(productId);
-        string? redSkuId = null;
-        foreach (var variant in data.GetProperty("variants").EnumerateArray())
-        {
-            var color = variant.GetProperty("optionValues").GetProperty("Màu").GetString();
-            var skuId = variant.GetProperty("id").GetString()!;
-            var stock = color == "Đỏ" ? 1 : 5;
-            redSkuId = color == "Đỏ" ? skuId : redSkuId;
-            var adjusted = await _client.SendAsync(ActorHttp.CreateJsonRequest(
-                HttpMethod.Post, $"/api/admin/skus/{skuId}/movements", new { delta = stock, reason = "Nhập kho cho test" }, _adminCookie));
-            Assert.Equal(HttpStatusCode.Created, adjusted.StatusCode);
-        }
-
-        return new TwoVariantProduct(productId, redSkuId!);
+        var redSkuId = data.GetProperty("variants").EnumerateArray()
+            .Single(variant => variant.GetProperty("optionValues").GetProperty("Màu").GetString() == "Đỏ")
+            .GetProperty("id").GetString()!;
+        return new TwoVariantProduct(productId, redSkuId);
     }
 
     private static object[] TwoVariants(int redPrice) =>
     [
         new { optionValues = new Dictionary<string, string> { ["Màu"] = "Đỏ" }, price = redPrice, enabled = true },
         new { optionValues = new Dictionary<string, string> { ["Màu"] = "Xanh" }, price = 200000, enabled = true },
+    ];
+
+    // Bản có tồn kho cho lúc tạo. Bản không có tồn kho dùng cho PATCH, để không ghi đè hàng đang giữ.
+    private static object[] TwoVariantsWithStock(int redPrice) =>
+    [
+        new { optionValues = new Dictionary<string, string> { ["Màu"] = "Đỏ" }, price = redPrice, stock = 1, enabled = true },
+        new { optionValues = new Dictionary<string, string> { ["Màu"] = "Xanh" }, price = 200000, stock = 5, enabled = true },
     ];
 
     [Fact]

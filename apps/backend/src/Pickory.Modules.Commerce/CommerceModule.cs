@@ -10,6 +10,7 @@ using Pickory.Modules.Commerce.Checkout;
 using Pickory.Modules.Commerce.Configuration;
 using Pickory.Modules.Commerce.Contracts.Reading;
 using Pickory.Modules.Commerce.Contracts.Reports;
+using Pickory.Modules.Commerce.Demo;
 using Pickory.Modules.Commerce.Orders;
 using Pickory.Modules.Commerce.Orders.Admin;
 using Pickory.Modules.Commerce.Orders.Lookup;
@@ -118,6 +119,18 @@ public static class CommerceModule
         await using var scope = services.CreateAsyncScope();
         await scope.ServiceProvider.GetRequiredService<CommerceDbContext>().Database.MigrateAsync(cancellationToken);
     }
+
+    // Lệnh `commerce:demo-orders` tạo hoặc xóa đơn mẫu cho báo cáo trên DB dev.
+    public static bool IsDemoOrdersCommand(IReadOnlyList<string> args) => DemoOrdersCommand.IsCommand(args);
+
+    public static Task<int> RunDemoOrdersCommandAsync(
+        IServiceProvider services,
+        IReadOnlyList<string> args,
+        bool isProduction,
+        TextWriter output,
+        TextWriter error,
+        CancellationToken cancellationToken) =>
+        DemoOrdersCommand.RunAsync(services, args, isProduction, output, error, cancellationToken);
 
     public static IEndpointRouteBuilder MapCommerceEndpoints(this IEndpointRouteBuilder endpoints)
     {
