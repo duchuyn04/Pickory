@@ -232,7 +232,8 @@ test('UI-C5b: đăng bán, ẩn, bán lại, xóa sản phẩm và quyền của
     await page.getByLabel('Tên hoặc mã SKU').fill(publishedProduct.name);
     const row = page.locator('tbody tr').filter({ hasText: publishedProduct.name });
     await expect(row).toHaveCount(1);
-    await expect(row.locator('.badge')).toHaveText('Đang bán');
+    // Cột Số lượng còn có badge "Sắp hết", nên chỉ đọc badge trong ô Trạng thái, là `td` thứ ba của hàng.
+    await expect(row.locator('td').nth(2).locator('.badge')).toHaveText('Đang bán');
     await page.screenshot({ path: testInfo.outputPath('list-active-1280.png') });
     await row.getByRole('link', { name: 'Chỉnh sửa', exact: true }).click();
     await expect(statusBadge(page)).toHaveText('Đang bán');
