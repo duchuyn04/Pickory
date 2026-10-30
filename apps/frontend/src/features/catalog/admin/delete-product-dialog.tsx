@@ -11,7 +11,7 @@ interface DeleteProductDialogProps {
   onClose: () => void;
 }
 
-// Hộp thoại xác nhận xóa sản phẩm. Không dùng `AdminFormDialog` vì khung đó có thẻ `form`, mà hộp thoại này nằm trong form sản phẩm.
+// Hộp thoại xác nhận xóa. Backend quyết định xóa cứng hoặc xóa mềm dựa trên lịch sử đơn hàng.
 export function DeleteProductDialog({ productName, onConfirm, onClose }: DeleteProductDialogProps) {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -62,8 +62,8 @@ export function DeleteProductDialog({ productName, onConfirm, onClose }: DeleteP
         <div className="dialog-body stack">
           {errorMessage && <ErrorAlert message={errorMessage} />}
           <p id="delete-product-description" className="delete-product-text">
-            Sản phẩm <strong className="wrap-anywhere">{productName}</strong> sẽ bị ẩn khỏi cửa hàng
-            và trang quản trị. Dữ liệu vẫn được giữ để đối soát đơn hàng cũ.
+            Bạn sắp xóa sản phẩm <strong className="wrap-anywhere">{productName}</strong>. Sản phẩm
+            chưa có đơn sẽ bị xóa vĩnh viễn. Sản phẩm đã có đơn được xóa mềm và có thể khôi phục.
           </p>
         </div>
         <div className="dialog-foot">
@@ -76,7 +76,7 @@ export function DeleteProductDialog({ productName, onConfirm, onClose }: DeleteP
             onClick={confirmDelete}
             disabled={isDeleting}
           >
-            Xóa sản phẩm
+            Xác nhận xóa
           </button>
         </div>
       </div>

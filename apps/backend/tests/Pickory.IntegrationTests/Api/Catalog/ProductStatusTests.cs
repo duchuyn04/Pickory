@@ -9,12 +9,13 @@ using Pickory.Modules.Catalog.Attributes;
 using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Features.Products;
+using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Identity.Roles;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Api.Catalog;
 
-// CAT-07: đổi trạng thái sản phẩm và xóa mềm sản phẩm.
+// CAT-07: đổi trạng thái sản phẩm và xóa cứng sản phẩm.
 [Collection(IntegrationDatabaseCollection.Name)]
 public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
 {
@@ -76,10 +77,9 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
             .Where(movement => context.Skus.Any(sku => sku.Id == movement.SkuId && _productIds.Contains(sku.ProductId)))
             .ExecuteDeleteAsync();
         await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ExecuteDeleteAsync();
-        // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm, danh mục và thương hiệu đã bị xóa mềm trong test.
-        await context.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
-        await context.Categories.IgnoreQueryFilters().Where(category => category.Id == _plainCategoryId || category.Id == _requiredSpecCategoryId).ExecuteDeleteAsync();
-        await context.Brands.IgnoreQueryFilters().Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
+        await context.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+        await context.Categories.Where(category => category.Id == _plainCategoryId || category.Id == _requiredSpecCategoryId).ExecuteDeleteAsync();
+        await context.Brands.Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
     }
 
     private Category NewCategory(string slugPrefix, IReadOnlyList<AttributeDefinition> attributes) => new()
@@ -163,6 +163,9 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
 
     private async Task<HttpResponseMessage> DeleteAsync(string productId, string? cookie = null) =>
         await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Delete, $"/api/admin/products/{productId}", null, cookie ?? _adminCookie));
+
+    private async Task<HttpResponseMessage> RestoreAsync(string productId, string? cookie = null) =>
+        await _client.SendAsync(ActorHttp.CreateJsonRequest(HttpMethod.Post, $"/api/admin/products/{productId}/restoration", null, cookie ?? _adminCookie));
 
     private static async Task<JsonDocument> AssertErrorAsync(HttpResponseMessage response, HttpStatusCode status, string code)
     {
@@ -434,6 +437,43 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
     }
 
     [Fact]
+    public async Task Restore_Sales_Returns403AndKeepsDeletedProduct()
+    {
+        var productId = await SeedProductAsync();
+        await using (var context = _database.CreateCatalogContext())
+        {
+            var product = await context.Products.SingleAsync(item => item.Id == productId);
+            product.DeletedAt = DateTime.UtcNow;
+            await context.SaveChangesAsync();
+        }
+
+        var response = await RestoreAsync(productId, _salesCookie);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        await using var verify = _database.CreateCatalogContext();
+        Assert.NotNull((await verify.Products.SingleAsync(item => item.Id == productId)).DeletedAt);
+    }
+
+    [Fact]
+    public async Task Update_WhenSoftDeleted_Returns409AndKeepsName()
+    {
+        var productId = await SeedProductAsync();
+        await using (var context = _database.CreateCatalogContext())
+        {
+            var product = await context.Products.SingleAsync(item => item.Id == productId);
+            product.DeletedAt = DateTime.UtcNow;
+            await context.SaveChangesAsync();
+        }
+
+        var response = await _client.SendAsync(ActorHttp.CreateJsonRequest(
+            HttpMethod.Patch, $"/api/admin/products/{productId}", new { name = "Tên bị chặn" }, _adminCookie));
+
+        await AssertErrorAsync(response, HttpStatusCode.Conflict, "PRODUCT_DELETED");
+        await using var verify = _database.CreateCatalogContext();
+        Assert.NotEqual("Tên bị chặn", (await verify.Products.SingleAsync(item => item.Id == productId)).Name);
+    }
+
+    [Fact]
     public async Task Delete_UnknownProduct_Returns404()
     {
         var response = await DeleteAsync(Guid.NewGuid().ToString("N"));
@@ -442,27 +482,48 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
     }
 
     [Fact]
-    // Movement `order_reserve` nghĩa là SKU từng có đơn. Sản phẩm, movement và ảnh phải còn nguyên.
-    public async Task Delete_WithOrderReserveMovement_Returns409AndKeepsEverything()
+    // Sản phẩm đã có đơn được xóa mềm, ẩn khỏi khách và khôi phục được mà không mất dữ liệu liên quan.
+    public async Task Delete_WithOrderReserveMovement_SoftDeletesAndRestoreKeepsEverything()
     {
-        var productId = await SeedProductAsync(imageCount: 2);
+        var productId = await SeedProductAsync(ProductStatus.Active, imageCount: 2);
+        // Route công khai tra theo slug. `SeedProductAsync` đặt slug theo id, nên test dựng lại cùng chuỗi.
+        var productSlug = $"trang-thai-{productId}";
         await AddMovementAsync(productId, InventoryMovementType.Manual, null);
         await AddMovementAsync(productId, InventoryMovementType.OrderReserve, $"order-{_suffix}");
 
         var response = await DeleteAsync(productId);
 
-        await AssertErrorAsync(response, HttpStatusCode.Conflict, "PRODUCT_HAS_ORDERS");
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Mong đợi 200, nhận {response.StatusCode}: {body}");
+        using var deletion = JsonDocument.Parse(body);
+        var deletionData = deletion.RootElement.GetProperty("data");
+        Assert.Equal("soft_deleted", deletionData.GetProperty("outcome").GetString());
+        Assert.NotEqual(JsonValueKind.Null, deletionData.GetProperty("product").GetProperty("deletedAt").ValueKind);
         await using var context = _database.CreateCatalogContext();
         Assert.True(await context.Products.AnyAsync(product => product.Id == productId));
         Assert.Equal(2, await context.InventoryMovements.CountAsync(movement => context.Skus.Any(sku => sku.Id == movement.SkuId && sku.ProductId == productId)));
         Assert.Equal(2, await context.ProductImages.CountAsync(image => image.ProductId == productId));
         Assert.Empty(await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ToListAsync());
-        Assert.Empty(EventsOf(productId));
+        Assert.Equal(ProductChange.Deleted, Assert.Single(EventsOf(productId)).Change);
+
+        // Sản phẩm xóa mềm không xuất hiện công khai và không được đổi trạng thái cho tới khi khôi phục.
+        Assert.Equal(HttpStatusCode.NotFound, (await _client.GetAsync($"/api/products/{productSlug}")).StatusCode);
+        await AssertErrorAsync(await ChangeStatusAsync(productId, new { status = "hidden" }), HttpStatusCode.Conflict, "PRODUCT_DELETED");
+
+        var restoreResponse = await RestoreAsync(productId);
+
+        var restoreBody = await restoreResponse.Content.ReadAsStringAsync();
+        Assert.True(restoreResponse.StatusCode == HttpStatusCode.OK, $"Mong đợi 200, nhận {restoreResponse.StatusCode}: {restoreBody}");
+        using var restoration = JsonDocument.Parse(restoreBody);
+        Assert.Equal(JsonValueKind.Null, restoration.RootElement.GetProperty("data").GetProperty("deletedAt").ValueKind);
+        Assert.Equal(HttpStatusCode.OK, (await _client.GetAsync($"/api/products/{productSlug}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ChangeStatusAsync(productId, new { status = "hidden" })).StatusCode);
+        Assert.Equal([ProductChange.Deleted, ProductChange.Status, ProductChange.Status], EventsOf(productId).Select(item => item.Change));
     }
 
     [Fact]
-    // Đơn đã giữ hàng rồi thả hàng vẫn là sản phẩm từng có đơn, nên không xóa cứng được.
-    public async Task Delete_WithReserveAndReleaseMovements_Returns409()
+    // Đơn đã giữ hàng rồi thả hàng vẫn là sản phẩm từng có đơn, nên chỉ xóa mềm được.
+    public async Task Delete_WithReserveAndReleaseMovements_SoftDeletesProduct()
     {
         var productId = await SeedProductAsync();
         await AddMovementAsync(productId, InventoryMovementType.OrderReserve, $"order-a-{_suffix}");
@@ -470,12 +531,17 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
 
         var response = await DeleteAsync(productId);
 
-        await AssertErrorAsync(response, HttpStatusCode.Conflict, "PRODUCT_HAS_ORDERS");
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Mong đợi 200, nhận {response.StatusCode}: {body}");
+        using var json = JsonDocument.Parse(body);
+        Assert.Equal("soft_deleted", json.RootElement.GetProperty("data").GetProperty("outcome").GetString());
+        await using var context = _database.CreateCatalogContext();
+        Assert.NotNull((await context.Products.SingleAsync(product => product.Id == productId)).DeletedAt);
     }
 
     [Fact]
-    // Xóa mềm giữ sản phẩm, SKU, ảnh và movement để đối soát. Ảnh không bị xóa khỏi Cloudinary.
-    public async Task Delete_WithManualAndReturnMovements_MarksDeletedAndKeepsChildren()
+    // Movement `manual` và `return` bị xóa cùng sản phẩm (Decision 18). Mọi bản ghi con biến mất khỏi DB.
+    public async Task Delete_WithManualAndReturnMovements_DeletesEverythingAndQueuesImageJobs()
     {
         var productId = await SeedProductAsync(imageCount: 2,
             skus: [new SkuSeed($"DEL-A-{_suffix}"), new SkuSeed($"DEL-B-{_suffix}")]);
@@ -486,23 +552,22 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
 
         var response = await DeleteAsync(productId);
 
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Mong đợi 200, nhận {response.StatusCode}: {body}");
+        using var deletion = JsonDocument.Parse(body);
+        Assert.Equal("hard_deleted", deletion.RootElement.GetProperty("data").GetProperty("outcome").GetString());
+        Assert.Equal(JsonValueKind.Null, deletion.RootElement.GetProperty("data").GetProperty("product").ValueKind);
         await using var context = _database.CreateCatalogContext();
-        // Bỏ qua bộ lọc để thấy dòng đã xóa mềm và con của nó.
-        var stored = await context.Products.IgnoreQueryFilters().SingleAsync(product => product.Id == productId);
-        Assert.NotNull(stored.DeletedAt);
-        Assert.Equal(2, await context.Skus.CountAsync(sku => sku.ProductId == productId));
-        Assert.Equal(2, await context.ProductImages.CountAsync(image => image.ProductId == productId));
-        Assert.Equal(2, await context.InventoryMovements.CountAsync(movement => skuIds.Contains(movement.SkuId)));
+        Assert.False(await context.Products.AnyAsync(product => product.Id == productId));
+        Assert.False(await context.Skus.AnyAsync(sku => sku.ProductId == productId));
+        Assert.False(await context.ProductImages.AnyAsync(image => image.ProductId == productId));
+        Assert.False(await context.InventoryMovements.AnyAsync(movement => skuIds.Contains(movement.SkuId)));
 
-        // Ảnh vẫn còn vì sản phẩm có thể khôi phục, nên không xếp job xóa ảnh.
-        Assert.Empty(await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ToListAsync());
-
-        // Sản phẩm đã xóa không còn trong API quản trị và trang công khai.
-        var adminGet = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, $"/api/admin/products/{productId}", _adminCookie));
-        Assert.Equal(HttpStatusCode.NotFound, adminGet.StatusCode);
-        var publicGet = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, $"/api/products/{stored.Slug}"));
-        Assert.Equal(HttpStatusCode.NotFound, publicGet.StatusCode);
+        // Mỗi ảnh có đúng 1 job xóa, để Cloudinary không giữ ảnh mồ côi.
+        var jobs = await context.ImageDeletionJobs.AsNoTracking().Where(job => job.PublicId.Contains(_suffix)).ToListAsync();
+        var expectedPublicIds = new[] { ImagePublicId(productId, 0), ImagePublicId(productId, 1) }.Order();
+        Assert.Equal(expectedPublicIds, jobs.Select(job => job.PublicId).Order());
+        Assert.All(jobs, job => Assert.Equal(ImageDeletionProcessor.PendingStatus, job.Status));
 
         var emitted = Assert.Single(EventsOf(productId));
         Assert.Equal(ProductChange.Deleted, emitted.Change);
@@ -515,11 +580,11 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
 
         var response = await DeleteAsync(productId);
 
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Mong đợi 200, nhận {response.StatusCode}: {body}");
+        using var deletion = JsonDocument.Parse(body);
+        Assert.Equal("hard_deleted", deletion.RootElement.GetProperty("data").GetProperty("outcome").GetString());
         await using var context = _database.CreateCatalogContext();
-        // Sản phẩm vẫn còn trong DB với dấu xóa mềm, nhưng không có ảnh nên không cần job xóa ảnh.
-        var stored = await context.Products.IgnoreQueryFilters().SingleAsync(product => product.Id == productId);
-        Assert.NotNull(stored.DeletedAt);
         Assert.Empty(await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ToListAsync());
     }
 
@@ -543,6 +608,6 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
 
         await lockTransaction.RollbackAsync();
         var response = await pendingDelete.WaitAsync(TimeSpan.FromSeconds(30));
-        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }

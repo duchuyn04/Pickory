@@ -70,7 +70,9 @@ export type AttributeDefinition = {
 | `hidden` | | | Ẩn tạm, link cũ trả 404 |
 | `discontinued` | ✓ | | Vẫn xem được (giữ link, SEO) nhưng hiện "Ngừng kinh doanh" |
 
-- Xóa sản phẩm là xóa mềm: API đặt `deletedAt` và giữ SKU, ảnh, movement cùng lịch sử slug. Sản phẩm đã có trong đơn vẫn bị chặn xóa để giữ liên kết đơn hàng.
+- Sản phẩm chưa từng có đơn bị xóa cứng. Sản phẩm đã có đơn được xóa mềm.
+- Sản phẩm xóa mềm có `deletedAt`, bị ẩn khỏi khách và vẫn còn dữ liệu trong quản trị.
+- Khôi phục sản phẩm xóa mềm trả lại trạng thái trước khi xóa.
 
 **Quy tắc giá:**
 - Giá là số nguyên VND, lớn hơn 0.
@@ -137,7 +139,8 @@ export { catalogPermissions } from './permissions';
 - Giới hạn: JPG, PNG, WebP; tối đa 5 MB mỗi ảnh; tối đa 10 ảnh mỗi sản phẩm; alt text bắt buộc.
 - Cloudinary không giới hạn kích thước file qua chữ ký. Khi gắn ảnh mới, backend hỏi Cloudinary kích thước và định dạng thật. Ảnh sai bị từ chối và được xếp lịch xóa.
 - Hiển thị qua URL biến đổi của Cloudinary (`f_auto,q_auto`, các chiều rộng 200/400/800/1200) để trình duyệt chọn ảnh vừa kích thước.
-- Xóa ảnh khỏi sản phẩm thì xóa luôn trên Cloudinary (qua job nền, lỗi thì thử lại).
+- Bỏ ảnh cần xác nhận. Ảnh chỉ bị xóa sau khi admin lưu sản phẩm.
+- Lưu sản phẩm có ảnh bị bỏ thì xóa ảnh khỏi sản phẩm và Cloudinary qua job nền.
 - Job xóa ảnh nằm trong `image_deletion_jobs`, ghi cùng transaction với việc bỏ ảnh. Lỗi thì chờ 1, 2, 4 phút và tiếp tục nhân đôi, tối đa 6 giờ. Lỗi lần thứ 8 thì job dừng và API ghi log lỗi.
 - Thiếu `CLOUDINARY_*` ở dev và test thì API dùng kho ảnh giả. Production thiếu khóa thì API dừng khi khởi động.
 - Kho ảnh giả ở dev và E2E coi mọi ảnh trong thư mục `pickory/products` là JPG nhỏ hợp lệ, vì trình duyệt không tải được ảnh thật. Test tích hợp dùng kho giả nghiêm ngặt.
@@ -168,6 +171,8 @@ Admin soạn mô tả chi tiết bằng trình soạn thảo trực quan. Backen
 | GET | `/api/product-details?slug=a&slug=b` | Tối đa 20 slug; trả chi tiết sản phẩm công khai theo thứ tự yêu cầu, bỏ slug thiếu hoặc trùng |
 | GET | `/api/products/compare?ids=a,b,c` | So sánh tối đa 4 sản phẩm cùng danh mục |
 
+Chi tiết sản phẩm trả `stock` cho mỗi SKU đang bật. Trường này là số lượng tồn hiện tại.
+
 Tham số `GET /api/products`:
 
 ```
@@ -189,11 +194,12 @@ sort=newest|price_asc|price_desc                     page=1  pageSize=24 (tối 
 
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
-| GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, tìm theo tên hoặc SKU. Lọc bằng `status`, `categoryId` (gồm danh mục con), `lowStock=true` (sản phẩm có SKU đang bật với `stock` từ 5 trở xuống). |
-| GET | `/api/admin/products/:id` | `products:read` | Chi tiết để sửa |
-| POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể, ảnh (`images`) |
-| PUT | `/api/admin/products/:id/status` | `products:write` | Đặt trạng thái của sản phẩm. Body `{ "status": "draft" \| "active" \| "hidden" \| "discontinued" }`. Lỗi: 400 `VALIDATION_ERROR`, 404 `PRODUCT_NOT_FOUND`, 409 `INVALID_STATUS_TRANSITION`, 422 `PRODUCT_NOT_PUBLISHABLE` (danh sách lý do trong `details`). Đổi sang đúng trạng thái hiện tại trả 200, không ghi audit. |
-| DELETE | `/api/admin/products/:id` | `products:write` | Xóa mềm: đặt `deletedAt`, giữ SKU, ảnh, movement và lịch sử slug. Trả 204. Lỗi: 404 `PRODUCT_NOT_FOUND`, 409 `PRODUCT_HAS_ORDERS`. |
+| GET | `/api/admin/products` | `products:read` | Danh sách mọi trạng thái, kể cả sản phẩm xóa mềm. Tìm theo tên hoặc SKU. Lọc bằng `status`, `categoryId` (gồm danh mục con), `lowStock=true` (sản phẩm có SKU đang bật với `stock` từ 5 trở xuống). |
+| GET | `/api/admin/products/:id` | `products:read` | Chi tiết để sửa, kể cả khi đang xóa mềm |
+| POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể, ảnh (`images`). Sửa sản phẩm xóa mềm trả 409 `PRODUCT_DELETED`. |
+| PUT | `/api/admin/products/:id/status` | `products:write` | Đặt trạng thái của sản phẩm. Body `{ "status": "draft" \| "active" \| "hidden" \| "discontinued" }`. Lỗi: 400 `VALIDATION_ERROR`, 404 `PRODUCT_NOT_FOUND`, 409 `INVALID_STATUS_TRANSITION` hoặc `PRODUCT_DELETED`, 422 `PRODUCT_NOT_PUBLISHABLE` (danh sách lý do trong `details`). Đổi sang đúng trạng thái hiện tại trả 200, không ghi audit. |
+| DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng khi chưa có đơn; xóa mềm khi đã có đơn. Trả 200 kèm `outcome` là `hard_deleted` hoặc `soft_deleted`. Lỗi: 404 `PRODUCT_NOT_FOUND`. |
+| POST | `/api/admin/products/:id/restoration` | `products:write` | Khôi phục sản phẩm xóa mềm, trả chi tiết đã mở khóa |
 | GET | `/api/admin/categories` | `products:read` | Danh sách phẳng, mỗi danh mục kèm đủ thuộc tính riêng |
 | POST · PATCH · DELETE | `/api/admin/categories[/:id]` | `products:write` | Quản lý danh mục và bộ thuộc tính. `DELETE` là xóa mềm. |
 | POST · PATCH · DELETE | `/api/admin/brands[/:id]` | `products:write` | Quản lý thương hiệu. `DELETE` là xóa mềm. |
@@ -234,7 +240,7 @@ model Product {
   inStock        Boolean       @default(false)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
-  deletedAt      DateTime?
+  deletedAt      DateTime?     // null nghĩa là chưa xóa mềm
   @@index([categoryId, status])
   @@map("products")
 }
@@ -273,8 +279,10 @@ model InventoryMovement { /* bảng cũ, chỉ đọc từ ngày 2026-10-22: sku
 - Hai vùng chừa sẵn cho `recommendations` và `personalized-content` không còn dùng, vì hai module này đã bỏ ngày 2026-10-14. Xóa hai vùng này ở một task sau.
 
 *Back-office* (`features/catalog/admin/`)
-- Danh sách sản phẩm có lọc trạng thái, danh mục, sắp hết hàng.
+- Danh sách sản phẩm có lọc trạng thái, danh mục, sắp hết hàng và nhãn `Đã xóa mềm`.
 - Form sản phẩm: ô thông số sinh động theo danh mục; trình soạn thảo mô tả có thanh công cụ (tiêu đề 1, 2, 3, đậm, nghiêng); bảng biến thể sinh từ tổ hợp tùy chọn; kéo thả sắp xếp ảnh.
+- Bấm nút trạng thái khi có bản nháp sẽ tự lưu trước, rồi mới gửi trạng thái đích.
+- Sản phẩm xóa mềm chỉ đọc và có nút khôi phục. Bỏ ảnh cần xác nhận trước khi rời khỏi bản nháp.
 - Quản lý danh mục kèm trình soạn bộ thuộc tính; quản lý thương hiệu.
 - Bảng biến thể có ô số lượng sửa được. Số lượng mới từ SSE hiện ngay khi ô chưa bị sửa. Danh sách sản phẩm có cột tổng số lượng và nhãn sắp hết.
 - Nút và menu ẩn hoặc hiện theo `useCan(...)`.

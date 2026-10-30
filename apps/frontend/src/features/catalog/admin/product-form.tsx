@@ -66,9 +66,16 @@ export interface ProductDetail {
   status: string;
   minPrice: number | null;
   images: ProductImageDetail[];
+  // Có giá trị khi sản phẩm đang bị xóa mềm và cần khôi phục trước khi sửa.
+  deletedAt?: string | null;
 }
 
 const emptyDescription: DescriptionDoc = { type: 'doc', content: [{ type: 'paragraph' }] };
+
+interface DeleteProductResult {
+  outcome: 'hard_deleted' | 'soft_deleted';
+  product: ProductDetail | null;
+}
 
 // Cờ sửa số lượng chỉ điều khiển payload. Bỏ cờ trước khi so sánh hoặc gửi lên máy chủ.
 function withoutStockEdited(variant: ProductVariant): ProductVariant {
@@ -83,9 +90,10 @@ interface ProductFormViewProps {
   canWrite: boolean;
   product?: ProductDetail;
   onSave: (payload: Record<string, unknown>) => Promise<unknown>;
-  // Chỉ trang sửa dùng hai hàm này. Trang tạo mới không có khối trạng thái nên không gọi.
+  // Chỉ trang sửa dùng ba hàm này. Trang tạo mới không có khối trạng thái nên không gọi.
   onChangeStatus: (target: ProductStatus) => Promise<void>;
-  onDelete: () => Promise<void>;
+  onDelete: () => Promise<unknown>;
+  onRestore: () => Promise<void>;
 }
 
 export function ProductFormView({
@@ -96,6 +104,7 @@ export function ProductFormView({
   onSave,
   onChangeStatus,
   onDelete,
+  onRestore,
 }: ProductFormViewProps) {
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? '');
   const [brandId, setBrandId] = useState(product?.brandId ?? '');
@@ -148,8 +157,8 @@ export function ProductFormView({
   const leafCategories = categories.filter(
     (category) => !categories.some((child) => child.parentId === category.id),
   );
-  // Quyền products:write và trạng thái lưu cùng khóa mọi ô để tránh ghi ngoài quyền hoặc gửi trùng.
-  const disabled = !canWrite || isSaving;
+  // Quyền ghi, thao tác lưu và trạng thái xóa mềm cùng khóa mọi ô để tránh ghi ngoài ý muốn.
+  const disabled = !canWrite || isSaving || Boolean(product?.deletedAt);
 
   function updateOptions(nextOptions: ProductOption[]) {
     setOptions(nextOptions);
@@ -197,10 +206,9 @@ export function ProductFormView({
     }
   }
 
-  async function submit(event: FormEvent) {
-    event.preventDefault();
+  async function saveProduct(): Promise<boolean> {
     // Giao diện có thể đổi quyền khi đang mở form, nên chặn gửi ngay tại điểm lưu.
-    if (!canWrite || isSaving) return;
+    if (!canWrite || isSaving || product?.deletedAt) return false;
     setFormError(null);
     // Thẩm định bộ thông số trước HTTP để lỗi luôn gắn đúng ô đang hiển thị.
     const validation = validateSpecs(specs, attributes);
@@ -208,13 +216,13 @@ export function ProductFormView({
       setSpecErrors(
         Object.fromEntries(validation.errors.map((error) => [error.key, error.message])),
       );
-      return;
+      return false;
     }
     setSpecErrors({});
     // Thiếu định danh hoặc tên sẽ khiến API từ chối toàn bộ sản phẩm.
     if (!categoryId || !brandId || !name.trim()) {
       setFormError('Nhập danh mục, thương hiệu và tên sản phẩm.');
-      return;
+      return false;
     }
     // Sinh tổ hợp trước khi gửi để giới hạn số SKU và phát hiện trục không hợp lệ.
     let combinations: Record<string, string>[];
@@ -222,7 +230,7 @@ export function ProductFormView({
       combinations = buildVariantCombinations(options);
     } catch (error) {
       setFormError(toCatalogErrorMessage(error, 'Tùy chọn không hợp lệ.'));
-      return;
+      return false;
     }
     // Gửi các trục đã chuẩn hóa để API lưu đúng tên tổ hợp đang hiển thị trên bảng.
     const normalizedOptions = options.map((option) => ({
@@ -245,7 +253,7 @@ export function ProductFormView({
     );
     setImageAltErrors(missingAlts);
     // Không gửi nếu còn giá sai hoặc ảnh thiếu alt vì từng ô đã hiển thị lỗi riêng.
-    if (Object.keys(invalidPrices).length > 0 || Object.keys(missingAlts).length > 0) return;
+    if (Object.keys(invalidPrices).length > 0 || Object.keys(missingAlts).length > 0) return false;
     // Khóa form trong lúc chờ máy chủ để tránh hai lần ghi cùng một bản nháp.
     setIsSaving(true);
     try {
@@ -267,6 +275,7 @@ export function ProductFormView({
       setVariants((current) => current.map(withoutStockEdited));
       // Lưu xong, dữ liệu trên máy chủ khớp với dữ liệu trong form. Vì vậy các nút trạng thái được mở lại.
       savedSnapshotRef.current = formSnapshot;
+      return true;
     } catch (error) {
       // Lỗi thông số trả về key từ API phải nằm ngay dưới ô, không xóa bản nháp.
       if (error instanceof ApiError && error.code === 'SPECS_INVALID' && error.details) {
@@ -276,10 +285,16 @@ export function ProductFormView({
       } else {
         setFormError(toCatalogErrorMessage(error, 'Không lưu được sản phẩm.'));
       }
+      return false;
     } finally {
       // Mở lại form sau khi yêu cầu hoàn tất, kể cả khi API trả lỗi.
       setIsSaving(false);
     }
+  }
+
+  async function submit(event: FormEvent) {
+    event.preventDefault();
+    await saveProduct();
   }
 
   return (
@@ -301,10 +316,13 @@ export function ProductFormView({
         <ProductStatusPanel
           productName={product.name}
           status={product.status}
+          deletedAt={product.deletedAt ?? null}
           canWrite={canWrite}
           hasUnsavedChanges={hasUnsavedChanges}
+          onSaveChanges={saveProduct}
           onChangeStatus={onChangeStatus}
           onDelete={onDelete}
+          onRestore={onRestore}
         />
       )}
       <section className="card product-section">
@@ -477,7 +495,7 @@ export function ProductFormView({
       {/* Chỉ quyền products:write mới được hiển thị thao tác lưu. */}
       {canWrite && (
         <div className="head-actions product-actions">
-          <button className="btn btn-primary" disabled={isSaving} type="submit">
+          <button className="btn btn-primary" disabled={disabled} type="submit">
             {isSaving ? 'Đang lưu...' : 'Lưu sản phẩm'}
           </button>
         </div>
@@ -553,10 +571,28 @@ export function ProductFormPage() {
   }
 
   async function deleteProduct() {
-    await apiRequest<void>(`/api/admin/products/${id}`, { method: 'DELETE' });
-    // Sản phẩm đã mất, nên danh sách cũ trong cache không còn đúng.
+    const result = await apiRequest<DeleteProductResult>(`/api/admin/products/${id}`, {
+      method: 'DELETE',
+    });
+    // Danh sách phải tải lại vì sản phẩm có thể đã đổi sang trạng thái xóa mềm.
     await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
+    if (result.outcome === 'soft_deleted' && result.product) {
+      // Sản phẩm vẫn còn để khôi phục, nên cập nhật tại chỗ thay vì rời trang.
+      queryClient.setQueryData(['admin-product', id], result.product);
+      return;
+    }
+    // Xóa cứng làm sản phẩm mất hẳn, nên bỏ cache chi tiết trước khi về danh sách.
+    queryClient.removeQueries({ queryKey: ['admin-product', id] });
     navigate('/admin/products');
+  }
+
+  async function restoreProduct() {
+    const restored = await apiRequest<ProductDetail>(`/api/admin/products/${id}/restoration`, {
+      method: 'POST',
+    });
+    // Ghi sản phẩm đã khôi phục vào cache để form mở khóa ngay.
+    queryClient.setQueryData(['admin-product', id], restored);
+    await queryClient.invalidateQueries({ queryKey: ['admin-products'] });
   }
 
   return (
@@ -569,6 +605,7 @@ export function ProductFormPage() {
       onSave={save}
       onChangeStatus={changeStatus}
       onDelete={deleteProduct}
+      onRestore={restoreProduct}
     />
   );
 }

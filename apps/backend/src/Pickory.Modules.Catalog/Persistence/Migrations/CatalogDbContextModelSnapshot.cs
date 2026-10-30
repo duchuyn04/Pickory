@@ -347,8 +347,7 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique()
-                        .HasDatabaseName("products_slug_key")
-                        .HasFilter("\"deletedAt\" IS NULL");
+                        .HasDatabaseName("products_slug_key");
 
                     b.HasIndex("Specs")
                         .HasDatabaseName("products_specs_gin_idx");

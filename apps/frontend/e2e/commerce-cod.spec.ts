@@ -4,7 +4,6 @@ import {
   type BrowserContext,
   type Locator,
   type Page,
-  type Request,
   type TestInfo,
 } from '@playwright/test';
 import {
@@ -15,12 +14,7 @@ import {
   type AddressChoice,
   type SeededProduct,
 } from './admin-order-fixtures';
-import {
-  collectConsoleIssues,
-  dismissConsent,
-  isAllowedLoadFailure,
-  loginAdmin,
-} from './catalog-admin-flow';
+import { collectConsoleIssues, dismissConsent, loginAdmin } from './catalog-admin-flow';
 import {
   addToCartAndOpenCheckout,
   checkoutRowFor,
@@ -104,7 +98,7 @@ test.describe('COM-E2E1: khách vãng lai mua COD', () => {
     }
   });
 
-  test('khách thêm giỏ, đặt COD, đọc thư, mở link xem đơn, rồi admin không xóa được sản phẩm đã đặt', async ({
+  test('khách thêm giỏ, đặt COD, đọc thư, mở link xem đơn, rồi admin xóa mềm và khôi phục sản phẩm đã đặt', async ({
     page,
     browser,
   }, testInfo: TestInfo) => {
@@ -214,57 +208,59 @@ test.describe('COM-E2E1: khách vãng lai mua COD', () => {
       }
     });
 
-    await test.step('Admin xóa cứng sản phẩm đã đặt thì nhận lỗi PRODUCT_HAS_ORDERS', async () => {
-      // Chỉ bỏ qua đúng một dòng lỗi 409, tức dòng "Failed to load resource" của request xóa bị từ chối. Mọi dòng khác vẫn là lỗi.
-      const expectedDeleteFailure = {
-        urlPattern: new RegExp(`/api/admin/products/${product.id}$`),
-        status: 409,
-      };
-      const adminIssues = collectConsoleIssues(adminPage, [expectedDeleteFailure]);
-      // Một hàm duy nhất nhận ra request xóa sản phẩm, để listener và `waitForResponse` dùng cùng luật.
-      const isProductDeleteRequest = (request: Request) =>
-        request.method() === 'DELETE' && expectedDeleteFailure.urlPattern.test(request.url());
-      // Số request xóa chứng minh test chỉ gửi một request xóa. Đăng ký trước khi bấm để không bỏ sót request.
-      let deleteRequestCount = 0;
-      adminPage.on('request', (request) => {
-        if (isProductDeleteRequest(request)) deleteRequestCount += 1;
-      });
-      // Số dòng bỏ qua chứng minh dòng lỗi 409 đã tới và được tính.
-      let ignoredDeleteFailures = 0;
-      adminPage.on('console', (message) => {
-        if (isAllowedLoadFailure(message, expectedDeleteFailure)) ignoredDeleteFailures += 1;
-      });
+    await test.step('Admin xóa mềm sản phẩm đã đặt rồi khôi phục', async () => {
+      const adminIssues = collectConsoleIssues(adminPage);
 
       await adminPage.goto(`/admin/products/${product.id}`);
       await adminPage.getByRole('button', { name: 'Xóa sản phẩm', exact: true }).click();
       const dialog = adminPage.getByRole('dialog');
       await expect(dialog).toContainText(product.name);
 
-      const deleteResponse = adminPage.waitForResponse((response) =>
-        isProductDeleteRequest(response.request()),
+      const deleteResponse = adminPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'DELETE' &&
+          response.url().endsWith(`/api/admin/products/${product.id}`),
       );
-      await dialog.getByRole('button', { name: 'Xóa vĩnh viễn', exact: true }).click();
-      const response = await deleteResponse;
-      // Sự kiện `request` đến trước response, nên số request xóa đã ổn định ở đây.
-      expect(deleteRequestCount).toBe(1);
-      expect(response.status()).toBe(409);
-      expect((await response.json()).error.code).toBe('PRODUCT_HAS_ORDERS');
+      await dialog.getByRole('button', { name: 'Xác nhận xóa', exact: true }).click();
+      const softDeleted = await deleteResponse;
+      expect(softDeleted.status()).toBe(200);
+      const deletionBody = await softDeleted.json();
+      expect(deletionBody.data.outcome).toBe('soft_deleted');
+      expect(deletionBody.data.product.deletedAt).not.toBeNull();
 
-      // Hộp thoại còn mở và báo lý do bằng tiếng Việt, để admin biết vì sao không xóa được.
-      await expect(dialog).toBeVisible();
-      await expect(dialog.getByRole('alert')).toContainText(
-        'Sản phẩm đã có đơn hàng nên không xóa được.',
+      // Xóa mềm đóng hộp thoại, khóa form và chỉ cho khôi phục.
+      await expect(dialog).toBeHidden();
+      await expect(adminPage.locator('.status-current .badge')).toHaveText('Đã xóa mềm');
+      await expect(adminPage.locator('#product-name')).toBeDisabled();
+      await expect(
+        adminPage.getByRole('button', { name: 'Khôi phục sản phẩm', exact: true }),
+      ).toBeVisible();
+
+      // Dữ liệu còn trong admin nhưng khách không tải được sản phẩm qua API công khai.
+      const softDetail = await adminPage.request.get(`/api/admin/products/${product.id}`);
+      expect(softDetail.status(), await softDetail.text()).toBe(200);
+      expect((await softDetail.json()).data.deletedAt).not.toBeNull();
+      expect((await page.request.get(`/api/products/${product.slug}`)).status()).toBe(404);
+
+      const restoreResponse = adminPage.waitForResponse(
+        (response) =>
+          response.request().method() === 'POST' &&
+          response.url().endsWith(`/api/admin/products/${product.id}/restoration`),
       );
-      await adminPage.screenshot({ path: testInfo.outputPath('delete-blocked.png') });
+      await adminPage.getByRole('button', { name: 'Khôi phục sản phẩm', exact: true }).click();
+      const restored = await restoreResponse;
+      expect(restored.status()).toBe(200);
+      expect((await restored.json()).data.deletedAt).toBeNull();
 
-      // Sản phẩm vẫn còn: API admin trả 200 và trang khách vẫn mở được.
-      const stillThere = await adminPage.request.get(`/api/admin/products/${product.id}`);
-      expect(stillThere.status(), await stillThere.text()).toBe(200);
+      // Khôi phục trả sản phẩm về trạng thái trước khi xóa và mở lại trang khách.
+      await expect(adminPage.locator('.status-current .badge')).toHaveText('Đang bán');
+      await expect(
+        adminPage.getByRole('button', { name: 'Khôi phục sản phẩm', exact: true }),
+      ).toHaveCount(0);
+      expect((await page.request.get(`/api/products/${product.slug}`)).status()).toBe(200);
       await page.goto(`/p/${product.slug}`);
       await expect(page.getByRole('heading', { level: 1, name: product.name })).toBeVisible();
 
-      // Sự kiện console đến không đồng bộ với response. Chờ tới khi dòng lỗi 409 được ghi nhận.
-      await expect.poll(() => ignoredDeleteFailures).toBe(1);
       expect(adminIssues).toEqual([]);
     });
 

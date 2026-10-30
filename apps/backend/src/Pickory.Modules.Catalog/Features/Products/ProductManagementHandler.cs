@@ -123,6 +123,12 @@ public sealed class ProductManagementHandler(
                 throw ProductNotFound();
             }
 
+            // Sản phẩm xóa mềm phải được khôi phục trước khi sửa, để dữ liệu đang ẩn không đổi ngoài ý muốn.
+            if (product.DeletedAt is not null)
+            {
+                throw ProductDeleted();
+            }
+
             // Chỉ lấy SKU thuộc tùy chọn hiện tại. SKU đã bỏ vẫn nằm trong DB để có thể bật lại.
             var oldOptions = ReadOptions(product.Options);
             var oldCombinationKeys = VariantCombinations.Build(oldOptions).Select(CombinationKey).ToHashSet(StringComparer.Ordinal);
@@ -159,6 +165,12 @@ public sealed class ProductManagementHandler(
                 throw ProductNotFound();
             }
 
+            // Trạng thái của sản phẩm đang xóa mềm chỉ đổi được sau khi khôi phục.
+            if (product.DeletedAt is not null)
+            {
+                throw ProductDeleted();
+            }
+
             // Trạng thái không đổi thì không có gì để ghi, nên không audit và không phát sự kiện.
             if (product.Status == target)
             {
@@ -193,40 +205,116 @@ public sealed class ProductManagementHandler(
         }, cancellationToken);
     }
 
-    public async Task DeleteAsync(string id, CancellationToken cancellationToken)
+    public async Task<DeleteProductResponse> DeleteAsync(string id, CancellationToken cancellationToken)
     {
-        // Helper chỉ phát sự kiện sau commit, nên xóa thất bại không phát sự kiện `Deleted`.
-        await CatalogTransaction.RunAsync(database, dispatcher, async events =>
+        try
         {
-            // Dùng chung khóa với tạo và sửa, để không xóa trong lúc request khác đang sửa sản phẩm.
-            await database.Database.ExecuteSqlInterpolatedAsync(
-                $"SELECT pg_advisory_xact_lock({ProductWriteLockKey})", cancellationToken);
-            // Khóa dòng sản phẩm trước khi kiểm movement. Đơn đang giữ hàng chưa commit phải commit xong thì mới thấy movement của nó.
+            // Helper chỉ phát sự kiện sau commit, nên xóa thất bại không phát sự kiện `Deleted`.
+            return await CatalogTransaction.RunAsync(database, dispatcher, async events =>
+            {
+                // Dùng chung khóa với tạo và sửa, để không xóa trong lúc request khác đang sửa sản phẩm.
+                await database.Database.ExecuteSqlInterpolatedAsync(
+                    $"SELECT pg_advisory_xact_lock({ProductWriteLockKey})", cancellationToken);
+                // Khóa dòng sản phẩm trước khi kiểm movement. Đơn đang giữ hàng chưa commit phải commit xong thì mới thấy movement của nó.
+                await LockProductRowAsync(id, cancellationToken);
+                var product = await database.Products.Include(item => item.Skus).Include(item => item.Images)
+                    .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+                if (product is null)
+                {
+                    throw ProductNotFound();
+                }
+
+                // Gọi xóa lần hai trên sản phẩm đã xóa mềm không ghi thêm dữ liệu hay phát lặp sự kiện.
+                if (product.DeletedAt is not null)
+                {
+                    return new DeleteProductResponse(ProductDeletionOutcome.SoftDeleted, ToResponse(product));
+                }
+
+                // Sản phẩm đã có đơn phải giữ nguyên dữ liệu lịch sử, nên chuyển sang xóa mềm.
+                var skuIds = product.Skus.Select(sku => sku.Id).ToList();
+                var hasOrders = await database.InventoryMovements.AnyAsync(movement =>
+                    skuIds.Contains(movement.SkuId) && movement.Type == InventoryMovementType.OrderReserve, cancellationToken);
+                if (hasOrders)
+                {
+                    return await SoftDeleteInTransactionAsync(product, events, cancellationToken);
+                }
+
+                // Movement `manual` và `return` không thuộc đơn hàng. Khóa ngoại Restrict buộc xóa chúng trước SKU (Decision 18).
+                await database.InventoryMovements
+                    .Where(movement => skuIds.Contains(movement.SkuId))
+                    .ExecuteDeleteAsync(cancellationToken);
+
+                // Job xóa ảnh nằm trong cùng transaction, để ảnh chỉ bị xóa khỏi Cloudinary khi sản phẩm đã bị xóa.
+                imageSync.ScheduleDeletionOfAllImages(product, timeProvider.GetUtcNow().UtcDateTime);
+                database.Products.Remove(product);
+                await database.SaveChangesAsync(cancellationToken);
+                events.Emit(new ProductChangedEvent(product.Id, ProductChange.Deleted));
+                return new DeleteProductResponse(ProductDeletionOutcome.HardDeleted, Product: null);
+            }, cancellationToken);
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
+            { SqlState: PostgresErrorCodes.ForeignKeyViolation, ConstraintName: "inventory_movements_skuId_fkey" })
+        {
+            // Đơn giữ hàng xuất hiện sau bước kiểm tra. Chạy lại ở chế độ xóa mềm trên transaction mới.
+            return await SoftDeleteAsync(id, cancellationToken);
+        }
+    }
+
+    public async Task<ProductResponse> RestoreAsync(string id, CancellationToken cancellationToken) =>
+        await RunWriteAsync(async events =>
+        {
             await LockProductRowAsync(id, cancellationToken);
-            var product = await database.Products.Include(item => item.Skus)
+            var product = await database.Products.Include(item => item.Skus).Include(item => item.Images)
                 .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
             if (product is null)
             {
                 throw ProductNotFound();
             }
 
-            // Movement `order_reserve` nghĩa là SKU từng có đơn. Giữ quy tắc cũ: sản phẩm đã bán không xóa, kể cả xóa mềm.
-            var skuIds = product.Skus.Select(sku => sku.Id).ToList();
-            var hasOrders = await database.InventoryMovements.AnyAsync(movement =>
-                skuIds.Contains(movement.SkuId) && movement.Type == InventoryMovementType.OrderReserve, cancellationToken);
-            if (hasOrders)
+            // Khôi phục lần hai không tạo cập nhật hay sự kiện trùng.
+            if (product.DeletedAt is null)
             {
-                throw ProductHasOrders();
+                return ToResponse(product);
             }
 
-            // Đánh dấu xóa mềm. Dòng sản phẩm, SKU, ảnh và movement ở lại để đối soát và khôi phục.
+            product.DeletedAt = null;
+            product.UpdatedAt = timeProvider.GetUtcNow().UtcDateTime;
+            await database.SaveChangesAsync(cancellationToken);
+            events.Emit(new ProductChangedEvent(product.Id, ProductChange.Status));
+            return ToResponse(product);
+        }, cancellationToken);
+
+    private async Task<DeleteProductResponse> SoftDeleteAsync(string id, CancellationToken cancellationToken) =>
+        await CatalogTransaction.RunAsync(database, dispatcher, async events =>
+        {
+            // Khóa theo cùng thứ tự với mọi đường ghi sản phẩm.
+            await database.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({ProductWriteLockKey})", cancellationToken);
+            await LockProductRowAsync(id, cancellationToken);
+            var product = await database.Products.Include(item => item.Skus).Include(item => item.Images)
+                .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+            if (product is null)
+            {
+                throw ProductNotFound();
+            }
+
+            return await SoftDeleteInTransactionAsync(product, events, cancellationToken);
+        }, cancellationToken);
+
+    private async Task<DeleteProductResponse> SoftDeleteInTransactionAsync(
+        Product product, DomainEventCollector events, CancellationToken cancellationToken)
+    {
+        // Ghi dấu xóa mềm một lần. Gọi lặp không đổi thời điểm và không phát thêm sự kiện.
+        if (product.DeletedAt is null)
+        {
             var now = timeProvider.GetUtcNow().UtcDateTime;
             product.DeletedAt = now;
             product.UpdatedAt = now;
             await database.SaveChangesAsync(cancellationToken);
             events.Emit(new ProductChangedEvent(product.Id, ProductChange.Deleted));
-            return true;
-        }, cancellationToken);
+        }
+
+        return new DeleteProductResponse(ProductDeletionOutcome.SoftDeleted, ToResponse(product));
     }
 
     // Khóa dòng sản phẩm đến hết transaction. Sổ tồn kho cũng khóa `products` trước `skus`, nên hai bên không chờ nhau theo vòng.
@@ -673,11 +761,11 @@ public sealed class ProductManagementHandler(
             product.Images.OrderBy(image => image.Position).ThenBy(image => image.Id).Select(image =>
                 new ProductImageResponse(image.Id, image.PublicId, image.Alt, image.SkuId, image.Position,
                     ProductImageUrl.Build(cloudinary, image.PublicId))).ToList(),
-            product.CreatedAt, product.UpdatedAt);
+            product.DeletedAt, product.CreatedAt, product.UpdatedAt);
     }
 
     private static AppException ProductNotFound() => new("PRODUCT_NOT_FOUND", 404, "Không tìm thấy sản phẩm.");
-    private static AppException ProductHasOrders() => new("PRODUCT_HAS_ORDERS", 409, "Sản phẩm đã có đơn hàng nên không xóa được.");
+    private static AppException ProductDeleted() => new("PRODUCT_DELETED", 409, "Sản phẩm đã bị xóa mềm. Khôi phục trước khi chỉnh sửa.");
     private static AppException DuplicateSkuCode() => new("SKU_CODE_ALREADY_EXISTS", 409, "Mã SKU đã tồn tại.");
     private static AppException InvalidVariants() => new("INVALID_PRODUCT_VARIANTS", 400, "Danh sách biến thể không khớp tổ hợp tùy chọn.");
     private sealed record VariantPlan(Sku Sku, ProductVariantRequest Variant, string Code, bool IsNew);

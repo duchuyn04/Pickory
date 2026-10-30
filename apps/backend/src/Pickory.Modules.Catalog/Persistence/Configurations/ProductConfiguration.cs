@@ -29,16 +29,11 @@ internal sealed class ProductConfiguration : IEntityTypeConfiguration<Product>
         entity.Property(value => value.InStock).HasDefaultValue(false);
         entity.Property(value => value.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         entity.Property(value => value.UpdatedAt).IsRequired();
-        // Lưu thời điểm xóa mềm để truy vết. Dòng đã xóa vẫn giữ SKU, ảnh và sổ tồn kho.
         entity.Property(value => value.DeletedAt).IsRequired(false);
-        // Ẩn sản phẩm đã xóa khỏi trang quản trị, cửa hàng và giỏ hàng.
-        entity.HasQueryFilter(value => value.DeletedAt == null);
 
         entity.HasIndex(value => value.Slug)
             .IsUnique()
-            .HasDatabaseName("products_slug_key")
-            // Chỉ chặn trùng slug giữa các sản phẩm còn sống. Dòng đã xóa nhường slug cho bản mới.
-            .HasFilter("\"deletedAt\" IS NULL");
+            .HasDatabaseName("products_slug_key");
 
         entity.HasIndex(value => new { value.CategoryId, value.Status })
             .HasDatabaseName("products_categoryId_status_idx");

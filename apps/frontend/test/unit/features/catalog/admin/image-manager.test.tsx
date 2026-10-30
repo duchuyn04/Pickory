@@ -146,12 +146,49 @@ describe('ImageManager', () => {
     );
   });
 
-  it('bỏ ảnh xóa ảnh khỏi danh sách', async () => {
-    await renderManager();
+  it('bỏ ảnh mở hộp thoại xác nhận và chưa đổi danh sách', async () => {
+    const { onChange } = await renderManager();
 
     await act(async () => button('Bỏ ảnh 1').click());
 
+    const dialog = container.querySelector<HTMLElement>('[role="dialog"]')!;
+    expect(dialog).not.toBeNull();
+    expect(dialog.textContent).toContain('Ảnh chỉ bị xóa sau khi bạn lưu sản phẩm.');
+    expect(onChange).not.toHaveBeenCalled();
+    expect(altValues()).toEqual(['Mặt trước', 'Mặt sau']);
+  });
+
+  it('xác nhận bỏ ảnh thì mới xóa ảnh khỏi danh sách', async () => {
+    const { onChange } = await renderManager();
+
+    await act(async () => button('Bỏ ảnh 1').click());
+    const confirm = [
+      ...container.querySelectorAll<HTMLButtonElement>('[role="dialog"] button'),
+    ].find((candidate) => candidate.textContent === 'Bỏ ảnh')!;
+    await act(async () => confirm.click());
+
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(altValues()).toEqual(['Mặt sau']);
+  });
+
+  it('Hủy hoặc Escape đóng hộp thoại mà không bỏ ảnh', async () => {
+    const { onChange } = await renderManager();
+
+    await act(async () => button('Bỏ ảnh 1').click());
+    await act(async () => {
+      [...container.querySelectorAll<HTMLButtonElement>('[role="dialog"] button')]
+        .find((candidate) => candidate.textContent === 'Hủy')!
+        .click();
+    });
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
+
+    await act(async () => button('Bỏ ảnh 1').click());
+    await act(async () => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    });
+    expect(container.querySelector('[role="dialog"]')).toBeNull();
+    expect(onChange).not.toHaveBeenCalled();
   });
 
   it('chọn biến thể gắn `skuId` cho ảnh', async () => {

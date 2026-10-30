@@ -31,7 +31,7 @@ public static class CartRules
     public static string? FindUnavailableReason(SkuSnapshot? sku, int quantity)
     {
         // SKU không có trong catalog, hoặc sản phẩm khách không được thấy, thì dòng không còn dữ liệu để hiện.
-        if (sku is null || IsHiddenFromCustomer(sku.ProductStatus))
+        if (sku is null || sku.ProductDeleted || IsHiddenFromCustomer(sku.ProductStatus))
         {
             return CartUnavailableReason.Removed;
         }
@@ -65,7 +65,7 @@ public static class CartRules
     public static AddCheck CheckAddable(SkuSnapshot? sku)
     {
         // SKU lạ và sản phẩm nháp cùng trả "không tìm thấy". Khách không phân biệt được sản phẩm nháp với id sai.
-        if (sku is null || IsHiddenFromCustomer(sku.ProductStatus))
+        if (sku is null || sku.ProductDeleted || IsHiddenFromCustomer(sku.ProductStatus))
         {
             return AddCheck.NotFound;
         }

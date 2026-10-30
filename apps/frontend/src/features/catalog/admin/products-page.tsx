@@ -293,13 +293,19 @@ export function ProductsPage() {
                         )?.name ?? product.categoryId}
                       </td>
                       <td>
-                        <span
-                          className={
-                            PRODUCT_STATUS_BADGE_CLASSES[product.status as ProductStatus] ?? 'badge'
-                          }
-                        >
-                          {PRODUCT_STATUS_NAMES[product.status as ProductStatus] ?? product.status}
-                        </span>
+                        {product.deletedAt ? (
+                          <span className="badge badge-bad">Đã xóa mềm</span>
+                        ) : (
+                          <span
+                            className={
+                              PRODUCT_STATUS_BADGE_CLASSES[product.status as ProductStatus] ??
+                              'badge'
+                            }
+                          >
+                            {PRODUCT_STATUS_NAMES[product.status as ProductStatus] ??
+                              product.status}
+                          </span>
+                        )}
                       </td>
                       <td className="num">
                         {product.minPrice === null

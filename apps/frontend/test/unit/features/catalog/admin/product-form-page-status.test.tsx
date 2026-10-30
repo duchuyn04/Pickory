@@ -54,8 +54,8 @@ function errorResponse(code: string, message: string, status: number, details?: 
 interface ServerOptions {
   // Trả lỗi này cho lần đổi trạng thái thay vì thành công.
   statusFailure?: Response;
-  // Trả lỗi này cho lần xóa thay vì 204.
-  deleteFailure?: Response;
+  // Kiểu xóa trả về để kiểm hai nhánh giao diện.
+  deleteOutcome?: 'hard_deleted' | 'soft_deleted';
   // Lỗi đọc sản phẩm phải hiện khung lỗi và đường về danh sách thay vì chặn trang.
   productFailure?: Response;
   // Sau khi đổi trạng thái, mọi lần đọc lại không bao giờ trả về. Chứng minh nhãn đổi nhờ ghi cache.
@@ -91,6 +91,7 @@ function createServer(options: ServerOptions = {}) {
     status: 'draft',
     minPrice: 25000000,
     images: [],
+    deletedAt: null as string | null,
   };
   const state = { product, statusChanged: false };
   const fetchMock = vi.fn(async (input: string, init?: RequestInit) => {
@@ -124,7 +125,17 @@ function createServer(options: ServerOptions = {}) {
       return jsonResponse({ data: state.product });
     }
     if (url.pathname === '/api/admin/products/p1' && method === 'DELETE') {
-      return options.deleteFailure ?? new Response(null, { status: 204 });
+      if (options.deleteOutcome === 'soft_deleted') {
+        state.product = { ...state.product, deletedAt: '2026-10-27T00:00:00Z' };
+        return jsonResponse({
+          data: { outcome: 'soft_deleted', product: state.product },
+        });
+      }
+      return jsonResponse({ data: { outcome: 'hard_deleted', product: null } });
+    }
+    if (url.pathname === '/api/admin/products/p1/restoration' && method === 'POST') {
+      state.product = { ...state.product, deletedAt: null };
+      return jsonResponse({ data: state.product });
     }
     return errorResponse('NOT_FOUND', 'Không có route giả.', 404);
   });
@@ -264,20 +275,48 @@ describe('ProductFormPage: khối trạng thái', () => {
     expect(statusLabel()).toBe('Bản nháp');
   });
 
-  it('có thay đổi chưa lưu thì khóa nút trạng thái, lưu xong thì mở lại', async () => {
+  it('có thay đổi chưa lưu thì tự lưu rồi mới đổi trạng thái', async () => {
     const fetchMock = createServer();
     await renderPage(writerActor);
     expect(buttonByName('Đăng bán')!.disabled).toBe(false);
 
     await typeInto('#product-name', 'MacBook Air M4');
-    expect(buttonByName('Đăng bán')!.disabled).toBe(true);
-    expect(document.body.textContent).toContain('Lưu thay đổi trước khi đổi trạng thái.');
-    await click(buttonByName('Đăng bán'));
-    expect(statusPutRequests(fetchMock)).toHaveLength(0);
-
-    await click(buttonByName('Lưu sản phẩm'));
     expect(buttonByName('Đăng bán')!.disabled).toBe(false);
-    expect(document.body.textContent).not.toContain('Lưu thay đổi trước');
+    expect(document.body.textContent).toContain('Thay đổi sẽ được lưu trước khi đổi trạng thái.');
+
+    await click(buttonByName('Đăng bán'));
+
+    // Bản nháp được gửi trước, sau đó mới gửi trạng thái đích.
+    const productWrites = fetchMock.mock.calls
+      .filter(([input, init]) => {
+        const path = String(input);
+        return (
+          (path.endsWith('/api/admin/products/p1') && init?.method === 'PATCH') ||
+          (path.endsWith('/status') && init?.method === 'PUT')
+        );
+      })
+      .map(([, init]) => ({ method: init?.method, body: JSON.parse(init?.body as string) }));
+    expect(productWrites).toEqual([
+      { method: 'PATCH', body: expect.objectContaining({ name: 'MacBook Air M4' }) },
+      { method: 'PUT', body: { status: 'active' } },
+    ]);
+    expect(statusLabel()).toBe('Đang bán');
+    expect(container.querySelector<HTMLInputElement>('#product-name')?.value).toBe(
+      'MacBook Air M4',
+    );
+    expect(document.body.textContent).not.toContain('Thay đổi sẽ được lưu');
+  });
+
+  it('bản nháp không hợp lệ thì không đổi trạng thái', async () => {
+    const fetchMock = createServer();
+    await renderPage(writerActor);
+    await typeInto('#product-name', '   ');
+
+    await click(buttonByName('Đăng bán'));
+
+    expect(statusPutRequests(fetchMock)).toHaveLength(0);
+    expect(statusLabel()).toBe('Bản nháp');
+    expect(container.textContent).toContain('Nhập danh mục, thương hiệu và tên sản phẩm.');
   });
 
   it('sửa rồi gõ lại đúng giá trị cũ thì không còn thay đổi chưa lưu', async () => {
@@ -301,13 +340,17 @@ describe('ProductFormPage: xóa sản phẩm', () => {
   async function confirmDelete() {
     await click(buttonByName('Xóa sản phẩm'));
     const confirm = [...document.querySelectorAll('[role="dialog"] button')].find(
-      (button) => button.textContent === 'Xóa vĩnh viễn',
+      (button) => button.textContent === 'Xác nhận xóa',
     ) as HTMLButtonElement;
     await click(confirm);
   }
 
   const deleteCalls = (fetchMock: ReturnType<typeof createServer>) =>
     fetchMock.mock.calls.filter(([, init]) => init?.method === 'DELETE');
+  const restoreCalls = (fetchMock: ReturnType<typeof createServer>) =>
+    fetchMock.mock.calls.filter(
+      ([input, init]) => String(input).endsWith('/restoration') && init?.method === 'POST',
+    );
 
   it('hủy thì không gọi API xóa', async () => {
     const fetchMock = createServer();
@@ -332,23 +375,25 @@ describe('ProductFormPage: xóa sản phẩm', () => {
     );
   });
 
-  it('lỗi 409 PRODUCT_HAS_ORDERS hiện trong hộp thoại, không chuyển trang', async () => {
-    createServer({
-      deleteFailure: errorResponse(
-        'PRODUCT_HAS_ORDERS',
-        'Sản phẩm đã có đơn hàng nên không xóa được.',
-        409,
-      ),
-    });
+  it('xóa mềm ở lại trang, khóa form và cho khôi phục', async () => {
+    const fetchMock = createServer({ deleteOutcome: 'soft_deleted' });
     await renderPage(writerActor);
 
     await confirmDelete();
 
-    const dialog = document.querySelector('[role="dialog"]')!;
-    expect(dialog.querySelector('[role="alert"]')?.textContent).toBe(
-      'Sản phẩm đã có đơn hàng nên không xóa được.',
-    );
+    expect(deleteCalls(fetchMock)).toHaveLength(1);
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(statusLabel()).toBe('Đã xóa mềm');
+    const nameInput = container.querySelector<HTMLInputElement>('#product-name')!;
+    expect(nameInput.disabled).toBe(true);
+    expect(buttonByName('Khôi phục sản phẩm')).toBeDefined();
+
+    await click(buttonByName('Khôi phục sản phẩm'));
+
+    expect(restoreCalls(fetchMock)).toHaveLength(1);
     expect(statusLabel()).toBe('Bản nháp');
-    expect(document.querySelector('h1')?.textContent).not.toBe('Danh sách sản phẩm giả');
+    expect(nameInput.disabled).toBe(false);
+    expect(buttonByName('Khôi phục sản phẩm')).toBeUndefined();
+    expect(document.querySelector('[role="status"]')?.textContent).toBe('Đã khôi phục sản phẩm.');
   });
 });

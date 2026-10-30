@@ -72,6 +72,15 @@ describe('màn sản phẩm giữ bộ lọc trên URL', () => {
     expect(findField(harness.container, 'Sắp hết hàng')!.checked).toBe(true);
   });
 
+  it('sản phẩm xóa mềm hiện nhãn riêng thay cho trạng thái', async () => {
+    harness = await open('/admin/products', [
+      { ...product('1'), deletedAt: '2026-10-27T00:00:00Z' },
+    ]);
+
+    const row = harness.container.querySelector('tbody tr')!;
+    expect(row.querySelector('.badge')?.textContent).toBe('Đã xóa mềm');
+  });
+
   it('bật rồi tắt ô sắp hết hàng thì URL có rồi mất lowStock', async () => {
     harness = await open('/admin/products');
     const checkbox = findField(harness.container, 'Sắp hết hàng')!;

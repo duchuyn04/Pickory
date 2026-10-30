@@ -12,23 +12,12 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
-                name: "products_slug_key",
-                table: "products");
-
-            migrationBuilder.DropIndex(
                 name: "categories_slug_key",
                 table: "categories");
 
             migrationBuilder.DropIndex(
                 name: "brands_slug_key",
                 table: "brands");
-
-            migrationBuilder.AddColumn<DateTime>(
-                name: "deletedAt",
-                table: "products",
-                type: "timestamp(3) without time zone",
-                precision: 3,
-                nullable: true);
 
             migrationBuilder.AddColumn<DateTime>(
                 name: "deletedAt",
@@ -43,13 +32,6 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                 type: "timestamp(3) without time zone",
                 precision: 3,
                 nullable: true);
-
-            migrationBuilder.CreateIndex(
-                name: "products_slug_key",
-                table: "products",
-                column: "slug",
-                unique: true,
-                filter: "\"deletedAt\" IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "categories_slug_key",
@@ -70,10 +52,6 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropIndex(
-                name: "products_slug_key",
-                table: "products");
-
-            migrationBuilder.DropIndex(
                 name: "categories_slug_key",
                 table: "categories");
 
@@ -83,21 +61,11 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
 
             migrationBuilder.DropColumn(
                 name: "deletedAt",
-                table: "products");
-
-            migrationBuilder.DropColumn(
-                name: "deletedAt",
                 table: "categories");
 
             migrationBuilder.DropColumn(
                 name: "deletedAt",
                 table: "brands");
-
-            migrationBuilder.CreateIndex(
-                name: "products_slug_key",
-                table: "products",
-                column: "slug",
-                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "categories_slug_key",

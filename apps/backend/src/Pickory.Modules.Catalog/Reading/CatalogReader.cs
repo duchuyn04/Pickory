@@ -62,9 +62,9 @@ public sealed class CatalogReader(
         }
 
         // Không lọc theo trạng thái ở đây. Giỏ hàng cần biết SKU tắt hoặc sản phẩm ngừng bán để giải thích vì sao không mua được.
-        // Sản phẩm đã xóa mềm không còn là hàng có thể mua, nên bỏ hẳn SKU của nó khỏi kết quả.
+        // Giữ SKU của sản phẩm đã xóa mềm với cờ `ProductDeleted`. Giỏ hàng cần phân biệt hàng đã xóa với hàng tắt hoặc ngừng bán.
         var rows = await database.Skus.AsNoTracking()
-            .Where(sku => requestedIds.Contains(sku.Id) && sku.Product!.DeletedAt == null)
+            .Where(sku => requestedIds.Contains(sku.Id))
             .Select(sku => new
             {
                 sku.Id,
@@ -73,6 +73,7 @@ public sealed class CatalogReader(
                 ProductName = sku.Product!.Name,
                 ProductSlug = sku.Product.Slug,
                 ProductStatus = sku.Product.Status,
+                ProductDeleted = sku.Product.DeletedAt != null,
                 sku.Enabled,
                 sku.OptionValues,
                 sku.Price,
@@ -120,7 +121,8 @@ public sealed class CatalogReader(
                 chosen is null
                     ? null
                     : new ProductImageInfo(ProductImageUrl.Build(credentials, chosen.PublicId), chosen.Alt, chosen.SkuId),
-                chosen?.PublicId);
+                chosen?.PublicId,
+                row.ProductDeleted);
         });
 
         // DB không giữ thứ tự của `skuIds`. Sắp lại để giỏ hàng nhận đúng thứ tự đã gửi.

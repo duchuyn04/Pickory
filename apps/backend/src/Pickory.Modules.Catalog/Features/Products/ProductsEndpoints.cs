@@ -32,8 +32,11 @@ public static class ProductsEndpoints
         // Đổi trạng thái là thao tác ghi, nên dùng chung quyền ghi sản phẩm.
         endpoints.MapPut("/api/admin/products/{id}/status", ChangeProductStatusAsync)
             .RequirePermission(Permissions.ProductsWrite);
-        // Xóa mềm vẫn là thay đổi dữ liệu bán hàng, nên chỉ nhân viên có quyền ghi sản phẩm được gọi.
+        // Sản phẩm đã có đơn được xóa mềm, nên nhân viên có quyền ghi mới dùng được thao tác này.
         endpoints.MapDelete("/api/admin/products/{id}", DeleteProductAsync)
+            .RequirePermission(Permissions.ProductsWrite);
+        // Khôi phục là tạo lại trạng thái hoạt động từ dấu xóa mềm, nên là tài nguyên con dạng danh từ.
+        endpoints.MapPost("/api/admin/products/{id}/restoration", RestoreProductAsync)
             .RequirePermission(Permissions.ProductsWrite);
     }
 
@@ -201,8 +204,17 @@ public static class ProductsEndpoints
         string id,
         ProductManagementHandler handler)
     {
-        await handler.DeleteAsync(id, context.RequestAborted);
-        return Results.NoContent();
+        var result = await handler.DeleteAsync(id, context.RequestAborted);
+        return Results.Ok(new ApiResponse<DeleteProductResponse>(result));
+    }
+
+    private static async Task<IResult> RestoreProductAsync(
+        HttpContext context,
+        string id,
+        ProductManagementHandler handler)
+    {
+        var restored = await handler.RestoreAsync(id, context.RequestAborted);
+        return Results.Ok(new ApiResponse<ProductResponse>(restored));
     }
 
     private static IResult SpecsInvalidResult(ProductSpecsException specsException)

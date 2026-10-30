@@ -5,9 +5,10 @@ namespace Pickory.Modules.Catalog.Features.Storefront;
 // Các điều kiện lọc dưới dạng biểu thức để EF Core dịch sang SQL. Danh sách và facets dùng chung, nên hai bên không lệch nhau.
 public static class ProductFilterExpressions
 {
-    // Khách chỉ thấy sản phẩm đang bán hoặc ngừng kinh doanh. `draft` và `hidden` không bao giờ lộ ra.
+    // Khách chỉ thấy sản phẩm chưa xóa mềm và đang bán hoặc ngừng kinh doanh. `draft` và `hidden` không bao giờ lộ ra.
     public static IQueryable<Product> VisibleToCustomers(this IQueryable<Product> products) =>
-        products.Where(product => product.Status == ProductStatus.Active || product.Status == ProductStatus.Discontinued);
+        products.Where(product => product.DeletedAt == null
+            && (product.Status == ProductStatus.Active || product.Status == ProductStatus.Discontinued));
 
     public static IQueryable<Product> InCategories(this IQueryable<Product> products, IReadOnlyCollection<string> categoryIds) =>
         products.Where(product => categoryIds.Contains(product.CategoryId));

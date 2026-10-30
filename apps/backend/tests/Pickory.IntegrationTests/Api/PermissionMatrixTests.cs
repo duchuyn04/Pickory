@@ -103,6 +103,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "PATCH", "/api/admin/products/dummy-id", [Permissions.ProductsWrite] },
         { "PUT", "/api/admin/products/dummy-id/status", [Permissions.ProductsWrite] },
         { "DELETE", "/api/admin/products/dummy-id", [Permissions.ProductsWrite] },
+        { "POST", "/api/admin/products/dummy-id/restoration", [Permissions.ProductsWrite] },
         { "POST", "/api/admin/uploads/signature", [Permissions.ProductsWrite] },
         { "POST", "/api/admin/uploads/brand-logo/signature", [Permissions.ProductsWrite] },
         { "GET", "/api/admin/analytics/funnel", [Permissions.ReportsRead] },

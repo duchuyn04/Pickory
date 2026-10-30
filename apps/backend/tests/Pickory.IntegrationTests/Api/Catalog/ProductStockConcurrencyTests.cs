@@ -131,8 +131,8 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
     }
 
     [Fact]
-    // DELETE chờ khóa sản phẩm của bên gọi, rồi thấy movement `order_reserve` đã commit và trả 409 thay vì lỗi 500.
-    public async Task Delete_WhileReserveIsUncommitted_Returns409NotServerError()
+    // DELETE chờ khóa sản phẩm của bên gọi, rồi thấy movement `order_reserve` đã commit và chuyển sang xóa mềm.
+    public async Task Delete_WhileReserveIsUncommitted_SoftDeletesAfterCommit()
     {
         var product = await CreateProductWithStockAsync(5);
         var (connection, transaction, events) = await BeginCallerAsync();
@@ -146,11 +146,11 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
         var response = await pendingDelete.WaitAsync(TimeSpan.FromSeconds(30));
 
         var body = await response.Content.ReadAsStringAsync();
-        Assert.True(response.StatusCode == HttpStatusCode.Conflict, $"Mong đợi 409, nhận {response.StatusCode}: {body}");
+        Assert.True(response.StatusCode == HttpStatusCode.OK, $"Mong đợi 200, nhận {response.StatusCode}: {body}");
         using var json = JsonDocument.Parse(body);
-        Assert.Equal("PRODUCT_HAS_ORDERS", json.RootElement.GetProperty("error").GetProperty("code").GetString());
+        Assert.Equal("soft_deleted", json.RootElement.GetProperty("data").GetProperty("outcome").GetString());
         await using var context = _database.CreateCatalogContext();
-        Assert.True(await context.Products.AnyAsync(item => item.Id == product.ProductId));
+        Assert.NotNull((await context.Products.SingleAsync(item => item.Id == product.ProductId)).DeletedAt);
         Assert.Equal(3, await _data.StockOfAsync(product.SkuId));
         Assert.Equal(2, await context.InventoryMovements.CountAsync(movement => movement.SkuId == product.SkuId));
     }
@@ -160,8 +160,13 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
     public async Task Reserve_AfterSoftDelete_ReturnsShortageAndKeepsStock()
     {
         var product = await CreateProductWithStockAsync(5);
-        var deleteResponse = await DeleteAsync(product.ProductId);
-        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+        await using (var softDeleteContext = _database.CreateCatalogContext())
+        {
+            // Đặt trạng thái xóa mềm trực tiếp để test không phụ thuộc quyết định xóa cứng hay xóa mềm của API.
+            var stored = await softDeleteContext.Products.SingleAsync(item => item.Id == product.ProductId);
+            stored.DeletedAt = DateTime.UtcNow;
+            await softDeleteContext.SaveChangesAsync();
+        }
 
         var reservation = await ReserveWithoutCallerAsync(product.SkuId, 1);
 

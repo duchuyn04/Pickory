@@ -267,6 +267,12 @@
   border-top: 1px solid var(--color-border);
 }
 
+.status-restore {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
 .delete-product-text {
   margin: 0;
 }
