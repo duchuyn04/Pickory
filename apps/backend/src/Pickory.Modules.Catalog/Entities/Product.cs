@@ -20,6 +20,8 @@ public sealed class Product
     public bool InStock { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    // Thời điểm xóa mềm. Dòng còn lại để đơn cũ và lịch sử tồn kho giữ tham chiếu.
+    public DateTime? DeletedAt { get; set; }
 
     public Category? Category { get; set; }
     public Brand? Brand { get; set; }

@@ -509,6 +509,11 @@ namespace Pickory.Modules.Commerce.Persistence.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("address");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("deletedAt");
+
                     b.Property<bool>("IsDefault")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")

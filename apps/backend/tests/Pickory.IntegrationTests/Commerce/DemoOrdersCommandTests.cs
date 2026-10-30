@@ -260,17 +260,17 @@ public sealed class DemoOrdersCommandTests : IClassFixture<PickoryWebApplication
         if (_productIds.Count > 0)
         {
             await catalog.Skus.Where(sku => _productIds.Contains(sku.ProductId)).ExecuteDeleteAsync();
-            await catalog.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+            await catalog.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
         }
 
         if (_brandIds.Count > 0)
         {
-            await catalog.Brands.Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
+            await catalog.Brands.IgnoreQueryFilters().Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
         }
 
         if (_categoryIds.Count > 0)
         {
-            await catalog.Categories.Where(category => _categoryIds.Contains(category.Id)).ExecuteDeleteAsync();
+            await catalog.Categories.IgnoreQueryFilters().Where(category => _categoryIds.Contains(category.Id)).ExecuteDeleteAsync();
         }
     }
 

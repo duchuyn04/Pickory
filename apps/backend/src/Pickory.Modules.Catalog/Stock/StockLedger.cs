@@ -47,12 +47,24 @@ internal static class StockLedger
         }
 
         // Khóa dòng sản phẩm trước, theo thứ tự `id`. Mọi đường ghi dùng cùng thứ tự `products` rồi `skus`, nên không khóa chéo nhau.
+        // Đọc `deletedAt` trong cùng câu lệnh khóa để trạng thái xóa không đổi tới hết transaction.
         var productIdsBySku = await ReadProductIdsAsync(connection, npgsqlTransaction, ordered.Select(m => m.SkuId).ToArray(), cancellationToken);
-        await LockProductsAsync(connection, npgsqlTransaction, productIdsBySku.Values.Distinct(StringComparer.Ordinal).ToArray(), cancellationToken);
+        var deletedProductIds = await LockProductsAsync(connection, npgsqlTransaction, productIdsBySku.Values.Distinct(StringComparer.Ordinal).ToArray(), cancellationToken);
 
         // Khóa dòng SKU sau khi đã giữ khóa sản phẩm. Tồn kho đọc ở đây là bản sau khi transaction khác đã commit.
         var current = await LockSkusAsync(connection, npgsqlTransaction, ordered.Select(m => m.SkuId).ToArray(), cancellationToken);
         var available = current.ToDictionary(pair => pair.Key, pair => pair.Value.Stock, StringComparer.Ordinal);
+        // Sản phẩm đã xóa mềm không còn hàng bán được. Đặt tồn khả dụng về 0 để bước kiểm thiếu hàng chặn giữ hàng.
+        foreach (var movement in ordered)
+        {
+            if (movement.Type == InventoryMovementType.OrderReserve
+                && productIdsBySku.TryGetValue(movement.SkuId, out var productId)
+                && deletedProductIds.Contains(productId))
+            {
+                available[movement.SkuId] = 0;
+            }
+        }
+
         var shortages = StockShortages.Find(ordered.Select(m => new StockDelta(m.SkuId, m.Delta)).ToList(), available);
         var missing = ordered.Select(m => m.SkuId).Where(skuId => !current.ContainsKey(skuId)).ToList();
         // Kiểm đủ hàng trước khi ghi. Thiếu hàng thì không để lại thay đổi nào trong transaction của bên gọi.
@@ -115,17 +127,24 @@ internal static class StockLedger
         return result;
     }
 
-    private static async Task LockProductsAsync(
+    private static async Task<HashSet<string>> LockProductsAsync(
         NpgsqlConnection connection, NpgsqlTransaction transaction, string[] productIds, CancellationToken cancellationToken)
     {
         await using var command = Command(connection, transaction,
-            "SELECT id FROM products WHERE id = ANY(@ids) ORDER BY id FOR UPDATE");
+            "SELECT id, \"deletedAt\" FROM products WHERE id = ANY(@ids) ORDER BY id FOR UPDATE");
         command.Parameters.AddWithValue("ids", productIds);
+        var deletedProductIds = new HashSet<string>(StringComparer.Ordinal);
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         while (await reader.ReadAsync(cancellationToken))
         {
-            // Chỉ cần câu lệnh chạy hết để mọi dòng được khóa.
+            // Dòng đã xóa mềm vẫn phải khóa để DELETE và reserve không chạy chồng lên nhau.
+            if (!reader.IsDBNull(1))
+            {
+                deletedProductIds.Add(reader.GetString(0));
+            }
         }
+
+        return deletedProductIds;
     }
 
     private static async Task<Dictionary<string, (int Stock, string ProductId)>> LockSkusAsync(

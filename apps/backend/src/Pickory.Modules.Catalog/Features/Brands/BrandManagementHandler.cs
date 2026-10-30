@@ -141,9 +141,12 @@ public sealed class BrandManagementHandler(
         }
 
         var beforeSnapshot = ToAuditSnapshot(brand);
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
-        database.Brands.Remove(brand);
+        // Đánh dấu xóa mềm thay vì xóa dòng. Nhật ký kiểm toán và dữ liệu cũ vẫn giữ tham chiếu.
+        brand.DeletedAt = now;
+        brand.UpdatedAt = now;
         await database.SaveChangesAsync(cancellationToken);
 
         // Ghi nhật ký thao tác xóa thương hiệu phục vụ kiểm toán sau này.

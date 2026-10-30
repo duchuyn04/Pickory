@@ -146,10 +146,11 @@ public sealed class PublicProductListTests : IClassFixture<PickoryWebApplication
     public async Task DisposeAsync()
     {
         await using var context = _database.CreateCatalogContext();
-        await context.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
-        await context.Categories.Where(category => category.Id == _childCategoryId).ExecuteDeleteAsync();
-        await context.Categories.Where(category => category.Id == _parentCategoryId).ExecuteDeleteAsync();
-        await context.Brands.Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm, danh mục và thương hiệu đã bị xóa mềm trong test.
+        await context.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+        await context.Categories.IgnoreQueryFilters().Where(category => category.Id == _childCategoryId).ExecuteDeleteAsync();
+        await context.Categories.IgnoreQueryFilters().Where(category => category.Id == _parentCategoryId).ExecuteDeleteAsync();
+        await context.Brands.IgnoreQueryFilters().Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
     }
 
     private Category NewCategory(string slugPrefix, string? parentId, IReadOnlyList<AttributeDefinition> attributes) => new()

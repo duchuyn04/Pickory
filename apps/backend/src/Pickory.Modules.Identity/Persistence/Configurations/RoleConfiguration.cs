@@ -19,6 +19,12 @@ internal sealed class RoleConfiguration : IEntityTypeConfiguration<Role>
         entity.Property(value => value.Name).IsRequired();
         entity.Property(value => value.IsSystem).HasDefaultValue(false);
         entity.Property(value => value.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
-        entity.HasIndex(value => value.Code).IsUnique().HasDatabaseName("roles_code_key");
+        // Lưu thời điểm xóa mềm để truy vết. Dòng đã xóa không còn được gán cho nhân viên.
+        entity.Property(value => value.DeletedAt).IsRequired(false);
+        // Ẩn role đã xóa khỏi danh sách và mọi lần kiểm quyền.
+        entity.HasQueryFilter(value => value.DeletedAt == null);
+        entity.HasIndex(value => value.Code).IsUnique().HasDatabaseName("roles_code_key")
+            // Chỉ chặn trùng mã giữa các role còn sống. Dòng đã xóa nhường mã cho role mới.
+            .HasFilter("\"deletedAt\" IS NULL");
     }
 }

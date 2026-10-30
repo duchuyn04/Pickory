@@ -355,9 +355,12 @@ public sealed class CategoryManagementHandler(
         }
 
         var beforeSnapshot = ToAuditSnapshot(category);
+        var now = timeProvider.GetUtcNow().UtcDateTime;
 
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
-        database.Categories.Remove(category);
+        // Đánh dấu xóa mềm thay vì xóa dòng. Sản phẩm cũ và nhật ký kiểm toán vẫn giữ tham chiếu.
+        category.DeletedAt = now;
+        category.UpdatedAt = now;
         await database.SaveChangesAsync(cancellationToken);
 
         // Ghi nhật ký thao tác xóa danh mục trong cùng giao dịch cơ sở dữ liệu.

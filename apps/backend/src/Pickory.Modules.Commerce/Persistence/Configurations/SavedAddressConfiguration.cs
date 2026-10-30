@@ -20,5 +20,9 @@ internal sealed class SavedAddressConfiguration : IEntityTypeConfiguration<Saved
         entity.Property(value => value.Phone).IsRequired();
         entity.Property(value => value.Address).HasColumnType("jsonb");
         entity.Property(value => value.IsDefault).HasDefaultValue(false);
+        // Lưu thời điểm xóa mềm để truy vết. Địa chỉ đã xóa không còn trong sổ và không tính hạn mức.
+        entity.Property(value => value.DeletedAt).IsRequired(false);
+        // Ẩn địa chỉ đã xóa khỏi danh sách và các thao tác sửa, đặt mặc định.
+        entity.HasQueryFilter(value => value.DeletedAt == null);
     }
 }

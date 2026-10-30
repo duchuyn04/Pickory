@@ -22,10 +22,16 @@ internal sealed class CategoryConfiguration : IEntityTypeConfiguration<Category>
         entity.Property(value => value.Attributes).HasColumnType("jsonb");
         entity.Property(value => value.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         entity.Property(value => value.UpdatedAt).IsRequired();
+        // Lưu thời điểm xóa mềm để truy vết. Dòng đã xóa vẫn giữ cây và thuộc tính cho dữ liệu cũ.
+        entity.Property(value => value.DeletedAt).IsRequired(false);
+        // Ẩn danh mục đã xóa khỏi cây công khai và danh sách quản trị.
+        entity.HasQueryFilter(value => value.DeletedAt == null);
 
         entity.HasIndex(value => value.Slug)
             .IsUnique()
-            .HasDatabaseName("categories_slug_key");
+            .HasDatabaseName("categories_slug_key")
+            // Chỉ chặn trùng slug giữa các danh mục còn sống. Dòng đã xóa nhường slug cho bản mới.
+            .HasFilter("\"deletedAt\" IS NULL");
 
         // Chặn xóa danh mục đang có con để cây danh mục không mất liên kết.
         entity.HasOne(value => value.Parent)

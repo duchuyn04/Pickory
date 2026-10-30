@@ -32,7 +32,7 @@ public static class ProductsEndpoints
         // Đổi trạng thái là thao tác ghi, nên dùng chung quyền ghi sản phẩm.
         endpoints.MapPut("/api/admin/products/{id}/status", ChangeProductStatusAsync)
             .RequirePermission(Permissions.ProductsWrite);
-        // Xóa cứng làm mất dữ liệu bán hàng, nên chỉ nhân viên có quyền ghi sản phẩm được gọi.
+        // Xóa mềm vẫn là thay đổi dữ liệu bán hàng, nên chỉ nhân viên có quyền ghi sản phẩm được gọi.
         endpoints.MapDelete("/api/admin/products/{id}", DeleteProductAsync)
             .RequirePermission(Permissions.ProductsWrite);
     }

@@ -70,7 +70,7 @@ export type AttributeDefinition = {
 | `hidden` | | | Ẩn tạm, link cũ trả 404 |
 | `discontinued` | ✓ | | Vẫn xem được (giữ link, SEO) nhưng hiện "Ngừng kinh doanh" |
 
-- Không xóa cứng sản phẩm đã có trong đơn hàng. Sản phẩm chưa từng được đặt mới xóa cứng được.
+- Xóa sản phẩm là xóa mềm: API đặt `deletedAt` và giữ SKU, ảnh, movement cùng lịch sử slug. Sản phẩm đã có trong đơn vẫn bị chặn xóa để giữ liên kết đơn hàng.
 
 **Quy tắc giá:**
 - Giá là số nguyên VND, lớn hơn 0.
@@ -193,10 +193,10 @@ sort=newest|price_asc|price_desc                     page=1  pageSize=24 (tối 
 | GET | `/api/admin/products/:id` | `products:read` | Chi tiết để sửa |
 | POST · PATCH | `/api/admin/products[/:id]` | `products:write` | Tạo, sửa sản phẩm, tùy chọn, biến thể, ảnh (`images`) |
 | PUT | `/api/admin/products/:id/status` | `products:write` | Đặt trạng thái của sản phẩm. Body `{ "status": "draft" \| "active" \| "hidden" \| "discontinued" }`. Lỗi: 400 `VALIDATION_ERROR`, 404 `PRODUCT_NOT_FOUND`, 409 `INVALID_STATUS_TRANSITION`, 422 `PRODUCT_NOT_PUBLISHABLE` (danh sách lý do trong `details`). Đổi sang đúng trạng thái hiện tại trả 200, không ghi audit. |
-| DELETE | `/api/admin/products/:id` | `products:write` | Xóa cứng (chỉ khi chưa từng có đơn và không còn hàng). Trả 204. Lỗi: 404 `PRODUCT_NOT_FOUND`, 409 `PRODUCT_HAS_ORDERS`, 409 `PRODUCT_HAS_STOCK`. |
+| DELETE | `/api/admin/products/:id` | `products:write` | Xóa mềm: đặt `deletedAt`, giữ SKU, ảnh, movement và lịch sử slug. Trả 204. Lỗi: 404 `PRODUCT_NOT_FOUND`, 409 `PRODUCT_HAS_ORDERS`. |
 | GET | `/api/admin/categories` | `products:read` | Danh sách phẳng, mỗi danh mục kèm đủ thuộc tính riêng |
-| POST · PATCH · DELETE | `/api/admin/categories[/:id]` | `products:write` | Quản lý danh mục và bộ thuộc tính |
-| POST · PATCH · DELETE | `/api/admin/brands[/:id]` | `products:write` | Quản lý thương hiệu |
+| POST · PATCH · DELETE | `/api/admin/categories[/:id]` | `products:write` | Quản lý danh mục và bộ thuộc tính. `DELETE` là xóa mềm. |
+| POST · PATCH · DELETE | `/api/admin/brands[/:id]` | `products:write` | Quản lý thương hiệu. `DELETE` là xóa mềm. |
 | POST | `/api/admin/uploads/signature` | `products:write` | Chữ ký tải ảnh lên Cloudinary: `cloudName`, `apiKey`, `uploadUrl`, `timestamp`, `folder`, `allowedFormats`, `maxFileBytes`, `signature` |
 | POST | `/api/admin/uploads/brand-logo/signature` | `products:write` | Chữ ký tải logo với `folder=pickory/brands`. Response có cùng các trường với chữ ký ảnh sản phẩm |
 
@@ -209,20 +209,21 @@ model Category {
   id         String     @id @default(uuid())
   parentId   String?
   name       String
-  slug       String     @unique
+  slug       String     @unique   // duy nhất trong các dòng chưa xóa
   position   Int        @default(0)
   attributes Json       // AttributeDefinition[] của riêng danh mục này
+  deletedAt  DateTime?
   @@map("categories")
 }
 
-model Brand { id String @id @default(uuid()); name String; slug String @unique; logoPublicId String?; @@map("brands") }
+model Brand { id String @id @default(uuid()); name String; slug String @unique /* duy nhất trong các dòng chưa xóa */; logoPublicId String?; deletedAt DateTime?; @@map("brands") }
 
 model Product {
   id             String        @id @default(uuid())
   categoryId     String
   brandId        String
   name           String
-  slug           String        @unique
+  slug           String        @unique   // duy nhất trong các dòng chưa xóa
   shortDesc      String
   description    Json          // tài liệu của trình soạn thảo, xem mục Mô tả sản phẩm
   specs          Json          // { ram_gb: 16, cpu: 'Intel Core i7-13650HX', ... }
@@ -233,6 +234,7 @@ model Product {
   inStock        Boolean       @default(false)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
   @@index([categoryId, status])
   @@map("products")
 }
@@ -291,7 +293,7 @@ model InventoryMovement { /* bảng cũ, chỉ đọc từ ngày 2026-10-22: sku
   - `q` kết hợp đúng với các bộ lọc khác.
   - `q` chứa `%` hoặc `_` không khớp mọi sản phẩm.
   - Slug cũ trả 301.
-  - Không xóa cứng được sản phẩm đã có đơn.
+  - Không xóa mềm được sản phẩm đã có đơn; xóa mềm giữ SKU, ảnh và movement.
   - Chặn xóa thuộc tính đang được dùng.
 - Test giữ hàng đồng thời, idempotent và bất biến `stock = tổng delta`.
 - Đồng thời: sửa sản phẩm chạy cùng lúc với giữ hàng không deadlock, `inStock` và `minPrice` khớp số bán được.

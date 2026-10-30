@@ -22,8 +22,10 @@ public sealed class CommerceOrderFeeSourceMigrationTests(PickoryWebApplicationFa
         var context = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
         DotnetSchemaIntegrationTests.AssertTestConnection(context);
         var migrationIds = context.GetService<IMigrationsAssembly>().Migrations.Keys.Order(StringComparer.Ordinal).ToList();
-        Assert.Equal(FeeSourceMigrationId, migrationIds[^1]);
-        var previousMigrationId = migrationIds[^2];
+        // Migration này không còn là mới nhất khi module thêm migration sau. Tìm vị trí thật để lấy mốc trước nó.
+        var feeSourceIndex = migrationIds.IndexOf(FeeSourceMigrationId);
+        Assert.True(feeSourceIndex > 0, "Migration nguồn phí vận chuyển phải có trong lịch sử Commerce.");
+        var previousMigrationId = migrationIds[feeSourceIndex - 1];
         var migrator = context.GetService<IMigrator>();
 
         // Rollback giữ nguyên DB test. Mọi thay đổi schema và dòng đơn tạm chỉ tồn tại trong transaction này.

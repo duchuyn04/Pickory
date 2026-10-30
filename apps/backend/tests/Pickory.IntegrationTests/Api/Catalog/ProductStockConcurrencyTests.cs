@@ -7,6 +7,7 @@ using Npgsql;
 using Pickory.IntegrationTests.Api.Identity;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Catalog.Contracts.Stock;
+using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Identity.Roles;
 using Pickory.Shared.Events;
 using Xunit;
@@ -98,6 +99,17 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
         Assert.True(result.Ok);
     }
 
+    private async Task<ReserveResult> ReserveWithoutCallerAsync(string skuId, int quantity)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var service = scope.ServiceProvider.GetRequiredService<IStockService>();
+        return await service.ReserveAsync(
+            $"order-{_suffix}-{Guid.NewGuid():N}",
+            [new StockItem(skuId, quantity)],
+            null,
+            CancellationToken.None);
+    }
+
     [Fact]
     // PATCH chờ khóa sản phẩm của bên gọi, rồi đọc tồn kho sau khi bên gọi commit. `inStock` vì vậy phải là false.
     public async Task Patch_WhileReserveHoldsLastUnits_KeepsInStockFalse()
@@ -141,6 +153,54 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
         Assert.True(await context.Products.AnyAsync(item => item.Id == product.ProductId));
         Assert.Equal(3, await _data.StockOfAsync(product.SkuId));
         Assert.Equal(2, await context.InventoryMovements.CountAsync(movement => movement.SkuId == product.SkuId));
+    }
+
+    [Fact]
+    // Sản phẩm đã xóa mềm không giữ được hàng. Ledger trả thiếu hàng, tồn kho và sổ movement không đổi.
+    public async Task Reserve_AfterSoftDelete_ReturnsShortageAndKeepsStock()
+    {
+        var product = await CreateProductWithStockAsync(5);
+        var deleteResponse = await DeleteAsync(product.ProductId);
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+
+        var reservation = await ReserveWithoutCallerAsync(product.SkuId, 1);
+
+        Assert.False(reservation.Ok);
+        var shortage = Assert.Single(reservation.Shortages);
+        Assert.Equal(product.SkuId, shortage.SkuId);
+        Assert.Equal(1, shortage.Requested);
+        Assert.Equal(0, shortage.Available);
+        Assert.Equal(5, await _data.StockOfAsync(product.SkuId));
+        await using var context = _database.CreateCatalogContext();
+        Assert.False(await context.InventoryMovements.AnyAsync(movement =>
+            movement.SkuId == product.SkuId && movement.Type == InventoryMovementType.OrderReserve));
+    }
+
+    [Fact]
+    // Reserve chờ khóa sản phẩm của giao dịch xóa. Sau khi xóa commit, ledger thấy `deletedAt` và không giữ hàng.
+    public async Task Reserve_WaitsForDeleteLockAndSeesSoftDelete()
+    {
+        var product = await CreateProductWithStockAsync(5);
+        await using var deleteConnection = new NpgsqlConnection(_database.ConnectionString);
+        await deleteConnection.OpenAsync();
+        await using var deleteTransaction = await deleteConnection.BeginTransactionAsync();
+        await using (var command = new NpgsqlCommand(
+            "UPDATE products SET \"deletedAt\" = now() WHERE id = @id", deleteConnection, deleteTransaction))
+        {
+            command.Parameters.AddWithValue("id", product.ProductId);
+            await command.ExecuteNonQueryAsync();
+        }
+
+        var pendingReserve = Task.Run(() => ReserveWithoutCallerAsync(product.SkuId, 1));
+        await LockWait.UntilSessionIsBlockedAsync(_database);
+        await deleteTransaction.CommitAsync();
+        var reservation = await pendingReserve.WaitAsync(TimeSpan.FromSeconds(30));
+
+        Assert.False(reservation.Ok);
+        Assert.Equal(5, await _data.StockOfAsync(product.SkuId));
+        await using var context = _database.CreateCatalogContext();
+        Assert.False(await context.InventoryMovements.AnyAsync(movement =>
+            movement.SkuId == product.SkuId && movement.Type == InventoryMovementType.OrderReserve));
     }
 
     private sealed record TwoVariantProduct(string ProductId, string RedSkuId);

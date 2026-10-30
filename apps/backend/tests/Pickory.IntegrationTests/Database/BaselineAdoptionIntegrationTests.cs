@@ -54,7 +54,7 @@ public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture 
             Assert.Equal(originalHistory["ef_support_desk"], stamped["ef_support_desk"]);
             // Script chỉ ghi nhận migration mốc. Migration sinh sau mốc còn chờ `db:migrate` áp dụng, nên không được ghi nhận nhầm.
             Assert.Equal(
-                ["20261013101735_EnableUnaccentExtension", "20261019190331_RemoveAiPermissions"],
+                ["20261013101735_EnableUnaccentExtension", "20261019190331_RemoveAiPermissions", "20261030050727_AddRoleSoftDelete"],
                 await context.Database.GetPendingMigrationsAsync());
 
             // Lần nhận schema thứ hai phải giữ nguyên lịch sử đã ghi, không thêm dòng hoặc đổi phiên bản.

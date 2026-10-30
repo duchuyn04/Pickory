@@ -62,8 +62,9 @@ public sealed class CatalogReader(
         }
 
         // Không lọc theo trạng thái ở đây. Giỏ hàng cần biết SKU tắt hoặc sản phẩm ngừng bán để giải thích vì sao không mua được.
+        // Sản phẩm đã xóa mềm không còn là hàng có thể mua, nên bỏ hẳn SKU của nó khỏi kết quả.
         var rows = await database.Skus.AsNoTracking()
-            .Where(sku => requestedIds.Contains(sku.Id))
+            .Where(sku => requestedIds.Contains(sku.Id) && sku.Product!.DeletedAt == null)
             .Select(sku => new
             {
                 sku.Id,
@@ -158,7 +159,11 @@ public sealed class CatalogReader(
     }
 
     public Task<int> CountLowStockAsync(CancellationToken cancellationToken) =>
-        database.Skus.AsNoTracking().WhereLowStock().CountAsync(cancellationToken);
+        // Sản phẩm đã xóa không cần nhập thêm hàng, nên bỏ SKU của chúng khỏi cảnh báo tồn kho thấp.
+        database.Skus.AsNoTracking()
+            .Where(sku => sku.Product!.DeletedAt == null)
+            .WhereLowStock()
+            .CountAsync(cancellationToken);
 
     private static Dictionary<string, string> ToParameters(ProductFilters filters, int pageSize)
     {

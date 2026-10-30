@@ -250,9 +250,18 @@ public sealed class AdminRolesTests : IClassFixture<PickoryWebApplicationFactory
         using var document = await ActorHttp.ReadJsonAsync(unusedResponse);
         Assert.True(document.RootElement.GetProperty("data").GetProperty("success").GetBoolean());
 
-        // Role bị xóa cùng quyền của role. Nhật ký giữ lại mã role đã xóa.
+        // Role đã xóa mềm vẫn còn dòng và quyền để đối soát, nhưng API danh sách ẩn role đó.
         await using var identity = _database.CreateIdentityContext();
+        var deletedRole = await identity.Roles.IgnoreQueryFilters().SingleAsync(value => value.Id == unusedRole.Id);
+        Assert.NotNull(deletedRole.DeletedAt);
+        Assert.True(await identity.RolePermissions.AnyAsync(value => value.RoleId == unusedRole.Id));
         Assert.False(await identity.Roles.AnyAsync(value => value.Id == unusedRole.Id));
+
+        // Mã role đã xóa được dùng lại, vì chỉ mục duy nhất bỏ qua dòng đã xóa.
+        var recreateResponse = await SendAsync(
+            HttpMethod.Post, "/api/admin/roles", new { code = unusedRole.Code, name = "Role dùng lại mã" }, adminSession);
+        Assert.Equal(HttpStatusCode.Created, recreateResponse.StatusCode);
+
         var audit = await identity.AuditLogs.SingleAsync(log => log.TargetId == unusedRole.Id);
         Assert.Equal(admin.Id, audit.ActorId);
         Assert.Equal("role.delete", audit.Action);

@@ -561,17 +561,18 @@ public sealed class AdminSalesReportEndpointTests : IClassFixture<PickoryWebAppl
         if (_catalogProductIds.Count > 0)
         {
             await catalog.Skus.Where(sku => _catalogProductIds.Contains(sku.ProductId)).ExecuteDeleteAsync();
-            await catalog.Products.Where(product => _catalogProductIds.Contains(product.Id)).ExecuteDeleteAsync();
+            // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm đã xóa mềm, tránh khóa ngoại chặn xóa hãng và danh mục.
+            await catalog.Products.IgnoreQueryFilters().Where(product => _catalogProductIds.Contains(product.Id)).ExecuteDeleteAsync();
         }
 
         if (_catalogBrandIds.Count > 0)
         {
-            await catalog.Brands.Where(brand => _catalogBrandIds.Contains(brand.Id)).ExecuteDeleteAsync();
+            await catalog.Brands.IgnoreQueryFilters().Where(brand => _catalogBrandIds.Contains(brand.Id)).ExecuteDeleteAsync();
         }
 
         if (_catalogCategoryIds.Count > 0)
         {
-            await catalog.Categories.Where(category => _catalogCategoryIds.Contains(category.Id)).ExecuteDeleteAsync();
+            await catalog.Categories.IgnoreQueryFilters().Where(category => _catalogCategoryIds.Contains(category.Id)).ExecuteDeleteAsync();
         }
     }
 }

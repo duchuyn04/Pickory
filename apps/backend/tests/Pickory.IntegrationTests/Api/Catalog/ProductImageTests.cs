@@ -66,9 +66,10 @@ public sealed class ProductImageTests : IClassFixture<PickoryWebApplicationFacto
         await StockInvariant.AssertHoldsAsync(_database);
         await using var context = _database.CreateCatalogContext();
         await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ExecuteDeleteAsync();
-        await context.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
-        await context.Categories.Where(category => category.Id == _categoryId).ExecuteDeleteAsync();
-        await context.Brands.Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm, danh mục và thương hiệu đã bị xóa mềm trong test.
+        await context.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+        await context.Categories.IgnoreQueryFilters().Where(category => category.Id == _categoryId).ExecuteDeleteAsync();
+        await context.Brands.IgnoreQueryFilters().Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
     }
 
     // Mô phỏng trình duyệt vừa tải ảnh lên Cloudinary: ảnh có trong kho ảnh giả với kích thước và định dạng cho trước.

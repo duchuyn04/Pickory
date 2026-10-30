@@ -195,51 +195,38 @@ public sealed class ProductManagementHandler(
 
     public async Task DeleteAsync(string id, CancellationToken cancellationToken)
     {
-        try
+        // Helper chỉ phát sự kiện sau commit, nên xóa thất bại không phát sự kiện `Deleted`.
+        await CatalogTransaction.RunAsync(database, dispatcher, async events =>
         {
-            // Helper chỉ phát sự kiện sau commit, nên xóa thất bại không phát sự kiện `Deleted`.
-            await CatalogTransaction.RunAsync(database, dispatcher, async events =>
+            // Dùng chung khóa với tạo và sửa, để không xóa trong lúc request khác đang sửa sản phẩm.
+            await database.Database.ExecuteSqlInterpolatedAsync(
+                $"SELECT pg_advisory_xact_lock({ProductWriteLockKey})", cancellationToken);
+            // Khóa dòng sản phẩm trước khi kiểm movement. Đơn đang giữ hàng chưa commit phải commit xong thì mới thấy movement của nó.
+            await LockProductRowAsync(id, cancellationToken);
+            var product = await database.Products.Include(item => item.Skus)
+                .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
+            if (product is null)
             {
-                // Dùng chung khóa với tạo và sửa, để không xóa trong lúc request khác đang sửa sản phẩm.
-                await database.Database.ExecuteSqlInterpolatedAsync(
-                    $"SELECT pg_advisory_xact_lock({ProductWriteLockKey})", cancellationToken);
-                // Khóa dòng sản phẩm trước khi kiểm movement. Đơn đang giữ hàng chưa commit phải commit xong thì mới thấy movement của nó.
-                await LockProductRowAsync(id, cancellationToken);
-                var product = await database.Products.Include(item => item.Skus).Include(item => item.Images)
-                    .SingleOrDefaultAsync(item => item.Id == id, cancellationToken);
-                if (product is null)
-                {
-                    throw ProductNotFound();
-                }
+                throw ProductNotFound();
+            }
 
-                // Movement `order_reserve` nghĩa là SKU từng có đơn. Xóa sản phẩm sẽ làm mất lịch sử đơn hàng.
-                var skuIds = product.Skus.Select(sku => sku.Id).ToList();
-                var hasOrders = await database.InventoryMovements.AnyAsync(movement =>
-                    skuIds.Contains(movement.SkuId) && movement.Type == InventoryMovementType.OrderReserve, cancellationToken);
-                if (hasOrders)
-                {
-                    throw ProductHasOrders();
-                }
+            // Movement `order_reserve` nghĩa là SKU từng có đơn. Giữ quy tắc cũ: sản phẩm đã bán không xóa, kể cả xóa mềm.
+            var skuIds = product.Skus.Select(sku => sku.Id).ToList();
+            var hasOrders = await database.InventoryMovements.AnyAsync(movement =>
+                skuIds.Contains(movement.SkuId) && movement.Type == InventoryMovementType.OrderReserve, cancellationToken);
+            if (hasOrders)
+            {
+                throw ProductHasOrders();
+            }
 
-                // Movement `manual` và `return` không thuộc đơn hàng. Khóa ngoại Restrict buộc xóa chúng trước SKU (Decision 18).
-                await database.InventoryMovements
-                    .Where(movement => skuIds.Contains(movement.SkuId))
-                    .ExecuteDeleteAsync(cancellationToken);
-
-                // Job xóa ảnh nằm trong cùng transaction, để ảnh chỉ bị xóa khỏi Cloudinary khi sản phẩm đã bị xóa.
-                imageSync.ScheduleDeletionOfAllImages(product, timeProvider.GetUtcNow().UtcDateTime);
-                database.Products.Remove(product);
-                await database.SaveChangesAsync(cancellationToken);
-                events.Emit(new ProductChangedEvent(product.Id, ProductChange.Deleted));
-                return true;
-            }, cancellationToken);
-        }
-        catch (DbUpdateException exception) when (exception.InnerException is PostgresException
-            { SqlState: PostgresErrorCodes.ForeignKeyViolation, ConstraintName: "inventory_movements_skuId_fkey" })
-        {
-            // Movement đơn hàng xuất hiện sau bước kiểm tra. Khóa ngoại là lớp bảo vệ thứ hai và trả cùng lỗi.
-            throw ProductHasOrders();
-        }
+            // Đánh dấu xóa mềm. Dòng sản phẩm, SKU, ảnh và movement ở lại để đối soát và khôi phục.
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+            product.DeletedAt = now;
+            product.UpdatedAt = now;
+            await database.SaveChangesAsync(cancellationToken);
+            events.Emit(new ProductChangedEvent(product.Id, ProductChange.Deleted));
+            return true;
+        }, cancellationToken);
     }
 
     // Khóa dòng sản phẩm đến hết transaction. Sổ tồn kho cũng khóa `products` trước `skus`, nên hai bên không chờ nhau theo vòng.

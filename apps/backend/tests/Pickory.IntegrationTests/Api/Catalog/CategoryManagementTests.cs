@@ -566,6 +566,42 @@ public sealed class CategoryManagementTests : IClassFixture<PickoryWebApplicatio
     }
 
     [Fact]
+    // Xóa danh mục là xóa mềm: dòng giữ `deletedAt`, cây công khai ẩn dòng, và slug được giải phóng cho bản mới.
+    public async Task DeleteCategory_MarksDeletedHidesItAndReleasesSlug()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var name = $"Danh mục xóa mềm {suffix}";
+        var createRequest = ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/categories", new { name }, _adminCookie);
+        var createResponse = await _client.SendAsync(createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        using var createJson = await ActorHttp.ReadJsonAsync(createResponse);
+        var categoryId = createJson.RootElement.GetProperty("data").GetProperty("id").GetString()!;
+        var slug = createJson.RootElement.GetProperty("data").GetProperty("slug").GetString()!;
+
+        var deleteResponse = await _client.SendAsync(
+            ActorHttp.CreateJsonRequest(HttpMethod.Delete, $"/api/admin/categories/{categoryId}", null, _adminCookie));
+        Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
+
+        // Cây công khai không còn danh mục đã xóa.
+        var treeResponse = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, "/api/categories"));
+        using var treeJson = await ActorHttp.ReadJsonAsync(treeResponse);
+        Assert.DoesNotContain(treeJson.RootElement.GetProperty("data").EnumerateArray(),
+            item => item.GetProperty("id").GetString() == categoryId);
+
+        // Dòng vẫn còn trong DB với thời điểm xóa.
+        await using var catalog = _database.CreateCatalogContext();
+        var stored = await catalog.Categories.IgnoreQueryFilters().SingleAsync(category => category.Id == categoryId);
+        Assert.NotNull(stored.DeletedAt);
+
+        // Tạo lại cùng tên nhận đúng slug cũ, vì chỉ mục duy nhất bỏ qua dòng đã xóa.
+        var recreateResponse = await _client.SendAsync(
+            ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/categories", new { name }, _adminCookie));
+        Assert.Equal(HttpStatusCode.Created, recreateResponse.StatusCode);
+        using var recreateJson = await ActorHttp.ReadJsonAsync(recreateResponse);
+        Assert.Equal(slug, recreateJson.RootElement.GetProperty("data").GetProperty("slug").GetString());
+    }
+
+    [Fact]
     // Nhân viên sales chỉ có quyền đọc nên được gọi GET và bị cấm khi gọi POST.
     public async Task Sales_CanGetCategories_CannotCreateCategory()
     {

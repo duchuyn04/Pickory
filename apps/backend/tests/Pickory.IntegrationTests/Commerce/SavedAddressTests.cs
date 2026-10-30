@@ -47,7 +47,8 @@ public sealed class SavedAddressTests : IClassFixture<PickoryWebApplicationFacto
     public async Task DisposeAsync()
     {
         await using var commerce = _database.CreateCommerceContext();
-        await commerce.SavedAddresses.Where(address => _userIds.Contains(address.UserId)).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả địa chỉ đã xóa mềm trong test.
+        await commerce.SavedAddresses.IgnoreQueryFilters().Where(address => _userIds.Contains(address.UserId)).ExecuteDeleteAsync();
     }
 
     private sealed record Customer(string Id, string Cookie);
@@ -549,8 +550,8 @@ public sealed class SavedAddressTests : IClassFixture<PickoryWebApplicationFacto
     // ---------- Xóa ----------
 
     [Fact]
-    // Xóa trả 204 và chỉ xóa địa chỉ đó. Xóa lại nhận 404.
-    public async Task Delete_RemovesOnlyThatAddress()
+    // Xóa trả 204 và chỉ ẩn địa chỉ đó khỏi sổ. Xóa lại nhận 404, dòng vẫn còn với `deletedAt`.
+    public async Task Delete_SoftDeletesOnlyThatAddress()
     {
         var customer = await NewCustomerAsync();
         var firstId = await CreateAsync(customer, AddressBody(label: "Nhà"));
@@ -562,6 +563,12 @@ public sealed class SavedAddressTests : IClassFixture<PickoryWebApplicationFacto
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, again.StatusCode);
         Assert.Equal(firstId, Assert.Single(await RowsOfAsync(customer.Id)).Id);
+
+        // Dòng đã xóa vẫn còn trong DB để đối soát, nhưng không còn trong sổ và không còn là mặc định.
+        await using var commerce = _database.CreateCommerceContext();
+        var deleted = await commerce.SavedAddresses.IgnoreQueryFilters().SingleAsync(address => address.Id == secondId);
+        Assert.NotNull(deleted.DeletedAt);
+        Assert.False(deleted.IsDefault);
     }
 
     [Fact]

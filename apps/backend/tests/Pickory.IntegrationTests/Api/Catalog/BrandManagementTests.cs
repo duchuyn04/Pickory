@@ -122,6 +122,42 @@ public sealed class BrandManagementTests : IClassFixture<PickoryWebApplicationFa
     }
 
     [Fact]
+    // Xóa thương hiệu là xóa mềm: dòng giữ `deletedAt`, danh sách ẩn dòng, và slug được giải phóng cho bản mới.
+    public async Task DeleteBrand_MarksDeletedHidesItAndReleasesSlug()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var name = $"Hãng xóa mềm {suffix}";
+        var createRequest = ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/brands", new { name }, _adminCookie);
+        var createResponse = await _client.SendAsync(createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        using var createJson = await ActorHttp.ReadJsonAsync(createResponse);
+        var brandId = createJson.RootElement.GetProperty("data").GetProperty("id").GetString()!;
+        var slug = createJson.RootElement.GetProperty("data").GetProperty("slug").GetString()!;
+
+        var deleteResponse = await _client.SendAsync(
+            ActorHttp.CreateJsonRequest(HttpMethod.Delete, $"/api/admin/brands/{brandId}", null, _adminCookie));
+        Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
+
+        // Danh sách công khai không còn thương hiệu đã xóa.
+        var listResponse = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, "/api/brands"));
+        using var listJson = await ActorHttp.ReadJsonAsync(listResponse);
+        Assert.DoesNotContain(listJson.RootElement.GetProperty("data").EnumerateArray(),
+            item => item.GetProperty("id").GetString() == brandId);
+
+        // Dòng vẫn còn trong DB với thời điểm xóa.
+        await using var catalog = _database.CreateCatalogContext();
+        var stored = await catalog.Brands.IgnoreQueryFilters().SingleAsync(brand => brand.Id == brandId);
+        Assert.NotNull(stored.DeletedAt);
+
+        // Tạo lại cùng tên nhận đúng slug cũ, vì chỉ mục duy nhất bỏ qua dòng đã xóa.
+        var recreateResponse = await _client.SendAsync(
+            ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/brands", new { name }, _adminCookie));
+        Assert.Equal(HttpStatusCode.Created, recreateResponse.StatusCode);
+        using var recreateJson = await ActorHttp.ReadJsonAsync(recreateResponse);
+        Assert.Equal(slug, recreateJson.RootElement.GetProperty("data").GetProperty("slug").GetString());
+    }
+
+    [Fact]
     // Nhân viên sales chỉ có quyền đọc nên gọi GET được và gọi POST tạo thương hiệu nhận 403.
     public async Task Sales_CanGetBrands_CannotCreateBrand()
     {

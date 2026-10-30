@@ -108,6 +108,14 @@ public sealed class AccountDeletionCommerceDataTests : IClassFixture<PickoryWebA
         await _kit.SeedCartAsync(userId, null, (skuId, 1));
         await _kit.SeedCartAsync(otherUserId, null, (skuId, 1));
         await _kit.AddSavedAddressAsync(userId);
+        // Đánh dấu một địa chỉ đã xóa mềm trước đó. Xóa tài khoản vẫn phải xóa hẳn dữ liệu cá nhân này.
+        await using (var commerce = _database.CreateCommerceContext())
+        {
+            var softDeleted = await commerce.SavedAddresses.SingleAsync(address => address.UserId == userId);
+            softDeleted.DeletedAt = DateTime.UtcNow;
+            await commerce.SaveChangesAsync();
+        }
+        await _kit.AddSavedAddressAsync(userId);
         await _kit.AddSavedAddressAsync(otherUserId);
 
         await DeleteAccountEventAsync(userId);

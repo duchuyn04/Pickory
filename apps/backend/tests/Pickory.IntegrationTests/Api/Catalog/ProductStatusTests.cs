@@ -9,13 +9,12 @@ using Pickory.Modules.Catalog.Attributes;
 using Pickory.Modules.Catalog.Contracts.Events;
 using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Features.Products;
-using Pickory.Modules.Catalog.Images;
 using Pickory.Modules.Identity.Roles;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Api.Catalog;
 
-// CAT-07: đổi trạng thái sản phẩm và xóa cứng sản phẩm.
+// CAT-07: đổi trạng thái sản phẩm và xóa mềm sản phẩm.
 [Collection(IntegrationDatabaseCollection.Name)]
 public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
 {
@@ -77,9 +76,10 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
             .Where(movement => context.Skus.Any(sku => sku.Id == movement.SkuId && _productIds.Contains(sku.ProductId)))
             .ExecuteDeleteAsync();
         await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ExecuteDeleteAsync();
-        await context.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
-        await context.Categories.Where(category => category.Id == _plainCategoryId || category.Id == _requiredSpecCategoryId).ExecuteDeleteAsync();
-        await context.Brands.Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm, danh mục và thương hiệu đã bị xóa mềm trong test.
+        await context.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+        await context.Categories.IgnoreQueryFilters().Where(category => category.Id == _plainCategoryId || category.Id == _requiredSpecCategoryId).ExecuteDeleteAsync();
+        await context.Brands.IgnoreQueryFilters().Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
     }
 
     private Category NewCategory(string slugPrefix, IReadOnlyList<AttributeDefinition> attributes) => new()
@@ -474,8 +474,8 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
     }
 
     [Fact]
-    // Movement `manual` và `return` bị xóa cùng sản phẩm (Decision 18). Mọi bản ghi con biến mất khỏi DB.
-    public async Task Delete_WithManualAndReturnMovements_DeletesEverythingAndQueuesImageJobs()
+    // Xóa mềm giữ sản phẩm, SKU, ảnh và movement để đối soát. Ảnh không bị xóa khỏi Cloudinary.
+    public async Task Delete_WithManualAndReturnMovements_MarksDeletedAndKeepsChildren()
     {
         var productId = await SeedProductAsync(imageCount: 2,
             skus: [new SkuSeed($"DEL-A-{_suffix}"), new SkuSeed($"DEL-B-{_suffix}")]);
@@ -488,16 +488,21 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await using var context = _database.CreateCatalogContext();
-        Assert.False(await context.Products.AnyAsync(product => product.Id == productId));
-        Assert.False(await context.Skus.AnyAsync(sku => sku.ProductId == productId));
-        Assert.False(await context.ProductImages.AnyAsync(image => image.ProductId == productId));
-        Assert.False(await context.InventoryMovements.AnyAsync(movement => skuIds.Contains(movement.SkuId)));
+        // Bỏ qua bộ lọc để thấy dòng đã xóa mềm và con của nó.
+        var stored = await context.Products.IgnoreQueryFilters().SingleAsync(product => product.Id == productId);
+        Assert.NotNull(stored.DeletedAt);
+        Assert.Equal(2, await context.Skus.CountAsync(sku => sku.ProductId == productId));
+        Assert.Equal(2, await context.ProductImages.CountAsync(image => image.ProductId == productId));
+        Assert.Equal(2, await context.InventoryMovements.CountAsync(movement => skuIds.Contains(movement.SkuId)));
 
-        // Mỗi ảnh có đúng 1 job xóa, để Cloudinary không giữ ảnh mồ côi.
-        var jobs = await context.ImageDeletionJobs.AsNoTracking().Where(job => job.PublicId.Contains(_suffix)).ToListAsync();
-        var expectedPublicIds = new[] { ImagePublicId(productId, 0), ImagePublicId(productId, 1) }.Order();
-        Assert.Equal(expectedPublicIds, jobs.Select(job => job.PublicId).Order());
-        Assert.All(jobs, job => Assert.Equal(ImageDeletionProcessor.PendingStatus, job.Status));
+        // Ảnh vẫn còn vì sản phẩm có thể khôi phục, nên không xếp job xóa ảnh.
+        Assert.Empty(await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ToListAsync());
+
+        // Sản phẩm đã xóa không còn trong API quản trị và trang công khai.
+        var adminGet = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, $"/api/admin/products/{productId}", _adminCookie));
+        Assert.Equal(HttpStatusCode.NotFound, adminGet.StatusCode);
+        var publicGet = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, $"/api/products/{stored.Slug}"));
+        Assert.Equal(HttpStatusCode.NotFound, publicGet.StatusCode);
 
         var emitted = Assert.Single(EventsOf(productId));
         Assert.Equal(ProductChange.Deleted, emitted.Change);
@@ -512,6 +517,9 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await using var context = _database.CreateCatalogContext();
+        // Sản phẩm vẫn còn trong DB với dấu xóa mềm, nhưng không có ảnh nên không cần job xóa ảnh.
+        var stored = await context.Products.IgnoreQueryFilters().SingleAsync(product => product.Id == productId);
+        Assert.NotNull(stored.DeletedAt);
         Assert.Empty(await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ToListAsync());
     }
 
