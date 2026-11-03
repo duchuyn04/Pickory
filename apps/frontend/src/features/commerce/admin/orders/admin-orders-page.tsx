@@ -27,6 +27,7 @@ import {
   orderStatusBadgeClass,
   paymentStatusBadgeClass,
 } from './order-badges';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './admin-orders.css';
 
 const ALL_STATUS_TAB_LABEL = 'Tất cả';
@@ -159,7 +160,7 @@ export function AdminOrdersPage() {
           ) : isError ? (
             // Lỗi 400 của API là tiếng Việt và nói rõ ô sai, nên hiện nguyên văn.
             <ErrorAlert
-              message={error instanceof Error ? error.message : 'Tải danh sách đơn hàng thất bại.'}
+              message={getErrorMessage(error, 'Tải danh sách đơn hàng thất bại.')}
               className="order-list-alert"
             />
           ) : showFilteredEmpty ? (

@@ -14,6 +14,7 @@ import { ChangePasswordForm } from '../components/change-password-form';
 import { DeleteAccountDialog } from '../components/delete-account-dialog';
 import { useActor } from '../hooks/use-actor';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import './account.css';
 
 // Trang tài khoản của khách: sửa hồ sơ, đổi mật khẩu, quyền riêng tư, xóa tài khoản.
@@ -91,11 +92,7 @@ export function AccountPage() {
       setSuccess(true);
     } catch (err: unknown) {
       // Lỗi từ API đã có thông báo tiếng Việt nên hiện nguyên văn; lỗi lạ mới dùng câu chung.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Cập nhật thông tin thất bại.');
-      }
+      setError(getErrorMessage(err, 'Cập nhật thông tin thất bại.'));
     } finally {
       // Luôn mở lại nút dù thành công hay lỗi.
       setSaving(false);

@@ -9,6 +9,7 @@ import { formatBucketLabel, formatBucketTick, REPORT_RANGE_OPTIONS } from './rep
 import { ReportPeriodControl } from './report-period-controls';
 import { fetchSalesReport } from './reports-api';
 import { usePeriodReportParams } from './use-report-params';
+import { getErrorMessage } from '../../../shared/error-message';
 import './reports.css';
 
 const PERIOD_EMPTY_MESSAGE = 'Chưa có dữ liệu trong khoảng này';
@@ -71,7 +72,7 @@ export function ProductsPeriodsReportPage() {
         )}
         {periodQuery.isError && (
           <ErrorAlert
-            message={periodQuery.error?.message ?? 'Không tải được sản phẩm bán ra theo kỳ.'}
+            message={getErrorMessage(periodQuery.error, 'Không tải được sản phẩm bán ra theo kỳ.')}
           />
         )}
         {periodQuery.isSuccess && !hasQuantity && (

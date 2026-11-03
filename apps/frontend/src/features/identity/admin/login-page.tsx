@@ -5,6 +5,7 @@ import { apiRequest } from '../../../shared/api';
 import { getEmailError, getPasswordError } from '../../../shared/identity-validation';
 import { useActor } from '../hooks/use-actor';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import './admin-login.css';
 
 // Trang đăng nhập nhân viên, tách khỏi trang đăng nhập khách và không có nút đăng nhập Google.
@@ -50,11 +51,7 @@ export function StaffLoginPage() {
       navigate('/admin', { replace: true });
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API: sai email và sai mật khẩu cùng một câu, còn bị khóa thì có câu riêng.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
-      }
+      setError(getErrorMessage(err, 'Đã có lỗi xảy ra. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }

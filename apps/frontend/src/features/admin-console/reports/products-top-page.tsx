@@ -15,6 +15,7 @@ import { ReportPieChart } from './report-pie-chart';
 import { ReportMonthControl } from './report-period-controls';
 import { fetchSalesReport } from './reports-api';
 import { useMonthReportParams } from './use-report-params';
+import { getErrorMessage } from '../../../shared/error-message';
 import './reports.css';
 
 const MONTH_EMPTY_MESSAGE = 'Chưa có dữ liệu trong tháng này';
@@ -72,7 +73,9 @@ export function ProductsTopReportPage() {
           </p>
         )}
         {monthQuery.isError && (
-          <ErrorAlert message={monthQuery.error?.message ?? 'Không tải được sản phẩm bán ra.'} />
+          <ErrorAlert
+            message={getErrorMessage(monthQuery.error, 'Không tải được sản phẩm bán ra.')}
+          />
         )}
         {monthQuery.isSuccess && total === 0 && (
           <p className="empty-state">{MONTH_EMPTY_MESSAGE}</p>

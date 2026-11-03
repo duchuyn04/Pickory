@@ -31,6 +31,7 @@ import {
 import { CheckoutSummary } from './checkout-summary';
 import { useCheckoutPreview } from './use-checkout-preview';
 import { usePlaceOrder } from './use-place-order';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './checkout-page.css';
 
 // Id ổn định cho từng ô, để nhãn, lỗi, focus và E2E nối với đúng ô.
@@ -347,7 +348,7 @@ export function CheckoutPage() {
     return (
       <main className="catalog-page checkout-page">
         <CheckoutHeading />
-        <ErrorAlert message={cartQuery.error?.message ?? 'Không tải được giỏ hàng.'} />
+        <ErrorAlert message={getErrorMessage(cartQuery.error, 'Không tải được giỏ hàng.')} />
         <Link to="/cart" className="btn btn-outline">
           Quay lại giỏ hàng
         </Link>

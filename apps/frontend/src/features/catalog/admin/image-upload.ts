@@ -1,3 +1,6 @@
+import { UserFacingError } from '../../../shared/error-message';
+import { getErrorMessage } from '../../../shared/error-message';
+
 // Luật tải ảnh phải khớp `ImageUploadRules` của backend. Backend vẫn kiểm lại khi gắn ảnh.
 export const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 export const MAX_IMAGES_PER_PRODUCT = 10;
@@ -49,7 +52,7 @@ export async function uploadToCloudinary(
   const response = await fetchImplementation(signature.uploadUrl, { method: 'POST', body });
   // Lỗi của Cloudinary là tiếng Anh, nên giao diện báo câu tiếng Việt có tên file.
   if (!response.ok) {
-    throw new Error(`Không tải được ảnh "${file.name}" lên. Hãy thử lại.`);
+    throw new UserFacingError(`Không tải được ảnh "${file.name}" lên. Hãy thử lại.`);
   }
   const result = (await response.json()) as { public_id: string; secure_url: string };
   return { publicId: result.public_id, url: result.secure_url };
@@ -96,9 +99,7 @@ export async function uploadImageFiles(
     try {
       uploaded.push(await dependencies.uploadFile(file, signature));
     } catch (error) {
-      errors.push(
-        error instanceof Error ? error.message : `Không tải được ảnh "${file.name}" lên.`,
-      );
+      errors.push(getErrorMessage(error, `Không tải được ảnh "${file.name}" lên.`));
     }
   }
   return { uploaded, errors };

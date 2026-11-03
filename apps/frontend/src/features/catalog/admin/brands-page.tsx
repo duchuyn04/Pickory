@@ -19,6 +19,7 @@ import {
   type UploadSignature,
 } from './image-upload';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import './catalog-admin.css';
 
 // Dữ liệu phản hồi thương hiệu sản phẩm từ API.
@@ -259,9 +260,7 @@ export function BrandsPage() {
       )}
 
       {isError && (
-        <ErrorAlert
-          message={error instanceof Error ? error.message : 'Tải danh sách thương hiệu thất bại.'}
-        />
+        <ErrorAlert message={getErrorMessage(error, 'Tải danh sách thương hiệu thất bại.')} />
       )}
 
       {!isLoading && !isError && (

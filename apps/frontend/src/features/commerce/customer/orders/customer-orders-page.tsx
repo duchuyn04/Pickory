@@ -8,6 +8,7 @@ import { ProductThumbnail } from '../product-thumbnail';
 import { formatOrderStatus } from '../../order-labels';
 import { formatDateTime } from './order-format';
 import { fetchCustomerOrders } from './orders-api';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './orders.css';
 
 // Trang hiển thị danh sách lịch sử đơn hàng của tài khoản đã đăng nhập.
@@ -84,9 +85,7 @@ export function CustomerOrdersPage() {
         </p>
       )}
 
-      {error && (
-        <ErrorAlert message={error instanceof Error ? error.message : 'Lỗi tải đơn hàng.'} />
-      )}
+      {error && <ErrorAlert message={getErrorMessage(error, 'Lỗi tải đơn hàng.')} />}
 
       {data &&
         data.items.length === 0 &&

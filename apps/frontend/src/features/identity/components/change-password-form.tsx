@@ -10,6 +10,7 @@ import {
 } from '../../../shared/field-error';
 import { getConfirmPasswordError, getPasswordError } from '../../../shared/identity-validation';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import '../customer/account.css';
 
 // Form đổi mật khẩu trong trang tài khoản.
@@ -67,11 +68,7 @@ export function ChangePasswordForm() {
       }, 1500);
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (ví dụ sai mật khẩu hiện tại) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Đổi mật khẩu thất bại. Vui lòng thử lại.');
-      }
+      setError(getErrorMessage(err, 'Đổi mật khẩu thất bại. Vui lòng thử lại.'));
     } finally {
       // Luôn mở lại nút dù thành công hay lỗi.
       setLoading(false);

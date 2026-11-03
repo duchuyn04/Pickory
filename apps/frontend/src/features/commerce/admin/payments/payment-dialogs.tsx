@@ -11,11 +11,12 @@ import {
   updatePaymentTransaction,
   type PaymentTransaction,
 } from './admin-payments-api';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './admin-payments.css';
 
-// Thông báo lỗi của API là tiếng Việt và đã nói rõ nguyên nhân, nên hiện nguyên văn.
+// Thông báo lỗi của API là tiếng Việt và đã nói rõ nguyên nhân. Lỗi khác loại hiện câu dự phòng.
 function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
+  return getErrorMessage(error, fallback);
 }
 
 // Sau thao tác thành công, danh sách giao dịch và danh sách đơn đều có thể đã đổi.

@@ -1,3 +1,5 @@
+import { UserFacingError } from '../error-message';
+
 // Kiểu dữ liệu hỗ trợ cho thuộc tính thông số kỹ thuật.
 export type AttributeType = 'text' | 'number' | 'enum' | 'boolean';
 
@@ -170,7 +172,7 @@ export function resolveCategoryAttributes(
   const childValidation = validateAttributeDefinitions(childAttributes);
   if (!childValidation.valid) {
     const detail = childValidation.errors.map((err) => err.message).join(' ');
-    throw new Error(`Định nghĩa thuộc tính danh mục con không hợp lệ: ${detail}`);
+    throw new UserFacingError(`Định nghĩa thuộc tính danh mục con không hợp lệ: ${detail}`);
   }
 
   // Danh mục gốc không có cha thì chỉ trả về thuộc tính của chính nó.
@@ -182,7 +184,7 @@ export function resolveCategoryAttributes(
   const parentValidation = validateAttributeDefinitions(parentAttributes);
   if (!parentValidation.valid) {
     const detail = parentValidation.errors.map((err) => err.message).join(' ');
-    throw new Error(`Định nghĩa thuộc tính danh mục cha không hợp lệ: ${detail}`);
+    throw new UserFacingError(`Định nghĩa thuộc tính danh mục cha không hợp lệ: ${detail}`);
   }
 
   // Tập hợp các khóa của cha để đối chiếu xung đột.
@@ -191,7 +193,7 @@ export function resolveCategoryAttributes(
   // Chặn trùng khóa giữa cha và con để không ghi đè thuộc tính kế thừa.
   for (const childAttr of childAttributes) {
     if (parentKeys.has(childAttr.key)) {
-      throw new Error(
+      throw new UserFacingError(
         `Trùng khóa thuộc tính "${childAttr.key}" giữa danh mục cha và danh mục con.`,
       );
     }

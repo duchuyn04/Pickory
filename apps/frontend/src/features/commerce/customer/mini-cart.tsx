@@ -8,6 +8,7 @@ import type { Cart, CartLine } from './cart-api';
 import { ProductThumbnail } from './product-thumbnail';
 import { cartButtonLabel, unavailableLabel } from './cart-labels';
 import { useCart, useRefreshCartOnActorChange } from './use-cart';
+import { getErrorMessage } from '../../../shared/error-message';
 import './mini-cart.css';
 
 function MiniCartLine({ line }: { line: CartLine }) {
@@ -115,7 +116,9 @@ export function MiniCart() {
             </button>
           </div>
           {cartQuery.isPending && <p role="status">Đang tải giỏ hàng...</p>}
-          {cartQuery.isError && <ErrorAlert message={cartQuery.error.message} />}
+          {cartQuery.isError && (
+            <ErrorAlert message={getErrorMessage(cartQuery.error, 'Không tải được giỏ hàng.')} />
+          )}
           {cartQuery.data && (
             <MiniCartContent cart={cartQuery.data} onNavigate={() => setIsOpen(false)} />
           )}

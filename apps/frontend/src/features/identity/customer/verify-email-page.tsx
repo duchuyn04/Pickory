@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-do
 import { apiRequest } from '../../../shared/api';
 import { AuthCard } from './auth-ui';
 import { ResultPanel } from '../../../shared/result-panel';
+import { getErrorMessage } from '../../../shared/error-message';
 
 // Trang xác thực email, mở từ link trong thư đăng ký.
 export function VerifyEmailPage() {
@@ -47,11 +48,7 @@ export function VerifyEmailPage() {
       })
       .catch((err: unknown) => {
         // Hiện nguyên thông báo của API (link hết hạn, đã dùng...) vì đã là tiếng Việt.
-        if (err instanceof Error) {
-          setError(err.message);
-        } else {
-          setError('Xác thực email thất bại hoặc liên kết đã hết hạn.');
-        }
+        setError(getErrorMessage(err, 'Xác thực email thất bại hoặc liên kết đã hết hạn.'));
       })
       .finally(() => {
         setLoading(false);

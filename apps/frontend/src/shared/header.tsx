@@ -8,6 +8,7 @@ import { BrandMark } from './brand-mark';
 import { ErrorAlert } from './error-alert';
 import { Icon } from './icons';
 import { useDialogFocus } from './use-dialog-focus';
+import { getErrorMessage } from './error-message';
 import './header.css';
 
 const MENU_PANEL_ID = 'site-menu-panel';
@@ -43,7 +44,7 @@ export function Header() {
       setLogoutError(null);
       await apiRequest('/api/auth/sessions/current', { method: 'DELETE' });
     } catch (err: unknown) {
-      setLogoutError(err instanceof Error ? err.message : 'Đăng xuất thất bại.');
+      setLogoutError(getErrorMessage(err, 'Đăng xuất thất bại.'));
     } finally {
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       navigate('/');

@@ -5,6 +5,7 @@ import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { rowNumber } from '../../../shared/row-number';
 import { useCan } from '../hooks/use-actor';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import './identity-admin.css';
 
 // Một dòng nhật ký như API trả về; actorEmail và actorName do server tra thêm để hiển thị người làm thay vì chuỗi UUID.
@@ -193,7 +194,7 @@ export function AuditLogPage() {
           </p>
         ) : isError ? (
           <ErrorAlert
-            message={error instanceof Error ? error.message : 'Tải nhật ký thao tác thất bại.'}
+            message={getErrorMessage(error, 'Tải nhật ký thao tác thất bại.')}
             className="identity-table-alert"
           />
         ) : (

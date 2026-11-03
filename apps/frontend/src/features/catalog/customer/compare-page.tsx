@@ -10,6 +10,7 @@ import type { ComparedProduct, ProductCompareResponse } from './catalog-api';
 import { buildCompareGroups, findMissingIds } from './compare-rows';
 import { formatProductPrice, getProductBadges } from './product-display';
 import { useCompareList } from './use-compare-list';
+import { getErrorMessage } from '../../../shared/error-message';
 import './category-page.css';
 import './compare-page.css';
 
@@ -147,7 +148,10 @@ export function ComparePage() {
     if (comparison.isError) {
       return (
         <>
-          <ErrorAlert message={comparison.error.message} className="compare-alert" />
+          <ErrorAlert
+            message={getErrorMessage(comparison.error, 'Không tải được bảng so sánh.')}
+            className="compare-alert"
+          />
           {comparison.error.code === 'COMPARE_CATEGORY_MISMATCH' && (
             // Sản phẩm đã đổi danh mục nên danh sách cũ không còn so sánh được. Khách phải bắt đầu lại.
             <button type="button" className="btn compare-alert-action" onClick={clear}>

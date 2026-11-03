@@ -21,6 +21,7 @@ import {
   type ShippingFieldErrors,
   type ShippingFieldName,
 } from '../shipping-settings-validation';
+import { getErrorMessage } from '../../../shared/error-message';
 
 const SHIPPING_SETTINGS_PERMISSION = 'shipping-settings:manage';
 
@@ -71,11 +72,7 @@ export function ShippingSettingsPage() {
 
       {settingsQuery.isError && (
         <ErrorAlert
-          message={
-            settingsQuery.error instanceof Error && settingsQuery.error.message
-              ? settingsQuery.error.message
-              : 'Không tải được cấu hình vận chuyển.'
-          }
+          message={getErrorMessage(settingsQuery.error, 'Không tải được cấu hình vận chuyển.')}
         />
       )}
 
@@ -192,7 +189,7 @@ function ShippingSettingsForm({ initialSettings, ghnShopId }: ShippingSettingsFo
         setFormErrors(mapped.unmatched);
       } else {
         // Lỗi khác (403, 503, mạng) hiện đầu form. Dữ liệu khách đã nhập giữ nguyên để thử lại.
-        setFormErrors([error instanceof Error ? error.message : 'Không lưu được cấu hình.']);
+        setFormErrors([getErrorMessage(error, 'Không lưu được cấu hình.')]);
       }
     } finally {
       setIsSubmitting(false);

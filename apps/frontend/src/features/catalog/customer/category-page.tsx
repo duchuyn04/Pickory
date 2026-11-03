@@ -21,6 +21,7 @@ import { findCategoryTrail } from './category-tree';
 import { ProductCard } from './product-card';
 import { ProductFilters } from './product-filters';
 import { useProductList } from './use-product-list';
+import { getErrorMessage } from '../../../shared/error-message';
 import './category-page.css';
 
 // Dưới ngưỡng này khối bộ lọc gập sau nút "Bộ lọc". Giá trị khớp `@media` trong `category-page.css`.
@@ -235,7 +236,7 @@ function CategoryContent({ slug }: { slug: string }) {
           {list.status === 'error' && (
             <>
               <ErrorAlert
-                message={list.error.message}
+                message={getErrorMessage(list.error, 'Không tải được danh sách sản phẩm.')}
                 items={list.error.details?.map((detail) => detail.message)}
                 className="catalog-alert"
               />

@@ -6,6 +6,7 @@ import { getEmailError, getNameError } from '../../../shared/identity-validation
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import type { RoleData } from './role-form';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 
 interface InviteDialogProps {
   availableRoles: RoleData[];
@@ -81,11 +82,7 @@ export function InviteDialog({ availableRoles, onSuccess, onClose }: InviteDialo
       onClose();
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (email đã dùng, không đủ quyền để mời vào role này...) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Gửi lời mời thất bại.');
-      }
+      setError(getErrorMessage(err, 'Gửi lời mời thất bại.'));
     } finally {
       setLoading(false);
     }

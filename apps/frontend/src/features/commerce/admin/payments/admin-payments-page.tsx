@@ -22,6 +22,7 @@ import {
   type PaymentTransaction,
 } from './admin-payments-api';
 import { AttachOrderDialog, IgnoreTransactionDialog, ReceiveCodDialog } from './payment-dialogs';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './admin-payments.css';
 
 const PANEL_ID = 'payment-panel';
@@ -147,11 +148,10 @@ export function AdminPaymentsPage() {
               </p>
             ) : transactionsQuery.isError ? (
               <ErrorAlert
-                message={
-                  transactionsQuery.error instanceof Error
-                    ? transactionsQuery.error.message
-                    : 'Tải danh sách giao dịch thất bại.'
-                }
+                message={getErrorMessage(
+                  transactionsQuery.error,
+                  'Tải danh sách giao dịch thất bại.',
+                )}
                 className="payment-list-alert"
               />
             ) : transactions && transactions.items.length === 0 ? (
@@ -253,11 +253,7 @@ export function AdminPaymentsPage() {
             </p>
           ) : codQuery.isError ? (
             <ErrorAlert
-              message={
-                codQuery.error instanceof Error
-                  ? codQuery.error.message
-                  : 'Tải danh sách đơn COD thất bại.'
-              }
+              message={getErrorMessage(codQuery.error, 'Tải danh sách đơn COD thất bại.')}
               className="payment-list-alert"
             />
           ) : codOrders && codOrders.items.length === 0 ? (

@@ -12,6 +12,7 @@ import { AssignRolesDialog, type StaffRow } from '../components/assign-roles-dia
 import { InviteDialog } from '../components/invite-dialog';
 import type { RoleData } from '../components/role-form';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import './identity-admin.css';
 
 interface StaffListResponse {
@@ -117,11 +118,7 @@ export function StaffPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin-staff'] });
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (admin cuối cùng, tự khóa mình, không đủ quyền...) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setActionError(err.message);
-      } else {
-        setActionError('Thao tác khóa/mở khóa thất bại.');
-      }
+      setActionError(getErrorMessage(err, 'Thao tác khóa/mở khóa thất bại.'));
     }
   }
 
@@ -145,11 +142,7 @@ export function StaffPage() {
       {actionError && <ErrorAlert message={actionError} />}
 
       {rolesIsError && (
-        <ErrorAlert
-          message={
-            rolesError instanceof Error ? rolesError.message : 'Tải danh sách vai trò thất bại.'
-          }
-        />
+        <ErrorAlert message={getErrorMessage(rolesError, 'Tải danh sách vai trò thất bại.')} />
       )}
 
       <section className="card card-flush">
@@ -195,9 +188,7 @@ export function StaffPage() {
           </p>
         ) : staffIsError ? (
           <ErrorAlert
-            message={
-              staffError instanceof Error ? staffError.message : 'Tải danh sách nhân viên thất bại.'
-            }
+            message={getErrorMessage(staffError, 'Tải danh sách nhân viên thất bại.')}
             className="identity-table-alert"
           />
         ) : staffList.length === 0 && (hasFilters || page > 1) ? (

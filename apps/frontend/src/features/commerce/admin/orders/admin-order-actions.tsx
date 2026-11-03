@@ -17,6 +17,7 @@ import {
   type ParcelForm,
 } from './order-action-forms';
 import { availableOrderActions, type OrderActionKey } from './order-actions';
+import { getErrorMessage } from '../../../../shared/error-message';
 
 interface ActionCopy {
   // Chữ trên nút mở hộp thoại.
@@ -162,7 +163,7 @@ function OrderActionDialog({ action, order, onClose, onDone }: ActionDialogProps
       onClose();
     } catch (error: unknown) {
       // Giữ hộp thoại mở và dữ liệu đã nhập. Lỗi 409 cho nhân viên đọc lý do rồi tải lại đơn.
-      setApiError(error instanceof Error ? error.message : 'Thao tác thất bại.');
+      setApiError(getErrorMessage(error, 'Thao tác thất bại.'));
       setIsSubmitting(false);
     }
   }

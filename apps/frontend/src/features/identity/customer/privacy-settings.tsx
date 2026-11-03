@@ -3,6 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { apiRequest } from '../../../shared/api';
 import { useActor } from '../hooks/use-actor';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import './account.css';
 
 // Trang để khách vãng lai và khách đã đăng nhập xem và đổi lựa chọn đồng ý bất cứ lúc nào.
@@ -51,7 +52,7 @@ export function PrivacySettingsPage() {
       setSavedMessage(true);
     } catch (err: unknown) {
       // Phải báo lỗi: nếu im lặng thì người dùng tưởng đã lưu trong khi server chưa ghi nhận.
-      setError(err instanceof Error ? err.message : 'Lưu cài đặt quyền riêng tư thất bại.');
+      setError(getErrorMessage(err, 'Lưu cài đặt quyền riêng tư thất bại.'));
     } finally {
       setSaving(false);
     }
