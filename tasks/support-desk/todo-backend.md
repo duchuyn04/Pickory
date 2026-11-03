@@ -17,12 +17,12 @@ Quy ước riêng của nhánh backend:
 ### SD-C1: Bộ kiểm hợp đồng phía backend
 **Mô tả:** Helper `SupportDeskContract` trong `apps/backend/tests/Pickory.IntegrationTests/SupportDesk/`. Helper đọc file trong `spec/fixtures/support-desk/` theo cách của `SharedFixtures`. Helper so JSON của response thật với một ví dụ theo `name`.
 **Tiêu chí nghiệm thu:**
-- [ ] Helper nhận JSON thật, tên file mẫu và tên ví dụ
-- [ ] Thiếu khóa, thừa khóa hoặc khác kiểu thì test lỗi, và thông báo ghi đường dẫn khóa, ví dụ `data.session.status`
-- [ ] Giá trị `null` ở một bên khớp mọi kiểu ở bên kia. Mảng so kiểu theo phần tử đầu của ví dụ
-- [ ] Helper so thêm mã HTTP của response với `status` của ví dụ
-- [ ] Test của helper chạy mọi ví dụ trong mọi file mẫu với chính ví dụ đó, và đều khớp
-- [ ] Phép thử đột biến: xóa một khóa khỏi JSON thật thì test lỗi
+- [x] Helper nhận JSON thật, tên file mẫu và tên ví dụ
+- [x] Thiếu khóa, thừa khóa hoặc khác kiểu thì test lỗi, và thông báo ghi đường dẫn khóa, ví dụ `data.session.status`
+- [x] Giá trị `null` ở một bên khớp mọi kiểu ở bên kia. Mảng so kiểu theo phần tử đầu của ví dụ
+- [x] Helper so thêm mã HTTP của response với `status` của ví dụ
+- [x] Test của helper chạy mọi ví dụ trong mọi file mẫu với chính ví dụ đó, và đều khớp
+- [x] Phép thử đột biến: xóa một khóa khỏi JSON thật thì test lỗi
 **Kiểm tra:** test tích hợp của helper. Thư mục `SupportDesk/` không thuộc `Infrastructure/`, nên task chỉ chạy bộ lọc `FullyQualifiedName~.SupportDesk.`
 **Phụ thuộc:** không · **Quy mô:** S
 **File:** `apps/backend/tests/Pickory.IntegrationTests/SupportDesk/SupportDeskContract.cs`
