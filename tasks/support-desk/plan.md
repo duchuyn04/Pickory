@@ -226,7 +226,7 @@ Hai nhánh chạy song song theo quyết định 31.
 
 Nhánh backend (`todo-backend.md`):
 - [x] SD-15 hội thoại và tin của khách
-- [ ] SD-16 kênh SSE phía khách
+- [x] SD-16 kênh SSE phía khách
 - [ ] SD-C1 bộ kiểm hợp đồng
 - [ ] SD-04 mở phiên chờ và nhắc lại
 - [ ] SD-05 yêu cầu gọi lại

@@ -52,12 +52,12 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 ### SD-16: Kênh SSE phía khách
 **Mô tả:** `CustomerEventHub` giữ kết nối SSE của từng hội thoại. `GET /api/support/conversations/{id}/events` gửi tin của nhân viên, tin hệ thống và đổi trạng thái phiên tới trang `/support`.
 **Tiêu chí nghiệm thu:**
-- [ ] Người không phải chủ hội thoại nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
-- [ ] Tin của nhân viên tới kết nối SSE trong 2 giây sau commit
-- [ ] Sự kiện chỉ gửi sau commit. Transaction bị hủy không sinh sự kiện
-- [ ] Kết nối nhận dòng chú thích giữ kết nối mỗi 15 giây
-- [ ] Client ngắt kết nối thì hub gỡ `Channel` của kết nối đó
-- [ ] Response SSE có `Content-Type: text/event-stream` và `Cache-Control: no-cache`
+- [x] Người không phải chủ hội thoại nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
+- [x] Tin của nhân viên tới kết nối SSE trong 2 giây sau commit
+- [x] Sự kiện chỉ gửi sau commit. Transaction bị hủy không sinh sự kiện
+- [x] Kết nối nhận dòng chú thích giữ kết nối mỗi 15 giây
+- [x] Client ngắt kết nối thì hub gỡ `Channel` của kết nối đó
+- [x] Response SSE có `Content-Type: text/event-stream` và `Cache-Control: no-cache`
 **Kiểm tra:** test tích hợp đọc stream SSE
 **Phụ thuộc:** SD-15 · **Quy mô:** M
 

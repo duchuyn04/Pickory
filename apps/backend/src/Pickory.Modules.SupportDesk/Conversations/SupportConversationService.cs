@@ -10,7 +10,8 @@ using Pickory.Shared.Exceptions;
 
 namespace Pickory.Modules.SupportDesk.Conversations;
 
-// Mở hội thoại, đọc lịch sử và nhận tin của khách. Mọi hàm giả định route đã chặn nhân viên.
+// Mở hội thoại, đọc lịch sử, nhận tin của khách và kiểm chủ cho kênh SSE.
+// Mọi hàm giả định route đã chặn nhân viên.
 internal sealed class SupportConversationService(
     SupportDeskDbContext database,
     TimeProvider timeProvider,
@@ -81,13 +82,8 @@ internal sealed class SupportConversationService(
             cursorId = decodedId;
         }
 
-        // Một truy vấn có điều kiện chủ. Người khác và `id` không tồn tại cùng nhận 404, nên không dò được `id`.
-        var isOwner = await ConversationOwnership.OwnedBy(database.Conversations.AsNoTracking(), actor)
-            .AnyAsync(conversation => conversation.Id == conversationId, cancellationToken);
-        if (!isOwner)
-        {
-            throw ConversationNotFound();
-        }
+        // Kiểm chủ trước khi đọc tin. Người khác và `id` không tồn tại cùng nhận 404, nên không dò được `id`.
+        await EnsureOwnerAsync(actor, conversationId, cancellationToken);
 
         // Hội thoại đã đóng vẫn đọc được lịch sử, nên không lọc theo trạng thái.
         var query = database.Messages.AsNoTracking().Where(message => message.ConversationId == conversationId);
@@ -153,6 +149,18 @@ internal sealed class SupportConversationService(
         await database.SaveChangesAsync(cancellationToken);
 
         return MessageResponse.From(message);
+    }
+
+    // Kiểm chủ hội thoại cho route đọc. Hội thoại của người khác và `id` không tồn tại cùng nhận 404.
+    public async Task EnsureOwnerAsync(Actor actor, string conversationId, CancellationToken cancellationToken)
+    {
+        // Một truy vấn có điều kiện chủ, nên người khác không dò được hội thoại nào tồn tại.
+        var isOwner = await ConversationOwnership.OwnedBy(database.Conversations.AsNoTracking(), actor)
+            .AnyAsync(conversation => conversation.Id == conversationId, cancellationToken);
+        if (!isOwner)
+        {
+            throw ConversationNotFound();
+        }
     }
 
     // Hội thoại `open` của người gọi theo luật chủ. Chỉ mục unique bảo đảm tối đa một dòng.

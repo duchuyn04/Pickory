@@ -3,23 +3,29 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Pickory.Modules.Identity.Contracts.Actors;
+using Pickory.Modules.SupportDesk.Realtime;
 using Pickory.Shared.Http;
 using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.SupportDesk.Conversations;
 
-// Ba route chat của khách, không cần quyền vì khách vãng lai cũng chat được.
+// Bốn route chat của khách, không cần quyền vì khách vãng lai cũng chat được.
 // Route ghi đi qua kiểm `Origin` của actor middleware.
 internal static class SupportConversationEndpoints
 {
     private const string ConversationsPath = "/api/support/conversations";
     private const string MessagesPath = "/api/support/conversations/{id}/messages";
+    private const string EventsPath = "/api/support/conversations/{id}/events";
 
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost(ConversationsPath, OpenAsync);
         endpoints.MapGet(MessagesPath, ListMessagesAsync);
         endpoints.MapPost(MessagesPath, SendMessageAsync);
+        // Luồng SSE không kết thúc, client đóng kết nối khi rời trang `/support`.
+        endpoints.MapGet(EventsPath, OpenEventStreamAsync)
+            // Khai báo kiểu nội dung để tài liệu OpenAPI mô tả đúng luồng SSE. Hàm trả `IResult` nên OpenAPI không tự suy ra.
+            .Produces<string>(StatusCodes.Status200OK, "text/event-stream");
     }
 
     internal static async Task<IResult> OpenAsync(HttpContext context, SupportConversationService service)
@@ -69,5 +75,22 @@ internal static class SupportConversationEndpoints
         var validRequest = await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
         var message = await service.SendMessageAsync(actor, id, validRequest.TrimmedBody, context.RequestAborted);
         return Results.Json(new ApiResponse<MessageResponse>(message), statusCode: StatusCodes.Status201Created);
+    }
+
+    internal static async Task<IResult> OpenEventStreamAsync(
+        string id,
+        HttpContext context,
+        SupportConversationService service,
+        CustomerEventStreamer streamer)
+    {
+        var actor = context.GetActor();
+        // Nhân viên gọi route phía khách nhận 403, giống ba route hội thoại của SD-15.
+        ConversationOwnership.RejectStaff(actor);
+
+        // Kiểm chủ trước khi mở response. Sau khi đã ghi header thì không đổi được response sang 404.
+        await service.EnsureOwnerAsync(actor, id, context.RequestAborted);
+
+        // Kết nối chỉ vào hub sau bước kiểm chủ ở trên, nên người lạ không chiếm được kênh.
+        return new CustomerEventStreamResult(streamer.StreamAsync(id, context.RequestAborted));
     }
 }

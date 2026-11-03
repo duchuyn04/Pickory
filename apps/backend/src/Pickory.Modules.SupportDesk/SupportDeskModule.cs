@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Pickory.Modules.Identity.Contracts.Events;
+using Pickory.Modules.SupportDesk.Contracts.Events;
 using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Persistence;
 using Pickory.Modules.SupportDesk.Presence;
@@ -38,6 +39,13 @@ public static class SupportDeskModule
         services.AddSingleton<SupportEventHub>();
         // Streamer không giữ trạng thái riêng nên là singleton. Nó tự tạo scope khi cần ghi DB.
         services.AddSingleton<SupportEventStreamer>();
+        // Hub phía khách cũng là singleton. Kết nối thuộc một hội thoại nên mọi producer phải phát qua cùng danh sách.
+        services.AddSingleton<CustomerEventHub>();
+        // Streamer phía khách không giữ trạng thái riêng. Nó đọc đồng hồ và vòng đời ứng dụng để đóng kết nối.
+        services.AddSingleton<CustomerEventStreamer>();
+        // Handler chuyển sự kiện miền đã commit cho kết nối của đúng hội thoại. Một handler nghe hai loại sự kiện của kênh khách.
+        services.AddScoped<IDomainEventHandler<SupportMessageCreatedEvent>, CustomerEventBroadcastHandler>();
+        services.AddScoped<IDomainEventHandler<SupportSessionStatusChangedEvent>, CustomerEventBroadcastHandler>();
         // Vòng đời scoped vì dịch vụ và job giữ `SupportDeskDbContext` của request hoặc của một vòng worker.
         services.AddScoped<SupportConversationService>();
         services.AddScoped<StaffPresenceService>();
