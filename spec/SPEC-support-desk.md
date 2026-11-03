@@ -112,6 +112,8 @@ Quyền `support-settings:manage`, `conversations:read`, `conversations:reply` n
 
 Route theo REST mức tài nguyên, theo quyết định 11 của plan.
 
+Dạng request, response, sự kiện SSE và mã lỗi của từng route nằm ở `tasks/support-desk/api-contract.md`. Dữ liệu mẫu dùng chung cho frontend và backend nằm ở `spec/fixtures/support-desk/`.
+
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
 | POST | `/api/support/conversations` | khách | Lấy hội thoại đang mở hoặc tạo mới |
@@ -126,6 +128,7 @@ Route theo REST mức tài nguyên, theo quyết định 11 của plan.
 | PUT | `/api/admin/support/sessions/{id}/assignment` | `conversations:reply` | Chuyển cho đồng nghiệp |
 | PATCH | `/api/admin/support/sessions/{id}` | `conversations:reply` | Kết thúc phiên với `status: "closed"` |
 | POST | `/api/admin/support/sessions/{id}/messages` | `conversations:reply` | Gửi tin (người đã nhận mới gửi được) |
+| GET | `/api/admin/support/conversations/{id}/messages` | `conversations:read` | Lịch sử tin của mọi phiên trong hội thoại |
 | GET | `/api/admin/support/sessions/{id}/customer` | `conversations:read` | Bảng thông tin khách |
 | GET · PUT | `/api/admin/support/presence` | `conversations:reply` | Danh sách nhân viên sẵn sàng; đổi trạng thái của mình |
 | GET · PATCH | `/api/admin/support/callback-requests[/{id}]` | `conversations:read` · `conversations:reply` | Danh sách gọi lại, đánh dấu đã gọi |

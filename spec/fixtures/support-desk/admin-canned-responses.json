@@ -1,0 +1,75 @@
+{
+  "description": "Mẫu request và response của mẫu trả lời nhanh. `editable` cho biết người gọi sửa được mẫu này hay không, để frontend ẩn nút sửa.",
+  "examples": [
+    {
+      "name": "danh sách mẫu",
+      "method": "GET",
+      "path": "/api/admin/support/canned-responses",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": [
+          {
+            "id": "ca000000-0000-4000-8000-000000000001",
+            "shortcut": "camon",
+            "body": "Cảm ơn {ten_khach} đã liên hệ Pickory.",
+            "shared": true,
+            "editable": false
+          },
+          {
+            "id": "ca000000-0000-4000-8000-000000000002",
+            "shortcut": "kiemdon",
+            "body": "Mình kiểm đơn {ma_don} giúp bạn nhé.",
+            "shared": false,
+            "editable": true
+          }
+        ]
+      }
+    },
+    {
+      "name": "tạo mẫu cá nhân",
+      "method": "POST",
+      "path": "/api/admin/support/canned-responses",
+      "request": { "shortcut": "baohanh", "body": "Sản phẩm được bảo hành 12 tháng.", "shared": false },
+      "status": 201,
+      "response": {
+        "data": {
+          "id": "ca000000-0000-4000-8000-000000000003",
+          "shortcut": "baohanh",
+          "body": "Sản phẩm được bảo hành 12 tháng.",
+          "shared": false,
+          "editable": true
+        }
+      }
+    },
+    {
+      "name": "sửa mẫu",
+      "method": "PATCH",
+      "path": "/api/admin/support/canned-responses/ca000000-0000-4000-8000-000000000003",
+      "request": { "body": "Sản phẩm được bảo hành chính hãng 12 tháng." },
+      "status": 200,
+      "response": {
+        "data": {
+          "id": "ca000000-0000-4000-8000-000000000003",
+          "shortcut": "baohanh",
+          "body": "Sản phẩm được bảo hành chính hãng 12 tháng.",
+          "shared": false,
+          "editable": true
+        }
+      }
+    },
+    {
+      "name": "trùng phím tắt",
+      "method": "POST",
+      "path": "/api/admin/support/canned-responses",
+      "request": { "shortcut": "kiemdon", "body": "Mình xem đơn giúp bạn.", "shared": false },
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "CANNED_SHORTCUT_TAKEN",
+          "message": "Bạn đã có mẫu dùng phím tắt này."
+        }
+      }
+    }
+  ]
+}

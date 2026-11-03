@@ -1,0 +1,52 @@
+{
+  "description": "Mẫu request và response của tab Gọi lại. `phone` bằng `null` khi job đã xóa số sau 30 ngày.",
+  "examples": [
+    {
+      "name": "danh sách yêu cầu gọi lại",
+      "method": "GET",
+      "path": "/api/admin/support/callback-requests",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": [
+          {
+            "id": "cb000000-0000-4000-8000-000000000001",
+            "conversationId": "c0a80000-0000-4000-8000-000000000001",
+            "phone": "0901234567",
+            "note": "Gọi sau 18 giờ giúp mình.",
+            "status": "pending",
+            "createdAt": "2026-11-03T14:05:00Z",
+            "handledAt": null
+          },
+          {
+            "id": "cb000000-0000-4000-8000-000000000002",
+            "conversationId": "c0a80000-0000-4000-8000-000000000003",
+            "phone": null,
+            "note": null,
+            "status": "done",
+            "createdAt": "2026-09-20T13:00:00Z",
+            "handledAt": "2026-09-21T02:10:00Z"
+          }
+        ]
+      }
+    },
+    {
+      "name": "đánh dấu đã gọi",
+      "method": "PATCH",
+      "path": "/api/admin/support/callback-requests/cb000000-0000-4000-8000-000000000001",
+      "request": { "status": "done" },
+      "status": 200,
+      "response": {
+        "data": {
+          "id": "cb000000-0000-4000-8000-000000000001",
+          "conversationId": "c0a80000-0000-4000-8000-000000000001",
+          "phone": "0901234567",
+          "note": "Gọi sau 18 giờ giúp mình.",
+          "status": "done",
+          "createdAt": "2026-11-03T14:05:00Z",
+          "handledAt": "2026-11-04T01:30:00Z"
+        }
+      }
+    }
+  ]
+}

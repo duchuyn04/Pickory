@@ -1,0 +1,43 @@
+{
+  "description": "Mẫu response của bảng thông tin khách. `name` và `email` bằng `null` tới khi người dùng chốt Câu hỏi mở 2 của plan. Frontend tự dựng link `/admin/orders/{code}` từ `code`.",
+  "examples": [
+    {
+      "name": "khách đã đăng nhập",
+      "method": "GET",
+      "path": "/api/admin/support/sessions/5e550000-0000-4000-8000-000000000001/customer",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "customer": {
+            "isGuest": false,
+            "name": "Nguyễn Minh Anh",
+            "email": "minhanh@example.com"
+          },
+          "orders": [
+            {
+              "code": "PK123",
+              "status": "shipping",
+              "total": 459000,
+              "itemCount": 2,
+              "createdAt": "2026-11-01T09:12:00Z"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "khách vãng lai",
+      "method": "GET",
+      "path": "/api/admin/support/sessions/5e550000-0000-4000-8000-000000000002/customer",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "customer": { "isGuest": true, "name": null, "email": null },
+          "orders": []
+        }
+      }
+    }
+  ]
+}

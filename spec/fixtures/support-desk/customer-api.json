@@ -1,0 +1,170 @@
+{
+  "description": "Mẫu request và response của route phía khách. Backend kiểm response thật có cùng khóa và cùng kiểu với mẫu. Frontend kiểm schema zod đọc được mẫu, và E2E dùng mẫu khi route chưa có.",
+  "examples": [
+    {
+      "name": "tạo hội thoại lần đầu",
+      "method": "POST",
+      "path": "/api/support/conversations",
+      "request": null,
+      "status": 201,
+      "response": {
+        "data": {
+          "id": "c0a80000-0000-4000-8000-000000000001",
+          "status": "open",
+          "createdAt": "2026-11-03T02:15:00Z",
+          "showRetentionNotice": true,
+          "session": null
+        }
+      }
+    },
+    {
+      "name": "mở lại hội thoại đang có phiên chờ",
+      "method": "POST",
+      "path": "/api/support/conversations",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "id": "c0a80000-0000-4000-8000-000000000001",
+          "status": "open",
+          "createdAt": "2026-11-03T02:15:00Z",
+          "showRetentionNotice": false,
+          "session": {
+            "id": "5e550000-0000-4000-8000-000000000001",
+            "status": "waiting",
+            "csatScore": null
+          }
+        }
+      }
+    },
+    {
+      "name": "lịch sử tin, trang cuối",
+      "method": "GET",
+      "path": "/api/support/conversations/c0a80000-0000-4000-8000-000000000001/messages?limit=50",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "items": [
+            {
+              "id": "a0000000-0000-4000-8000-000000000001",
+              "role": "customer",
+              "body": "Đơn PK123 của mình giao tới đâu rồi?",
+              "action": null,
+              "staffDisplayName": null,
+              "createdAt": "2026-11-03T02:15:05Z"
+            },
+            {
+              "id": "a0000000-0000-4000-8000-000000000002",
+              "role": "system",
+              "body": "Đã chuyển cho nhân viên CSKH. Thời gian chờ dự kiến khoảng 5 phút.",
+              "action": null,
+              "staffDisplayName": null,
+              "createdAt": "2026-11-03T02:15:05Z"
+            },
+            {
+              "id": "a0000000-0000-4000-8000-000000000003",
+              "role": "staff",
+              "body": "Chào bạn, mình kiểm đơn PK123 ngay nhé.",
+              "action": null,
+              "staffDisplayName": "Lan - CSKH",
+              "createdAt": "2026-11-03T02:17:40Z"
+            }
+          ],
+          "nextCursor": null
+        }
+      }
+    },
+    {
+      "name": "khách gửi tin",
+      "method": "POST",
+      "path": "/api/support/conversations/c0a80000-0000-4000-8000-000000000001/messages",
+      "request": { "body": "Cảm ơn bạn." },
+      "status": 201,
+      "response": {
+        "data": {
+          "id": "a0000000-0000-4000-8000-000000000004",
+          "role": "customer",
+          "body": "Cảm ơn bạn.",
+          "action": null,
+          "staffDisplayName": null,
+          "createdAt": "2026-11-03T02:18:00Z"
+        }
+      }
+    },
+    {
+      "name": "khách gửi quá giới hạn",
+      "method": "POST",
+      "path": "/api/support/conversations/c0a80000-0000-4000-8000-000000000001/messages",
+      "request": { "body": "Alo?" },
+      "status": 429,
+      "response": {
+        "error": {
+          "code": "SUPPORT_MESSAGE_RATE_LIMITED",
+          "message": "Bạn gửi tin quá nhanh. Hãy chờ một chút rồi gửi lại."
+        }
+      }
+    },
+    {
+      "name": "khách để lại số điện thoại",
+      "method": "POST",
+      "path": "/api/support/callback-requests",
+      "request": {
+        "conversationId": "c0a80000-0000-4000-8000-000000000001",
+        "phone": "0901234567",
+        "note": "Gọi sau 18 giờ giúp mình."
+      },
+      "status": 201,
+      "response": {
+        "data": {
+          "id": "cb000000-0000-4000-8000-000000000001",
+          "status": "pending",
+          "createdAt": "2026-11-03T14:05:00Z"
+        }
+      }
+    },
+    {
+      "name": "yêu cầu gọi lại thứ 4 trong ngày",
+      "method": "POST",
+      "path": "/api/support/callback-requests",
+      "request": {
+        "conversationId": "c0a80000-0000-4000-8000-000000000001",
+        "phone": "0901234567",
+        "note": null
+      },
+      "status": 429,
+      "response": {
+        "error": {
+          "code": "CALLBACK_LIMIT_REACHED",
+          "message": "Bạn đã gửi 3 yêu cầu gọi lại hôm nay. CSKH sẽ liên hệ sớm."
+        }
+      }
+    },
+    {
+      "name": "khách chấm điểm phiên vừa kết thúc",
+      "method": "PUT",
+      "path": "/api/support/conversations/c0a80000-0000-4000-8000-000000000001/csat",
+      "request": { "score": 5 },
+      "status": 200,
+      "response": {
+        "data": {
+          "sessionId": "5e550000-0000-4000-8000-000000000001",
+          "score": 5
+        }
+      }
+    },
+    {
+      "name": "chấm điểm khi phiên chưa kết thúc",
+      "method": "PUT",
+      "path": "/api/support/conversations/c0a80000-0000-4000-8000-000000000001/csat",
+      "request": { "score": 4 },
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "SUPPORT_SESSION_OPEN",
+          "message": "Phiên hỗ trợ chưa kết thúc nên chưa chấm điểm được."
+        }
+      }
+    }
+  ]
+}
