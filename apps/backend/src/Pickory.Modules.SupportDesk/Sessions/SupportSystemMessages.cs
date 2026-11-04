@@ -18,6 +18,8 @@ internal static class SupportSystemMessages
 
     // Phiên chờ quá lâu trong giờ thì khách được chọn để lại số điện thoại thay vì chờ tiếp.
     public const string WaitReminder = "Nhân viên CSKH đang bận. Bạn có thể để lại SĐT để CSKH gọi lại.";
+    // Thông báo cho khách khi nhân viên CSKH nhận phiên hỗ trợ và chuẩn bị trả lời.
+    public const string SessionClaimed = "Nhân viên CSKH đã nhận hội thoại và sẽ trả lời bạn ngay.";
 
     // Giờ viết không có số 0 đứng đầu, ví dụ `8:00` và `21:00`, giống mẫu câu trong spec.
     private static string FormatClock(TimeOnly time) => time.ToString("H:mm", CultureInfo.InvariantCulture);

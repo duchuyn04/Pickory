@@ -99,17 +99,17 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 ### SD-06: Hàng chờ và nhận hội thoại
 **Mô tả:** `GET /api/admin/support/sessions?view=waiting|mine` trả hàng chờ. `POST /api/admin/support/sessions/{id}/assignment` nhận phiên bằng UPDATE có điều kiện. Ngày 2026-10-18 task bỏ lời gọi `IConversationService.AssignAsync` và bước bù trừ. Nhận phiên và ghi tin hệ thống chạy trong một transaction.
 **Tiêu chí nghiệm thu:**
-- [ ] `sales` gọi hàng chờ nhận 403. `support` nhận 200
-- [ ] Mỗi phiên trong hàng chờ có 200 ký tự đầu của tin đầu tiên trong phiên và số giây đã chờ
-- [ ] Hai request nhận song song: đúng 1 request 201, request kia 409 `SUPPORT_SESSION_ALREADY_CLAIMED`
-- [ ] Nhận thành công ghi đúng 1 dòng audit `support.session.claim` trong cùng transaction
-- [ ] Nhận thành công gửi khách tin hệ thống báo nhân viên đã nhận, qua SSE phía khách
-- [ ] Phiên đã kết thúc trả 409 `SUPPORT_SESSION_CLOSED`
-- [ ] Nhân viên khác nhận sự kiện SSE để gỡ phiên khỏi tab Đang chờ
-- [ ] Phiên không có trả 404 `SUPPORT_SESSION_NOT_FOUND`
-- [ ] Hàng chờ có thêm `claimedAt` và `transferNote`. `transferNote` bằng `null` tới khi SD-08 xong
-- [ ] Test hợp đồng: response khớp các ví dụ hàng chờ và nhận phiên của `admin-sessions.json`
-- [ ] Endpoint mới có trong ma trận quyền
+- [x] `sales` gọi hàng chờ nhận 403. `support` nhận 200
+- [x] Mỗi phiên trong hàng chờ có 200 ký tự đầu của tin đầu tiên trong phiên và số giây đã chờ
+- [x] Hai request nhận song song: đúng 1 request 201, request kia 409 `SUPPORT_SESSION_ALREADY_CLAIMED`
+- [x] Nhận thành công ghi đúng 1 dòng audit `support.session.claim` trong cùng transaction
+- [x] Nhận thành công gửi khách tin hệ thống báo nhân viên đã nhận, qua SSE phía khách
+- [x] Phiên đã kết thúc trả 409 `SUPPORT_SESSION_CLOSED`
+- [x] Nhân viên khác nhận sự kiện SSE để gỡ phiên khỏi tab Đang chờ
+- [x] Phiên không có trả 404 `SUPPORT_SESSION_NOT_FOUND`
+- [x] Hàng chờ có thêm `claimedAt` và `transferNote`. `transferNote` bằng `null` tới khi SD-08 xong
+- [x] Test hợp đồng: response khớp các ví dụ hàng chờ và nhận phiên của `admin-sessions.json`
+- [x] Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp với 2 request song song
 **Phụ thuộc:** SD-04 · **Quy mô:** M
 

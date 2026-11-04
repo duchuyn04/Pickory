@@ -98,8 +98,8 @@ Cột "Có từ" ghi task đã làm route. Ô ghi "chưa có" nghĩa là fronten
 | `GET /api/support/conversations/{id}/events` | `customer-events.json` | SD-16, SD-07 thêm `staffDisplayName` | SD-UI7 | SD-16 |
 | `POST /api/support/callback-requests` | `customer-api.json` | SD-05 | SD-UI6 | SD-05 |
 | `PUT /api/support/conversations/{id}/csat` | `customer-api.json` | SD-09 | SD-UI6 | chưa có |
-| `GET /api/admin/support/sessions?view=waiting\|mine` | `admin-sessions.json` | SD-06 | SD-UI1 | chưa có |
-| `POST /api/admin/support/sessions/{id}/assignment` | `admin-sessions.json` | SD-06 | SD-UI2 | chưa có |
+| `GET /api/admin/support/sessions?view=waiting\|mine` | `admin-sessions.json` | SD-06 | SD-UI1 | SD-06 |
+| `POST /api/admin/support/sessions/{id}/assignment` | `admin-sessions.json` | SD-06 | SD-UI2 | SD-06 |
 | `PUT /api/admin/support/sessions/{id}/assignment` | `admin-sessions.json` | SD-08 | SD-UI3 | chưa có |
 | `PATCH /api/admin/support/sessions/{id}` | `admin-sessions.json` | SD-08 | SD-UI3 | chưa có |
 | `POST /api/admin/support/sessions/{id}/messages` | `admin-sessions.json` | SD-07 | SD-UI2 | chưa có |

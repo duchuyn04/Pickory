@@ -60,6 +60,10 @@ public static class SupportDeskModule
         services.AddScoped<CallbackRequestService>();
         services.AddScoped<StaffPresenceService>();
         services.AddScoped<StaffPresenceTimeoutProcessor>();
+        // Dịch vụ đọc danh sách hàng chờ dùng DbContext theo từng phạm vi request.
+        services.AddScoped<SupportSessionQueueService>();
+        // Dịch vụ nhận phiên hỗ trợ cần DbContext của request để mở transaction.
+        services.AddScoped<SupportSessionClaimService>();
         // Opener đọc cấu hình từ DB và chạy trong transaction của tin khách, nên dùng chung scope với request.
         services.AddScoped<SupportSettingsReader>();
         services.AddScoped<SupportSessionOpener>();
@@ -101,6 +105,7 @@ public static class SupportDeskModule
         StaffPresenceEndpoints.Map(moduleRoutes);
         SupportConversationEndpoints.Map(moduleRoutes);
         CallbackRequestEndpoints.Map(moduleRoutes);
+        SupportSessionEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }

@@ -18,15 +18,18 @@ internal sealed class StaffSessionEventBroadcastHandler(
     public async Task HandleAsync(
         SupportSessionStatusChangedEvent @event, CancellationToken cancellationToken = default)
     {
-        if (@event.Status is SupportSessionStatus.Closed)
+        if (@event.Status is SupportSessionStatus.Closed or SupportSessionStatus.Assigned)
         {
-            // Tab Đang chờ của mọi nhân viên có thể đang hiện phiên này. Nhân viên tạm vắng cũng nhận để gỡ phiên khi quay lại.
+            // Tab Đang chờ của mọi nhân viên có thể đang hiện phiên này. Gửi tới mọi kết nối để gỡ khỏi tab Đang chờ.
+            var eventName = @event.Status is SupportSessionStatus.Closed
+                ? SupportEventNames.SessionClosed
+                : SupportEventNames.SessionAssigned;
             eventHub.Broadcast(
-                new SupportEvent(SupportEventNames.SessionClosed, new SessionEventData(@event.SessionId)));
+                new SupportEvent(eventName, new SessionEventData(@event.SessionId)));
             return;
         }
 
-        // Chỉ trạng thái chờ mới báo cho nhân viên sẵn sàng. Nhận phiên thuộc SD-06 và SD-08.
+        // Chỉ trạng thái chờ mới phát cho nhân viên sẵn sàng.
         if (@event.Status is not SupportSessionStatus.Waiting)
         {
             return;

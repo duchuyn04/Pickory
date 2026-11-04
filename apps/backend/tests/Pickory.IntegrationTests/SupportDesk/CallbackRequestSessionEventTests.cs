@@ -212,28 +212,6 @@ public sealed class CallbackRequestSessionEventTests(PickoryWebApplicationFactor
             () => staffStream.ReadEventNamedAsync("callback.created", TimeSpan.FromMilliseconds(500)));
     }
 
-    [Fact]
-    // Trạng thái `Assigned` chưa phát trên kênh nhân viên ở SD-05, nên kết nối nhận dòng đánh dấu trước.
-    public async Task Assigned_SessionStatusChanged_IsIgnoredByStaffStream()
-    {
-        var (staffUserId, staffCookie) = await CreateStaffAsync(StaffPresenceStatus.Available);
-        using var staffStream = await OpenStaffStreamAsync(staffCookie);
-        await SupportDeskTestKit.WaitForConnectionCountAsync(_staffHub, 1);
-
-        var cookie = SupportConversationTestKit.NewGuestCookie();
-        var conversation = await SupportConversationTestKit.SeedConversationAsync(
-            database, SupportConversationTestKit.ReadAnonymousId(cookie));
-        var session = await SupportSessionTestKit.SeedSessionAsync(
-            database, conversation, _clock.GetUtcNow().UtcDateTime);
-
-        await SupportEventTestKit.ClaimSessionAfterCommitAsync(
-            database, _host.Services, session.Id, staffUserId, _clock.GetUtcNow().UtcDateTime);
-        _staffHub.Broadcast(new SupportEvent("test.marker", new { }));
-
-        var firstEvent = await staffStream.ReadEventAsync();
-        Assert.Equal("test.marker", firstEvent.Name);
-    }
-
     private sealed class CommittedCallbackProbe(IntegrationDatabaseFixture database)
         : IDomainEventHandler<CallbackRequestCreatedEvent>
     {

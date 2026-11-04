@@ -230,7 +230,7 @@ Nhánh backend (`todo-backend.md`):
 - [x] SD-C1 bộ kiểm hợp đồng
 - [x] SD-04 mở phiên chờ và nhắc lại
 - [x] SD-05 yêu cầu gọi lại
-- [ ] SD-06 hàng chờ và nhận phiên
+- [x] SD-06 hàng chờ và nhận phiên
 - [ ] SD-07 tin nhân viên và tin mới của khách
 - [ ] SD-08 chuyển, kết thúc và tự đóng phiên
 - [ ] SD-09 chấm điểm CSAT

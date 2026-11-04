@@ -14,6 +14,8 @@ internal static class SupportEventNames
 
     // Phiên vừa kết thúc. Tab Đang chờ của mọi nhân viên có thể đang hiện phiên này, nên sự kiện gửi tới mọi kết nối.
     public const string SessionClosed = "session.closed";
+    // Phiên vừa có nhân viên nhận hoặc chuyển. Gửi tới mọi kết nối để gỡ khỏi tab Đang chờ.
+    public const string SessionAssigned = "session.assigned";
 
     // Khách vừa gửi yêu cầu gọi lại. Client đọc lại tab Gọi lại rồi hiện thông báo kèm âm báo.
     public const string CallbackCreated = "callback.created";

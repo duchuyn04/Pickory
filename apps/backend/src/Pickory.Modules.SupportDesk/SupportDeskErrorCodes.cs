@@ -9,4 +9,8 @@ internal static class SupportDeskErrorCodes
     public const string MessageRateLimited = "SUPPORT_MESSAGE_RATE_LIMITED";
     public const string CallbackLimitReached = "CALLBACK_LIMIT_REACHED";
     public const string CallbackRequestNotFound = "CALLBACK_REQUEST_NOT_FOUND";
+    // Các mã lỗi cho nghiệp vụ hàng chờ và nhận phiên hỗ trợ.
+    public const string SessionNotFound = "SUPPORT_SESSION_NOT_FOUND";
+    public const string SessionClosed = "SUPPORT_SESSION_CLOSED";
+    public const string SessionAlreadyClaimed = "SUPPORT_SESSION_ALREADY_CLAIMED";
 }
