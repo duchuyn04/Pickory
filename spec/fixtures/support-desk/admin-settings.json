@@ -60,6 +60,26 @@
           "details": [{ "key": "opensAt", "message": "Giờ mở cửa phải trước giờ đóng cửa." }]
         }
       }
+    },
+    {
+      "name": "mốc nhắc lại không trước mốc tự đóng",
+      "method": "PUT",
+      "path": "/api/admin/support/settings",
+      "request": {
+        "opensAt": "08:00",
+        "closesAt": "21:00",
+        "holidays": [],
+        "waitNudgeMinutes": 30,
+        "autoCloseMinutes": 30
+      },
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "Mốc nhắc lại phải nhỏ hơn mốc tự đóng.",
+          "details": [{ "key": "waitNudgeMinutes", "message": "Mốc nhắc lại phải nhỏ hơn mốc tự đóng." }]
+        }
+      }
     }
   ]
 }

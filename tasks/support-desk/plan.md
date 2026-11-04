@@ -111,7 +111,7 @@ SD-E2E1, SD-E2E2, SD-13, SD-17                → SD-14 nghiệm thu
 8. Giờ làm việc là hàm thuần có `TimeProvider`. `WorkingHoursCalendar` đổi giờ UTC sang `Asia/Ho_Chi_Minh`, rồi so với khung giờ và ngày nghỉ. Khung giờ là nửa mở: 8:00 thuộc trong giờ, 21:00 thuộc ngoài giờ. "Trong giờ" còn cần ít nhất một nhân viên `available`.
 9. Ước tính thời gian chờ. N bằng thời gian chờ trung bình 7 ngày nhân số phiên đang chờ cộng 1, chia số nhân viên sẵn sàng, làm tròn lên. Chưa có dữ liệu 7 ngày thì dùng 5 phút cho mỗi phiên. Hằng số này nằm trong `SupportSettings` để admin chỉnh sau.
 10. Phiên lưu thêm cột cho báo cáo. Spec chưa có các cột này. `support_sessions` thêm `handoff_in_hours`, `customer_user_id`, `anonymous_id`. Báo cáo đếm phiên trong giờ mà không cần tính lại lịch cũ. Hai cột định danh cho phép xóa dữ liệu khi nhận `UserDeletedEvent`.
-11. Route theo REST mức tài nguyên. Spec còn dùng route đặt theo hành động. Plan đề xuất bảng dưới, chờ người dùng chốt ở Câu hỏi mở 1. Response giữ dạng `{ data }`, không kèm link.
+11. Route theo REST mức tài nguyên. Spec cũ dùng route đặt theo hành động. Người dùng duyệt bảng dưới ngày 2026-11-04 (Câu hỏi mở 1). Response giữ dạng `{ data }`, không kèm link.
 
     | Spec | Đề xuất REST |
     | --- | --- |
@@ -200,7 +200,7 @@ SD-E2E1, SD-E2E2, SD-13, SD-17                → SD-14 nghiệm thu
     - Frontend gỡ `page.route` của một route khi task backend của route đó đã tick.
     - `SD-E2E1` và `SD-E2E2` chạy với backend thật, không có `page.route` cho route support-desk.
     - Bên nào cần đổi dạng dữ liệu thì sửa hợp đồng và dữ liệu mẫu trước, trong cùng một commit. Bên kia sửa code theo khi test hợp đồng báo đỏ.
-    - Giá trị còn chờ Câu hỏi mở 2 và 3 có dạng chốt trong hợp đồng. Backend trả `null` hoặc mảng rỗng, nên frontend không chờ hai câu này.
+    - Ngày 2026-11-04 người dùng chốt Câu hỏi mở 2 và 3. Hai quyết định này không đổi dạng dữ liệu của hợp đồng.
 
 ## Task List
 
@@ -303,27 +303,29 @@ Spec chưa cập nhật theo phạm vi mới. Bảng dưới ghi tiêu chí theo
 | SSE bị proxy giữ đệm | Thông báo trễ quá 3 giây | Gửi header `Cache-Control: no-cache` và `X-Accel-Buffering: no`; E2E đo qua Vite proxy |
 | Hub SSE chỉ sống trong một instance | Chạy nhiều instance làm mất thông báo | Ghi giới hạn MVP một instance, giống ai-gateway |
 | Biên giờ làm việc sai múi giờ | Báo ngoài giờ lúc đang trong giờ | Unit test 7:59, 8:00, 20:59, 21:00, ngày nghỉ với `FakeTimeProvider` |
-| Thiếu cổng đọc người dùng ở identity | Bảng thông tin khách thiếu tên và email | SD-11 chờ Câu hỏi mở 2; các task khác không chờ |
+| Thiếu cổng đọc người dùng ở identity | Bảng thông tin khách thiếu tên và email | SD-11 thêm `ICustomerDirectory` vào Contracts của Identity (Câu hỏi mở 2) |
 | Hai nhánh hiểu hợp đồng khác nhau | Giao diện vỡ khi nối backend thật | Quyết định 31: test hợp đồng ở hai bên đọc cùng dữ liệu mẫu; E2E cuối chạy với backend thật |
 | Frontend giữ `page.route` sau khi backend xong | E2E xanh nhưng không kiểm route thật | `SD-E2E1` và `SD-E2E2` có tiêu chí không còn `page.route` cho route support-desk |
 
 ## Câu hỏi mở
 
-1. Route REST thay route hành động. Spec dùng `/claim`, `/transfer`, `/close`, `/csat`, `/queue`. Plan đề xuất bảng ở quyết định 11, gồm thêm `GET /api/admin/support/presence` và bốn route phía khách. Người dùng duyệt bảng này không? Nếu duyệt, cần cập nhật `spec/SPEC-support-desk.md` trước SD-06.
-2. Cổng đọc người dùng ở identity. Bảng thông tin khách cần tên và email. Tin nhân viên cần tên ngắn, ví dụ "Lan - CSKH". Đề xuất thêm `IUserDirectory` vào `Pickory.Modules.Identity.Contracts`:
-   - `GetCustomerContactAsync(string userId, CancellationToken)` trả tên và email;
-   - `GetStaffDisplayNamesAsync(IReadOnlyList<string> staffIds, CancellationToken)` trả tên hiển thị của nhân viên.
-   Đây là thay đổi Contracts, thuộc "Ask first". Tên ngắn lấy từ đâu cũng cần chốt: tên đầu của hồ sơ, hay một trường mới do nhân viên tự đặt.
-3. Đơn của khách vãng lai. Spec của `commerce` chỉ có `getOrdersForCustomer(userId, limit)`. Bảng thông tin khách cần đơn theo `anonymousId`. Dùng `ICommerceReader.GetOrdersForAnonymousAsync(string anonymousId, int limit, CancellationToken)`. `tasks/commerce/todo.md` đã thêm hàm này vào Contracts của `commerce`.
+1. Route REST thay route hành động. Đã chốt ngày 2026-11-04: người dùng duyệt bảng ở quyết định 11. `spec/SPEC-support-desk.md` đã dùng bảng này.
+2. Cổng đọc người dùng ở identity. Đã chốt ngày 2026-11-04:
+   - Tin nhân viên hiện tên trong hồ sơ của nhân viên, không có trường tên ngắn riêng. SD-07 đọc tên từ `IStaffDirectory` đã có trong Contracts của Identity.
+   - `IStaffDirectory.GetNamesAsync` trả email khi hồ sơ không có tên. Khách không được thấy email này, nên `staffDisplayName` bằng `null` khi nhân viên chưa có tên.
+   - SD-11 thêm `ICustomerDirectory.GetContactAsync(string userId, CancellationToken)` vào Contracts của Identity. Hàm này trả tên và email của khách.
+3. Đơn của khách vãng lai. Đã chốt ngày 2026-11-04: SD-11 dùng `ICommerceReader.GetOrdersForAnonymousAsync`. Hàm này đã có trong Contracts của `commerce`.
 4. Đã bỏ ngày 2026-10-18. Module không còn dùng `IConversationService`.
-5. Hội thoại ngoài giờ chờ tới khi nào? Ngoài giờ không có ai nhận, nên phiên chờ kéo dài tới sáng hôm sau. Đề xuất: khách gửi số điện thoại thì đóng phiên ngay. Khách không gửi thì phiên tự đóng sau 30 phút.
+5. Hội thoại ngoài giờ chờ tới khi nào? Đã chốt ngày 2026-11-04:
+   - Khách gửi số điện thoại khi hội thoại có phiên chờ chưa ai nhận: module đóng phiên đó ngay (SD-05).
+   - Phiên chờ mở ngoài giờ mà khách không gửi số: job tự đóng phiên sau `autoCloseMinutes` (SD-08).
 6. Đã chốt bằng quyết định 26: module tự xóa hội thoại, tin và phiên cũ hơn 90 ngày.
-7. Ước tính thời gian chờ khi chưa có dữ liệu. Plan dùng 5 phút mỗi phiên (quyết định 9). Người dùng muốn mức khác không?
+7. Ước tính thời gian chờ khi chưa có dữ liệu. Đã chốt ngày 2026-11-04: giữ 5 phút mỗi phiên (quyết định 9).
 8. Mốc nhắc lại 10 phút và tự đóng 30 phút. Đây là Open Question 1 của spec. Plan giữ mặc định của spec và đặt hai mốc trong `support_settings`.
-9. Phân loại hội thoại. Đây là Open Question 2 của spec. Plan giữ mặc định: chưa làm.
+9. Phân loại hội thoại. Đây là Open Question 2 của spec. Đã chốt ngày 2026-11-04: chưa làm.
 10. Giới hạn tin của khách. Đã chốt ngày 2026-10-18: 10 tin mỗi phút và 200 tin mỗi ngày theo `anonymous_id` (quyết định 27).
 11. Thông tin khách vãng lai. Đã chốt ngày 2026-10-18: khách không phải nhập tên hay số điện thoại trước khi chat. Nhân viên hỏi trong lúc chat khi cần.
 12. Lối vào `/support`. Đã chốt ngày 2026-10-18: link "Liên hệ CSKH" ở chân trang và trên `/help`. Thanh đầu trang không có link này. Fallback của `chatbot-rag` trỏ tới cùng trang.
     - Ngày 2026-10-20: `knowledge-base` làm sau module này. Module này dựng chân trang và đặt link ở đó.
     - Link trên `/help` do KB-UI1 của `tasks/knowledge-base/todo.md` thêm sau.
-13. Ngữ cảnh từ chatbot. Khách mở `/support` từ fallback của `chatbot-rag` thì nhân viên không thấy câu khách đã hỏi bot. Đề xuất: MVP chưa chuyển ngữ cảnh. Việc này mở lại khi `chatbot-rag` có human handoff.
+13. Ngữ cảnh từ chatbot. Khách mở `/support` từ fallback của `chatbot-rag` thì nhân viên không thấy câu khách đã hỏi bot. Đã chốt ngày 2026-11-04: MVP chưa chuyển ngữ cảnh. Việc này mở lại khi `chatbot-rag` có human handoff.

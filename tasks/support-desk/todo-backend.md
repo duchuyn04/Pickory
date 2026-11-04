@@ -85,6 +85,8 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 - [ ] Số điện thoại sai luật của `ContactFieldRules` trả 400 `VALIDATION_ERROR`. Số đúng lưu dạng `0xxxxxxxxx`
 - [ ] Yêu cầu thứ 4 trong cùng ngày giờ Việt Nam của một `anonymousId` trả 429 `CALLBACK_LIMIT_REACHED`
 - [ ] Yêu cầu mới phát sự kiện `callback.created` cho nhân viên có `conversations:read`
+- [ ] Hội thoại có phiên chờ chưa ai nhận: yêu cầu mới đóng phiên đó với `closed_by = auto`, phát `session.closed` tới khách và nhân viên
+- [ ] Đóng phiên khi gửi số không gửi tin có `action = csat_form`. Phiên đã có người nhận vẫn mở
 - [ ] `GET` cần `conversations:read`. `PATCH` cần `conversations:reply` và chỉ nhận `done` hoặc `unreachable`
 - [ ] `PATCH` ghi `handled_by` và `handled_at`. Yêu cầu không có trả 404 `CALLBACK_REQUEST_NOT_FOUND`
 - [ ] Test hợp đồng: response khớp các ví dụ gọi lại của `customer-api.json` và `admin-callbacks.json`
@@ -117,11 +119,12 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 - [ ] Người không giữ phiên gửi tin nhận 403 `SUPPORT_SESSION_NOT_ASSIGNED`
 - [ ] Tin rỗng hoặc dài hơn 2.000 ký tự trả 400 `VALIDATION_ERROR`
 - [ ] Tin đầu tiên của phiên ghi `first_response_at`. Tin sau không đổi giá trị này
-- [ ] Tin hiện tên hiển thị của nhân viên, ví dụ "Lan - CSKH" (chờ Câu hỏi mở 2)
+- [ ] Tin hiện tên trong hồ sơ của nhân viên, đọc qua `IStaffDirectory`
+- [ ] Nhân viên chưa có tên: `staffDisplayName` bằng `null`. Response và sự kiện không chứa email của nhân viên
 - [ ] Khách nhận tin qua SSE phía khách trong 2 giây
 - [ ] Tin mới của khách tới nhân viên giữ phiên qua SSE. Nhân viên khác không nhận
 - [ ] Sự kiện tin phía nhân viên tên `message.created`, dữ liệu `{ sessionId, conversationId }`
-- [ ] Tin phía khách (lịch sử và sự kiện `message.created`) có thêm `staffDisplayName`. Giá trị bằng `null` tới khi chốt Câu hỏi mở 2
+- [ ] Tin phía khách (lịch sử và sự kiện `message.created`) có thêm `staffDisplayName`. Tin không phải `staff` có giá trị `null`
 - [ ] Thêm `GET /api/admin/support/conversations/{id}/messages` cho nhân viên, cần `conversations:read`. Mỗi tin có `sessionId`
 - [ ] Test hợp đồng: response khớp ví dụ gửi tin và lịch sử tin của `admin-sessions.json`, và ví dụ lịch sử của `customer-api.json`
 - [ ] Endpoint mới có trong ma trận quyền
@@ -138,6 +141,8 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 - [ ] Kết thúc gửi khách tin hệ thống có `action = csat_form`
 - [ ] Sau khi kết thúc, tin mới của khách mở phiên chờ mới trong cùng hội thoại
 - [ ] Phiên im lặng 30 phút tự đóng với `closed_by = auto`, không ghi audit
+- [ ] Phiên chờ có `handoff_in_hours = false` mà chưa ai nhận tự đóng sau `autoCloseMinutes`, với `closed_by = auto`
+- [ ] Phiên chờ mở trong giờ không tự đóng khi chưa ai nhận. Phiên này chỉ nhận nhắc lại của SD-04
 - [ ] Phiên đã kết thúc trả 409 `SUPPORT_SESSION_CLOSED` cho cả chuyển và kết thúc
 - [ ] Hàng chờ `view=mine` của người nhận có `transferNote` của lần chuyển gần nhất
 - [ ] Kết thúc và tự đóng phát `session.closed` tới khách và tới nhân viên. Chuyển phát `session.assigned` tới nhân viên
@@ -157,16 +162,18 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 **Phụ thuộc:** SD-08 · **Quy mô:** S
 
 ### SD-11: Bảng thông tin khách
-**Mô tả:** `GET /api/admin/support/sessions/{id}/customer` trả thông tin cho cột phải. Thông tin gồm tên và email của khách và đơn gần đây. Task chờ Câu hỏi mở 2 và 3 của plan. Ngày 2026-10-18 task bỏ "sản phẩm bot đã gợi ý" và "trang khách đang xem", vì hai trường này đến từ `shopping-assistant`.
+**Mô tả:** `GET /api/admin/support/sessions/{id}/customer` trả thông tin cho cột phải. Thông tin gồm tên và email của khách và đơn gần đây. Task thêm `ICustomerDirectory.GetContactAsync` vào Contracts của Identity để đọc tên và email. Ngày 2026-10-18 task bỏ "sản phẩm bot đã gợi ý" và "trang khách đang xem", vì hai trường này đến từ `shopping-assistant`.
 **Tiêu chí nghiệm thu:**
 - [ ] Khách đã đăng nhập: có tên, email và tối đa 5 đơn gần đây qua `ICommerceReader.GetOrdersForCustomerAsync`
-- [ ] Khách vãng lai: có đơn đặt từ cùng `anonymousId`, không có tên và email
+- [ ] Khách đã đăng nhập: tên và email đọc qua `ICustomerDirectory.GetContactAsync`
+- [ ] Khách vãng lai: có đơn đặt từ cùng `anonymousId` qua `ICommerceReader.GetOrdersForAnonymousAsync`, không có tên và email
+- [ ] Bộ integration test chạy đủ, vì task đổi Contracts của Identity
 - [ ] Response không có dữ liệu sở thích hay lịch sử xem hàng của khách
 - [ ] Mỗi đơn có `code`, để frontend dựng link tới trang đơn trong back-office
 - [ ] `sales` nhận 403. Endpoint mới có trong ma trận quyền
 - [ ] Test hợp đồng: response khớp các ví dụ của `admin-customer-panel.json`
 **Kiểm tra:** test tích hợp với cổng đọc giả của identity và commerce
-**Phụ thuộc:** SD-06, quyết định của người dùng ở Câu hỏi mở 2, 3. Chưa có quyết định thì task trả `name` và `email` bằng `null` theo hợp đồng · **Quy mô:** S
+**Phụ thuộc:** SD-06 · **Quy mô:** M
 
 ### SD-17: Xóa dữ liệu hỗ trợ
 **Mô tả:** Job hằng ngày đóng hội thoại im lặng 24 giờ và xóa hội thoại cũ hơn 90 ngày, theo quyết định 25 và 26. Handler `UserDeletedEvent` xóa hội thoại của người dùng đó. Job theo mẫu `ImageDeletionWorker`.
@@ -179,6 +186,8 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 **Kiểm tra:** test tích hợp; test gọi processor
 **Phụ thuộc:** SD-15 · **Quy mô:** S
 
+Hết task backend của Phase 2. Báo người dùng để chạy Checkpoint SD2 trong `tasks/support-desk/todo.md`.
+
 ---
 
 ## Phase 3: Cấu hình và số liệu
@@ -188,6 +197,7 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 **Tiêu chí nghiệm thu:**
 - [ ] `support` gọi `PUT /api/admin/support/settings` nhận 403. Admin nhận 200
 - [ ] Giờ mở cửa không trước giờ đóng cửa. Sai thì trả 400 `VALIDATION_ERROR`
+- [ ] `waitNudgeMinutes` không nhỏ hơn `autoCloseMinutes` trả 400 `VALIDATION_ERROR` với khóa `waitNudgeMinutes`
 - [ ] Mỗi lần sửa cấu hình ghi đúng 1 dòng audit `support.settings.update` trong cùng transaction
 - [ ] Mẫu cá nhân: người có `conversations:reply` tạo, sửa, xóa mẫu của chính mình. Sửa mẫu của người khác trả 404
 - [ ] Mẫu dùng chung: tạo, sửa, xóa cần `support-settings:manage`, nếu không trả 403
@@ -219,14 +229,16 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 
 **Mô tả:** `POST /api/admin/support/sessions/{id}/drafts` dựng đầu vào theo quyết định 15, gọi `IAiGateway` với `AiFeature.SupportDeskDraftReply`, rồi trả bản nháp kèm nguồn. Module ghi một dòng `draft_logs` và không gửi tin.
 **Tiêu chí nghiệm thu:**
-- [ ] Người không giữ phiên nhận 403 `SUPPORT_SESSION_NOT_ASSIGNED`
-- [ ] Đầu vào có tối đa 10 tin gần nhất và đoạn tài liệu từ `IKnowledgeRetriever` với `audience` là `staff`
-- [ ] Fake provider ghi lại request. Request không chứa số điện thoại, email hay địa chỉ của khách, kể cả số trong `callback_requests`
-- [ ] Request có thể chứa đoạn tài liệu `internal`
-- [ ] Nguồn trả về chỉ gồm `chunkId` có trong kết quả truy xuất của lượt đó
-- [ ] Sau khi tạo bản nháp, số tin nhân viên trong hội thoại không đổi
-- [ ] Hết ngân sách hoặc AI lỗi trả 503 `SUPPORT_DRAFT_UNAVAILABLE`. Nút trên giao diện hiện "Tạm không khả dụng"
-- [ ] Câu hỏi về chính sách đổi trả với tài liệu seed trả bản nháp có ít nhất 1 nguồn
-- [ ] Endpoint mới có trong ma trận quyền
+- Người không giữ phiên nhận 403 `SUPPORT_SESSION_NOT_ASSIGNED`
+- Đầu vào có tối đa 10 tin gần nhất và đoạn tài liệu từ `IKnowledgeRetriever` với `audience` là `staff`
+- Fake provider ghi lại request. Request không chứa số điện thoại, email hay địa chỉ của khách, kể cả số trong `callback_requests`
+- Request có thể chứa đoạn tài liệu `internal`
+- Nguồn trả về chỉ gồm `chunkId` có trong kết quả truy xuất của lượt đó
+- Sau khi tạo bản nháp, số tin nhân viên trong hội thoại không đổi
+- Hết ngân sách hoặc AI lỗi trả 503 `SUPPORT_DRAFT_UNAVAILABLE`. Nút trên giao diện hiện "Tạm không khả dụng"
+- Câu hỏi về chính sách đổi trả với tài liệu seed trả bản nháp có ít nhất 1 nguồn
+- Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp với fake provider ghi request
 **Phụ thuộc:** SD-07 · **Quy mô:** M
+
+Hết task backend của Phase 3. Báo người dùng để chạy Checkpoint SD3 trong `tasks/support-desk/todo.md`. Phase 4 cũng nằm trong file đó.

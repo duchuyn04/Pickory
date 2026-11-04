@@ -1,5 +1,5 @@
 {
-  "description": "Mẫu response của bảng thông tin khách. `name` và `email` bằng `null` tới khi người dùng chốt Câu hỏi mở 2 của plan. Frontend tự dựng link `/admin/orders/{code}` từ `code`.",
+  "description": "Mẫu response của bảng thông tin khách. Khách vãng lai có `name` và `email` bằng `null`. Frontend tự dựng link `/admin/orders/{code}` từ `code`.",
   "examples": [
     {
       "name": "khách đã đăng nhập",

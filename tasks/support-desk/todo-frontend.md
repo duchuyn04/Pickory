@@ -123,6 +123,7 @@ Quy ước riêng của nhánh frontend:
 - [ ] Schema `zod` đọc được mọi ví dụ của `admin-settings.json` và `admin-canned-responses.json`
 - [ ] Mẫu có `editable` bằng `false` không có nút sửa và nút xóa
 - [ ] Lưu thành công hiện thông báo. Lỗi hiện dưới đúng ô bằng `FieldError`
+- [ ] Mốc nhắc lại không nhỏ hơn mốc tự đóng: lỗi hiện dưới ô mốc nhắc lại, theo ví dụ lỗi của `admin-settings.json`
 - [ ] Ngày nghỉ chọn bằng ô ngày có `label`, xóa được từng ngày
 - [ ] Người thiếu quyền không thấy menu. Mở thẳng URL thấy trang không đủ quyền
 - [ ] Ảnh chụp 1280 px và 375 px không tràn ngang
