@@ -128,11 +128,21 @@ export function queueSession(id: string, preview = `Khách hỏi về đơn ${id
     preview,
     waitingSeconds: 90,
     handoffAt: '2026-10-22T08:00:00Z',
+    claimedAt: null,
+    transferNote: null,
   };
 }
 
 export function callbackRequest(id: string, status: string) {
-  return { id, phone: `0900000${id.padStart(3, '0')}`, status, createdAt: '2026-10-22T08:00:00Z' };
+  return {
+    id,
+    conversationId: `conversation-${id}`,
+    phone: `0900000${id.padStart(3, '0')}`,
+    note: null,
+    status,
+    createdAt: '2026-10-22T08:00:00Z',
+    handledAt: null,
+  };
 }
 
 function notFound() {

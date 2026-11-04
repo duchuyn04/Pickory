@@ -14,6 +14,8 @@ const validSession = {
   preview: 'Tôi cần đổi địa chỉ giao hàng',
   waitingSeconds: 125,
   handoffAt: '2026-10-22T08:00:00Z',
+  claimedAt: null,
+  transferNote: null,
 };
 
 describe('parseQueueSessions', () => {
@@ -41,16 +43,27 @@ describe('parseCallbackRequests', () => {
   it('nhận danh sách đúng hợp đồng', () => {
     const row = {
       id: 'cb-1',
+      conversationId: 'conversation-1',
       phone: '0900000001',
+      note: null,
       status: 'pending',
       createdAt: '2026-10-22T08:00:00Z',
+      handledAt: null,
     };
 
     expect(parseCallbackRequests([row])).toEqual([row]);
   });
 
   it('ném ApiError khi status không phải chuỗi', () => {
-    const row = { id: 'cb-1', phone: '0900000001', status: 1, createdAt: '2026-10-22T08:00:00Z' };
+    const row = {
+      id: 'cb-1',
+      conversationId: 'conversation-1',
+      phone: '0900000001',
+      note: null,
+      status: 1,
+      createdAt: '2026-10-22T08:00:00Z',
+      handledAt: null,
+    };
 
     expect(() => parseCallbackRequests([row])).toThrow(ApiError);
   });

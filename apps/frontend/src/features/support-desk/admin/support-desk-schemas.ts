@@ -23,13 +23,20 @@ const queueSessionSchema = z.object({
   preview: z.string(),
   waitingSeconds: z.number(),
   handoffAt: z.string(),
+  // `null` ở tab Đang chờ. Ghi chú nội bộ chỉ có sau khi đồng nghiệp chuyển phiên.
+  claimedAt: z.string().nullable(),
+  transferNote: z.string().nullable(),
 });
 
 const callbackRequestSchema = z.object({
   id: z.string(),
-  phone: z.string(),
+  conversationId: z.string(),
+  // Job xóa số sau 30 ngày, nên `phone` có thể bằng `null`.
+  phone: z.string().nullable(),
+  note: z.string().nullable(),
   status: z.string(),
   createdAt: z.string(),
+  handledAt: z.string().nullable(),
 });
 
 export type PresenceStatus = z.infer<typeof presenceStatusSchema>;

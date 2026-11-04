@@ -18,36 +18,13 @@ import {
 import { stubWebFonts } from './commerce-order-fixtures';
 import { e2eEnvironment } from './environment';
 import { activateStaffAccount, inviteStaff } from './staff-fixtures';
+import { createSupportDeskRouteMocks } from './support-desk-contract-routes';
 
 // SD-UI1: màn CSKH, hai công tắc (sẵn sàng, âm báo) và trạng thái kết nối.
-// Hai route `sessions` và `callback-requests` chưa có nên spec trả dữ liệu mẫu bằng `page.route`, còn `events` và `presence` dùng backend thật.
+// Hai route `sessions` và `callback-requests` chưa có nên spec trả dữ liệu mẫu bằng helper SD-C2, còn `events` và `presence` dùng backend thật.
 
 const PRESENCE_PATH = '/api/admin/support/presence';
 const EVENTS_PATH_PATTERN = /\/api\/admin\/support\/events/;
-
-const WAITING_SESSIONS = [
-  {
-    id: 'sd-ui1-session-1',
-    conversationId: 'sd-ui1-conversation-1',
-    preview: 'Tôi cần đổi địa chỉ giao hàng cho đơn đặt hôm qua, nhờ bạn hỗ trợ giúp mình.',
-    waitingSeconds: 150,
-    handoffAt: '2026-10-22T08:00:00Z',
-  },
-  {
-    id: 'sd-ui1-session-2',
-    conversationId: 'sd-ui1-conversation-2',
-    // Chuỗi liền không có khoảng trắng để kiểm cột hàng chờ không bị đẩy tràn ngang ở 375px.
-    preview: `https://pickory.example/orders/${'a'.repeat(110)}`,
-    waitingSeconds: 45,
-    handoffAt: '2026-10-22T08:02:00Z',
-  },
-];
-
-const CALLBACK_REQUESTS = [
-  { id: 'cb-1', phone: '0901000001', status: 'pending', createdAt: '2026-10-22T07:30:00Z' },
-  { id: 'cb-2', phone: '0901000002', status: 'done', createdAt: '2026-10-22T07:40:00Z' },
-  { id: 'cb-3', phone: '0901000003', status: 'pending', createdAt: '2026-10-22T07:50:00Z' },
-];
 
 interface StaffSession {
   context: BrowserContext;
@@ -67,15 +44,12 @@ async function openStaffSession(browser: Browser): Promise<StaffSession> {
   return { context, page, consoleIssues, allowedFailures };
 }
 
-// Trả dữ liệu mẫu cho hai route backend chưa có. Request vẫn do trình duyệt gửi nên đường đi của client được kiểm thật.
+// Trả dữ liệu mẫu cho hai route backend chưa có. Helper đọc tài liệu OpenAPI trước khi gắn route.
 async function mockUnfinishedQueueRoutes(page: Page) {
-  await page.route(/\/api\/admin\/support\/sessions\?/, (route) => {
-    const view = new URL(route.request().url()).searchParams.get('view');
-    return route.fulfill({ json: { data: view === 'waiting' ? WAITING_SESSIONS : [] } });
-  });
-  await page.route('**/api/admin/support/callback-requests', (route) =>
-    route.fulfill({ json: { data: CALLBACK_REQUESTS } }),
-  );
+  const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
+  await routes.mockRoute('admin-sessions.json', 'hàng chờ');
+  await routes.mockRoute('admin-sessions.json', 'phiên của tôi sau khi đồng nghiệp chuyển');
+  await routes.mockRoute('admin-callbacks.json', 'danh sách yêu cầu gọi lại');
 }
 
 async function readOwnUserId(page: Page): Promise<string> {
@@ -140,7 +114,7 @@ async function openDeskPage(page: Page) {
   await page.goto('/admin/conversations');
   await expect(page.getByRole('heading', { level: 1, name: 'Chăm sóc khách hàng' })).toBeVisible();
   // Danh sách mẫu hiện ra nghĩa là cột hàng chờ đã nạp xong.
-  await expect(page.getByText('Tôi cần đổi địa chỉ giao hàng')).toBeVisible();
+  await expect(page.getByText('Đơn PK123 của mình giao tới đâu rồi?')).toBeVisible();
 }
 
 test.describe.configure({ mode: 'serial' });
@@ -234,21 +208,24 @@ test.describe('SD-UI1: màn CSKH', () => {
     const { page } = support;
     await openDeskPage(page);
 
-    // Hai phiên mẫu thì badge là 2.
-    await expect(waitingTab(page).locator('.tab-list-count')).toHaveText('2');
+    // File mẫu có một phiên đang chờ thì badge là 1.
+    await expect(waitingTab(page).locator('.tab-list-count')).toHaveText('1');
     await expect(
       page.getByRole('list', { name: 'Phiên đang chờ' }).getByRole('listitem'),
-    ).toHaveCount(2);
+    ).toHaveCount(1);
+    // Cột hàng chờ hiện nội dung của ví dụ "hàng chờ", không phải dữ liệu viết tay.
+    await expect(page.getByText('Đơn PK123 của mình giao tới đâu rồi?')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Gọi lại', exact: true }).click();
     const callbackList = page.getByRole('list', { name: 'Yêu cầu gọi lại' });
-    await expect(callbackList.getByRole('listitem')).toHaveCount(2);
-    await expect(callbackList.getByText('0901000001')).toBeVisible();
-    await expect(callbackList.getByText('0901000003')).toBeVisible();
-    await expect(callbackList.getByText('0901000002')).toHaveCount(0);
+    // File mẫu có hai yêu cầu, một dòng đã gọi. Tab chỉ hiện dòng `pending`.
+    await expect(callbackList.getByRole('listitem')).toHaveCount(1);
+    await expect(callbackList.getByText('0901234567')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Của tôi', exact: true }).click();
-    await expect(page.getByText('Bạn chưa nhận hội thoại nào.')).toBeVisible();
+    const mineList = page.getByRole('list', { name: 'Phiên của tôi' });
+    await expect(mineList.getByRole('listitem')).toHaveCount(1);
+    await expect(mineList.getByText('Mình muốn đổi size áo.')).toBeVisible();
   });
 
   test('bàn phím: mũi tên đổi tab và phím Tab tới được công tắc Sẵn sàng', async () => {
@@ -301,7 +278,7 @@ test.describe('SD-UI1: màn CSKH', () => {
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
 
     await page.reload();
-    await expect(page.getByText('Tôi cần đổi địa chỉ giao hàng')).toBeVisible();
+    await expect(page.getByText('Đơn PK123 của mình giao tới đâu rồi?')).toBeVisible();
     await expect(soundSwitch(page)).toHaveAttribute('aria-checked', 'false');
 
     // Bật lại để các case sau bắt đầu từ mặc định.
@@ -324,7 +301,7 @@ test.describe('SD-UI1: màn CSKH', () => {
       await page.route(EVENTS_PATH_PATTERN, blockEvents);
       // Tải lại để trang mở luồng mới. Luồng cũ đang mở nên route chặn chưa tác động tới nó.
       await page.reload();
-      await expect(page.getByText('Tôi cần đổi địa chỉ giao hàng')).toBeVisible();
+      await expect(page.getByText('Đơn PK123 của mình giao tới đâu rồi?')).toBeVisible();
 
       await expect(lostNotice).toBeVisible({ timeout: 20000 });
       await page.screenshot({ path: screenshotPath(testInfo, 'lost-connection-1280.png') });
@@ -436,7 +413,7 @@ test.describe('SD-UI1: màn CSKH', () => {
       const { page } = support;
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await openDeskPage(page);
-      await expect(waitingTab(page).locator('.tab-list-count')).toHaveText('2');
+      await expect(waitingTab(page).locator('.tab-list-count')).toHaveText('1');
       await expect(presenceSwitch(page)).toBeVisible();
       await expectNoHorizontalOverflow(page);
       // Khi không có lỗi, thanh trên cùng cao 48px ở màn rộng và 56px ở màn hẹp.
@@ -458,7 +435,7 @@ test.describe('SD-UI1: màn CSKH', () => {
       await expect(presenceSwitch(page)).toHaveAttribute('aria-checked', 'false');
 
       await page.getByRole('tab', { name: 'Gọi lại', exact: true }).click();
-      await expect(page.getByText('0901000001')).toBeVisible();
+      await expect(page.getByText('0901234567')).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await page.screenshot({
         path: screenshotPath(testInfo, `workspace-${viewport.name}-callbacks.png`),
