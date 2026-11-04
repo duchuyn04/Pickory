@@ -1,6 +1,6 @@
 # Hợp đồng API của support-desk
 
-## Tóm tắt dễ hiểu
+## Tóm tắt
 
 Hợp đồng API là bản thỏa thuận về dạng dữ liệu giữa frontend và backend. Bản này ghi mỗi route nhận gì, trả gì và báo lỗi bằng mã nào.
 
@@ -156,10 +156,13 @@ Kiểu `Message` phía khách:
 | `role` | `customer`, `staff`, `system` | |
 | `body` | chuỗi | Tối đa 2.000 ký tự |
 | `action` | `callback_form`, `csat_form` hoặc `null` | Chỉ tin `system` có giá trị khác `null` |
-| `staffDisplayName` | chuỗi hoặc `null` | Tên ngắn của nhân viên, ví dụ "Lan - CSKH". Chỉ tin `staff` có giá trị |
+| `staffDisplayName` | chuỗi hoặc `null` | Tên trong hồ sơ của nhân viên, ví dụ "Trần Thị Lan". Chỉ tin `staff` có giá trị |
 | `createdAt` | thời điểm | |
 
-SD-07 thêm `staffDisplayName`. Tên ngắn chờ Câu hỏi mở 2 của plan. Tới lúc đó backend trả `null`, và frontend hiện "Nhân viên CSKH".
+SD-07 thêm `staffDisplayName`. Tới lúc đó backend trả `null`.
+
+- `staffDisplayName` không bao giờ chứa email của nhân viên. Nhân viên chưa có tên trong hồ sơ thì giá trị bằng `null`.
+- Frontend hiện "Nhân viên CSKH" khi giá trị bằng `null`.
 
 ### Khách gửi tin
 
@@ -185,6 +188,8 @@ SD-07 thêm `staffDisplayName`. Tên ngắn chờ Câu hỏi mở 2 của plan. 
 - `phone` theo luật của `ContactFieldRules`. Backend lưu dạng `0xxxxxxxxx`.
 - `note` là chuỗi hoặc `null`, tối đa 500 ký tự.
 - Response 201: `{ data: { id, status, createdAt } }`, với `status` bằng `pending`.
+- Hội thoại có phiên chờ chưa ai nhận thì backend đóng phiên đó với `closedBy` bằng `auto`. Backend phát `session.closed` tới khách và nhân viên.
+- Đóng phiên lúc này không gửi form CSAT, vì chưa có nhân viên nào nhận phiên.
 
 | Lỗi | Khi nào |
 |---|---|
@@ -299,8 +304,8 @@ Kiểu `StaffViewMessage` có mọi trường của `Message` phía khách, thê
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
 | `customer.isGuest` | boolean | `true` với khách vãng lai |
-| `customer.name` | chuỗi hoặc `null` | `null` với khách vãng lai, và `null` cho tới khi chốt Câu hỏi mở 2 |
-| `customer.email` | chuỗi hoặc `null` | Như `customer.name` |
+| `customer.name` | chuỗi hoặc `null` | `null` với khách vãng lai, hoặc khi hồ sơ không có tên |
+| `customer.email` | chuỗi hoặc `null` | `null` với khách vãng lai |
 | `orders` | mảng | Tối đa 5 đơn, mới nhất trước |
 | `orders[].code` | chuỗi | Frontend dựng link `/admin/orders/{code}` |
 | `orders[].status` | chuỗi | Giá trị theo API đơn của `commerce` |
@@ -367,7 +372,7 @@ Kiểu `StaffViewMessage` có mọi trường của `Message` phía khách, thê
 | `opensAt` | chuỗi `HH:mm` | Giờ Việt Nam |
 | `closesAt` | chuỗi `HH:mm` | Phải sau `opensAt` |
 | `holidays` | mảng chuỗi `yyyy-MM-dd` | Ngày theo lịch Việt Nam, không trùng nhau |
-| `waitNudgeMinutes` | số nguyên | Mốc nhắc lại phiên chờ |
+| `waitNudgeMinutes` | số nguyên | Mốc nhắc lại phiên chờ. Phải nhỏ hơn `autoCloseMinutes` |
 | `autoCloseMinutes` | số nguyên | Mốc tự đóng phiên im lặng |
 | `updatedAt` | thời điểm | Chỉ có trong response |
 
@@ -376,6 +381,7 @@ Kiểu `StaffViewMessage` có mọi trường của `Message` phía khách, thê
 | Lỗi | Khi nào |
 |---|---|
 | 400 `VALIDATION_ERROR` | `opensAt` không trước `closesAt`, ngày sai dạng, hoặc mốc phút ngoài khoảng cho phép |
+| 400 `VALIDATION_ERROR` | `waitNudgeMinutes` không nhỏ hơn `autoCloseMinutes`. Lỗi gắn với khóa `waitNudgeMinutes` |
 
 ## Sự kiện SSE
 
@@ -431,29 +437,35 @@ Thông báo của lỗi viết tiếng Việt. Frontend hiện `message` của A
 | `CANNED_RESPONSE_NOT_FOUND` | 404 | Không có mẫu, hoặc mẫu cá nhân của người khác | SD-10, mã mới |
 | `CANNED_SHORTCUT_TAKEN` | 409 | Người gọi đã có mẫu cùng phím tắt | SD-10 |
 
-## Giới hạn đề xuất chờ người dùng duyệt
+## Giới hạn
 
-Spec chưa ghi các giới hạn dưới đây. Hợp đồng dùng các giá trị này để hai bên làm cùng một luật.
+Người dùng duyệt các giới hạn dưới đây ngày 2026-11-04. Hai bên dùng cùng các giá trị này.
 
 - Ghi chú chuyển phiên: tối đa 500 ký tự.
 - Ghi chú yêu cầu gọi lại: tối đa 500 ký tự.
 - Phím tắt mẫu: 2 đến 30 ký tự. Chỉ có chữ thường không dấu, số, `-` và `_`.
 - Mốc nhắc lại và mốc tự đóng: 1 đến 240 phút.
+- Mốc nhắc lại nhỏ hơn mốc tự đóng. Nếu không, phiên đóng trước lúc nhắc lại.
 - `limit` của lịch sử tin: mặc định 50, tối đa 100.
 
-## Phần còn chờ quyết định
+## Quyết định ngày 2026-11-04
 
-Các mục dưới đây không chặn frontend. Hợp đồng đã chốt dạng dữ liệu, chỉ giá trị thật còn chờ.
+Người dùng chốt các mục dưới đây. Dạng dữ liệu của hợp đồng không đổi.
 
-| Mục | Câu hỏi mở của plan | Giá trị tạm |
+| Mục | Câu hỏi mở của plan | Quyết định |
 |---|---|---|
-| `staffDisplayName` | 2 | Backend trả `null`. Frontend hiện "Nhân viên CSKH" |
-| `customer.name`, `customer.email` | 2 | Backend trả `null`. Frontend hiện "Chưa có thông tin" |
-| Đơn của khách vãng lai | 3 | Backend trả `orders` rỗng khi chưa nối `GetOrdersForAnonymousAsync` |
-| Bảng route REST | 1 | Hợp đồng dùng bảng đề xuất. Người dùng đổi route thì sửa hợp đồng trước |
+| Bảng route REST | 1 | Duyệt bảng ở quyết định 11 của plan |
+| `staffDisplayName` | 2 | Tên trong hồ sơ nhân viên, đọc qua `IStaffDirectory`. Không có tên thì `null` |
+| `customer.name`, `customer.email` | 2 | SD-11 đọc qua `ICustomerDirectory` mới. Frontend hiện "Chưa có thông tin" khi giá trị bằng `null` |
+| Đơn của khách vãng lai | 3 | SD-11 đọc qua `ICommerceReader.GetOrdersForAnonymousAsync` |
+| Phiên chờ ngoài giờ | 5 | Khách gửi số điện thoại thì backend đóng phiên chờ. Mục "Khách để lại số điện thoại" ghi chi tiết |
 
 ## Lịch sử thay đổi
 
+- 2026-11-04: Người dùng chốt Câu hỏi mở 1, 2, 3, 5 của plan và các giới hạn. Các phần đổi:
+  - `staffDisplayName` là tên trong hồ sơ, không chứa email;
+  - luật `waitNudgeMinutes` nhỏ hơn `autoCloseMinutes`, kèm ví dụ lỗi trong `admin-settings.json`;
+  - gửi số điện thoại đóng phiên chờ chưa ai nhận và phát `session.closed`.
 - 2026-11-03: Tạo hợp đồng cho mọi route còn lại, mở rộng quyết định 30. Các phần mới so với spec và plan cũ:
   - trường `session` trong response tạo hội thoại;
   - trường `staffDisplayName` trong tin;

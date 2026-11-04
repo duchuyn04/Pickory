@@ -31,7 +31,7 @@ Mỗi task nằm trên một dòng riêng trong `plan.md`. Hai nhóm tick trên 
 - Mỗi task frontend phải qua `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`.
 - Mỗi test mới đi qua ít nhất một phép thử đột biến trên luật nó bảo vệ.
 - Kích thước: XS 1 file, S 1-2, M 3-5, L 6-8. Số file không tính file test.
-- Route trong các file task theo bảng REST ở quyết định 11 của plan. Người dùng chưa chốt bảng này (Câu hỏi mở 1).
+- Route trong các file task theo bảng REST ở quyết định 11 của plan. Người dùng duyệt bảng này ngày 2026-11-04 (Câu hỏi mở 1).
 - Không thêm package. Không đổi schema của module khác.
 
 Quy ước làm song song (quyết định 31 của plan):
