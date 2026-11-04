@@ -142,6 +142,18 @@ internal static class SupportConversationTestKit
             .ToListAsync();
     }
 
+    // Tin của một vai trò. Test đếm tin của khách không bị lẫn tin hệ thống mà phiên chờ sinh ra.
+    public static async Task<IReadOnlyList<SupportMessage>> ReadMessagesByRoleAsync(
+        IntegrationDatabaseFixture database, string conversationId, SupportMessageRole role)
+    {
+        await using var context = database.CreateSupportDeskContext();
+        return await context.Messages.AsNoTracking()
+            .Where(message => message.ConversationId == conversationId && message.Role == role)
+            .OrderBy(message => message.CreatedAt)
+            .ThenBy(message => message.Id)
+            .ToListAsync();
+    }
+
     public static async Task<JsonElement> ReadDataAsync(HttpResponseMessage response)
     {
         var document = await response.Content.ReadFromJsonAsync<JsonDocument>();

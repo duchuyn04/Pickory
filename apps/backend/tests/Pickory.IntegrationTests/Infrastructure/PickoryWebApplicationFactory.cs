@@ -16,6 +16,7 @@ using Pickory.Modules.Shipping.Contracts.Events;
 using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Shipping.Sync;
 using Pickory.Modules.SupportDesk.Presence;
+using Pickory.Modules.SupportDesk.Sessions;
 using Pickory.Modules.Identity.GoogleOAuth;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.Events;
@@ -206,6 +207,14 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             if (presenceTimeoutWorkerRegistration is not null)
             {
                 services.Remove(presenceTimeoutWorkerRegistration);
+            }
+
+            // Bỏ worker nhắc lại phiên chờ. Test gọi `WaitNudgeProcessor` trực tiếp, để job không nhắc trước giữa lúc test đang kiểm.
+            var waitNudgeWorkerRegistration = services.SingleOrDefault(descriptor =>
+                descriptor.ServiceType == typeof(IHostedService) && descriptor.ImplementationType == typeof(WaitNudgeWorker));
+            if (waitNudgeWorkerRegistration is not null)
+            {
+                services.Remove(waitNudgeWorkerRegistration);
             }
         });
     }

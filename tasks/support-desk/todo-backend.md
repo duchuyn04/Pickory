@@ -64,17 +64,17 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 ### SD-04: Mở phiên chờ và nhắc lại
 **Mô tả:** Khách gửi tin khi hội thoại không có phiên mở thì module tạo phiên chờ. Module ghi tin hệ thống vào hội thoại, rồi báo nhân viên sẵn sàng qua SSE. Job mỗi phút nhắc lại phiên chờ quá 10 phút. Ngày 2026-10-18 task thay `HandoffRequestedEvent` bằng tin của khách ở SD-15.
 **Tiêu chí nghiệm thu:**
-- [ ] Trong giờ: tin hệ thống có số phút chờ dự kiến N theo `WaitEstimator`
-- [ ] Ngoài giờ hoặc không ai sẵn sàng: tin hệ thống báo ngoài giờ kèm `action = callback_form`
-- [ ] Phiên lưu `handoff_in_hours`, `customer_user_id`, `anonymous_id` đúng lúc mở phiên
-- [ ] Sự kiện SSE tới nhân viên sẵn sàng trong 3 giây sau khi khách gửi tin
-- [ ] Hai tin của khách gửi cùng lúc chỉ tạo 1 phiên
-- [ ] Tin của khách khi đã có phiên mở không tạo phiên mới
-- [ ] Phiên chờ quá 10 phút trong giờ: nhân viên sẵn sàng nhận sự kiện nhắc lại, khách nhận tin có `action = callback_form`
-- [ ] Mỗi phiên chỉ được nhắc lại 1 lần
-- [ ] Response của `POST /api/support/conversations` có trường `session` theo hợp đồng
-- [ ] Mở phiên phát `session.waiting` tới khách và tới nhân viên sẵn sàng. Nhắc lại phát `session.reminded` tới nhân viên sẵn sàng
-- [ ] Test hợp đồng: response khớp ví dụ "mở lại hội thoại đang có phiên chờ" của `customer-api.json`
+- [x] Trong giờ: tin hệ thống có số phút chờ dự kiến N theo `WaitEstimator`
+- [x] Ngoài giờ hoặc không ai sẵn sàng: tin hệ thống báo ngoài giờ kèm `action = callback_form`
+- [x] Phiên lưu `handoff_in_hours`, `customer_user_id`, `anonymous_id` đúng lúc mở phiên
+- [x] Sự kiện SSE tới nhân viên sẵn sàng trong 3 giây sau khi khách gửi tin
+- [x] Hai tin của khách gửi cùng lúc chỉ tạo 1 phiên
+- [x] Tin của khách khi đã có phiên mở không tạo phiên mới
+- [x] Phiên chờ quá 10 phút trong giờ: nhân viên sẵn sàng nhận sự kiện nhắc lại, khách nhận tin có `action = callback_form`
+- [x] Mỗi phiên chỉ được nhắc lại 1 lần
+- [x] Response của `POST /api/support/conversations` có trường `session` theo hợp đồng
+- [x] Mở phiên phát `session.waiting` tới khách và tới nhân viên sẵn sàng. Nhắc lại phát `session.reminded` tới nhân viên sẵn sàng
+- [x] Test hợp đồng: response khớp ví dụ "mở lại hội thoại đang có phiên chờ" của `customer-api.json`
 **Kiểm tra:** test tích hợp với `FakeTimeProvider`; test 2 request gửi tin song song
 **Phụ thuộc:** SD-03, SD-16, SD-C1 · **Quy mô:** M
 

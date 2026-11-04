@@ -6,6 +6,8 @@ using Npgsql;
 using Pickory.Modules.Identity.Contracts.Actors;
 using Pickory.Modules.SupportDesk.Entities;
 using Pickory.Modules.SupportDesk.Persistence;
+using Pickory.Modules.SupportDesk.Sessions;
+using Pickory.Shared.Events;
 using Pickory.Shared.Exceptions;
 
 namespace Pickory.Modules.SupportDesk.Conversations;
@@ -14,22 +16,25 @@ namespace Pickory.Modules.SupportDesk.Conversations;
 // Mọi hàm giả định route đã chặn nhân viên.
 internal sealed class SupportConversationService(
     SupportDeskDbContext database,
+    SupportSessionOpener sessionOpener,
     TimeProvider timeProvider,
-    SupportMessageLimiters limiters)
+    SupportMessageLimiters limiters,
+    IEventDispatcher dispatcher)
 {
     public const int DefaultPageSize = 50;
     public const int MaxPageSize = 100;
     private const string ConversationNotFoundMessage = "Không tìm thấy hội thoại.";
     private const string ConversationClosedMessage = "Hội thoại này đã đóng. Hãy mở hội thoại mới để tiếp tục.";
 
-    // Trả hội thoại `open` của người gọi, hoặc tạo mới. `Created` cho route biết chọn 201 hay 200.
-    public async Task<(SupportConversation Conversation, bool Created)> OpenAsync(
+    // Trả hội thoại `open` của người gọi và phiên gần nhất của hội thoại, hoặc tạo mới. `Created` cho route biết chọn 201 hay 200.
+    public async Task<(SupportConversation Conversation, SupportSession? LatestSession, bool Created)> OpenAsync(
         Actor actor, CancellationToken cancellationToken)
     {
         var existing = await FindOpenAsync(actor, cancellationToken);
         if (existing is not null)
         {
-            return (existing, false);
+            // Hội thoại đang mở có thể đã có phiên từ lần gửi tin trước. Đọc phiên gần nhất để trả trạng thái.
+            return (existing, await FindLatestSessionAsync(existing.Id, cancellationToken), false);
         }
 
         var now = timeProvider.GetUtcNow().UtcDateTime;
@@ -47,7 +52,8 @@ internal sealed class SupportConversationService(
         try
         {
             await database.SaveChangesAsync(cancellationToken);
-            return (conversation, true);
+            // Hội thoại vừa tạo chưa có phiên nào, nên không cần đọc bảng phiên.
+            return (conversation, null, true);
         }
         catch (DbUpdateException exception) when (exception.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
         {
@@ -60,7 +66,7 @@ internal sealed class SupportConversationService(
                 throw;
             }
 
-            return (winner, false);
+            return (winner, await FindLatestSessionAsync(winner.Id, cancellationToken), false);
         }
     }
 
@@ -115,7 +121,7 @@ internal sealed class SupportConversationService(
     public async Task<MessageResponse> SendMessageAsync(
         Actor actor, string conversationId, string trimmedBody, CancellationToken cancellationToken)
     {
-        // Nạp bản có theo dõi, vì bước cuối cập nhật `LastMessageAt` cùng lần lưu với tin.
+        // Nạp bản có theo dõi, vì bước cuối cập nhật `LastMessageAt` trong cùng transaction với tin.
         var conversation = await ConversationOwnership.OwnedBy(database.Conversations, actor)
             .SingleOrDefaultAsync(value => value.Id == conversationId, cancellationToken);
         if (conversation is null)
@@ -135,7 +141,8 @@ internal sealed class SupportConversationService(
             throw new AppException(SupportDeskErrorCodes.MessageRateLimited, 429, SupportMessageLimiters.RateLimitedMessage);
         }
 
-        var now = timeProvider.GetUtcNow().UtcDateTime;
+        var nowMoment = timeProvider.GetUtcNow();
+        var now = nowMoment.UtcDateTime;
         var message = new SupportMessage
         {
             ConversationId = conversation.Id,
@@ -143,10 +150,24 @@ internal sealed class SupportConversationService(
             Body = trimmedBody,
             CreatedAt = now,
         };
+        // Sự kiện gom trong lúc transaction chạy và chỉ phát sau commit. Transaction hủy không phát phiên mới cho ai.
+        var events = new DomainEventCollector(dispatcher);
+        await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
+
         database.Messages.Add(message);
-        // Tin và `LastMessageAt` lưu trong một lần. Job đóng hội thoại im lặng không thấy trạng thái nửa vời.
+        // Lưu tin trước bước kiểm phiên. `lastMessageAt` để cuối vì lệnh UPDATE đó lấy khóa dòng hội thoại.
+        await database.SaveChangesAsync(cancellationToken);
+
+        // Phiên chờ mở trong cùng transaction với tin của khách, nên khách không thấy tin mà thiếu người xử lý.
+        await sessionOpener.OpenIfMissingAsync(conversation, nowMoment, events, cancellationToken);
+
+        // Cập nhật `lastMessageAt` sau bước kiểm phiên. Hai tin gửi cùng lúc không phải chờ khóa dòng hội thoại trước khi kiểm phiên.
         conversation.LastMessageAt = now;
         await database.SaveChangesAsync(cancellationToken);
+
+        await transaction.CommitAsync(cancellationToken);
+        // Phát sau commit. Handler đọc DB bằng kết nối khác vẫn thấy phiên và tin hệ thống mới.
+        await events.FlushAsync(cancellationToken);
 
         return MessageResponse.From(message);
     }
@@ -168,6 +189,17 @@ internal sealed class SupportConversationService(
     {
         return ConversationOwnership.OwnedBy(database.Conversations, actor)
             .SingleOrDefaultAsync(conversation => conversation.Status == SupportConversationStatus.Open, cancellationToken);
+    }
+
+    // Phiên gần nhất của hội thoại. Hội thoại có nhiều phiên sau nhiều lượt cần nhân viên, nên chọn theo lúc mở phiên.
+    private Task<SupportSession?> FindLatestSessionAsync(string conversationId, CancellationToken cancellationToken)
+    {
+        return database.Sessions.AsNoTracking()
+            .Where(session => session.ConversationId == conversationId)
+            // Hai phiên mở cùng mili giây vẫn có thứ tự ổn định nhờ mã phiên phá thế hòa.
+            .OrderByDescending(session => session.HandoffAt)
+            .ThenByDescending(session => session.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
     private static int ReadLimit(string? limitText)

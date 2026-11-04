@@ -36,9 +36,17 @@ public sealed class SupportConversationLinkHandlerTests : IClassFixture<PickoryW
         factory.Services.GetRequiredService<IdentityRateLimiters>().ClearAll();
     }
 
-    public Task InitializeAsync() => Task.CompletedTask;
+    public async Task InitializeAsync()
+    {
+        // Không có nhân viên sẵn sàng thì phiên chờ luôn đi nhánh ngoài giờ, dù test chạy lúc nào.
+        await SupportDeskTestKit.ClearPresenceAsync(_database);
+    }
 
-    public Task DisposeAsync() => SupportConversationTestKit.DeleteIssuedConversationsAsync(_database);
+    public async Task DisposeAsync()
+    {
+        await SupportDeskTestKit.ClearPresenceAsync(_database);
+        await SupportConversationTestKit.DeleteIssuedConversationsAsync(_database);
+    }
 
     [Fact]
     public async Task Login_GuestWithConversationAndMessages_KeepsSameConversationAndHistoryForTheAccount()
@@ -66,7 +74,12 @@ public sealed class SupportConversationLinkHandlerTests : IClassFixture<PickoryW
 
         var history = await SupportConversationTestKit.ReadDataAsync(await _client.SendAsync(SupportConversationTestKit.Get(
             SupportConversationTestKit.MessagesPath(conversationId), $"{sessionCookie}; {guestCookie}")));
-        Assert.Equal("Tôi cần hỗ trợ", Assert.Single(history.GetProperty("items").EnumerateArray()).GetProperty("body").GetString());
+        // Tin đầu tiên của khách mở phiên chờ. Lịch sử có tin của khách và tin hệ thống báo khách đang chờ.
+        var items = history.GetProperty("items").EnumerateArray().ToList();
+        Assert.Equal(["customer", "system"], items.Select(item => item.GetProperty("role").GetString()));
+        Assert.Equal("Tôi cần hỗ trợ", items[0].GetProperty("body").GetString());
+        // Tin hệ thống mời khách để lại số điện thoại, vì bộ test này không có nhân viên sẵn sàng.
+        Assert.Equal("callback_form", items[1].GetProperty("action").GetString());
         Assert.Equal(user.Id, (await SupportConversationTestKit.ReadConversationAsync(_database, conversationId)).CustomerUserId);
     }
 

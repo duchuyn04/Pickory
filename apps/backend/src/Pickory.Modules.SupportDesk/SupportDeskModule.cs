@@ -12,6 +12,8 @@ using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Persistence;
 using Pickory.Modules.SupportDesk.Presence;
 using Pickory.Modules.SupportDesk.Realtime;
+using Pickory.Modules.SupportDesk.Scheduling;
+using Pickory.Modules.SupportDesk.Sessions;
 using Pickory.Shared.Events;
 using Pickory.Shared.Persistence;
 
@@ -46,16 +48,27 @@ public static class SupportDeskModule
         // Handler chuyển sự kiện miền đã commit cho kết nối của đúng hội thoại. Một handler nghe hai loại sự kiện của kênh khách.
         services.AddScoped<IDomainEventHandler<SupportMessageCreatedEvent>, CustomerEventBroadcastHandler>();
         services.AddScoped<IDomainEventHandler<SupportSessionStatusChangedEvent>, CustomerEventBroadcastHandler>();
+        // Phiên chờ cũng phải báo cho nhân viên sẵn sàng. Handler thứ hai nghe cùng sự kiện nhưng phát qua kênh nhân viên.
+        services.AddScoped<IDomainEventHandler<SupportSessionStatusChangedEvent>, StaffSessionEventBroadcastHandler>();
+        // Sự kiện nhắc lại là sự kiện nội bộ của module. Handler đăng ký ở đây chứ không ở `Contracts`.
+        services.AddScoped<IDomainEventHandler<SupportSessionRemindedEvent>, StaffSessionEventBroadcastHandler>();
         // Vòng đời scoped vì dịch vụ và job giữ `SupportDeskDbContext` của request hoặc của một vòng worker.
         services.AddScoped<SupportConversationService>();
         services.AddScoped<StaffPresenceService>();
         services.AddScoped<StaffPresenceTimeoutProcessor>();
+        // Opener đọc cấu hình từ DB và chạy trong transaction của tin khách, nên dùng chung scope với request.
+        services.AddScoped<SupportSettingsReader>();
+        services.AddScoped<SupportSessionOpener>();
+        // Processor của job nhắc lại cũng cần scope riêng cho mỗi vòng chạy.
+        services.AddScoped<WaitNudgeProcessor>();
         // Giới hạn tin là singleton vì bộ đếm trong bộ nhớ phải dùng chung cho mọi request của một khách.
         services.AddSingleton<SupportMessageLimiters>();
         // Đăng nhập phát `UserLinkedEvent`. Handler gắn hội thoại vãng lai vào tài khoản vừa đăng nhập.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, SupportConversationLinkHandler>();
         // Worker chạy nền gọi processor mỗi 30 giây.
         services.AddHostedService<StaffPresenceTimeoutWorker>();
+        // Worker nhắc lại phiên chờ quá lâu chạy mỗi phút, đúng nhịp yêu cầu của spec.
+        services.AddHostedService<WaitNudgeWorker>();
         return services;
     }
 

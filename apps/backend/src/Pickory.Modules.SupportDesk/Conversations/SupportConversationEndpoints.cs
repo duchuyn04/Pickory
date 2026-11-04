@@ -35,14 +35,9 @@ internal static class SupportConversationEndpoints
         var actor = context.GetActor();
         ConversationOwnership.RejectStaff(actor);
 
-        var (conversation, created) = await service.OpenAsync(actor, context.RequestAborted);
-        var response = new ConversationResponse(
-            conversation.Id,
-            // Tên enum viết thường khớp nhãn `open` và `closed`.
-            conversation.Status.ToString().ToLowerInvariant(),
-            conversation.CreatedAt,
-            // Khách chỉ thấy thông báo lưu trữ ở lần tạo đầu, không thấy lại khi mở lại hội thoại cũ.
-            ShowRetentionNotice: created);
+        var (conversation, latestSession, created) = await service.OpenAsync(actor, context.RequestAborted);
+        // Khách chỉ thấy thông báo lưu trữ ở lần tạo đầu, không thấy lại khi mở lại hội thoại cũ.
+        var response = ConversationResponse.From(conversation, latestSession, showRetentionNotice: created);
         return Results.Json(
             new ApiResponse<ConversationResponse>(response),
             statusCode: created ? StatusCodes.Status201Created : StatusCodes.Status200OK);
