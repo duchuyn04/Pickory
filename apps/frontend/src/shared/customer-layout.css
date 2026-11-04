@@ -1,0 +1,14 @@
+/* Khung khách: cột cao tối thiểu một màn, chân trang nằm đáy màn khi trang ngắn. */
+
+.customer-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+/* Phần nội dung giãn ra. Không đặt flex ở đây để trang con tự canh giữa bằng `margin: 0 auto`. */
+.customer-body {
+  flex: 1 0 auto;
+  min-width: 0;
+}

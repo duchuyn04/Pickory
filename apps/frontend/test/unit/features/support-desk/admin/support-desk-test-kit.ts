@@ -5,7 +5,7 @@ import {
   waitFor,
   type AdminListHarness,
 } from '../../identity/admin/admin-list-test-kit';
-import { FakeEventSource } from './fake-event-source';
+import { FakeEventSource } from '../shared/fake-event-source';
 
 export { FakeEventSource };
 

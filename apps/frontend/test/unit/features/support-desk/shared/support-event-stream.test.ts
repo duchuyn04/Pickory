@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   SupportEventStream,
   type StreamStatus,
-} from '../../../../../src/features/support-desk/admin/support-event-stream';
+} from '../../../../../src/features/support-desk/shared/support-event-stream';
 import { FakeEventSource } from './fake-event-source';
 
 interface Recorder {

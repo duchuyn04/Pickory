@@ -18,7 +18,7 @@ import {
   SUPPORT_QUERY_KEY,
 } from './support-desk-api';
 import { parsePresenceChange, type StaffPresence } from './support-desk-schemas';
-import { SupportEventStream, type StreamStatus } from './support-event-stream';
+import { SupportEventStream, type StreamStatus } from '../shared/support-event-stream';
 
 const PRESENCE_EVENT = 'presence.changed';
 // Ba sự kiện của phiên. Hợp đồng ở quyết định 30 của `tasks/support-desk/plan.md`.
