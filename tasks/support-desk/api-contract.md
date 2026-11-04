@@ -96,7 +96,7 @@ Cột "Có từ" ghi task đã làm route. Ô ghi "chưa có" nghĩa là fronten
 | `GET /api/support/conversations/{id}/messages` | `customer-api.json` | SD-15, SD-07 thêm `staffDisplayName` | SD-UI7 | SD-15 |
 | `POST /api/support/conversations/{id}/messages` | `customer-api.json` | SD-15 | SD-UI7 | SD-15 |
 | `GET /api/support/conversations/{id}/events` | `customer-events.json` | SD-16, SD-07 thêm `staffDisplayName` | SD-UI7 | SD-16 |
-| `POST /api/support/callback-requests` | `customer-api.json` | SD-05 | SD-UI6 | chưa có |
+| `POST /api/support/callback-requests` | `customer-api.json` | SD-05 | SD-UI6 | SD-05 |
 | `PUT /api/support/conversations/{id}/csat` | `customer-api.json` | SD-09 | SD-UI6 | chưa có |
 | `GET /api/admin/support/sessions?view=waiting\|mine` | `admin-sessions.json` | SD-06 | SD-UI1 | chưa có |
 | `POST /api/admin/support/sessions/{id}/assignment` | `admin-sessions.json` | SD-06 | SD-UI2 | chưa có |
@@ -105,8 +105,8 @@ Cột "Có từ" ghi task đã làm route. Ô ghi "chưa có" nghĩa là fronten
 | `POST /api/admin/support/sessions/{id}/messages` | `admin-sessions.json` | SD-07 | SD-UI2 | chưa có |
 | `GET /api/admin/support/conversations/{id}/messages` | `admin-sessions.json` | SD-07 | SD-UI2 | chưa có |
 | `GET /api/admin/support/sessions/{id}/customer` | `admin-customer-panel.json` | SD-11 | SD-UI3 | chưa có |
-| `GET /api/admin/support/callback-requests` | `admin-callbacks.json` | SD-05 | SD-UI4 | chưa có |
-| `PATCH /api/admin/support/callback-requests/{id}` | `admin-callbacks.json` | SD-05 | SD-UI4 | chưa có |
+| `GET /api/admin/support/callback-requests` | `admin-callbacks.json` | SD-05 | SD-UI4 | SD-05 |
+| `PATCH /api/admin/support/callback-requests/{id}` | `admin-callbacks.json` | SD-05 | SD-UI4 | SD-05 |
 | `GET · POST · PATCH · DELETE /api/admin/support/canned-responses[/{id}]` | `admin-canned-responses.json` | SD-10 | SD-UI2 (đọc), SD-UI5 (sửa) | chưa có |
 | `GET · PUT /api/admin/support/settings` | `admin-settings.json` | SD-10 | SD-UI5 | chưa có |
 | `GET /api/admin/support/events` | `admin-events.json` | SD-03, SD-04, SD-05, SD-06, SD-07, SD-08 | SD-UI1, SD-UI2, SD-UI4 | SD-03 |
@@ -411,7 +411,7 @@ File mẫu: `admin-events.json`. Theo quyết định 30, client nhận sự ki�
 | `session.waiting` | `{ sessionId }` | SD-04 | Tab Đang chờ, kèm thông báo và âm báo |
 | `session.reminded` | `{ sessionId }` | SD-04 | Tab Đang chờ, kèm thông báo nhắc lại |
 | `session.assigned` | `{ sessionId }` | SD-06, SD-08 | Tab Đang chờ và tab Của tôi |
-| `session.closed` | `{ sessionId }` | SD-08 | Tab Của tôi |
+| `session.closed` | `{ sessionId }` | SD-05, SD-08 | Tab Đang chờ và tab Của tôi |
 | `message.created` | `{ sessionId, conversationId }` | SD-07 | Lịch sử tin của hội thoại đang mở |
 | `callback.created` | `{ callbackRequestId }` | SD-05 | Tab Gọi lại |
 

@@ -111,6 +111,8 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         { "GET", "/api/admin/support/events", [Permissions.ConversationsRead] },
         { "PUT", "/api/admin/support/presence", [Permissions.ConversationsReply] },
         { "GET", "/api/admin/support/presence", [Permissions.ConversationsReply] },
+        { "GET", "/api/admin/support/callback-requests", [Permissions.ConversationsRead] },
+        { "PATCH", "/api/admin/support/callback-requests/dummy-id", [Permissions.ConversationsReply] },
     };
     [Theory]
     [MemberData(nameof(BackofficeEndpoints))]

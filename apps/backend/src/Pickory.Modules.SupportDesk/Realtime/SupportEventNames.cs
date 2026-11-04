@@ -11,4 +11,10 @@ internal static class SupportEventNames
 
     // Phiên chờ quá lâu mà chưa ai nhận. Client đọc lại tab Đang chờ rồi hiện thông báo nhắc lại.
     public const string SessionReminded = "session.reminded";
+
+    // Phiên vừa kết thúc. Tab Đang chờ của mọi nhân viên có thể đang hiện phiên này, nên sự kiện gửi tới mọi kết nối.
+    public const string SessionClosed = "session.closed";
+
+    // Khách vừa gửi yêu cầu gọi lại. Client đọc lại tab Gọi lại rồi hiện thông báo kèm âm báo.
+    public const string CallbackCreated = "callback.created";
 }

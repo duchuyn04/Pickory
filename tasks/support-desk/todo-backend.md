@@ -81,18 +81,18 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 ### SD-05: Yêu cầu gọi lại
 **Mô tả:** `POST /api/support/callback-requests` cho khách để lại số điện thoại. `GET` và `PATCH /api/admin/support/callback-requests[/{id}]` cho nhân viên. Job hằng ngày xóa số điện thoại sau 30 ngày. Handler `UserDeletedEvent` xóa số điện thoại của người dùng đó.
 **Tiêu chí nghiệm thu:**
-- [ ] Người không phải chủ hội thoại nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
-- [ ] Số điện thoại sai luật của `ContactFieldRules` trả 400 `VALIDATION_ERROR`. Số đúng lưu dạng `0xxxxxxxxx`
-- [ ] Yêu cầu thứ 4 trong cùng ngày giờ Việt Nam của một `anonymousId` trả 429 `CALLBACK_LIMIT_REACHED`
-- [ ] Yêu cầu mới phát sự kiện `callback.created` cho nhân viên có `conversations:read`
-- [ ] Hội thoại có phiên chờ chưa ai nhận: yêu cầu mới đóng phiên đó với `closed_by = auto`, phát `session.closed` tới khách và nhân viên
-- [ ] Đóng phiên khi gửi số không gửi tin có `action = csat_form`. Phiên đã có người nhận vẫn mở
-- [ ] `GET` cần `conversations:read`. `PATCH` cần `conversations:reply` và chỉ nhận `done` hoặc `unreachable`
-- [ ] `PATCH` ghi `handled_by` và `handled_at`. Yêu cầu không có trả 404 `CALLBACK_REQUEST_NOT_FOUND`
-- [ ] Test hợp đồng: response khớp các ví dụ gọi lại của `customer-api.json` và `admin-callbacks.json`
-- [ ] Job xóa số điện thoại của yêu cầu cũ hơn 30 ngày, giữ dòng cho báo cáo
-- [ ] `UserDeletedEvent` xóa số điện thoại của mọi yêu cầu gắn `userId` đó
-- [ ] Endpoint mới có trong ma trận quyền
+- [x] Người không phải chủ hội thoại nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
+- [x] Số điện thoại sai luật của `ContactFieldRules` trả 400 `VALIDATION_ERROR`. Số đúng lưu dạng `0xxxxxxxxx`
+- [x] Yêu cầu thứ 4 trong cùng ngày giờ Việt Nam của một `anonymousId` trả 429 `CALLBACK_LIMIT_REACHED`
+- [x] Yêu cầu mới phát sự kiện `callback.created` cho nhân viên có `conversations:read`
+- [x] Hội thoại có phiên chờ chưa ai nhận: yêu cầu mới đóng phiên đó với `closed_by = auto`, phát `session.closed` tới khách và nhân viên
+- [x] Đóng phiên khi gửi số không gửi tin có `action = csat_form`. Phiên đã có người nhận vẫn mở
+- [x] `GET` cần `conversations:read`. `PATCH` cần `conversations:reply` và chỉ nhận `done` hoặc `unreachable`
+- [x] `PATCH` ghi `handled_by` và `handled_at`. Yêu cầu không có trả 404 `CALLBACK_REQUEST_NOT_FOUND`
+- [x] Test hợp đồng: response khớp các ví dụ gọi lại của `customer-api.json` và `admin-callbacks.json`
+- [x] Job xóa số điện thoại của yêu cầu cũ hơn 30 ngày, giữ dòng cho báo cáo
+- [x] `UserDeletedEvent` xóa số điện thoại của mọi yêu cầu gắn `userId` đó
+- [x] Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp; test gọi processor
 **Phụ thuộc:** SD-04 · **Quy mô:** M
 

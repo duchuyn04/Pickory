@@ -7,4 +7,6 @@ internal static class SupportDeskErrorCodes
     public const string ConversationNotFound = "SUPPORT_CONVERSATION_NOT_FOUND";
     public const string ConversationClosed = "SUPPORT_CONVERSATION_CLOSED";
     public const string MessageRateLimited = "SUPPORT_MESSAGE_RATE_LIMITED";
+    public const string CallbackLimitReached = "CALLBACK_LIMIT_REACHED";
+    public const string CallbackRequestNotFound = "CALLBACK_REQUEST_NOT_FOUND";
 }

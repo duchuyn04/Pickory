@@ -9,3 +9,6 @@ internal sealed record HeartbeatEventData(DateTime At);
 // Dữ liệu của sự kiện phiên gửi cho nhân viên. Tên sự kiện cho biết chuyện gì xảy ra, nên dữ liệu chỉ có mã phiên.
 // Client nhận sự kiện thì đọc lại danh sách hàng chờ, không dựng dòng từ dữ liệu này.
 internal sealed record SessionEventData(string SessionId);
+
+// Dữ liệu của sự kiện `callback.created`. Client đọc lại tab Gọi lại, nên dữ liệu chỉ có mã yêu cầu.
+internal sealed record CallbackCreatedEventData(string CallbackRequestId);

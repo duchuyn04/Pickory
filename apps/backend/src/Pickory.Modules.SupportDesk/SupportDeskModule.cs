@@ -7,6 +7,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Pickory.Modules.Identity.Contracts.Events;
+using Pickory.Modules.SupportDesk.Callbacks;
 using Pickory.Modules.SupportDesk.Contracts.Events;
 using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Persistence;
@@ -52,8 +53,11 @@ public static class SupportDeskModule
         services.AddScoped<IDomainEventHandler<SupportSessionStatusChangedEvent>, StaffSessionEventBroadcastHandler>();
         // Sự kiện nhắc lại là sự kiện nội bộ của module. Handler đăng ký ở đây chứ không ở `Contracts`.
         services.AddScoped<IDomainEventHandler<SupportSessionRemindedEvent>, StaffSessionEventBroadcastHandler>();
+        // Yêu cầu gọi lại mới cũng chỉ đi tới kênh nhân viên. Handler dùng chung với hai sự kiện phiên.
+        services.AddScoped<IDomainEventHandler<CallbackRequestCreatedEvent>, StaffSessionEventBroadcastHandler>();
         // Vòng đời scoped vì dịch vụ và job giữ `SupportDeskDbContext` của request hoặc của một vòng worker.
         services.AddScoped<SupportConversationService>();
+        services.AddScoped<CallbackRequestService>();
         services.AddScoped<StaffPresenceService>();
         services.AddScoped<StaffPresenceTimeoutProcessor>();
         // Opener đọc cấu hình từ DB và chạy trong transaction của tin khách, nên dùng chung scope với request.
@@ -61,14 +65,22 @@ public static class SupportDeskModule
         services.AddScoped<SupportSessionOpener>();
         // Processor của job nhắc lại cũng cần scope riêng cho mỗi vòng chạy.
         services.AddScoped<WaitNudgeProcessor>();
+        // Đăng ký lớp cụ thể cho test và interface `ICallbackPhoneRetentionProcessor` cho worker nền.
+        services.AddScoped<CallbackPhoneRetentionProcessor>();
+        services.AddScoped<ICallbackPhoneRetentionProcessor>(
+            provider => provider.GetRequiredService<CallbackPhoneRetentionProcessor>());
         // Giới hạn tin là singleton vì bộ đếm trong bộ nhớ phải dùng chung cho mọi request của một khách.
         services.AddSingleton<SupportMessageLimiters>();
         // Đăng nhập phát `UserLinkedEvent`. Handler gắn hội thoại vãng lai vào tài khoản vừa đăng nhập.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, SupportConversationLinkHandler>();
+        // Xóa tài khoản phát `UserDeletedEvent`. Handler xóa số điện thoại và ghi chú gọi lại của người dùng đó.
+        services.AddScoped<IDomainEventHandler<UserDeletedEvent>, CallbackRequestUserDeletedHandler>();
         // Worker chạy nền gọi processor mỗi 30 giây.
         services.AddHostedService<StaffPresenceTimeoutWorker>();
         // Worker nhắc lại phiên chờ quá lâu chạy mỗi phút, đúng nhịp yêu cầu của spec.
         services.AddHostedService<WaitNudgeWorker>();
+        // Worker xóa số điện thoại quá hạn 30 ngày chạy mỗi ngày một lần.
+        services.AddHostedService<CallbackPhoneRetentionWorker>();
         return services;
     }
 
@@ -88,6 +100,7 @@ public static class SupportDeskModule
         SupportEventsEndpoints.Map(moduleRoutes);
         StaffPresenceEndpoints.Map(moduleRoutes);
         SupportConversationEndpoints.Map(moduleRoutes);
+        CallbackRequestEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }
