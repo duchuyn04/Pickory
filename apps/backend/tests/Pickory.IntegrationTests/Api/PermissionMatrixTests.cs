@@ -22,38 +22,27 @@ namespace Pickory.IntegrationTests.Api;
 
 // Kiểm tra toàn bộ ma trận phân quyền trên các route back-office của hệ thống.
 [Collection(IntegrationDatabaseCollection.Name)]
-public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationFactory>, IClassFixture<PermissionMatrixFixture>
 {
-    private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
     private readonly PickoryWebApplicationFactory _factory;
-    private string _customerCookie = null!;
-    private string _salesCookie = null!;
-    private string _supportCookie = null!;
-    private string _adminCookie = null!;
+    private readonly string _customerCookie;
+    private readonly string _salesCookie;
+    private readonly string _supportCookie;
+    private readonly string _adminCookie;
 
-    public PermissionMatrixTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public PermissionMatrixTests(
+        PickoryWebApplicationFactory factory,
+        PermissionMatrixFixture matrixFixture)
     {
-        _database = database;
         _factory = factory;
         // Tắt tự động nạp cookie để test kiểm soát chính xác từng phiên người dùng.
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
-    }
-
-    public async Task InitializeAsync()
-    {
-        // Nạp role và quyền mặc định vào cơ sở dữ liệu trước khi tạo phiên kiểm thử.
-        await IdentityTestData.SeedRolesAsync(_database);
-
-        _customerCookie = $"pk_session={await CreateSessionAsync(UserKind.Customer, DefaultRoles.CustomerCode, "matrix-cust")}";
-        _salesCookie = $"pk_session={await CreateSessionAsync(UserKind.Staff, DefaultRoles.SalesCode, "matrix-sales")}";
-        _supportCookie = $"pk_session={await CreateSessionAsync(UserKind.Staff, DefaultRoles.SupportCode, "matrix-supp")}";
-        _adminCookie = $"pk_session={await CreateSessionAsync(UserKind.Staff, DefaultRoles.AdminCode, "matrix-admin")}";
-    }
-
-    public Task DisposeAsync()
-    {
-        return Task.CompletedTask;
+        // Lấy cookie của bốn tài khoản thử đã tạo một lần từ fixture dùng chung.
+        _customerCookie = matrixFixture.CustomerCookie;
+        _salesCookie = matrixFixture.SalesCookie;
+        _supportCookie = matrixFixture.SupportCookie;
+        _adminCookie = matrixFixture.AdminCookie;
     }
 
     public static TheoryData<string, string, string[]> BackofficeEndpoints => new()
@@ -464,9 +453,4 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
         return Regex.Replace(normalizedPattern, @"\{[^}]+\}", "dummy-id");
     }
 
-    private async Task<string> CreateSessionAsync(UserKind kind, string roleCode, string prefix)
-    {
-        var user = await IdentityTestData.CreateUserAsync(_database, IdentityTestData.NewEmail(prefix), kind, roleCode, emailVerified: true);
-        return await IdentityTestData.CreateSessionAsync(_database, user.Id);
-    }
 }

@@ -7,12 +7,12 @@ Quyết định và bối cảnh nằm ở `tasks/test-speed/plan.md`. Tiến đ
 ### TS-01: Ghi số đo gốc
 **Mô tả:** Đọc file `trx` của lần chạy đủ suite sau SD-05. Ghi kết quả vào `tasks/test-speed/baseline.md`. Không sửa code. Đường dẫn file `trx` nằm trong file giao việc của task.
 **Tiêu chí nghiệm thu:**
-- [ ] `baseline.md` ghi lệnh đã chạy, thời điểm chạy và tổng thời gian
-- [ ] `baseline.md` ghi số kết quả đạt, lỗi và bỏ qua
-- [ ] `baseline.md` tách tổng thời gian thành ba phần: thân test, phần giữa hai test cùng lớp, và khởi động API ở test đầu mỗi lớp
-- [ ] `baseline.md` có 20 test chậm nhất, mỗi dòng có tên test và thời gian
-- [ ] `baseline.md` có 10 lớp test chậm nhất theo tổng thời gian. Mỗi dòng có tổng thời gian, thời gian thân test và số kết quả
-- [ ] `baseline.md` ghi cách tính từng con số, để TS-02 và TS-03 đo lại theo cùng cách
+- [x] `baseline.md` ghi lệnh đã chạy, thời điểm chạy và tổng thời gian
+- [x] `baseline.md` ghi số kết quả đạt, lỗi và bỏ qua
+- [x] `baseline.md` tách tổng thời gian thành ba phần: thân test, phần giữa hai test cùng lớp, và khởi động API ở test đầu mỗi lớp
+- [x] `baseline.md` có 20 test chậm nhất, mỗi dòng có tên test và thời gian
+- [x] `baseline.md` có 10 lớp test chậm nhất theo tổng thời gian. Mỗi dòng có tổng thời gian, thời gian thân test và số kết quả
+- [x] `baseline.md` ghi cách tính từng con số, để TS-02 và TS-03 đo lại theo cùng cách
 **Kiểm tra:** reviewer tính lại tổng thời gian và một dòng của bảng lớp chậm nhất từ file `trx`
 **Phụ thuộc:** SD-06 đã commit · **Quy mô:** S
 
@@ -21,14 +21,14 @@ Quyết định và bối cảnh nằm ở `tasks/test-speed/plan.md`. Tiến đ
 - `IdentityTestData` băm mỗi mật khẩu một lần rồi dùng lại hash đó.
 - Lớp test tạo tài khoản và phiên đăng nhập một lần cho cả lớp, khi không test nào sửa dữ liệu đó (quyết định 8).
 **Tiêu chí nghiệm thu:**
-- [ ] `IdentityTestData.CreateUserAsync` không băm lại mật khẩu đã băm trong cùng lần chạy suite
-- [ ] Đăng nhập bằng tài khoản tạo từ hash dùng lại vẫn thành công. Có test chứng minh
-- [ ] `PermissionMatrixTests` tạo 4 tài khoản thử một lần cho cả lớp
-- [ ] Mỗi lớp trong 10 lớp chậm nhất của TS-01 có một trong hai kết quả: đã sửa, hoặc có lý do giữ nguyên trong báo cáo
-- [ ] Test đã sửa vẫn kiểm cùng hành vi. Không xóa hay nới lỏng câu kiểm nào
-- [ ] Phép thử đột biến: với mỗi lớp đã sửa, làm sai code sản phẩm mà lớp đó kiểm, và test phải đỏ
-- [ ] Mỗi lớp đã sửa xanh khi chạy riêng từng test, không chỉ khi chạy cả lớp
-- [ ] Suite đầy đủ xanh. Báo cáo ghi tổng thời gian mới và so với TS-01 theo cách tính của `baseline.md`
+- [x] `IdentityTestData.CreateUserAsync` không băm lại mật khẩu đã băm trong cùng lần chạy suite
+- [x] Đăng nhập bằng tài khoản tạo từ hash dùng lại vẫn thành công. Có test chứng minh
+- [x] `PermissionMatrixTests` tạo 4 tài khoản thử một lần cho cả lớp
+- [x] Mỗi lớp trong 10 lớp chậm nhất của TS-01 có một trong hai kết quả: đã sửa, hoặc có lý do giữ nguyên trong báo cáo
+- [x] Test đã sửa vẫn kiểm cùng hành vi. Không xóa hay nới lỏng câu kiểm nào
+- [x] Phép thử đột biến: với mỗi lớp đã sửa, làm sai code sản phẩm mà lớp đó kiểm, và test phải đỏ
+- [x] Mỗi lớp đã sửa xanh khi chạy riêng từng test, không chỉ khi chạy cả lớp
+- [x] Suite đầy đủ xanh. Báo cáo ghi tổng thời gian mới và so với TS-01 theo cách tính của `baseline.md`
 **Kiểm tra:** chạy từng lớp đã sửa, rồi reviewer chạy suite đầy đủ
 **Phụ thuộc:** TS-01 · **Quy mô:** M
 

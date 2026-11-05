@@ -272,6 +272,76 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
         Assert.NotNull(await ReadSessionExpiryAsync(sessionToken));
     }
 
+    [Fact]
+    // Hai tài khoản cùng mật khẩu phải nhận cùng chuỗi hash đã lưu trong bộ nhớ tạm.
+    // Kiểm tra tài khoản thứ hai vẫn đăng nhập thành công qua API thật.
+    public async Task CreateUser_ReusesPasswordHash_AndSecondUserCanLoginSuccessfully()
+    {
+        var password = "SamePassword123!";
+        var email1 = IdentityTestData.NewEmail("cached-hash-1");
+        // Tạo tài khoản thứ nhất với mật khẩu cần kiểm tra.
+        var user1 = await IdentityTestData.CreateUserAsync(_database, email1, UserKind.Customer, "customer", password);
+
+        var email2 = IdentityTestData.NewEmail("cached-hash-2");
+        // Tạo tài khoản thứ hai với cùng mật khẩu để kiểm tra việc dùng lại chuỗi hash.
+        var user2 = await IdentityTestData.CreateUserAsync(_database, email2, UserKind.Customer, "customer", password);
+
+        // Chuỗi hash không được là null khi có mật khẩu đầu vào.
+        Assert.NotNull(user1.PasswordHash);
+        // Hai tài khoản cùng mật khẩu phải có cùng chuỗi hash khi bật bộ nhớ đệm.
+        Assert.Equal(user1.PasswordHash, user2.PasswordHash);
+
+        // Gửi yêu cầu đăng nhập bằng tài khoản thứ hai tới route xác thực thật.
+        var loginResponse = await SendAsync("/api/auth/sessions", email2, password);
+        // API phải chấp nhận chuỗi hash dùng lại và trả mã thành công 201.
+        Assert.Equal(HttpStatusCode.Created, loginResponse.StatusCode);
+
+        var differentPassword = "DifferentPassword123!";
+        var email3 = IdentityTestData.NewEmail("cached-hash-diff");
+        // Tạo tài khoản thứ ba với mật khẩu khác để kiểm tra tính cách ly của chuỗi hash.
+        var user3 = await IdentityTestData.CreateUserAsync(_database, email3, UserKind.Customer, "customer", differentPassword);
+        // Mật khẩu khác nhau không được dùng chung chuỗi hash trong bộ nhớ đệm.
+        Assert.NotEqual(user1.PasswordHash, user3.PasswordHash);
+
+        var email4 = IdentityTestData.NewEmail("cached-hash-null");
+        // Tạo tài khoản thứ tư với mật khẩu null để kiểm tra trường hợp tài khoản chưa đặt mật khẩu.
+        var user4 = await IdentityTestData.CreateUserAsync(_database, email4, UserKind.Customer, "customer", password: null);
+        // Giá trị hash phải là null khi mật khẩu đầu vào là null.
+        Assert.Null(user4.PasswordHash);
+    }
+
+    [Fact]
+    // Nhiều luồng cùng băm một mật khẩu mới chỉ được gọi hàm băm một lần duy nhất.
+    // Thử nghiệm tranh chấp bằng rào đồng bộ và delegate có độ trễ chủ động.
+    public async Task GetOrCreatePasswordHash_ConcurrentCallsForSamePassword_OnlyHashesOnce()
+    {
+        var password = $"ConcurrentPassword-{Guid.NewGuid():N}!";
+        var hashCallCount = 0;
+        using var readyBarrier = new Barrier(participantCount: 8);
+
+        // Hàm băm giả lập có độ trễ để các luồng thực sự tranh chấp nhau.
+        string SlowHasher(string plain)
+        {
+            Interlocked.Increment(ref hashCallCount);
+            Thread.Sleep(50);
+            return $"simulated-hash-for-{plain}";
+        }
+
+        // Chạy đồng thời tám tác vụ cùng gọi hàm lấy hash cho cùng một mật khẩu.
+        var tasks = Enumerable.Range(0, 8).Select(_ => Task.Run(() =>
+        {
+            readyBarrier.SignalAndWait();
+            return IdentityTestData.GetOrCreatePasswordHash(password, SlowHasher);
+        })).ToArray();
+
+        var results = await Task.WhenAll(tasks);
+
+        // Hàm băm chỉ được phép thực thi đúng một lần duy nhất.
+        Assert.Equal(1, hashCallCount);
+        // Mọi luồng đều nhận cùng kết quả hash hợp lệ.
+        Assert.All(results, hash => Assert.Equal($"simulated-hash-for-{password}", hash));
+    }
+
     // Gửi email và mật khẩu tới route đăng nhập. Request có `Origin` của web để qua bước chống CSRF (Cross-Site Request Forgery).
     private Task<HttpResponseMessage> SendAsync(string path, string email, string password, string? cookieHeader = null)
     {

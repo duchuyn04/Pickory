@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using Microsoft.EntityFrameworkCore;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Identity.Entities;
@@ -12,6 +13,21 @@ internal static class IdentityTestData
 {
     // Mật khẩu mặc định đạt quy tắc độ mạnh. Test đăng nhập dùng lại giá trị này.
     public const string DefaultPassword = "ValidPassword123!";
+
+    // Lưu tạm chuỗi hash theo từng mật khẩu bằng `Lazy<string>` để chỉ băm một lần khi tranh chấp đồng thời.
+    private static readonly ConcurrentDictionary<string, Lazy<string>> PasswordHashCache = new();
+
+    // Lấy chuỗi hash từ bộ nhớ tạm hoặc băm mới qua hàm băm khi chưa có trong cache.
+    internal static string GetOrCreatePasswordHash(string password, Func<string, string>? hashFactory = null)
+    {
+        var factory = hashFactory ?? PasswordHasher.Hash;
+        // Dùng LazyThreadSafetyMode.ExecutionAndPublication để đảm bảo chỉ có một luồng thực thi hàm băm.
+        var lazy = PasswordHashCache.GetOrAdd(
+            password,
+            key => new Lazy<string>(() => factory(key), LazyThreadSafetyMode.ExecutionAndPublication));
+        // Chỉ đọc thuộc tính `Value` của đối tượng `Lazy<string>` mà `GetOrAdd` trả về.
+        return lazy.Value;
+    }
 
     // Thêm GUID (Globally Unique Identifier) vào email. Hai test không va chạm ràng buộc email duy nhất trong DB.
     public static string NewEmail(string prefix)
@@ -48,8 +64,8 @@ internal static class IdentityTestData
             Phone = "0901234567",
             Kind = kind,
             EmailVerified = emailVerified,
-            // Băm bằng `PasswordHasher` thật. Đăng nhập trong test so khớp đúng định dạng hash của API.
-            PasswordHash = password is null ? null : PasswordHasher.Hash(password),
+            // Dùng lại chuỗi hash đã băm để giảm thời gian khởi tạo tài khoản kiểm thử.
+            PasswordHash = password is null ? null : GetOrCreatePasswordHash(password),
             LockedAt = locked ? DateTime.UtcNow.AddHours(-1) : null,
             DeletedAt = deleted ? DateTime.UtcNow.AddHours(-1) : null,
             UpdatedAt = DateTime.UtcNow,
@@ -75,12 +91,22 @@ internal static class IdentityTestData
         return role;
     }
 
-    // Tạo phiên trực tiếp trong DB. Test quản trị đăng nhập bằng nhân viên có quyền cụ thể mà không qua route đăng nhập.
-    public static async Task<string> CreateSessionAsync(IntegrationDatabaseFixture database, string userId)
+    // Tạo phiên trực tiếp trong DB. Cho phép truyền thời hạn phiên để tránh bị middleware tự động gia hạn.
+    public static async Task<string> CreateSessionAsync(
+        IntegrationDatabaseFixture database,
+        string userId,
+        TimeSpan? lifetime = null)
     {
         var rawToken = SecureTokens.GenerateToken();
+        // Giữ thời hạn mặc định 12 giờ cho phiên nhân viên và các bài test thông thường.
+        var sessionLifetime = lifetime ?? TimeSpan.FromHours(12);
         await using var identity = database.CreateIdentityContext();
-        identity.Sessions.Add(new Session { TokenHash = SecureTokens.HashToken(rawToken), UserId = userId, ExpiresAt = DateTime.UtcNow.AddHours(12) });
+        identity.Sessions.Add(new Session
+        {
+            TokenHash = SecureTokens.HashToken(rawToken),
+            UserId = userId,
+            ExpiresAt = DateTime.UtcNow.Add(sessionLifetime),
+        });
         await identity.SaveChangesAsync();
         return rawToken;
     }

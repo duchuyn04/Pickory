@@ -51,8 +51,8 @@ Số đo lấy từ file `trx` của lần chạy đủ suite sau SD-05, trên w
 
 ## Task List
 
-- [ ] TS-01 ghi số đo gốc
-- [ ] TS-02 dựng dữ liệu test nhanh hơn
+- [x] TS-01 ghi số đo gốc
+- [x] TS-02 dựng dữ liệu test nhanh hơn
 - [ ] TS-03 chạy song song theo nhóm DB
 
 Đã bỏ ngày 2026-11-04: task bỏ chờ thời gian thật cũ và task dùng chung bản API (quyết định 5 và 6).
