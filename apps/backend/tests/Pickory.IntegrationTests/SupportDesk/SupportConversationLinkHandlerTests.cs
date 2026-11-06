@@ -20,14 +20,14 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-15: đăng nhập phát `UserLinkedEvent`, và `SupportConversationLinkHandler` gắn hội thoại vãng lai vào tài khoản.
 // Test đăng nhập bằng route thật, nên cả đường phát sự kiện lẫn handler cùng được kiểm.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class SupportConversationLinkHandlerTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class SupportConversationLinkHandlerTests : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public SupportConversationLinkHandlerTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public SupportConversationLinkHandlerTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

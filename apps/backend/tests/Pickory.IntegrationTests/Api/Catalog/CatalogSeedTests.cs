@@ -21,14 +21,14 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-12: `catalog:seed` ghi dữ liệu mẫu qua đường ghi của trang quản trị, và chạy lại không tạo bản ghi trùng.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CatalogSeedTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class CatalogSeedTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly SeedCatalog _catalog = CatalogSeedData.Create();
 
-    public CatalogSeedTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CatalogSeedTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

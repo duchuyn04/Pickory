@@ -14,11 +14,11 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // Kiểm tra endpoint GET /api/admin/support/sessions cho hàng chờ CSKH (SD-06).
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(SupportDeskCollection.Name)]
 public sealed class AdminSupportSessionQueueEndpointTests(
-    PickoryWebApplicationFactory factory,
-    IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+    SupportDeskWebApplicationFactory factory,
+    SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string QueuePath = "/api/admin/support/sessions";
     private static readonly DateTimeOffset TestMoment = new(2026, 11, 3, 3, 0, 0, TimeSpan.Zero);

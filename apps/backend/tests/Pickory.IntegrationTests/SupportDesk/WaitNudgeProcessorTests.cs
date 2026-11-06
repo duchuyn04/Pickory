@@ -15,9 +15,9 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-04: job mỗi phút nhắc lại phiên chờ quá `WaitNudgeMinutes`. Test gọi thẳng processor với đồng hồ giả, không chờ timer.
 // Mốc nhắc lại đọc từ dòng cấu hình, nên test không viết cứng 10 phút.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class WaitNudgeProcessorTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class WaitNudgeProcessorTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     // Nội dung tin nhắc lại theo spec. Test khóa nguyên câu, nên đổi câu trong code thì test phải đỏ.
     private const string ReminderBody = "Nhân viên CSKH đang bận. Bạn có thể để lại SĐT để CSKH gọi lại.";

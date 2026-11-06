@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.TestHost;
 using Pickory.Api.Middleware;
+using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.Identity.Contracts.Actors;
 using Pickory.Modules.Identity.Contracts.Authorization;
 using Xunit;
@@ -12,6 +13,7 @@ namespace Pickory.IntegrationTests.Api.Identity;
 
 // Bộ lọc quyền phải chạy thật trên route và trả JSON lỗi như `requireAuth` của bản Node.
 // Test dựng app nhỏ với middleware lỗi thật và không cần DB.
+[Collection(IdentityCollection.Name)]
 public sealed class ActorAuthorizationEndpointTests : IAsyncLifetime
 {
     // Header riêng của test thay cho actor middleware thật. Test chọn actor mà không cần phiên trong DB.

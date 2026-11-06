@@ -18,9 +18,9 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-04: hai tin của khách gửi cùng lúc chỉ mở một phiên.
 // Cổng đọc giữ cả hai request ở bước kiểm phiên. Cả hai chắc chắn cùng đi vào bước chèn phiên.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ParallelMessageSessionTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class ParallelMessageSessionTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string StaffEventsPath = "/api/admin/support/events";
 

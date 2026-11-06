@@ -7,12 +7,12 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-04: xem giỏ. Giá và trạng thái luôn lấy mới từ catalog, dòng không mua được vẫn hiện kèm nhãn lý do.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CartViewTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class CartViewTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private readonly CartTestKit _kit;
 
-    public CartViewTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CartViewTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _kit = new CartTestKit(factory, database);
     }

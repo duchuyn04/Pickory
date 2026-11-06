@@ -16,8 +16,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-07: đổi trạng thái sản phẩm và xóa cứng sản phẩm.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class ProductStatusTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private const string StatusAuditAction = "catalog.product.status_change";
 
@@ -32,7 +32,7 @@ public sealed class ProductStatusTests : IClassFixture<PickoryWebApplicationFact
     private string _brandId = null!;
     private readonly List<string> _productIds = new();
 
-    public ProductStatusTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ProductStatusTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _factory = factory;

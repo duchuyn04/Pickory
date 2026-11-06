@@ -11,8 +11,8 @@ using Shipment = Pickory.Modules.Shipping.Contracts.Shipments.Shipment;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-07 lát 3: hai request tạo cùng `Ref` chạy cùng lúc chỉ để lại một vận đơn và một sự kiện.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentConcurrencyTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentConcurrencyTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private const int ConcurrentCallers = 2;
 

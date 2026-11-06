@@ -17,8 +17,8 @@ using Shipment = Pickory.Modules.Shipping.Contracts.Shipments.Shipment;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-08 lát 4: bộ đồng bộ dự phòng gọi trực tiếp với DB thật và client GHN giả, không chờ đồng hồ.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentStatusSyncProcessorTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentStatusSyncProcessorTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly FakeGhnClient _ghn = new();
     private readonly RecordingEventDispatcher _events = new();

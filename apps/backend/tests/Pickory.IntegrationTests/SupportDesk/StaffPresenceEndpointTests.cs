@@ -17,9 +17,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-03: `PUT` và `GET /api/admin/support/presence`. Đồng hồ giả cho phép so `lastSeenAt` với một giờ biết trước.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class StaffPresenceEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class StaffPresenceEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string PresencePath = "/api/admin/support/presence";
 

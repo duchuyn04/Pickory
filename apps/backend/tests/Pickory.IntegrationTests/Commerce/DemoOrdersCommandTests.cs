@@ -16,8 +16,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // ADM-19: kiểm lệnh tạo đơn mẫu trên DB thật của bộ test.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class DemoOrdersCommandTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class DemoOrdersCommandTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly DateTimeOffset TestClockInstant = new(2040, 7, 15, 12, 0, 0, TimeSpan.Zero);
     private readonly FakeTimeProvider _clock = new(TestClockInstant);
@@ -28,7 +28,7 @@ public sealed class DemoOrdersCommandTests : IClassFixture<PickoryWebApplication
     private readonly List<string> _categoryIds = [];
     private readonly List<string> _productIds = [];
 
-    public DemoOrdersCommandTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public DemoOrdersCommandTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _database = database;
         _host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>

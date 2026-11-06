@@ -11,8 +11,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database.Catalog;
 
 // Port từ `events.int.test.ts` và phần `emitAfterCommit` của `events.test.ts` ở bản Node (CAT-03).
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CatalogTransactionTests(IntegrationDatabaseFixture database) : IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class CatalogTransactionTests(CatalogDatabaseFixture database) : IAsyncLifetime
 {
     public Task InitializeAsync() => Task.CompletedTask;
 

@@ -11,8 +11,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database;
 
 // Port từ test seed của bản Node và từ hành vi của `scripts/admin-create.ts`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class IdentitySetupTests(IntegrationDatabaseFixture database)
+[Collection(IdentityCollection.Name)]
+public sealed class IdentitySetupTests(IdentityDatabaseFixture database)
 {
     [Fact]
     // Seed tạo đủ bốn role với quyền mặc định. Chạy lại không tạo role trùng hoặc quyền trùng.

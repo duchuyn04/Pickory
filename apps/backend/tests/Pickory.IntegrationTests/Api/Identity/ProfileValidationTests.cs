@@ -10,8 +10,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Kiểm luật tên và số điện thoại ở ba route nhận hai trường này. Test gửi request thẳng vào API, không qua giao diện.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ProfileValidationTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class ProfileValidationTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private const string PhoneInvalidMessage = "Số điện thoại không đúng định dạng.";
     private const string NameTooLongMessage = "Họ và tên tối đa 100 ký tự.";
@@ -23,7 +23,7 @@ public sealed class ProfileValidationTests : IClassFixture<PickoryWebApplication
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public ProfileValidationTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ProfileValidationTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _database = database;
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

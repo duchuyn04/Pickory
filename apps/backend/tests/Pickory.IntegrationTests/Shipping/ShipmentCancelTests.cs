@@ -17,8 +17,8 @@ using Shipment = Pickory.Modules.Shipping.Contracts.Shipments.Shipment;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-07 lát 4: hủy vận đơn, GHN từ chối hủy, hủy lần hai và tạo lại sau khi hủy.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentCancelTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentCancelTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly RecordingGhnClient _ghn = new(new FakeGhnClient());
     private readonly RecordingEventDispatcher _events = new();

@@ -12,7 +12,7 @@ using Pickory.Modules.Shipping.Ghn;
 namespace Pickory.IntegrationTests.Commerce;
 
 // Factory của test checkout. Client GHN được bọc để test đọc kiện hàng đã gửi, và log được giữ lại để kiểm log lỗi.
-public sealed class CheckoutWebApplicationFactory(IntegrationDatabaseFixture database)
+public class CheckoutWebApplicationFactoryBase(IntegrationDatabaseFixture database)
     : PickoryWebApplicationFactory(database)
 {
     public CapturingLoggerProvider Logs { get; } = new();
@@ -44,3 +44,11 @@ public sealed class CheckoutWebApplicationFactory(IntegrationDatabaseFixture dat
         });
     }
 }
+
+// Factory checkout cho collection Commerce. xUnit tự động truyền fixture qua constructor.
+public class CheckoutWebApplicationFactory(CommerceDatabaseFixture database)
+    : CheckoutWebApplicationFactoryBase(database);
+
+// Factory checkout cho collection ActivityTracking. xUnit tự động truyền fixture qua constructor.
+public sealed class ActivityTrackingCheckoutWebApplicationFactory(ActivityTrackingDatabaseFixture database)
+    : CheckoutWebApplicationFactoryBase(database);

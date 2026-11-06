@@ -6,8 +6,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api;
 
 // Luật 20 của plan REST: route đặt tên theo tài nguyên, không theo hành động. Test này giữ luật cho mọi module, kể cả module mới.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class RouteNamingTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>
+[Collection(ApiCollection.Name)]
+public sealed class RouteNamingTests(ApiWebApplicationFactory factory) : IClassFixture<ApiWebApplicationFactory>
 {
     // Mỗi mục là một ngoại lệ có lý do. Không thêm route `commerce` tương lai vào đây, route đó phải đặt tên theo tài nguyên.
     private static readonly IReadOnlyDictionary<string, string> AllowedActionRoutes = new Dictionary<string, string>
@@ -80,6 +80,7 @@ public static class ActionRouteRule
     }
 }
 
+[Collection(ApiCollection.Name)]
 public sealed class ActionRouteRuleTests
 {
     [Theory]

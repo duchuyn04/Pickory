@@ -14,8 +14,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-10: `ICatalogReader` trên bộ dữ liệu cố định. Gọi qua DI giống cách module `commerce` và `smart-search` sẽ gọi.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CatalogReaderTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class CatalogReaderTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly PickoryWebApplicationFactory _factory;
@@ -26,7 +26,7 @@ public sealed class CatalogReaderTests : IClassFixture<PickoryWebApplicationFact
     private Category _parentCategory = null!;
     private Category _childCategory = null!;
 
-    public CatalogReaderTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CatalogReaderTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _factory = factory;

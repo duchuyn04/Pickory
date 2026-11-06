@@ -17,8 +17,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-13: route cấu hình phí dự phòng của back-office, gồm quyền, đọc, ghi, kiểm body và audit.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class FallbackFeeApiTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class FallbackFeeApiTests : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private const string FallbackFeePath = "/api/admin/shipping/fallback-fee";
     private const string AuditTargetType = "shipping_fallback_fee";
@@ -43,7 +43,7 @@ public sealed class FallbackFeeApiTests : IClassFixture<PickoryWebApplicationFac
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public FallbackFeeApiTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public FallbackFeeApiTests(ShippingWebApplicationFactory factory, ShippingDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

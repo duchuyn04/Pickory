@@ -12,26 +12,161 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Infrastructure;
 
-[CollectionDefinition(Name, DisableParallelization = true)]
-public sealed class IntegrationDatabaseCollection : ICollectionFixture<IntegrationDatabaseFixture>
-{
-    public const string Name = "Exclusive PostgreSQL integration database";
-}
 
-public sealed class IntegrationDatabaseFixture : IAsyncLifetime
+public class IntegrationDatabaseFixture : IAsyncLifetime
 {
-    private const long AdvisoryLockKey = 578524097137070905;
+    // Khóa advisory dùng chung để ngăn hai tiến trình chạy đè lên cùng một DB.
+    public const long AdvisoryLockKey = 578524097137070905;
     private NpgsqlConnection? _lockConnection;
+    // Hậu tố gắn vào tên DB để tách biệt dữ liệu giữa các collection song song.
+    public string DatabaseSuffix { get; }
     public string DatabaseUrl { get; private set; } = null!;
     public string ConnectionString { get; private set; } = null!;
     public bool Initialized { get; private set; }
 
+    protected internal IntegrationDatabaseFixture(string databaseSuffix)
+    {
+        // Yêu cầu hậu tố rõ ràng để mỗi collection sử dụng đúng cơ sở dữ liệu riêng.
+        DatabaseSuffix = databaseSuffix;
+    }
+    public static string BuildDatabaseUrl(string baseDatabaseUrl, string suffix)
+    {
+        // Trả về URL gốc khi không có hậu tố cần bổ sung.
+        var trimmedSuffix = suffix.Trim().TrimStart('_');
+        if (string.IsNullOrEmpty(trimmedSuffix))
+        {
+            return baseDatabaseUrl;
+        }
+
+        // Tách đường dẫn DB từ URI gốc và ghép hậu tố module.
+        var uriBuilder = new UriBuilder(baseDatabaseUrl);
+        var baseDb = Uri.UnescapeDataString(uriBuilder.Path.TrimStart('/'));
+
+        // Giữ nguyên tên nếu DB đã có sẵn hậu tố để tránh nhân đôi hậu tố.
+        var targetDb = baseDb.EndsWith($"_{trimmedSuffix}", StringComparison.OrdinalIgnoreCase)
+            ? baseDb
+            : $"{baseDb}_{trimmedSuffix}";
+
+        uriBuilder.Path = "/" + Uri.EscapeDataString(targetDb);
+        return uriBuilder.Uri.AbsoluteUri;
+    }
+
+    internal static async Task EnsureDatabaseCreatedAsync(NpgsqlConnectionStringBuilder target)
+    {
+        var databaseName = target.Database;
+        // Bắt buộc phải có tên DB để không tạo kết nối rỗng.
+        if (string.IsNullOrWhiteSpace(databaseName))
+        {
+            throw new InvalidOperationException("Mục tiêu kết nối phải có tên DB.");
+        }
+
+        // Kết nối maintenance DB postgres để kiểm tra sự tồn tại của DB đích.
+        var maintenanceBuilder = new NpgsqlConnectionStringBuilder(target.ConnectionString)
+        {
+            Database = "postgres",
+            Pooling = false
+        };
+
+        await using var connection = new NpgsqlConnection(maintenanceBuilder.ConnectionString);
+        await connection.OpenAsync();
+
+        // Kiểm tra xem DB đích đã được tạo trong catalog PostgreSQL hay chưa.
+        await using var existsCommand = new NpgsqlCommand("SELECT 1 FROM pg_database WHERE datname = @name", connection);
+        existsCommand.Parameters.AddWithValue("name", databaseName);
+        if (await existsCommand.ExecuteScalarAsync() is not null)
+        {
+            return;
+        }
+
+        // Bao ngoặc kép tên DB để tránh lỗi cú pháp SQL với ký tự đặc biệt.
+        var quotedName = databaseName.Replace("\"", "\"\"");
+        try
+        {
+            await using var createCommand = new NpgsqlCommand($"CREATE DATABASE \"{quotedName}\"", connection);
+            await createCommand.ExecuteNonQueryAsync();
+        }
+        catch (PostgresException ex) when (ex.SqlState == "42P04")
+        {
+            // Bỏ qua lỗi nếu collection song song khác đã kịp tạo DB trước.
+        }
+    }
+
+    internal static async Task DropDatabaseIfExistsAsync(NpgsqlConnectionStringBuilder baseBuilder, string databaseName)
+    {
+        if (string.IsNullOrWhiteSpace(databaseName))
+        {
+            return;
+        }
+
+        // Giới hạn phạm vi xóa vào các DB kiểm thử tạm thời để bảo vệ dữ liệu khác.
+        if (!databaseName.StartsWith("pickory_test_", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException("Chỉ cho phép xóa các DB thử nghiệm có tiền tố pickory_test_.");
+        }
+
+        // Kết nối maintenance DB postgres để thực hiện thao tác xóa DB.
+        var maintenanceBuilder = new NpgsqlConnectionStringBuilder(baseBuilder.ConnectionString)
+        {
+            Database = "postgres",
+            Pooling = false
+        };
+
+        await using var connection = new NpgsqlConnection(maintenanceBuilder.ConnectionString);
+        await connection.OpenAsync();
+
+        // Ngắt toàn bộ kết nối khác đang mở tới DB đích trước khi xóa.
+        await using var terminateCommand = new NpgsqlCommand("""
+            SELECT pg_terminate_backend(pid)
+            FROM pg_stat_activity
+            WHERE datname = @name AND pid <> pg_backend_pid()
+            """, connection);
+        terminateCommand.Parameters.AddWithValue("name", databaseName);
+        await terminateCommand.ExecuteNonQueryAsync();
+
+        // Xóa cơ sở dữ liệu nếu tồn tại sau khi đã ngắt kết nối.
+        var quotedName = databaseName.Replace("\"", "\"\"");
+        await using var dropCommand = new NpgsqlCommand($"DROP DATABASE IF EXISTS \"{quotedName}\"", connection);
+        await dropCommand.ExecuteNonQueryAsync();
+    }
+
+    internal static async Task<bool> DatabaseExistsAsync(NpgsqlConnectionStringBuilder baseBuilder, string databaseName)
+    {
+        // Kết nối maintenance DB postgres để tra cứu danh sách DB hệ thống.
+        var maintenanceBuilder = new NpgsqlConnectionStringBuilder(baseBuilder.ConnectionString)
+        {
+            Database = "postgres",
+            Pooling = false
+        };
+
+        await using var connection = new NpgsqlConnection(maintenanceBuilder.ConnectionString);
+        await connection.OpenAsync();
+
+        // Tra cứu catalog pg_database để kiểm tra DB có tồn tại không.
+        await using var existsCommand = new NpgsqlCommand("SELECT 1 FROM pg_database WHERE datname = @name", connection);
+        existsCommand.Parameters.AddWithValue("name", databaseName);
+        return await existsCommand.ExecuteScalarAsync() is not null;
+    }
+
+    internal static void ClearSpecificPool(string connectionString)
+    {
+        // Chỉ dọn dẹp pool kết nối gắn với đúng chuỗi kết nối này.
+        using var connection = new NpgsqlConnection(connectionString);
+        NpgsqlConnection.ClearPool(connection);
+    }
+
     public async Task InitializeAsync()
     {
-        // Từ chối DB phát triển trước mọi kết nối có thể thay đổi schema.
-        DatabaseUrl = PickoryWebApplicationFactory.ResolveTestDatabaseUrl();
+        // Xác định URL cơ sở dữ liệu có gắn hậu tố của collection.
+        var rawTestUrl = PickoryWebApplicationFactory.ResolveTestDatabaseUrl();
+        DatabaseUrl = BuildDatabaseUrl(rawTestUrl, DatabaseSuffix);
         var connection = new NpgsqlConnectionStringBuilder(PostgresConnectionString.Convert(DatabaseUrl));
+
+        // Kiểm tra an toàn để từ chối DB phát triển trước mọi kết nối schema.
         await ValidateTestTargetAsync(connection, PickoryWebApplicationFactory.ResolveEnvironmentValue("DATABASE_URL"));
+
+        // Tạo cơ sở dữ liệu khi chưa tồn tại trước khi mở kết nối khóa phiên.
+        await EnsureDatabaseCreatedAsync(connection);
+
         connection.Pooling = false;
         connection.ApplicationName = $"pickory-dotnet-tests-{Guid.NewGuid():N}";
         ConnectionString = connection.ConnectionString;
@@ -243,12 +378,131 @@ public sealed class IntegrationDatabaseFixture : IAsyncLifetime
         if (_lockConnection is not null)
         {
             await _lockConnection.DisposeAsync();
+            _lockConnection = null;
         }
-        // Chỉ fixture đã khởi tạo được phép đóng các kết nối nhàn rỗi của bộ kiểm thử.
-        if (Initialized)
+        // Chỉ dọn dẹp pool kết nối mà factory và DbContext sử dụng để không ảnh hưởng collection khác.
+        if (Initialized && !string.IsNullOrWhiteSpace(DatabaseUrl))
         {
-            NpgsqlConnection.ClearAllPools();
+            var pooledConnectionString = PostgresConnectionString.Convert(DatabaseUrl);
+            ClearSpecificPool(pooledConnectionString);
         }
         Initialized = false;
     }
+}
+
+public class IdentityDatabaseFixture : IntegrationDatabaseFixture
+{
+    public IdentityDatabaseFixture() : base("identity")
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class IdentityCollection : ICollectionFixture<IdentityDatabaseFixture>
+{
+    public const string Name = "Identity integration collection";
+}
+
+public class CatalogDatabaseFixture : IntegrationDatabaseFixture
+{
+    public CatalogDatabaseFixture() : base("catalog")
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class CatalogCollection : ICollectionFixture<CatalogDatabaseFixture>
+{
+    public const string Name = "Catalog integration collection";
+}
+
+public class ShippingDatabaseFixture : IntegrationDatabaseFixture
+{
+    public ShippingDatabaseFixture() : base("shipping")
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class ShippingCollection : ICollectionFixture<ShippingDatabaseFixture>
+{
+    public const string Name = "Shipping integration collection";
+}
+
+public class CommerceDatabaseFixture : IntegrationDatabaseFixture
+{
+    public CommerceDatabaseFixture() : base("commerce")
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class CommerceCollection : ICollectionFixture<CommerceDatabaseFixture>
+{
+    public const string Name = "Commerce integration collection";
+}
+
+public class ActivityTrackingDatabaseFixture : IntegrationDatabaseFixture
+{
+    public ActivityTrackingDatabaseFixture() : base("activity")
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class ActivityTrackingCollection : ICollectionFixture<ActivityTrackingDatabaseFixture>
+{
+    public const string Name = "ActivityTracking integration collection";
+}
+
+public class SupportDeskDatabaseFixture : IntegrationDatabaseFixture
+{
+    public SupportDeskDatabaseFixture() : base("support_desk")
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class SupportDeskCollection : ICollectionFixture<SupportDeskDatabaseFixture>
+{
+    public const string Name = "SupportDesk integration collection";
+}
+
+public class AdminConsoleDatabaseFixture : IntegrationDatabaseFixture
+{
+    public AdminConsoleDatabaseFixture() : base("admin_console")
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class AdminConsoleCollection : ICollectionFixture<AdminConsoleDatabaseFixture>
+{
+    public const string Name = "AdminConsole integration collection";
+}
+
+public class ApiDatabaseFixture : IntegrationDatabaseFixture
+{
+    public ApiDatabaseFixture() : base("api")
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class ApiCollection : ICollectionFixture<ApiDatabaseFixture>
+{
+    public const string Name = "Api integration collection";
+}
+
+public class DatabaseFixture : IntegrationDatabaseFixture
+{
+    public DatabaseFixture() : base("database")
+    {
+    }
+}
+
+[CollectionDefinition(Name)]
+public sealed class DatabaseCollection : ICollectionFixture<DatabaseFixture>
+{
+    public const string Name = "Database integration collection";
 }

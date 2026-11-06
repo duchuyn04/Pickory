@@ -16,9 +16,9 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-05: giới hạn 3 yêu cầu gọi lại trong cùng ngày giờ Việt Nam của một `anonymousId`.
 // Test dùng đồng hồ giả và rào chắn lệnh đọc, nên không phụ thuộc giờ chạy và không rơi vào tranh chấp ngẫu nhiên.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CallbackRequestDailyLimitTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class CallbackRequestDailyLimitTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string CallbackRequestsPath = CallbackRequestTestKit.CallbackRequestsPath;
 

@@ -10,8 +10,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-22: Kiểm tra tích hợp cổng đọc dữ liệu ICommerceReader qua DI container thật.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CommerceReaderTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class CommerceReaderTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
@@ -20,7 +20,7 @@ public sealed class CommerceReaderTests : IClassFixture<PickoryWebApplicationFac
     private readonly List<string> _productIds = [];
     private readonly string _suffix = Guid.NewGuid().ToString("N")[..8];
 
-    public CommerceReaderTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CommerceReaderTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

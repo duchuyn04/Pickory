@@ -11,9 +11,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-05: `POST /api/support/callback-requests`. Khách để lại số điện thoại để nhân viên gọi lại.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CallbackRequestEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class CallbackRequestEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string CallbackRequestsPath = CallbackRequestTestKit.CallbackRequestsPath;
 

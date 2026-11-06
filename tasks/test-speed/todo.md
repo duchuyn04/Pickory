@@ -37,14 +37,14 @@ Quyết định và bối cảnh nằm ở `tasks/test-speed/plan.md`. Tiến đ
 ### TS-03: Chạy song song theo nhóm DB
 **Mô tả:** Chia lớp test integration thành các collection theo module. Mỗi collection có `IntegrationDatabaseFixture` riêng và DB riêng, nên các collection chạy song song.
 **Tiêu chí nghiệm thu:**
-- [ ] Mỗi lớp test integration thuộc đúng một collection. Test kiến trúc lỗi khi một lớp thiếu collection
-- [ ] Mỗi collection dùng DB có tên lấy từ `TEST_DATABASE_URL` cộng hậu tố. Fixture tạo DB khi DB chưa có
-- [ ] Luật an toàn của fixture áp cho từng DB: tên có thành phần `test`, không trùng `DATABASE_URL`, khóa advisory riêng cho từng DB
-- [ ] Hai suite chạy cùng lúc trên cùng `TEST_DATABASE_URL` vẫn báo lỗi khóa, như trước
-- [ ] `xunit.runner.json` giới hạn tối đa 3 luồng song song
-- [ ] Lớp tự tạo `new PickoryWebApplicationFactory(database)` vẫn chạy đúng
-- [ ] Suite đầy đủ xanh 2 lần liên tiếp
-- [ ] Báo cáo ghi tổng thời gian mới, so với TS-01, và RAM trống thấp nhất trong lúc chạy
+- [x] Mỗi lớp test integration thuộc đúng một collection. Test kiến trúc lỗi khi một lớp thiếu collection
+- [x] Mỗi collection dùng DB có tên lấy từ `TEST_DATABASE_URL` cộng hậu tố. Fixture tạo DB khi DB chưa có
+- [x] Luật an toàn của fixture áp cho từng DB: tên có thành phần `test`, không trùng `DATABASE_URL`, khóa advisory riêng cho từng DB
+- [x] Hai suite chạy cùng lúc trên cùng `TEST_DATABASE_URL` vẫn báo lỗi khóa, như trước
+- [x] `xunit.runner.json` giới hạn tối đa 3 luồng song song
+- [x] Lớp tự tạo `new PickoryWebApplicationFactory(database)` vẫn chạy đúng
+- [x] Suite đầy đủ xanh 2 lần liên tiếp
+- [x] Báo cáo ghi tổng thời gian mới, so với TS-01, và RAM trống thấp nhất trong lúc chạy
 **Kiểm tra:** reviewer chạy suite đầy đủ 2 lần liên tiếp
 **Phụ thuộc:** TS-02 · **Quy mô:** L
 

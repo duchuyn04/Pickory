@@ -13,14 +13,14 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Port từ test ID-05 và ID-17 của bản Node cho `POST /api/auth/registrations`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class RegisterTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class RegisterTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public RegisterTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public RegisterTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

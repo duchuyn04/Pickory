@@ -14,9 +14,9 @@ using Shipment = Pickory.Modules.Shipping.Entities.Shipment;
 namespace Pickory.IntegrationTests.Database.Shipping;
 
 // SHIP-02: schema shipping ghi và đọc lại đúng, và DB tự từ chối dữ liệu trùng hoặc mồ côi.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShippingPersistenceTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(ShippingCollection.Name)]
+public sealed class ShippingPersistenceTests(ShippingWebApplicationFactory factory)
+    : IClassFixture<ShippingWebApplicationFactory>
 {
     private static readonly DateTime WrittenAt = new(2026, 10, 9, 8, 7, 6, 543, DateTimeKind.Utc);
 

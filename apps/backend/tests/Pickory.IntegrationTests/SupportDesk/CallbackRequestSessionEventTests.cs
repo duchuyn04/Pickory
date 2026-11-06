@@ -22,9 +22,9 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-05: yêu cầu gọi lại đóng phiên chờ chưa ai nhận, phát `session.closed` cho khách cùng nhân viên và phát `callback.created`.
 // Test đọc luồng sự kiện thật của host để kiểm đúng nơi phát của route gửi yêu cầu.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CallbackRequestSessionEventTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class CallbackRequestSessionEventTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string StaffEventsPath = "/api/admin/support/events";
 

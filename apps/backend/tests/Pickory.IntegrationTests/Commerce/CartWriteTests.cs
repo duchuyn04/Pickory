@@ -7,12 +7,12 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-04: thêm, đổi số lượng và xóa dòng giỏ. Mỗi test dùng mã ẩn danh riêng nên không đụng giỏ của test khác.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CartWriteTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class CartWriteTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private readonly CartTestKit _kit;
 
-    public CartWriteTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CartWriteTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _kit = new CartTestKit(factory, database);
     }

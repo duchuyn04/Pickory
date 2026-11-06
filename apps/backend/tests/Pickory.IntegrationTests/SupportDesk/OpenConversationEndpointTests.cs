@@ -15,9 +15,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-15: `POST /api/support/conversations`. Route trả hội thoại `open` của người gọi, hoặc tạo mới.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class OpenConversationEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class OpenConversationEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
 

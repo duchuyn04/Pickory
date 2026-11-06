@@ -17,8 +17,8 @@ using ShipmentEntity = Pickory.Modules.Shipping.Entities.Shipment;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-08 lát 2: lớp áp trạng thái dùng chung cho webhook và job đồng bộ, gọi trực tiếp, không qua HTTP.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentStatusUpdaterTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentStatusUpdaterTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly FakeGhnClient _ghn = new();
     private readonly RecordingEventDispatcher _events = new();

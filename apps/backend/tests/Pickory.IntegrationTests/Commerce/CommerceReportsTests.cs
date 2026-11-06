@@ -72,7 +72,7 @@ Việc chờ: PendingConfirmation = O02 O10 O14 O15 = 4. Giao dịch chưa khớ
 Cách giữ test ổn định: dữ liệu dùng mốc thời gian cố định ở năm 2040 đến 2042 nên không phụ thuộc giờ máy.
 Mỗi test xóa toàn bộ đơn và giao dịch trước và sau khi chạy, nên số liệu việc chờ không lẫn dữ liệu của test khác.
 */
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string AuditTargetType = "order";
@@ -93,7 +93,7 @@ public sealed class CommerceReportsTests : IClassFixture<CheckoutWebApplicationF
     private readonly List<OrderStatusHistory> _histories = [];
     private readonly List<string> _auditedCodes = [];
 
-    public CommerceReportsTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CommerceReportsTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

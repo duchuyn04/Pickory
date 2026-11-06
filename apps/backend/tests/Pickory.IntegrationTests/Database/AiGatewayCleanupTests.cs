@@ -9,9 +9,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database;
 
 // Bước dọn của `db:migrate` xóa ba bảng và schema lịch sử còn sót từ module AI đã gỡ.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AiGatewayCleanupTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(DatabaseCollection.Name)]
+public sealed class AiGatewayCleanupTests(DatabaseWebApplicationFactory factory, DatabaseFixture database)
+    : IClassFixture<DatabaseWebApplicationFactory>
 {
     private static readonly string[] LegacyTables = ["ai_usage_logs", "ai_settings", "ai_embedding_cache"];
 

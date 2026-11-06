@@ -7,7 +7,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api;
 
 // Khởi tạo và lưu trữ bốn tài khoản cùng phiên kiểm thử cho PermissionMatrixTests.
-public sealed class PermissionMatrixFixture(IntegrationDatabaseFixture database) : IAsyncLifetime
+public sealed class PermissionMatrixFixture(ApiDatabaseFixture database) : IAsyncLifetime
 {
     public string CustomerCookie { get; private set; } = null!;
     public string SalesCookie { get; private set; } = null!;

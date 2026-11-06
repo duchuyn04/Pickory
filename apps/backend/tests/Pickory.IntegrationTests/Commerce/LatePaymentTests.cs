@@ -8,8 +8,8 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Commerce;
 
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class LatePaymentTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+[Collection(CommerceCollection.Name)]
+public sealed class LatePaymentTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private readonly PaymentExpiryTestKit _kit = new(factory, database);

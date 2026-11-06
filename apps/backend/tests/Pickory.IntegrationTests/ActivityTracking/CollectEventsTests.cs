@@ -20,9 +20,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.ActivityTracking;
 
 // ACT-06: `POST /api/events` cộng bộ đếm `product_view` của ngày giờ Việt Nam. Test dùng đồng hồ giả chọn một ngày riêng từ năm 2031, riêng test đồng hồ thật ghi vào ngày hôm nay.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CollectEventsTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ActivityTrackingCollection.Name)]
+public sealed class CollectEventsTests(ActivityTrackingWebApplicationFactory factory, ActivityTrackingDatabaseFixture database)
+    : IClassFixture<ActivityTrackingWebApplicationFactory>, IAsyncLifetime
 {
     private const string ProductViewMetric = "product_view";
     private const string ProductViewBody = """{"type":"product_view"}""";

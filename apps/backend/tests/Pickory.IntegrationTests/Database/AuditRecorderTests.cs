@@ -7,8 +7,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database;
 
 // Port từ test ID-04 của bản Node. Nhật ký thao tác đi cùng giao dịch của thao tác chính.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AuditRecorderTests(IntegrationDatabaseFixture database)
+[Collection(DatabaseCollection.Name)]
+public sealed class AuditRecorderTests(DatabaseFixture database)
 {
     [Fact]
     // Thao tác chính bị hủy thì nhật ký cũng không còn. Nhật ký không ghi thao tác chưa từng xảy ra.

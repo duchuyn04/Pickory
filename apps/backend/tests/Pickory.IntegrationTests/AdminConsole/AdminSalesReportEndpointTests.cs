@@ -21,8 +21,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.AdminConsole;
 
 // ADM-12: kiểm tra endpoint GET /api/admin/reports/sales qua DB thật và container thật.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminSalesReportEndpointTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(AdminConsoleCollection.Name)]
+public sealed class AdminSalesReportEndpointTests : IClassFixture<AdminConsoleWebApplicationFactory>, IAsyncLifetime
 {
     private const string ReportsPath = "/api/admin/reports/sales";
     private static readonly DateTimeOffset TestClockInstant = new(2040, 7, 1, 12, 0, 0, TimeSpan.Zero);
@@ -40,7 +40,7 @@ public sealed class AdminSalesReportEndpointTests : IClassFixture<PickoryWebAppl
     private string _supportCookie = null!;
     private string _customerCookie = null!;
 
-    public AdminSalesReportEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminSalesReportEndpointTests(AdminConsoleWebApplicationFactory factory, AdminConsoleDatabaseFixture database)
     {
         _host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
         {

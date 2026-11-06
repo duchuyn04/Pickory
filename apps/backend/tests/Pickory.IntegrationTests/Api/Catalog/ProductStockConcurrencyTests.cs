@@ -15,8 +15,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-08 review 1: sửa và xóa sản phẩm chạy cùng lúc với giữ hàng phải dùng cùng thứ tự khóa (`products` rồi `skus`).
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class ProductStockConcurrencyTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly PickoryWebApplicationFactory _factory;
@@ -25,7 +25,7 @@ public sealed class ProductStockConcurrencyTests : IClassFixture<PickoryWebAppli
     private readonly string _suffix = Guid.NewGuid().ToString("N")[..10];
     private string _adminCookie = null!;
 
-    public ProductStockConcurrencyTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ProductStockConcurrencyTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _factory = factory;

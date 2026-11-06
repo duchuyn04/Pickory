@@ -8,11 +8,11 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-05: khi nhận `UserDeletedEvent`, module xóa số điện thoại và ghi chú trên mọi yêu cầu gọi lại của người dùng đó.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(SupportDeskCollection.Name)]
 public sealed class CallbackRequestUserDeletedHandlerTests(
-    PickoryWebApplicationFactory factory,
-    IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+    SupportDeskWebApplicationFactory factory,
+    SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly DateTime CreatedAt = new(2026, 11, 3, 3, 0, 0, DateTimeKind.Utc);
 

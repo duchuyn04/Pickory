@@ -7,8 +7,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-08: server chưa cấu hình `GHN_WEBHOOK_SECRET`. Header rỗng không được so bằng với secret rỗng.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class GhnWebhookUnconfiguredSecretTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>
+[Collection(ShippingCollection.Name)]
+public sealed class GhnWebhookUnconfiguredSecretTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>
 {
     [Theory]
     [InlineData(null)]

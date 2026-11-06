@@ -21,8 +21,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api;
 
 // Kiểm tra toàn bộ ma trận phân quyền trên các route back-office của hệ thống.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationFactory>, IClassFixture<PermissionMatrixFixture>
+[Collection(ApiCollection.Name)]
+public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFactory>, IClassFixture<PermissionMatrixFixture>
 {
     private readonly HttpClient _client;
     private readonly PickoryWebApplicationFactory _factory;
@@ -32,7 +32,7 @@ public sealed class PermissionMatrixTests : IClassFixture<PickoryWebApplicationF
     private readonly string _adminCookie;
 
     public PermissionMatrixTests(
-        PickoryWebApplicationFactory factory,
+        ApiWebApplicationFactory factory,
         PermissionMatrixFixture matrixFixture)
     {
         _factory = factory;

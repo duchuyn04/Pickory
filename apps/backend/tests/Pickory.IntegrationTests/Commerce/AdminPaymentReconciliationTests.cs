@@ -19,7 +19,7 @@ namespace Pickory.IntegrationTests.Commerce;
 
 // COM-13: nhân viên gắn tay giao dịch SePay vào đơn hoặc đánh dấu không thuộc đơn nào.
 // Luật khớp dùng chung với webhook, nên test đối chiếu kết quả với hành vi của webhook.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class AdminPaymentReconciliationTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string TransactionsPath = "/api/admin/payments/transactions";
@@ -37,7 +37,7 @@ public sealed class AdminPaymentReconciliationTests : IClassFixture<CheckoutWebA
     private readonly List<string> _keys = [];
     private readonly List<string> _transactionIds = [];
 
-    public AdminPaymentReconciliationTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminPaymentReconciliationTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

@@ -13,9 +13,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-16: `GET /api/support/conversations/{id}/events`. Test mở luồng SSE thật của host và chỉ đẩy sự kiện qua đường producer.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CustomerEventsEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class CustomerEventsEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     // Ghi thẳng 2 giây theo tiêu chí SD-16, không đọc hằng của code. Code gửi chậm hơn thì test phải đỏ.
     private static readonly TimeSpan StaffMessageDeadline = TimeSpan.FromSeconds(2);

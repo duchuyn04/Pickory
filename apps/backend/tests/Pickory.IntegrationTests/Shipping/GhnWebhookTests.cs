@@ -22,7 +22,7 @@ using Shipment = Pickory.Modules.Shipping.Contracts.Shipments.Shipment;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-08 lát 3: `POST /api/webhooks/ghn` qua HTTP với DB thật và client GHN giả.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(ShippingCollection.Name)]
 public sealed class GhnWebhookTests : IClassFixture<ConfiguredGhnWebApplicationFactory>, IAsyncLifetime
 {
     private const string WebhookPath = "/api/webhooks/ghn";

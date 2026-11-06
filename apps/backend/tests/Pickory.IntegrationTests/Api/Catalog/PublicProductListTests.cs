@@ -11,8 +11,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-09: `GET /api/products` có lọc, sắp xếp, phân trang và facets, trên bộ dữ liệu cố định.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class PublicProductListTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class PublicProductListTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
@@ -24,7 +24,7 @@ public sealed class PublicProductListTests : IClassFixture<PickoryWebApplication
     private string _childCategoryId = null!;
     private readonly List<string> _brandIds = new();
 
-    public PublicProductListTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public PublicProductListTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

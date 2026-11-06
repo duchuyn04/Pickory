@@ -8,8 +8,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database.Catalog;
 
 // Port từ `schema-constraints.int.test.ts` của bản Node (CAT-03). DB tự chặn dữ liệu sai, kể cả khi code có lỗi.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CatalogConstraintTests(IntegrationDatabaseFixture database) : IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class CatalogConstraintTests(CatalogDatabaseFixture database) : IAsyncLifetime
 {
     public Task InitializeAsync() => Task.CompletedTask;
 

@@ -8,9 +8,9 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-15: tài khoản A chat rồi đăng xuất, tài khoản B đăng nhập trên cùng trình duyệt (cùng `pk_anon`).
 // Hội thoại của A vẫn mang `anonymousId` của trình duyệt đó, nhưng B không được thấy nó.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class SharedBrowserOwnershipTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class SharedBrowserOwnershipTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
 

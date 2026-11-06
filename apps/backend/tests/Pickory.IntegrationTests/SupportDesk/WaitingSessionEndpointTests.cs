@@ -9,9 +9,9 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-04: khách gửi tin khi hội thoại chưa có phiên mở thì module mở phiên chờ kèm tin hệ thống.
 // Mọi test đặt đồng hồ giả ở một mốc cố định, để kết quả không phụ thuộc giờ chạy test.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class WaitingSessionEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class WaitingSessionEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string InHoursPrefix = "Đã chuyển cho nhân viên CSKH. Thời gian chờ dự kiến khoảng ";
     private const string OutsideHoursBody =

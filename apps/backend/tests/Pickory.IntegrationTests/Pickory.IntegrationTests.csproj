@@ -1,5 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
+
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
@@ -30,6 +31,7 @@
   <ItemGroup>
     <None Include="..\..\db\reference-schema.sql" Link="db\reference-schema.sql" CopyToOutputDirectory="PreserveNewest" />
     <None Include="..\..\db\adopt-existing-schema.sql" Link="db\adopt-existing-schema.sql" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="xunit.runner.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

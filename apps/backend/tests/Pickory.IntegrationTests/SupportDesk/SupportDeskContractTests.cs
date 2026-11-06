@@ -1,5 +1,6 @@
 using System.Net;
 using System.Text.Json.Nodes;
+using Pickory.IntegrationTests.Infrastructure;
 using Xunit;
 using Xunit.Sdk;
 
@@ -7,6 +8,7 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-C1: bộ kiểm hợp đồng so response thật với ví dụ trong `spec/fixtures/support-desk/`.
 // Test đọc dữ liệu mẫu trực tiếp, nên không chép response vào test.
+[Collection(SupportDeskCollection.Name)]
 public sealed class SupportDeskContractTests
 {
     // Tạo một case cho mỗi ví dụ của mọi file mẫu có `examples`.

@@ -14,9 +14,9 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Database;
 
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(DatabaseCollection.Name)]
+public sealed class BaselineMigrationIntegrationTests(DatabaseWebApplicationFactory factory)
+    : IClassFixture<DatabaseWebApplicationFactory>
 {
     private static readonly string[] HistorySchemas = ["ef_identity", "ef_catalog", "ef_shipping", "ef_commerce", "ef_activity_tracking", "ef_support_desk"];
 

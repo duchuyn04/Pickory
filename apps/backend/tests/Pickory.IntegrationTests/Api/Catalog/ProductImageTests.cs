@@ -13,8 +13,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-06: chữ ký tải ảnh, gắn ảnh vào sản phẩm, kiểm lại ảnh và job xóa ảnh khi bỏ ảnh.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ProductImageTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class ProductImageTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly PickoryWebApplicationFactory _factory;
@@ -26,7 +26,7 @@ public sealed class ProductImageTests : IClassFixture<PickoryWebApplicationFacto
     private string _brandId = null!;
     private readonly List<string> _productIds = new();
 
-    public ProductImageTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ProductImageTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _factory = factory;

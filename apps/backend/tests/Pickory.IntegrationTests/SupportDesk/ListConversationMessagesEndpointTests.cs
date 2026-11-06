@@ -8,9 +8,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-15: `GET /api/support/conversations/{id}/messages`. Chỉ chủ hội thoại đọc được lịch sử, và nhân viên không dùng route này.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ListConversationMessagesEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class ListConversationMessagesEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string NotFoundCode = "SUPPORT_CONVERSATION_NOT_FOUND";
     private static readonly DateTime BaseTime = new(2026, 10, 20, 9, 0, 0, DateTimeKind.Utc);

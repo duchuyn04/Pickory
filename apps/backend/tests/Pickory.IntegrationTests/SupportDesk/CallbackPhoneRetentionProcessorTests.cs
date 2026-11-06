@@ -12,11 +12,11 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-05: job hằng ngày xóa số điện thoại và ghi chú cũ hơn 30 ngày, giữ lại dòng cho báo cáo.
 // Test gọi thẳng `CallbackPhoneRetentionProcessor` với `FakeTimeProvider` và gỡ worker nền để không chạy tranh chấp lúc khởi động.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(SupportDeskCollection.Name)]
 public sealed class CallbackPhoneRetentionProcessorTests(
-    PickoryWebApplicationFactory factory,
-    IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+    SupportDeskWebApplicationFactory factory,
+    SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly DateTimeOffset TestMoment = new(2026, 11, 3, 3, 0, 0, TimeSpan.Zero);
 

@@ -11,15 +11,15 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-04 lát 5: hai route danh mục địa chỉ công khai, chỉ trả dòng đang dùng, sắp theo tên tiếng Việt, và kiểm tra `provinceCode`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AddressEndpointsTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class AddressEndpointsTests : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly DateTime SyncedAt = new(2026, 10, 10, 6, 30, 15, DateTimeKind.Utc);
 
     private readonly PickoryWebApplicationFactory _factory;
     private readonly HttpClient _client;
 
-    public AddressEndpointsTests(PickoryWebApplicationFactory factory)
+    public AddressEndpointsTests(ShippingWebApplicationFactory factory)
     {
         _factory = factory;
         // Client không có cookie, nên mọi request là của khách vãng lai chưa đăng nhập.

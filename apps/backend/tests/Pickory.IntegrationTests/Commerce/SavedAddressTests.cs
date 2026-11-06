@@ -14,8 +14,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-18: sổ địa chỉ của khách đã đăng nhập. Test đi qua route thật và đọc lại DB để chứng minh dữ liệu đã lưu.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class SavedAddressTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class SavedAddressTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const string AddressesPath = "/api/me/addresses";
     private const string ProvinceCode = "1000001";
@@ -29,7 +29,7 @@ public sealed class SavedAddressTests : IClassFixture<PickoryWebApplicationFacto
     private readonly HttpClient _client;
     private readonly List<string> _userIds = [];
 
-    public SavedAddressTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public SavedAddressTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

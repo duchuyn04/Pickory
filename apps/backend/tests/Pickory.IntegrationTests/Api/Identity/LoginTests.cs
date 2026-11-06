@@ -15,8 +15,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Port từ test ID-03, ID-05 và ID-06 của bản Node cho đăng nhập và đăng xuất.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class LoginTests : IClassFixture<IdentityWebApplicationFactory>
 {
     // Một thông điệp cho mọi lỗi đăng nhập, giữ nguyên bản Node.
     private const string InvalidCredentialsMessage = "Email hoặc mật khẩu không chính xác.";
@@ -24,7 +24,7 @@ public sealed class LoginTests : IClassFixture<PickoryWebApplicationFactory>
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public LoginTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public LoginTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

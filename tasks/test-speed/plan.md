@@ -53,14 +53,14 @@ Số đo lấy từ file `trx` của lần chạy đủ suite sau SD-05, trên w
 
 - [x] TS-01 ghi số đo gốc
 - [x] TS-02 dựng dữ liệu test nhanh hơn
-- [ ] TS-03 chạy song song theo nhóm DB
+- [x] TS-03 chạy song song theo nhóm DB
 
 Đã bỏ ngày 2026-11-04: task bỏ chờ thời gian thật cũ và task dùng chung bản API (quyết định 5 và 6).
 
 ### Checkpoint TS
 
-- [ ] Suite đầy đủ xanh 2 lần liên tiếp sau TS-03
-- [ ] Thời gian suite đầy đủ giảm ít nhất 40% so với số đo của TS-01
+- [x] Suite đầy đủ xanh 2 lần liên tiếp sau TS-03
+- [x] Thời gian suite đầy đủ giảm ít nhất 40% so với số đo của TS-01
 - [ ] Review với người dùng
 
 ## Rủi ro

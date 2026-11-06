@@ -21,11 +21,11 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // Kiểm tra endpoint POST /api/admin/support/sessions/{id}/assignment cho nhận phiên (SD-06).
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(SupportDeskCollection.Name)]
 public sealed class AdminSupportSessionClaimEndpointTests(
-    PickoryWebApplicationFactory factory,
-    IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+    SupportDeskWebApplicationFactory factory,
+    SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly DateTimeOffset TestMoment = new(2026, 11, 3, 3, 0, 0, TimeSpan.Zero);
 

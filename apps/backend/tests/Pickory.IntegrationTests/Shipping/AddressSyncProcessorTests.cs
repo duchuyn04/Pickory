@@ -14,9 +14,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-04 lát 1 đến 4: bộ đồng bộ ghi danh mục địa chỉ và tắt dòng không còn dùng. Bộ đồng bộ đọc hết trang và giữ dữ liệu cũ khi GHN lỗi.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AddressSyncProcessorTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class AddressSyncProcessorTests(ShippingWebApplicationFactory factory)
+    : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly DateTimeOffset SyncMoment = new(2026, 10, 10, 6, 30, 15, TimeSpan.Zero);
     private static readonly DateTime OldSyncedAt = new(2026, 9, 1, 1, 2, 3, DateTimeKind.Utc);

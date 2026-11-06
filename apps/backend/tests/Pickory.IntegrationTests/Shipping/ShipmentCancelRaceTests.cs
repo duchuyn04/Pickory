@@ -16,8 +16,8 @@ using Shipment = Pickory.Modules.Shipping.Contracts.Shipments.Shipment;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-08: hủy tay và webhook `cancel` cùng ghi. Chỉ một bên được đổi `ref`, ghi lịch sử và phát sự kiện.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentCancelRaceTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentCancelRaceTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly FakeGhnClient _fake = new();
     private readonly RecordingEventDispatcher _events = new();

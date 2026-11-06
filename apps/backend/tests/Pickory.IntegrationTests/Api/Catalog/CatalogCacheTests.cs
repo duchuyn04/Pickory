@@ -17,8 +17,8 @@ namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CACHE-01: `CATALOG_CACHE_SECONDS` bật cache ngắn cho `GET /api/products` và `GET /api/categories`.
 // Mọi thay đổi catalog xóa cache ngay sau commit, nên khách không thấy dữ liệu cũ sau khi admin sửa.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CatalogCacheTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class CatalogCacheTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     // Đếm lệnh SQL của `CatalogDbContext`. Test chứng minh cache bằng số lệnh, không bằng thời gian phản hồi.
     private sealed class CommandCounter : DbCommandInterceptor
@@ -46,7 +46,7 @@ public sealed class CatalogCacheTests : IClassFixture<PickoryWebApplicationFacto
     private WebApplicationFactory<Program> _cachedFactory = null!;
     private StockTestData.SeededProduct _inStock = null!;
 
-    public CatalogCacheTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CatalogCacheTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

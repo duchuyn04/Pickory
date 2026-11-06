@@ -11,15 +11,15 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-21: khi khách xóa tài khoản, giỏ và sổ địa chỉ bị xóa. Đánh giá và đơn hàng được ẩn danh, giữ nguyên nội dung.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AccountDeletionCommerceDataTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class AccountDeletionCommerceDataTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly CartTestKit _kit;
     private readonly LinkingTestSeed _seed;
 
-    public AccountDeletionCommerceDataTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AccountDeletionCommerceDataTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

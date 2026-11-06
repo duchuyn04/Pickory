@@ -9,13 +9,13 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Port từ test ID-11 của bản Node cho danh mục quyền và quản lý role.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminRolesTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class AdminRolesTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public AdminRolesTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminRolesTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _database = database;
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

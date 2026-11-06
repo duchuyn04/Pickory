@@ -18,8 +18,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-06: route cấu hình commerce của back-office, gồm quyền, đọc, ghi, luật kiểm body và audit.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CommerceSettingsApiTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class CommerceSettingsApiTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const string SettingsPath = "/api/admin/commerce/settings";
     private const string AuditTargetType = "commerce_settings";
@@ -29,7 +29,7 @@ public sealed class CommerceSettingsApiTests : IClassFixture<PickoryWebApplicati
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public CommerceSettingsApiTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CommerceSettingsApiTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

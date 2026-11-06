@@ -14,13 +14,13 @@ namespace Pickory.IntegrationTests.Commerce;
 
 // COM-04 tiêu chí 6: sự kiện giỏ hàng chỉ phát sau commit.
 // Handler thử đọc DB bằng kết nối riêng ngay lúc nhận sự kiện, và kết nối này không thấy dữ liệu chưa commit.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CartEventTimingTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class CartEventTimingTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly CartTestKit _kit;
 
-    public CartEventTimingTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CartEventTimingTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _kit = new CartTestKit(factory, database);

@@ -12,8 +12,8 @@ using Shipment = Pickory.Modules.Shipping.Contracts.Shipments.Shipment;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-07: bên gọi hủy request sau khi GHN đã tạo hoặc hủy đơn. DB vẫn phải ghi nhận kết quả của GHN.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentCallerCancellationTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentCallerCancellationTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly FakeGhnClient _fake = new();
     private readonly RecordingEventDispatcher _events = new();

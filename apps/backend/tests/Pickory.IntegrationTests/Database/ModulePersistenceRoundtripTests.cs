@@ -11,9 +11,9 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Database;
 
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ModulePersistenceRoundtripTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(DatabaseCollection.Name)]
+public sealed class ModulePersistenceRoundtripTests(DatabaseWebApplicationFactory factory)
+    : IClassFixture<DatabaseWebApplicationFactory>
 {
     private static readonly DateTime WrittenAt = new(2026, 10, 5, 12, 34, 56, 789, DateTimeKind.Utc);
     private static readonly DateTime ChangedAt = new(2026, 10, 6, 1, 2, 3, 456, DateTimeKind.Utc);

@@ -7,7 +7,7 @@ using Pickory.Shared.Configuration;
 namespace Pickory.IntegrationTests.Infrastructure;
 
 // Factory có token, shop id và bí mật webhook GHN giả. Test dùng nó để kiểm tra API không lộ các giá trị này.
-public sealed class ConfiguredGhnWebApplicationFactory(IntegrationDatabaseFixture database) : PickoryWebApplicationFactory(database)
+public sealed class ConfiguredGhnWebApplicationFactory(ShippingDatabaseFixture database) : PickoryWebApplicationFactory(database)
 {
     // Giá trị dễ nhận ra trong thân response. Test khẳng định thân response không chứa hai chuỗi bí mật.
     public const string FakeGhnToken = "ghn-token-bi-mat-de-nhan-ra-0001";

@@ -20,8 +20,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // Kiểm tra luồng quản lý sản phẩm từ phân quyền tới toàn vẹn dữ liệu.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ProductManagementTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class ProductManagementTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly PickoryWebApplicationFactory _factory;
@@ -34,7 +34,7 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
     private readonly List<string> _createdBrandIds = new();
     private readonly List<string> _createdMovementIds = new();
 
-    public ProductManagementTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ProductManagementTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _factory = factory;

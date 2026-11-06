@@ -11,13 +11,13 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Port từ test ID-08 của bản Node cho `PUT /api/me/consent` và việc gộp consent khi đăng nhập.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ConsentTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class ConsentTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public ConsentTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ConsentTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _database = database;
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

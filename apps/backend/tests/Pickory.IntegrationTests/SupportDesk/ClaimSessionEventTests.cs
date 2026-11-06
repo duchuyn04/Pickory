@@ -12,11 +12,11 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // Kiểm tra sự kiện SSE khi nhân viên nhận phiên hỗ trợ cho khách và nhân viên khác (SD-06).
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(SupportDeskCollection.Name)]
 public sealed class ClaimSessionEventTests(
-    PickoryWebApplicationFactory factory,
-    IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+    SupportDeskWebApplicationFactory factory,
+    SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string StaffEventsPath = "/api/admin/support/events";
     private static readonly DateTimeOffset TestMoment = new(2026, 11, 3, 3, 0, 0, TimeSpan.Zero);

@@ -11,11 +11,11 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // Kiểm tra hợp đồng API cho 4 ví dụ của admin-sessions.json theo tiêu chí SD-06.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(SupportDeskCollection.Name)]
 public sealed class AdminSupportSessionContractTests(
-    PickoryWebApplicationFactory factory,
-    IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+    SupportDeskWebApplicationFactory factory,
+    SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string FixtureFileName = "admin-sessions.json";
     private static readonly DateTimeOffset TestMoment = new(2026, 11, 3, 3, 0, 0, TimeSpan.Zero);

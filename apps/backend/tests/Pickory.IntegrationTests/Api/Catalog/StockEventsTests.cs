@@ -8,8 +8,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // Luồng SSE công khai gửi sự kiện tồn kho sau khi giao dịch đổi kho commit.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class StockEventsTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class StockEventsTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly PickoryWebApplicationFactory _factory;
@@ -18,7 +18,7 @@ public sealed class StockEventsTests : IClassFixture<PickoryWebApplicationFactor
     private HttpClient _client = null!;
     private string _adminCookie = null!;
 
-    public StockEventsTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public StockEventsTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

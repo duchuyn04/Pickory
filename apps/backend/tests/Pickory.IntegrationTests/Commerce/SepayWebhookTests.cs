@@ -20,7 +20,7 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Commerce;
 
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class SepayWebhookTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string ApiKey = "COM11-secret-not-for-logs";
@@ -32,7 +32,7 @@ public sealed class SepayWebhookTests : IClassFixture<CheckoutWebApplicationFact
     private readonly List<string> _providerIds = [];
     private readonly List<WebApplicationFactory<Program>> _hosts = [];
 
-    public SepayWebhookTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public SepayWebhookTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

@@ -7,7 +7,7 @@ using Pickory.Shared.Configuration;
 namespace Pickory.IntegrationTests.Infrastructure;
 
 // Factory có khóa webhook SePay giả. Test dùng nó để kiểm tra API và audit không lộ khóa này.
-public sealed class ConfiguredSepayWebApplicationFactory(IntegrationDatabaseFixture database)
+public sealed class ConfiguredSepayWebApplicationFactory(CommerceDatabaseFixture database)
     : PickoryWebApplicationFactory(database)
 {
     // Chuỗi dễ nhận ra trong thân response và trong dòng audit.

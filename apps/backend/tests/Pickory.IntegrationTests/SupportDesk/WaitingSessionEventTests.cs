@@ -19,9 +19,9 @@ namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-04: mở phiên phát `session.waiting` tới khách và tới nhân viên sẵn sàng.
 // Test đọc luồng SSE thật của host. Sự kiện chỉ đến từ producer thật của route gửi tin.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class WaitingSessionEventTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class WaitingSessionEventTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string StaffEventsPath = "/api/admin/support/events";
 

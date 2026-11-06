@@ -10,9 +10,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-14: lưu, đọc và dọn phí GHN đã tính. Dùng DB thật và đồng hồ giả để kiểm mốc 24 giờ chính xác tới giây.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class QuoteCacheStoreTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class QuoteCacheStoreTests(ShippingWebApplicationFactory factory)
+    : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly DateTimeOffset SavedMoment = new(2026, 10, 19, 8, 0, 0, TimeSpan.Zero);
 

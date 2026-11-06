@@ -11,15 +11,15 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // Kiểm tra toàn bộ luồng quản lý thương hiệu từ route công khai tới quản trị.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class BrandManagementTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class BrandManagementTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
     private string _adminCookie = null!;
     private string _salesCookie = null!;
 
-    public BrandManagementTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public BrandManagementTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         // Tắt tự động nạp cookie để bài test kiểm soát phiên người dùng chính xác.

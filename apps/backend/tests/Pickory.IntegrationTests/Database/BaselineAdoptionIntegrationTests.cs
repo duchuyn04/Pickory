@@ -7,8 +7,8 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Database;
 
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class BaselineAdoptionIntegrationTests(IntegrationDatabaseFixture database)
+[Collection(DatabaseCollection.Name)]
+public sealed class BaselineAdoptionIntegrationTests(DatabaseFixture database)
 {
     [Fact]
     public async Task Adoption_StampsAllModuleHistoriesIdempotentlyWithoutChangingExistingSchemaOrRecords()

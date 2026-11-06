@@ -17,9 +17,9 @@ namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-14: khi GHN không phản hồi lúc báo phí, `QuoteAsync` dùng phí đã lưu còn hạn rồi bảng phí dự phòng.
 // Lỗi GHN từ chối và lỗi cấu hình giữ nguyên.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class QuoteFallbackTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class QuoteFallbackTests(ShippingWebApplicationFactory factory)
+    : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly DateTimeOffset StartMoment = new(2026, 10, 19, 8, 0, 0, TimeSpan.Zero);
 

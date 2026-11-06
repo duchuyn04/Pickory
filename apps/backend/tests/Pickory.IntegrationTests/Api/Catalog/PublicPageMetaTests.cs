@@ -7,8 +7,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-11: `GET /p/{slug}` và `GET /c/{slug}` trả template của SPA kèm thẻ meta SEO.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class PublicPageMetaTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class PublicPageMetaTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private const string WebOrigin = "https://pickory.test";
 
@@ -23,7 +23,7 @@ public sealed class PublicPageMetaTests : IClassFixture<PickoryWebApplicationFac
     private readonly string _templatePath;
     private Category _category = null!;
 
-    public PublicPageMetaTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public PublicPageMetaTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _templatePath = Path.Combine(Path.GetTempPath(), $"pickory-index-{_suffix}.html");
         File.WriteAllText(_templatePath, Template);

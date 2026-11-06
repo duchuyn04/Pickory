@@ -8,9 +8,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-15: `POST /api/support/conversations/{id}/messages`. Host riêng có đồng hồ giả, nên giới hạn tin kiểm được mà không chờ thật.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class SendConversationMessageEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class SendConversationMessageEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string RateLimitedCode = "SUPPORT_MESSAGE_RATE_LIMITED";
 

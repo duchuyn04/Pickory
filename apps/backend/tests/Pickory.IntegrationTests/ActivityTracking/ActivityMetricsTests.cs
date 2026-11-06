@@ -6,9 +6,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.ActivityTracking;
 
 // ACT-11: `IActivityMetrics` cộng `daily_counters` trong khoảng ngày. Test ghi bộ đếm vào năm 2031 và dùng năm 2035 làm khoảng không có dòng nào, nên kết quả không đổi theo ngày chạy.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ActivityMetricsTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ActivityTrackingCollection.Name)]
+public sealed class ActivityMetricsTests(ActivityTrackingWebApplicationFactory factory, ActivityTrackingDatabaseFixture database)
+    : IClassFixture<ActivityTrackingWebApplicationFactory>, IAsyncLifetime
 {
     public async Task InitializeAsync()
     {

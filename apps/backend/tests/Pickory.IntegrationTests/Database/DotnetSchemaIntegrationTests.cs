@@ -16,9 +16,9 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Database;
 
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(DatabaseCollection.Name)]
+public sealed class DotnetSchemaIntegrationTests(DatabaseWebApplicationFactory factory)
+    : IClassFixture<DatabaseWebApplicationFactory>
 {
     [Fact]
     public async Task EfMigrations_CreateAllTablesMatchingReferenceSchemaAndModuleModels()
@@ -98,11 +98,13 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
 
     internal static void AssertTestConnection(DbContext context)
     {
-        // Không cho phép context dự phòng bằng DB phát triển.
+        // Không cho phép context kết nối vào DB phát triển hoặc DB ngoài nhóm test.
         var expected = new NpgsqlConnectionStringBuilder(PostgresConnectionString.Convert(PickoryWebApplicationFactory.ResolveTestDatabaseUrl()));
         var actual = new NpgsqlConnectionStringBuilder(context.Database.GetDbConnection().ConnectionString);
+        var databaseMatches = actual.Database == expected.Database ||
+                              (actual.Database?.StartsWith(expected.Database + "_", StringComparison.OrdinalIgnoreCase) == true);
         Assert.True(expected.Host == actual.Host && expected.Port == actual.Port &&
-                    expected.Database == actual.Database && expected.Username == actual.Username,
+                    databaseMatches && expected.Username == actual.Username,
             $"{context.GetType().Name} must use TEST_DATABASE_URL, not the development database.");
         Assert.Equal("Npgsql.EntityFrameworkCore.PostgreSQL", context.Database.ProviderName);
     }

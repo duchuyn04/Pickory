@@ -16,9 +16,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-03: `GET /api/admin/support/events`. Test dùng đồng hồ giả cho nhịp tim và hạn chờ thật 5 giây cho mọi lần đọc luồng.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class SupportEventsEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class SupportEventsEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string EventsPath = "/api/admin/support/events";
 

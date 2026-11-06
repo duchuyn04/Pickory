@@ -9,9 +9,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database;
 
 // COM-27: migration thêm cột `shippingFeeSource` vào bảng `orders`. Đơn đặt trước migration phải nhận nguồn `ghn`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CommerceOrderFeeSourceMigrationTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(CommerceCollection.Name)]
+public sealed class CommerceOrderFeeSourceMigrationTests(CommerceWebApplicationFactory factory)
+    : IClassFixture<CommerceWebApplicationFactory>
 {
     private const string FeeSourceMigrationId = "20261019144909_AddOrderShippingFeeSource";
 

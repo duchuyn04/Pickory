@@ -11,8 +11,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api;
 
 // Development có tài liệu đủ chức năng. Production chỉ có tài liệu chỉ xem khi bật `API_DOCS_ENABLED`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public class OpenApiDocumentationTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>
+[Collection(ApiCollection.Name)]
+public class OpenApiDocumentationTests(ApiWebApplicationFactory factory) : IClassFixture<ApiWebApplicationFactory>
 {
     private const string DocumentPath = "/api/openapi/v1.json";
     private const string DocsPath = "/api/docs";

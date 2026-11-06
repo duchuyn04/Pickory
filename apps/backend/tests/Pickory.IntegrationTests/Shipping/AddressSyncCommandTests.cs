@@ -12,9 +12,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-04 lát 6: lệnh `shipping:sync-addresses` chạy trên API test với client GHN giả, và factory không chạy worker nền.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AddressSyncCommandTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class AddressSyncCommandTests(ShippingWebApplicationFactory factory)
+    : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     public async Task InitializeAsync() => await ClearAsync();
 
