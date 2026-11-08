@@ -242,7 +242,7 @@ Nhánh frontend (`todo-frontend.md`):
 - [x] SD-UI7 trang `/support` của khách
 - [ ] SD-UI8 một mã khách vãng lai cho mọi request đầu trang
 - [x] SD-UI6 form số điện thoại và form CSAT
-- [ ] SD-UI2 khung chat và mẫu trả lời nhanh
+- [x] SD-UI2 khung chat và mẫu trả lời nhanh
 - [ ] SD-UI3 thông tin khách và hộp thoại chuyển phiên
 - [ ] SD-UI4 tab Gọi lại
 

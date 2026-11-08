@@ -16,14 +16,21 @@ import {
   SESSIONS_QUERY_KEY,
   SUPPORT_EVENTS_URL,
   SUPPORT_QUERY_KEY,
+  staffMessagesQueryKey,
 } from './support-desk-api';
-import { parsePresenceChange, type StaffPresence } from './support-desk-schemas';
+import {
+  parseMessageCreatedEvent,
+  parsePresenceChange,
+  type StaffPresence,
+} from './support-desk-schemas';
 import { SupportEventStream, type StreamStatus } from '../shared/support-event-stream';
 
 const PRESENCE_EVENT = 'presence.changed';
 // Ba sự kiện của phiên. Hợp đồng ở quyết định 30 của `tasks/support-desk/plan.md`.
 const SESSION_EVENTS = ['session.waiting', 'session.assigned', 'session.closed'];
-const SUPPORT_EVENT_NAMES = [PRESENCE_EVENT, ...SESSION_EVENTS];
+// Tin mới của hội thoại: chỉ đọc lại lịch sử tin của hội thoại trong sự kiện.
+const MESSAGE_CREATED_EVENT = 'message.created';
+const SUPPORT_EVENT_NAMES = [PRESENCE_EVENT, ...SESSION_EVENTS, MESSAGE_CREATED_EVENT];
 
 export type SupportEventHandler = (eventName: string, data: unknown) => void;
 
@@ -84,6 +91,15 @@ export function SupportEventsProvider({ children }: { children: ReactNode }) {
           if (SESSION_EVENTS.includes(eventName)) {
             // Sự kiện của phiên chỉ báo có thay đổi. Client đọc lại danh sách thay vì tin dữ liệu trong sự kiện.
             void queryClient.invalidateQueries({ queryKey: SESSIONS_QUERY_KEY });
+          }
+          if (eventName === MESSAGE_CREATED_EVENT) {
+            const created = parseMessageCreatedEvent(data);
+            // Sự kiện sai dạng bị bỏ qua. Chỉ đọc lại lịch sử của hội thoại trong sự kiện, không đọc hội thoại khác.
+            if (created) {
+              void queryClient.invalidateQueries({
+                queryKey: staffMessagesQueryKey(created.conversationId),
+              });
+            }
           }
           if (eventName === PRESENCE_EVENT) applyPresenceEventToCache(queryClient, data);
           for (const handler of handlersRef.current) handler(eventName, data);

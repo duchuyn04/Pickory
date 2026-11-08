@@ -1,0 +1,207 @@
+/* Khung chat của nhân viên: lịch sử tin cuộn riêng, dưới cùng là ô soạn. Chỉ dùng token. */
+/* Chiều cao theo khung nhìn chỉ áp dụng khi có phiên đang mở, để khung trống màn hẹp không bị kéo cao. */
+/* Trừ phần đầu trang và lề: màn hẹp trừ 240px, ba cột trừ 220px. */
+/* Thêm sàn 320px cho màn xoay ngang. */
+.support-chat-open {
+  height: max(320px, min(720px, calc(100vh - 240px)));
+  height: max(320px, min(720px, calc(100dvh - 240px)));
+}
+
+@media (min-width: 1180px) {
+  .support-chat-open {
+    height: max(320px, min(760px, calc(100vh - 220px)));
+    height: max(320px, min(760px, calc(100dvh - 220px)));
+  }
+}
+
+/* Vùng cuộn chiếm phần còn lại của thẻ. `min-height: 0` để flex không đẩy ô soạn ra ngoài. */
+.support-chat-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: var(--space-3) 14px;
+}
+
+.support-chat-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.support-chat-message {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 85%;
+  min-width: 0;
+}
+
+/* Tin khách nằm trái, tin nhân viên nằm phải. Nhãn của tin nhân viên canh phải theo bong bóng. */
+.support-chat-message.is-customer {
+  align-self: flex-start;
+}
+
+.support-chat-message.is-staff {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.support-chat-message.is-system {
+  align-self: center;
+  max-width: 100%;
+}
+
+.support-chat-meta {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+.support-chat-sender {
+  font-weight: 600;
+}
+
+.support-chat-bubble {
+  padding: 8px 12px;
+  border-radius: var(--radius-control);
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.support-chat-message.is-staff .support-chat-bubble {
+  background: var(--color-brand-soft);
+}
+
+.support-chat-message.is-system .support-chat-system {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  font-style: italic;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* Dòng phân cách giữa hai phiên: chữ giữa, hai vạch mảnh hai bên. */
+.support-chat-separator {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: var(--space-1) 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+.support-chat-separator::before,
+.support-chat-separator::after {
+  content: '';
+  flex: 1;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.support-chat-claim {
+  display: flex;
+  justify-content: flex-end;
+  padding: var(--space-3) 14px 0;
+}
+
+/* Ô soạn bám đáy thẻ, tách khỏi vùng cuộn bằng đường kẻ. */
+.support-chat-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) 14px;
+  border-top: 1px solid var(--color-border);
+}
+
+.support-chat-composer-bar {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-end;
+}
+
+/* `min-width: 0` để ô co lại được ở màn hẹp, không đẩy nút gửi tràn hàng. */
+.support-chat-composer-field {
+  flex: 1;
+  min-width: 0;
+}
+/* Ô soạn tự chỉnh chiều cao bằng JS, nên tắt tay kéo của trình duyệt để không vỡ bố cục. */
+.support-chat-composer-field textarea {
+  resize: none;
+}
+
+.support-chat-composer-send {
+  flex: 0 0 auto;
+}
+
+.support-chat-composer-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-2);
+}
+
+.support-chat-composer-hint {
+  margin: 0;
+}
+
+.support-chat-composer-counter {
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+/* Danh sách mẫu nằm dưới ô soạn, cuộn được khi dài và không che nút gửi. */
+.support-canned-list {
+  margin: 0;
+  padding: var(--space-1);
+  max-height: 220px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-popover);
+  list-style: none;
+}
+
+.support-canned-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: var(--radius-chip);
+}
+
+.support-canned-item.is-active {
+  background: var(--color-surface-hover);
+}
+
+.support-canned-shortcut {
+  flex: 0 0 auto;
+  color: var(--color-brand);
+  font-size: var(--text-label);
+  font-weight: 600;
+}
+
+/* Đoạn đầu nội dung cắt một dòng, để mục mẫu cao cố định dù nội dung dài. */
+.support-canned-body {
+  flex: 1;
+  min-width: 0;
+  color: var(--color-ink-secondary);
+  font-size: var(--text-label);
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+}
+
+.support-canned-empty {
+  padding: 8px;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}

@@ -30,8 +30,13 @@ export interface EventStreamMockOptions {
   eventNames: readonly string[];
 }
 
+export interface MockRouteOptions {
+  // Ghi đè thân phản hồi của ví dụ khi test cần lượng dữ liệu khác mẫu, ví dụ 50 tin cho cuộn trang.
+  responseOverride?: unknown;
+}
+
 export interface SupportDeskRouteMocks {
-  mockRoute(fixtureFile: string, exampleName: string): Promise<void>;
+  mockRoute(fixtureFile: string, exampleName: string, options?: MockRouteOptions): Promise<void>;
   mockEventStream(options: EventStreamMockOptions): Promise<void>;
 }
 
@@ -51,13 +56,17 @@ export function createSupportDeskRouteMocks(
   const loadOpenApiDocument = options.loadOpenApiDocument ?? fetchOpenApiDocument;
 
   return {
-    async mockRoute(fixtureFile, exampleName) {
+    async mockRoute(fixtureFile, exampleName, mockOptions) {
       const example = findSupportDeskExample(fixtureFile, exampleName);
       // Không gắn dữ liệu giả cho route backend đã có. Test đỏ để người sửa gỡ lời gọi helper.
       await assertRouteIsMissing(openApiUrl, loadOpenApiDocument, example);
+      const effectiveExample =
+        mockOptions?.responseOverride !== undefined
+          ? { ...example, response: mockOptions.responseOverride }
+          : example;
       await options.page.route(
-        (url) => matchesExampleUrl(url, example),
-        (route) => fulfillExample(route, example),
+        (url) => matchesExampleUrl(url, effectiveExample),
+        (route) => fulfillExample(route, effectiveExample),
       );
     },
 

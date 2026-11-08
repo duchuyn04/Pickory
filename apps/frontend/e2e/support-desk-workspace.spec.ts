@@ -44,12 +44,17 @@ async function openStaffSession(browser: Browser): Promise<StaffSession> {
   return { context, page, consoleIssues, allowedFailures };
 }
 
-// Trả dữ liệu mẫu cho hai route backend chưa có. Helper đọc tài liệu OpenAPI trước khi gắn route.
+// Trả dữ liệu mẫu cho các route backend chưa có. Helper đọc tài liệu OpenAPI trước khi gắn route.
 async function mockUnfinishedQueueRoutes(page: Page) {
   const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
   await routes.mockRoute('admin-sessions.json', 'hàng chờ');
   await routes.mockRoute('admin-sessions.json', 'phiên của tôi sau khi đồng nghiệp chuyển');
   await routes.mockRoute('admin-callbacks.json', 'danh sách yêu cầu gọi lại');
+  // Bốn route của khung chat SD-UI2: nhận phiên, gửi tin, lịch sử tin và danh sách mẫu.
+  await routes.mockRoute('admin-sessions.json', 'nhận phiên');
+  await routes.mockRoute('admin-sessions.json', 'nhân viên gửi tin');
+  await routes.mockRoute('admin-sessions.json', 'lịch sử tin của hội thoại cho nhân viên');
+  await routes.mockRoute('admin-canned-responses.json', 'danh sách mẫu');
 }
 
 async function readOwnUserId(page: Page): Promise<string> {
@@ -441,6 +446,210 @@ test.describe('SD-UI1: màn CSKH', () => {
         path: screenshotPath(testInfo, `workspace-${viewport.name}-callbacks.png`),
         fullPage: true,
       });
+    });
+  }
+
+  // SD-UI2: khung chat và mẫu trả lời nhanh. Bốn route của khung chat trả dữ liệu mẫu qua helper SD-C2.
+  function queueRow(page: Page) {
+    // Dòng phiên là một nút với tên truy cập gồm tin đầu và thời gian chờ.
+    return page.getByRole('button', { name: /Đơn PK123/ });
+  }
+
+  function chatComposer(page: Page) {
+    return page.getByRole('combobox', { name: 'Nội dung tin nhắn' });
+  }
+
+  async function openWaitingSession(page: Page) {
+    await openDeskPage(page);
+    await queueRow(page).click();
+    // Lịch sử tin mẫu hiện ra nghĩa là khung chat đã nạp xong.
+    // Dùng tin của nhân viên để tránh trùng chữ với tin đầu ở dòng hàng chờ (strict mode).
+    await expect(page.getByText('Chào bạn, mình kiểm đơn PK123 ngay nhé.')).toBeVisible();
+  }
+
+  test('SD-UI2: mở phiên từ hàng chờ hiện lịch sử tin, nút Nhận và ô soạn tắt kèm chú thích', async () => {
+    const { page } = support;
+    await openWaitingSession(page);
+
+    // Nhãn người gửi theo vai trò: khách và nhân viên.
+    // Lịch sử mẫu không có tin hệ thống; nhãn hệ thống được unit test kiểm riêng.
+    const chatRegion = page.locator('section', {
+      has: page.getByRole('heading', { name: 'Khung chat' }),
+    });
+    await expect(chatRegion.getByText('Khách', { exact: true })).toBeVisible();
+    await expect(chatRegion.getByText('Lan - CSKH', { exact: true })).toBeVisible();
+    // Nút Nhận hiện ở đầu khung chat; ô soạn tắt với chú thích nêu rõ lý do.
+    await expect(page.getByRole('button', { name: 'Nhận', exact: true })).toBeVisible();
+    await expect(chatComposer(page)).toBeDisabled();
+    await expect(page.getByText('Nhận hội thoại để trả lời.')).toBeVisible();
+  });
+
+  test('SD-UI2: bấm Nhận gọi POST assignment và ô soạn bật ngay', async () => {
+    const { page } = support;
+    await openWaitingSession(page);
+
+    await page.getByRole('button', { name: 'Nhận', exact: true }).click();
+    await expect(chatComposer(page)).toBeEnabled();
+    // Nhận xong thì nút Nhận biến mất khỏi khung chat.
+    await expect(page.getByRole('button', { name: 'Nhận', exact: true })).toHaveCount(0);
+  });
+
+  test('SD-UI2: gõ / mở danh sách mẫu, mũi tên chọn mục, Enter chèn mẫu đã thay biến', async () => {
+    const { page } = support;
+    await openWaitingSession(page);
+    // Nhận phiên để ô soạn bật, rồi mở danh sách mẫu.
+    await page.getByRole('button', { name: 'Nhận', exact: true }).click();
+    await expect(chatComposer(page)).toBeEnabled();
+
+    await chatComposer(page).fill('/');
+    const listbox = page.getByRole('listbox');
+    await expect(listbox).toBeVisible();
+    // Dữ liệu mẫu có hai dòng: /camon dùng chung và /kiemdon cá nhân.
+    await expect(page.getByRole('option', { name: /\/camon/ })).toHaveCount(1);
+    await expect(page.getByRole('option', { name: /\/kiemdon/ })).toHaveCount(1);
+
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByRole('option', { name: /\/kiemdon/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    await page.keyboard.press('Enter');
+    // Biến mẫu chưa có giá trị thật (SD-UI3 nối sau), nên {ten_khach} giữ nguyên theo luật.
+    await expect(chatComposer(page)).toHaveValue('Mình kiểm đơn {ma_don} giúp bạn nhé.');
+    await expect(listbox).toHaveCount(0);
+  });
+
+  test('SD-UI2: Enter gửi tin qua POST messages và dọn ô soạn', async () => {
+    const { page } = support;
+    await openWaitingSession(page);
+    await page.getByRole('button', { name: 'Nhận', exact: true }).click();
+    await expect(chatComposer(page)).toBeEnabled();
+
+    await chatComposer(page).fill('Chào bạn, mình kiểm đơn PK123 ngay nhé.');
+    await page.keyboard.press('Enter');
+    // Gửi thành công thì ô sạch. Lịch sử mẫu cố định nên tin gửi không hiện thêm ở E2E.
+    await expect(chatComposer(page)).toHaveValue('');
+  });
+
+  // Sinh 50 tin nhắn để kiểm tra vùng tin cuộn và ô soạn bám đáy khi lịch sử dài (R1-02).
+  function createFiftyMessages() {
+    const items = [];
+    for (let index = 1; index <= 50; index++) {
+      const isStaff = index % 2 === 0;
+      items.push({
+        id: `m-scroll-${index.toString().padStart(3, '0')}`,
+        sessionId: '5e550000-0000-4000-8000-000000000001',
+        role: isStaff ? 'staff' : 'customer',
+        body: `Tin nhắn thứ ${index} trong hội thoại dài để kiểm tra vùng cuộn của khung chat.`,
+        action: null,
+        staffDisplayName: isStaff ? 'Lan - CSKH' : null,
+        createdAt: new Date(
+          Date.UTC(2026, 10, 3, 2, Math.floor(index / 2), (index % 2) * 30),
+        ).toISOString(),
+      });
+    }
+    return { data: { items, nextCursor: null } };
+  }
+
+  for (const viewport of [
+    { name: '1280', width: 1280, height: 800 },
+    { name: '375', width: 375, height: 812 },
+  ]) {
+    test(`SD-UI2: ảnh chụp khung chat ${viewport.name}px không tràn ngang và cuộn được với 50 tin`, async () => {
+      const testInfo = test.info();
+      const { page } = support;
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+      // Ghi đè lịch sử với 50 tin nhắn để kiểm tra vùng cuộn thật và chụp ảnh có thanh cuộn (R1-02).
+      const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
+      await routes.mockRoute('admin-sessions.json', 'lịch sử tin của hội thoại cho nhân viên', {
+        responseOverride: createFiftyMessages(),
+      });
+
+      await openDeskPage(page);
+      await queueRow(page).click();
+
+      const lastMessageLocator = page
+        .locator('.support-chat-message')
+        .filter({ hasText: 'Tin nhắn thứ 50' });
+      await expect(lastMessageLocator).toBeVisible();
+
+      const scrollRegion = page.locator('.support-chat-scroll');
+      // Đọc scrollTop bằng expect.poll để đảm bảo useEffect cuộn đáy đã chạy xong (R2-02).
+      await expect
+        .poll(async () => scrollRegion.evaluate((el) => el.scrollTop), {
+          message: 'Vùng tin phải cuộn xuống đáy khi có 50 tin',
+        })
+        .toBeGreaterThan(0);
+
+      await page.getByRole('button', { name: 'Nhận', exact: true }).click();
+      await expect(chatComposer(page)).toBeEnabled();
+
+      // Mở danh sách mẫu: ô soạn cao thêm, kiểm tra tin 50 không bị cắt nhờ ResizeObserver (R2-02).
+      await chatComposer(page).fill('/');
+      await expect(page.getByRole('listbox')).toBeVisible();
+      await expectNoHorizontalOverflow(page);
+
+      // Ở 375px (xếp dọc): cuộn khung chat vào tầm nhìn trước khi đo.
+      const chatCard = page.locator('.support-chat-open');
+      await chatCard.scrollIntoViewIfNeeded();
+
+      // Tin 50 phải nằm trọn trong vùng cuộn: cạnh dưới tin không vượt quá cạnh dưới vùng (R2-02).
+      await expect
+        .poll(
+          async () => {
+            const messageBox = await readBox(lastMessageLocator);
+            const scrollBox = await readBox(scrollRegion);
+            return messageBox.y + messageBox.height <= scrollBox.y + scrollBox.height + 2;
+          },
+          {
+            message:
+              'Cạnh dưới tin 50 không được vượt quá cạnh dưới vùng cuộn khi mở danh sách mẫu',
+          },
+        )
+        .toBe(true);
+
+      const composerBox = await readBox(chatComposer(page));
+      expect(composerBox.x).toBeGreaterThanOrEqual(0);
+      expect(composerBox.x + composerBox.width).toBeLessThanOrEqual(viewport.width);
+      // Kiểm tra ô soạn nằm trong khung nhìn theo chiều dọc sau scrollIntoViewIfNeeded (R2-02 mục 2).
+      expect(composerBox.y).toBeGreaterThanOrEqual(0);
+      expect(composerBox.y + composerBox.height).toBeLessThanOrEqual(viewport.height);
+
+      const cannedListBox = await readBox(page.getByRole('listbox'));
+      expect(cannedListBox.x).toBeGreaterThanOrEqual(0);
+      expect(cannedListBox.x + cannedListBox.width).toBeLessThanOrEqual(viewport.width);
+
+      // Đính kèm số đo thật bằng testInfo.attach.
+      const scrollMetrics = await scrollRegion.evaluate((el) => ({
+        scrollTop: el.scrollTop,
+        scrollHeight: el.scrollHeight,
+        clientHeight: el.clientHeight,
+      }));
+      const chatCardBox = await readBox(chatCard);
+      const message50Box = await readBox(lastMessageLocator);
+      const scrollRegionBox = await readBox(scrollRegion);
+
+      const measurements = {
+        viewport,
+        chatCard: chatCardBox,
+        scrollRegion: scrollRegionBox,
+        scrollMetrics,
+        message50: message50Box,
+        composer: composerBox,
+        cannedList: cannedListBox,
+      };
+
+      await testInfo.attach(`measurements-${viewport.name}`, {
+        body: JSON.stringify(measurements, null, 2),
+        contentType: 'application/json',
+      });
+
+      await page.screenshot({
+        path: screenshotPath(testInfo, `chat-${viewport.name}.png`),
+        fullPage: true,
+      });
+      await page.setViewportSize({ width: 1280, height: 800 });
     });
   }
 });

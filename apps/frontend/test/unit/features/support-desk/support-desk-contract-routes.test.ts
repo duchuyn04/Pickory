@@ -333,3 +333,33 @@ describe('route stream SSE', () => {
     ).rejects.toThrow('Không có sự kiện "khong.co" trong file mẫu "admin-events.json".');
   });
 });
+
+describe('mockRoute với responseOverride', () => {
+  it('trả thân phản hồi ghi đè khi được cung cấp', async () => {
+    const fakePage = createFakePage();
+    const routes = createSupportDeskRouteMocks({
+      page: fakePage.page,
+      apiOrigin: API_ORIGIN,
+      loadOpenApiDocument: createOpenApiLoader({ paths: {} }).load,
+    });
+
+    const customData = { items: [{ id: 'custom-1' }], nextCursor: null };
+    await routes.mockRoute('admin-sessions.json', 'lịch sử tin của hội thoại cho nhân viên', {
+      responseOverride: { data: customData },
+    });
+
+    const dispatched = await dispatchRequest(
+      fakePage,
+      'GET',
+      'http://localhost/api/admin/support/conversations/c0a80000-0000-4000-8000-000000000001/messages?limit=50',
+    );
+
+    expect(dispatched.fulfilled).toEqual([
+      {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ data: customData }),
+      },
+    ]);
+  });
+});

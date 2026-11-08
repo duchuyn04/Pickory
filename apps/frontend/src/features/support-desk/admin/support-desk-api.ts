@@ -1,13 +1,21 @@
 import { apiRequest } from '../../../shared/api';
 import {
   parseCallbackRequests,
+  parseCannedResponses,
+  parseQueueSessions,
+  parseSessionAssignment,
+  parseStaffMessagePage,
   parseStaffPresence,
   parseStaffPresenceList,
-  parseQueueSessions,
+  parseStaffViewMessage,
   type CallbackRequest,
+  type CannedResponse,
   type PresenceStatus,
   type QueueSession,
+  type SessionAssignment,
+  type StaffMessagePage,
   type StaffPresence,
+  type StaffViewMessage,
 } from './support-desk-schemas';
 
 export const SUPPORT_EVENTS_URL = '/api/admin/support/events';
@@ -17,6 +25,15 @@ export const SUPPORT_QUERY_KEY = ['support'] as const;
 export const PRESENCE_QUERY_KEY = [...SUPPORT_QUERY_KEY, 'presence'] as const;
 export const SESSIONS_QUERY_KEY = [...SUPPORT_QUERY_KEY, 'sessions'] as const;
 export const CALLBACKS_QUERY_KEY = [...SUPPORT_QUERY_KEY, 'callback-requests'] as const;
+export const CANNED_RESPONSES_QUERY_KEY = [...SUPPORT_QUERY_KEY, 'canned-responses'] as const;
+
+// Khóa query của lịch sử tin theo hội thoại. Sự kiện `message.created` chỉ đọc lại đúng khóa này.
+export function staffMessagesQueryKey(conversationId: string): readonly unknown[] {
+  return [...SUPPORT_QUERY_KEY, 'messages', conversationId];
+}
+
+// Trang đầu của lịch sử tin. Nút tải tin cũ hơn bằng `cursor` thuộc task khác.
+const MESSAGE_PAGE_LIMIT = 50;
 
 export type SessionView = 'waiting' | 'mine';
 
@@ -38,4 +55,31 @@ export async function fetchSessions(view: SessionView): Promise<QueueSession[]> 
 
 export async function fetchCallbackRequests(): Promise<CallbackRequest[]> {
   return parseCallbackRequests(await apiRequest<unknown>('/api/admin/support/callback-requests'));
+}
+
+export async function fetchStaffMessages(conversationId: string): Promise<StaffMessagePage> {
+  const data = await apiRequest<unknown>(
+    `/api/admin/support/conversations/${conversationId}/messages?limit=${MESSAGE_PAGE_LIMIT}`,
+  );
+  return parseStaffMessagePage(data);
+}
+
+// Route nhận phiên không có body. Chống bấm đôi nằm ở component gọi hàm này.
+export async function claimSupportSession(sessionId: string): Promise<SessionAssignment> {
+  const data = await apiRequest<unknown>(`/api/admin/support/sessions/${sessionId}/assignment`, {
+    method: 'POST',
+  });
+  return parseSessionAssignment(data);
+}
+
+export async function sendStaffMessage(sessionId: string, body: string): Promise<StaffViewMessage> {
+  const data = await apiRequest<unknown>(`/api/admin/support/sessions/${sessionId}/messages`, {
+    method: 'POST',
+    body: JSON.stringify({ body }),
+  });
+  return parseStaffViewMessage(data);
+}
+
+export async function fetchCannedResponses(): Promise<CannedResponse[]> {
+  return parseCannedResponses(await apiRequest<unknown>('/api/admin/support/canned-responses'));
 }

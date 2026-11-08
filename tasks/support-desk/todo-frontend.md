@@ -91,18 +91,18 @@ Người dùng chọn cách sửa này ngày 2026-11-04. Backend không đổi.
 ### SD-UI2: Khung chat và mẫu trả lời nhanh
 **Mô tả:** Cột giữa của màn CSKH: lịch sử tin có nhãn khách, nhân viên, hệ thống. Ô soạn có nút gửi và gõ `/` để chọn mẫu. Ngày 2026-10-18 task bỏ nhãn bot, nguồn bot và nút "Gợi ý trả lời". Ngày 2026-11-03 task thêm nút "Nhận" ở phiên đang chờ.
 **Tiêu chí nghiệm thu:**
-- [ ] Schema `zod` đọc được mọi ví dụ nhận phiên, gửi tin và lịch sử tin của `admin-sessions.json`, và ví dụ danh sách của `admin-canned-responses.json`
-- [ ] Nút "Nhận" gọi `POST /api/admin/support/sessions/{id}/assignment`. Lỗi 409 `SUPPORT_SESSION_ALREADY_CLAIMED` hiện "Đã có người nhận"
-- [ ] Sự kiện `message.created` của hội thoại đang mở làm lịch sử đọc lại
+- [x] Schema `zod` đọc được mọi ví dụ nhận phiên, gửi tin và lịch sử tin của `admin-sessions.json`, và ví dụ danh sách của `admin-canned-responses.json`
+- [x] Nút "Nhận" gọi `POST /api/admin/support/sessions/{id}/assignment`. Lỗi 409 `SUPPORT_SESSION_ALREADY_CLAIMED` hiện "Đã có người nhận"
+- [x] Sự kiện `message.created` của hội thoại đang mở làm lịch sử đọc lại
   Kiểm đầu cuối ở SD-E2E1.
-- [ ] Tin `staff` có `staffDisplayName` bằng `null` hiện "Nhân viên CSKH"
-- [ ] Gõ `/` mở danh sách mẫu. Mũi tên lên, xuống chọn mẫu. Enter chèn mẫu đã thay biến
-- [ ] Ô soạn tắt và có chú thích khi nhân viên không giữ phiên
-- [ ] Lỗi 403 `SUPPORT_SESSION_NOT_ASSIGNED` hiện bằng `ErrorAlert`
-- [ ] Lịch sử hiện mọi phiên cũ của cùng hội thoại, có dòng phân cách giữa các phiên
-- [ ] Có `label` cho ô soạn. Dùng được bằng bàn phím
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang
-- [ ] Playwright console có 0 lỗi và 0 cảnh báo
+- [x] Tin `staff` có `staffDisplayName` bằng `null` hiện "Nhân viên CSKH"
+- [x] Gõ `/` mở danh sách mẫu. Mũi tên lên, xuống chọn mẫu. Enter chèn mẫu đã thay biến
+- [x] Ô soạn tắt và có chú thích khi nhân viên không giữ phiên
+- [x] Lỗi 403 `SUPPORT_SESSION_NOT_ASSIGNED` hiện bằng `ErrorAlert`
+- [x] Lịch sử hiện mọi phiên cũ của cùng hội thoại, có dòng phân cách giữa các phiên
+- [x] Có `label` cho ô soạn. Dùng được bằng bàn phím
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang
+- [x] Playwright console có 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest cho bộ chọn mẫu và ô soạn; ảnh chụp
 **Phụ thuộc:** SD-UI1, SD-C2 · **Quy mô:** M
 
