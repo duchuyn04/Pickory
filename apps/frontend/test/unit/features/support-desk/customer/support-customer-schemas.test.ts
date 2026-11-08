@@ -1,12 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../../../../../src/shared/api';
 import {
+  parseSupportCallbackRequest,
   parseSupportConversation,
+  parseSupportCsatResponse,
   parseSupportCustomerEvent,
   parseSupportMessage,
   parseSupportMessagePage,
 } from '../../../../../src/features/support-desk/customer/support-customer-schemas';
-import { sendSupportMessage } from '../../../../../src/features/support-desk/customer/support-customer-api';
+import {
+  sendCallbackRequest,
+  sendSupportMessage,
+  submitSupportCsat,
+} from '../../../../../src/features/support-desk/customer/support-customer-api';
 import {
   findSupportDeskExample,
   selectSupportDeskEvents,
@@ -146,6 +152,30 @@ describe('schema phía khách của support desk', () => {
     expect(parseSupportCustomerEvent('session.waiting', { wrong: true })).toBeNull();
     expect(parseSupportCustomerEvent('message.created', 'not-an-object')).toBeNull();
   });
+
+  it('đọc ví dụ "khách để lại số điện thoại" thành yêu cầu gọi lại chờ', () => {
+    const example = findSupportDeskExample(CUSTOMER_API_FIXTURE, 'khách để lại số điện thoại');
+    // Schema bảo đảm yêu cầu gọi lại có mã, trạng thái chờ và thời điểm tạo.
+    const callbackRequest = parseSupportCallbackRequest(readExampleData(example));
+    expect(callbackRequest).toEqual({
+      id: 'cb000000-0000-4000-8000-000000000001',
+      status: 'pending',
+      createdAt: '2026-11-03T14:05:00Z',
+    });
+  });
+
+  it('đọc ví dụ "khách chấm điểm phiên vừa kết thúc" thành điểm CSAT hợp lệ', () => {
+    const example = findSupportDeskExample(
+      CUSTOMER_API_FIXTURE,
+      'khách chấm điểm phiên vừa kết thúc',
+    );
+    // Schema bảo đảm điểm số nằm trong khoảng từ 1 đến 5.
+    const csat = parseSupportCsatResponse(readExampleData(example));
+    expect(csat).toEqual({
+      sessionId: '5e550000-0000-4000-8000-000000000001',
+      score: 5,
+    });
+  });
 });
 
 describe('gửi tin phía khách', () => {
@@ -165,6 +195,58 @@ describe('gửi tin phía khách', () => {
       code: 'SUPPORT_MESSAGE_RATE_LIMITED',
       status: 429,
       message: 'Bạn gửi tin quá nhanh. Hãy chờ một chút rồi gửi lại.',
+    });
+  });
+});
+
+describe('yêu cầu gọi lại phía khách', () => {
+  it('lỗi 429 "yêu cầu gọi lại thứ 4 trong ngày" thành ApiError với mã CALLBACK_LIMIT_REACHED', async () => {
+    const example = findSupportDeskExample(
+      CUSTOMER_API_FIXTURE,
+      'yêu cầu gọi lại thứ 4 trong ngày',
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json(example.response, { status: example.status })),
+    );
+
+    // Bắt lỗi khi gọi quá giới hạn trong ngày để giao diện hiện thông báo.
+    const caught = await sendCallbackRequest({
+      conversationId: 'c0a80000-0000-4000-8000-000000000001',
+      phone: '0901234567',
+      note: null,
+    }).catch((error: unknown) => error);
+
+    expect(caught).toBeInstanceOf(ApiError);
+    expect(caught).toMatchObject({
+      code: 'CALLBACK_LIMIT_REACHED',
+      status: 429,
+      message: 'Bạn đã gửi 3 yêu cầu gọi lại hôm nay. CSKH sẽ liên hệ sớm.',
+    });
+  });
+});
+
+describe('chấm điểm CSAT phía khách', () => {
+  it('lỗi 409 "chấm điểm khi phiên chưa kết thúc" thành ApiError với mã SUPPORT_SESSION_OPEN', async () => {
+    const example = findSupportDeskExample(
+      CUSTOMER_API_FIXTURE,
+      'chấm điểm khi phiên chưa kết thúc',
+    );
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json(example.response, { status: example.status })),
+    );
+
+    // Bắt lỗi khi chấm điểm phiên chưa kết thúc để giữ lựa chọn của khách.
+    const caught = await submitSupportCsat('c0a80000-0000-4000-8000-000000000001', 4).catch(
+      (error: unknown) => error,
+    );
+
+    expect(caught).toBeInstanceOf(ApiError);
+    expect(caught).toMatchObject({
+      code: 'SUPPORT_SESSION_OPEN',
+      status: 409,
+      message: 'Phiên hỗ trợ chưa kết thúc nên chưa chấm điểm được.',
     });
   });
 });

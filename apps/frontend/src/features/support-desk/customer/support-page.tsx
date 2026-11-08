@@ -61,7 +61,10 @@ export function SupportPage({ createEventSource }: SupportPageProps = {}) {
             Đang tải hội thoại...
           </p>
         ) : (
-          <SupportMessageList messages={controller.messages} />
+          <SupportMessageList
+            messages={controller.messages}
+            conversationId={controller.conversation?.id ?? null}
+          />
         )}
         {controller.sendError !== null && <ErrorAlert message={controller.sendError} />}
         <SupportMessageComposer

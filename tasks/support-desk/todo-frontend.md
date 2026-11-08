@@ -78,13 +78,13 @@ Người dùng chọn cách sửa này ngày 2026-11-04. Backend không đổi.
 ### SD-UI6: Form số điện thoại và form CSAT phía khách
 **Mô tả:** `CallbackRequestForm` và `CsatForm` trong `apps/frontend/src/features/support-desk/customer/`. Trang `/support` của SD-UI7 render hai form theo `action` của tin hệ thống (quyết định 21). Ngày 2026-10-18 task đổi nơi gắn form từ widget của `shopping-assistant` sang `/support`.
 **Tiêu chí nghiệm thu:**
-- [ ] Schema `zod` đọc được các ví dụ gọi lại và chấm điểm của `customer-api.json`
-- [ ] Form số điện thoại kiểm bằng Zod cùng luật với backend. Lỗi hiện dưới ô bằng `FieldError`
-- [ ] Lỗi 429 `CALLBACK_LIMIT_REACHED` hiện thông báo tiếng Việt, form không gửi lại
-- [ ] Gửi thành công thì form đổi thành lời xác nhận
-- [ ] Form CSAT có 5 nút chọn điểm dùng được bằng bàn phím, mỗi nút có tên truy cập
-- [ ] Ảnh chụp trong khung chat ở 1280 px và 375 px không tràn ngang
-- [ ] Playwright console có 0 lỗi và 0 cảnh báo
+- [x] Schema `zod` đọc được các ví dụ gọi lại và chấm điểm của `customer-api.json`
+- [x] Form số điện thoại kiểm bằng Zod cùng luật với backend. Lỗi hiện dưới ô bằng `FieldError`
+- [x] Lỗi 429 `CALLBACK_LIMIT_REACHED` hiện thông báo tiếng Việt, form không gửi lại
+- [x] Gửi thành công thì form đổi thành lời xác nhận
+- [x] Form CSAT có 5 nút chọn điểm dùng được bằng bàn phím, mỗi nút có tên truy cập
+- [x] Ảnh chụp trong khung chat ở 1280 px và 375 px không tràn ngang
+- [x] Playwright console có 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; ảnh chụp
 **Phụ thuộc:** SD-UI7, SD-C2 · **Quy mô:** M
 

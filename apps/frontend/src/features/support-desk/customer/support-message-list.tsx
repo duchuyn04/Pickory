@@ -23,10 +23,11 @@ function senderName(message: SupportMessage): string {
 
 interface SupportMessageListProps {
   messages: SupportMessage[];
+  conversationId?: string | null;
 }
 
 // Danh sách tin là vùng cuộn riêng, cuộn được bằng bàn phím và tự cuộn xuống khi khách ở gần đáy.
-export function SupportMessageList({ messages }: SupportMessageListProps) {
+export function SupportMessageList({ messages, conversationId = null }: SupportMessageListProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
   const lastMessageIdRef = useRef<string | null>(null);
@@ -106,7 +107,12 @@ export function SupportMessageList({ messages }: SupportMessageListProps) {
                     <time className="sr" dateTime={message.createdAt}>
                       {time}
                     </time>
-                    {message.action !== null && <SupportMessageAction action={message.action} />}
+                    {message.action !== null && (
+                      <SupportMessageAction
+                        action={message.action}
+                        conversationId={conversationId}
+                      />
+                    )}
                   </li>
                 ) : (
                   <li

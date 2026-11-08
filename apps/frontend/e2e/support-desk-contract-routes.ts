@@ -151,10 +151,26 @@ function parsePath(path: string): URL {
 function normalizePathname(pathname: string): string {
   return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
 }
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function matchesExampleUrl(url: URL, example: ContractExample): boolean {
   const exampleUrl = parsePath(example.path);
-  if (normalizePathname(url.pathname) !== normalizePathname(exampleUrl.pathname)) return false;
+  const exampleSegments = normalizePathname(exampleUrl.pathname).split('/');
+  const urlSegments = normalizePathname(url.pathname).split('/');
+  if (exampleSegments.length !== urlSegments.length) return false;
+
+  // Khớp từng đoạn đường dẫn, chấp nhận thay thế mã UUID động giữa ví dụ và trình duyệt.
+  const pathMatches = exampleSegments.every((segment, index) => {
+    const urlSegment = urlSegments[index];
+    if (urlSegment === undefined) return false;
+    if (segment === urlSegment) return true;
+    return (
+      (segment.startsWith('{') && segment.endsWith('}')) ||
+      (UUID_PATTERN.test(segment) && UUID_PATTERN.test(urlSegment))
+    );
+  });
+  if (!pathMatches) return false;
+
   // Ví dụ không có query thì route nhận mọi query của cùng đường dẫn.
   for (const [key, value] of exampleUrl.searchParams) {
     if (url.searchParams.get(key) !== value) return false;

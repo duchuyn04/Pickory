@@ -3,6 +3,7 @@ import { act } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createRoot, type Root } from 'react-dom/client';
 import { SupportPage } from '../../../../../src/features/support-desk/customer/support-page';
+import * as supportApi from '../../../../../src/features/support-desk/customer/support-customer-api';
 import {
   findSupportDeskExample,
   selectSupportDeskEvents,
@@ -168,6 +169,101 @@ describe('trang /support', () => {
 
     expect(container.querySelector('[data-action="callback_form"]')).not.toBeNull();
     expect(container.querySelector('[data-action="csat_form"]')).not.toBeNull();
+  });
+
+  it('tin hệ thống có `action` callback_form nhận đúng `conversationId` thật khi gửi', async () => {
+    const sendSpy = vi.spyOn(supportApi, 'sendCallbackRequest').mockResolvedValueOnce({
+      id: 'cb-page-1',
+      status: 'pending',
+      createdAt: '2026-11-03T14:05:00Z',
+    });
+
+    stubFetch((url) => {
+      if (url === '/api/support/conversations') return conversationData('tạo hội thoại lần đầu');
+      return { items: [], nextCursor: null };
+    });
+
+    await renderPage();
+    await waitForText('Nội dung tin nhắn');
+
+    // Phát sự kiện tin hệ thống chứa hành động gọi lại.
+    await act(async () => {
+      activeSource().emit('message.created', {
+        id: 'msg-sys-1',
+        conversationId: 'c0a80000-0000-4000-8000-000000000001',
+        role: 'system',
+        senderRole: 'system',
+        staffDisplayName: null,
+        body: 'Nhân viên đang bận. Bạn hãy để lại số điện thoại.',
+        action: 'callback_form',
+        createdAt: '2026-11-03T14:05:00Z',
+      });
+    });
+
+    const phoneInput = container.querySelector<HTMLInputElement>('input[name="phone"]')!;
+    expect(phoneInput).not.toBeNull();
+
+    const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    await act(async () => {
+      setter.call(phoneInput, '0901234567');
+      phoneInput.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+
+    const form = container.querySelector('form')!;
+    await act(async () => {
+      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    });
+
+    // Form phải nhận mã hội thoại từ trang chính và gửi lên API.
+    expect(sendSpy).toHaveBeenCalledWith({
+      conversationId: 'c0a80000-0000-4000-8000-000000000001',
+      phone: '0901234567',
+      note: null,
+    });
+  });
+
+  it('tin hệ thống có `action` csat_form nhận đúng `conversationId` thật khi chấm điểm', async () => {
+    const submitSpy = vi.spyOn(supportApi, 'submitSupportCsat').mockResolvedValueOnce({
+      sessionId: 'sess-page-1',
+      score: 5,
+    });
+
+    stubFetch((url) => {
+      if (url === '/api/support/conversations') return conversationData('tạo hội thoại lần đầu');
+      return { items: [], nextCursor: null };
+    });
+
+    await renderPage();
+    await waitForText('Nội dung tin nhắn');
+
+    // Phát sự kiện tin hệ thống chứa hành động chấm điểm CSAT.
+    await act(async () => {
+      activeSource().emit('message.created', {
+        id: 'msg-sys-2',
+        conversationId: 'c0a80000-0000-4000-8000-000000000001',
+        role: 'system',
+        senderRole: 'system',
+        staffDisplayName: null,
+        body: 'Phiên hỗ trợ đã kết thúc. Hãy đánh giá mức độ hài lòng.',
+        action: 'csat_form',
+        createdAt: '2026-11-03T14:10:00Z',
+      });
+    });
+
+    const scoreButtons = container.querySelectorAll<HTMLButtonElement>('.csat-score-btn');
+    expect(scoreButtons).toHaveLength(5);
+
+    await act(async () => {
+      scoreButtons[4]!.click();
+    });
+
+    const submitBtn = container.querySelector<HTMLButtonElement>('button[type="submit"]')!;
+    await act(async () => {
+      submitBtn.click();
+    });
+
+    // CSAT form phải gửi đúng mã hội thoại của trang lên API.
+    expect(submitSpy).toHaveBeenCalledWith('c0a80000-0000-4000-8000-000000000001', 5);
   });
 
   it('sự kiện `session.assigned` hiện "Nhân viên đang hỗ trợ"', async () => {

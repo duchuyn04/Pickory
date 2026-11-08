@@ -164,9 +164,104 @@
   justify-content: center;
 }
 
-/* Chỗ đặt form của tin hệ thống. SD-UI6 thay nội dung bằng form thật. */
+/* Vùng chứa form hành động trong tin hệ thống. */
 .support-message-action {
   margin-top: var(--space-2);
+}
+
+/* Khối form gọi lại hoặc CSAT nằm trong mạch tin hệ thống. */
+.support-form-card {
+  width: 420px;
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.support-form-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.support-form-desc {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-label);
+  color: var(--color-ink-muted);
+}
+
+.support-form-card form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.support-form-card .field {
+  margin: 0;
+}
+
+.support-form-alert {
+  margin-bottom: var(--space-3);
+}
+
+/* Hàng 5 nút chọn điểm CSAT. */
+.csat-scores-row {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.csat-score-btn {
+  flex: 1;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-body);
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.csat-score-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+
+.csat-score-btn.is-selected {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 700;
+}
+
+.csat-score-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.csat-score-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.csat-selected-label {
+  margin: 0;
+  font-size: var(--text-label);
+  color: var(--color-ink-muted);
+}
+
+.csat-selected-label strong {
+  color: var(--color-ink);
 }
 
 /* Thanh soạn nằm đáy thẻ, viền trên tách riêng khỏi vùng tin. */

@@ -50,6 +50,17 @@ const sessionEventSchema = z.object({
   sessionId: z.string(),
 });
 
+export const supportCallbackRequestSchema = z.object({
+  id: z.string(),
+  status: z.literal('pending'),
+  createdAt: apiTimeSchema,
+});
+
+export const supportCsatResponseSchema = z.object({
+  sessionId: z.string(),
+  score: z.number().int().min(1).max(5),
+});
+
 export type SupportSessionStatus = z.infer<typeof sessionStatusSchema>;
 export type SupportSession = z.infer<typeof supportSessionSchema>;
 export type SupportMessage = z.infer<typeof supportMessageSchema>;
@@ -59,6 +70,9 @@ export type SupportMessagePage = z.infer<typeof supportMessagePageSchema>;
 export type SupportCustomerEvent =
   | { kind: 'message'; message: SupportMessage }
   | { kind: 'session'; status: SupportSessionStatus; sessionId: string };
+
+export type SupportCallbackRequest = z.infer<typeof supportCallbackRequestSchema>;
+export type SupportCsatResponse = z.infer<typeof supportCsatResponseSchema>;
 
 // Dữ liệu sai hợp đồng thành `ApiError`, để trang hiện lỗi và nút "Thử lại" thay vì vỡ khi vẽ.
 function parseApiData<Schema extends z.ZodType>(schema: Schema, data: unknown): z.infer<Schema> {
@@ -77,6 +91,14 @@ export function parseSupportMessage(data: unknown): SupportMessage {
 
 export function parseSupportMessagePage(data: unknown): SupportMessagePage {
   return parseApiData(supportMessagePageSchema, data);
+}
+
+export function parseSupportCallbackRequest(data: unknown): SupportCallbackRequest {
+  return parseApiData(supportCallbackRequestSchema, data);
+}
+
+export function parseSupportCsatResponse(data: unknown): SupportCsatResponse {
+  return parseApiData(supportCsatResponseSchema, data);
 }
 
 // Sự kiện đến từ luồng SSE, không qua `apiRequest`. Sai dạng thì bỏ qua, không được làm vỡ trang.

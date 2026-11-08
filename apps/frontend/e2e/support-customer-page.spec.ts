@@ -500,3 +500,230 @@ test.describe('SD-UI7: ảnh bố cục', () => {
     await context.close();
   });
 });
+
+test.describe('SD-UI6: form số điện thoại và form CSAT phía khách', () => {
+  test('ảnh bố cục hai form trong khung chat ở 1280 px và 375 px không tràn ngang', async ({
+    browser,
+  }, testInfo) => {
+    const { context, page, consoleIssues } = await openGuestPage(browser);
+    const conversationId = await createConversationId(page);
+    await mockChatEvents(page, conversationId);
+
+    await openSupportPage(page);
+
+    // Chờ hai form hiển thị từ luồng tin nhắn hệ thống.
+    await expect(page.locator('[data-action="callback_form"]')).toBeVisible();
+    await expect(page.locator('[data-action="csat_form"]')).toBeVisible();
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+
+    const callbackCard = page.locator('[data-action="callback_form"]');
+    const csatCard = page.locator('[data-action="csat_form"]');
+    const callbackBox = await callbackCard.boundingBox();
+    const csatBox = await csatCard.boundingBox();
+
+    // Đo bề rộng hai thẻ tại 1280 px bảo đảm kích thước bằng nhau.
+    expect(callbackBox?.width).toBe(420);
+    expect(csatBox?.width).toBe(420);
+
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'support-sdui6-chat-forms-1280.png'),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'support-sdui6-chat-forms-375.png'),
+      fullPage: true,
+    });
+    // Kiểm tra không tràn ngang ở chiều rộng di động 375 px.
+    await expectNoHorizontalOverflow(page);
+
+    expect(consoleIssues).toEqual([]);
+    await context.close();
+  });
+
+  test('form số điện thoại kiểm bằng Zod, hiện lỗi bằng FieldError và đổi thành lời xác nhận khi gửi thành công', async ({
+    browser,
+  }, testInfo) => {
+    const { context, page, consoleIssues } = await openGuestPage(browser);
+    const conversationId = await createConversationId(page);
+
+    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
+    // Dùng route giả từ ví dụ hợp đồng theo quy định SD-C2.
+    await routes.mockRoute('customer-api.json', 'khách để lại số điện thoại');
+    await routes.mockEventStream({
+      path: eventsPath(conversationId),
+      fixtureFile: 'customer-events.json',
+      eventNames: ['message.created'],
+    });
+
+    await openSupportPage(page);
+
+    const callbackForm = page.locator('[data-action="callback_form"]');
+    await expect(callbackForm).toBeVisible();
+
+    const phoneField = callbackForm.locator('input[name="phone"]');
+    const submitBtn = callbackForm.locator('button[type="submit"]');
+
+    // Bấm gửi khi số trống để kích hoạt validation Zod.
+    await submitBtn.click();
+
+    // Lỗi bắt buộc phải hiển thị dưới ô bằng FieldError.
+    const errorId = await phoneField.getAttribute('aria-describedby');
+    expect(errorId).not.toBeNull();
+    const phoneError = callbackForm.locator(`[id="${errorId}"]`);
+    await expect(phoneError).toHaveText('Số điện thoại không được để trống.');
+    await expect(phoneField).toHaveAttribute('aria-invalid', 'true');
+    // Nhập đầu số sai định dạng của di động Việt Nam.
+    await phoneField.fill('0123456789');
+    await submitBtn.click();
+    await expect(phoneError).toHaveText('Số điện thoại không đúng định dạng.');
+
+    // Nhập số điện thoại hợp lệ và ghi chú theo ví dụ mẫu.
+    await phoneField.fill('0901234567');
+    await callbackForm.locator('textarea[name="note"]').fill('Gọi sau 18 giờ giúp mình.');
+    await submitBtn.click();
+
+    // Gửi thành công thì form đổi thành thông báo xác nhận.
+    const successAlert = callbackForm.locator('.alert-ok');
+    await expect(successAlert).toBeVisible();
+    await expect(successAlert).toContainText('Yêu cầu gọi lại đã được ghi nhận');
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'support-sdui6-callback-success-1280.png'),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'support-sdui6-callback-success-375.png'),
+      fullPage: true,
+    });
+    await expectNoHorizontalOverflow(page);
+
+    expect(consoleIssues).toEqual([]);
+    await context.close();
+  });
+
+  test('lỗi 429 CALLBACK_LIMIT_REACHED hiện thông báo tiếng Việt và form không gửi lại', async ({
+    browser,
+  }, testInfo) => {
+    // Cho phép mã lỗi 429 có chủ đích từ API route giả.
+    const allowedFailures: AllowedLoadFailure[] = [
+      { urlPattern: /\/api\/support\/callback-requests/, status: 429 },
+    ];
+    const { context, page, consoleIssues } = await openGuestPage(browser, allowedFailures);
+    const conversationId = await createConversationId(page);
+
+    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
+    await routes.mockRoute('customer-api.json', 'yêu cầu gọi lại thứ 4 trong ngày');
+    await routes.mockEventStream({
+      path: eventsPath(conversationId),
+      fixtureFile: 'customer-events.json',
+      eventNames: ['message.created'],
+    });
+
+    await openSupportPage(page);
+
+    const callbackForm = page.locator('[data-action="callback_form"]');
+    await expect(callbackForm).toBeVisible();
+
+    await callbackForm.locator('input[name="phone"]').fill('0901234567');
+    const submitBtn = callbackForm.locator('button[type="submit"]');
+    await submitBtn.click();
+
+    // Thông báo lỗi tiếng Việt hiển thị từ response của API.
+    const alertBody = callbackForm.locator('.alert-list');
+    await expect(alertBody).toContainText(
+      'Bạn đã gửi 3 yêu cầu gọi lại hôm nay. CSKH sẽ liên hệ sớm.',
+    );
+
+    // Nút gửi bị khóa sau khi nhận lỗi 429.
+    await expect(submitBtn).toBeDisabled();
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'support-sdui6-callback-429-1280.png'),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'support-sdui6-callback-429-375.png'),
+      fullPage: true,
+    });
+    await expectNoHorizontalOverflow(page);
+
+    expect(consoleIssues).toEqual([]);
+    await context.close();
+  });
+
+  test('form CSAT có 5 nút chọn điểm dùng được bằng bàn phím, mỗi nút có tên truy cập', async ({
+    browser,
+  }, testInfo) => {
+    const { context, page, consoleIssues } = await openGuestPage(browser);
+    const conversationId = await createConversationId(page);
+
+    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
+    await routes.mockRoute('customer-api.json', 'khách chấm điểm phiên vừa kết thúc');
+    await routes.mockEventStream({
+      path: eventsPath(conversationId),
+      fixtureFile: 'customer-events.json',
+      eventNames: ['message.created'],
+    });
+
+    await openSupportPage(page);
+
+    const csatForm = page.locator('[data-action="csat_form"]');
+    await expect(csatForm).toBeVisible();
+
+    const scoreButtons = csatForm.locator('.csat-score-btn');
+    await expect(scoreButtons).toHaveCount(5);
+
+    // Kiểm tra tên truy cập đầy đủ của từng nút điểm.
+    const expectedLabels = [
+      '1 điểm - Rất không hài lòng',
+      '2 điểm - Không hài lòng',
+      '3 điểm - Bình thường',
+      '4 điểm - Hài lòng',
+      '5 điểm - Rất hài lòng',
+    ];
+    for (let i = 0; i < expectedLabels.length; i++) {
+      const label = expectedLabels[i]!;
+      await expect(scoreButtons.nth(i)).toHaveAttribute('aria-label', label);
+    }
+
+    // Dùng bàn phím để chọn điểm 5 rất hài lòng.
+    await scoreButtons.nth(4).focus();
+    await page.keyboard.press('Enter');
+    await expect(scoreButtons.nth(4)).toHaveAttribute('aria-pressed', 'true');
+
+    // Nhấn gửi đánh giá sau khi đã chọn điểm.
+    const submitBtn = csatForm.locator('button[type="submit"]');
+    await submitBtn.click();
+
+    // Form đổi thành thông báo xác nhận có chứa điểm đã chọn.
+    const successAlert = csatForm.locator('.alert-ok');
+    await expect(successAlert).toBeVisible();
+    await expect(successAlert).toContainText('5/5');
+    await expect(successAlert).toContainText('Rất hài lòng');
+
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'support-sdui6-csat-success-1280.png'),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 375, height: 800 });
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'support-sdui6-csat-success-375.png'),
+      fullPage: true,
+    });
+    await expectNoHorizontalOverflow(page);
+
+    expect(consoleIssues).toEqual([]);
+    await context.close();
+  });
+});

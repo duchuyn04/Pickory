@@ -1,9 +1,13 @@
 import { apiRequest } from '../../../shared/api';
 import {
+  parseSupportCallbackRequest,
   parseSupportConversation,
+  parseSupportCsatResponse,
   parseSupportMessage,
   parseSupportMessagePage,
+  type SupportCallbackRequest,
   type SupportConversation,
+  type SupportCsatResponse,
   type SupportMessage,
   type SupportMessagePage,
 } from './support-customer-schemas';
@@ -37,4 +41,35 @@ export async function sendSupportMessage(
     body: JSON.stringify({ body }),
   });
   return parseSupportMessage(data);
+}
+
+export interface SendCallbackRequestInput {
+  conversationId: string;
+  phone: string;
+  note: string | null;
+}
+
+// Gửi yêu cầu gọi lại để nhân viên CSKH liên hệ với khách sau.
+export async function sendCallbackRequest(
+  input: SendCallbackRequestInput,
+): Promise<SupportCallbackRequest> {
+  const data = await apiRequest<unknown>('/api/support/callback-requests', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  // Kiểm dữ liệu trả về theo schema trước khi cập nhật giao diện.
+  return parseSupportCallbackRequest(data);
+}
+
+// Gửi điểm đánh giá CSAT cho phiên hỗ trợ vừa kết thúc.
+export async function submitSupportCsat(
+  conversationId: string,
+  score: number,
+): Promise<SupportCsatResponse> {
+  const data = await apiRequest<unknown>(`/api/support/conversations/${conversationId}/csat`, {
+    method: 'PUT',
+    body: JSON.stringify({ score }),
+  });
+  // Kiểm dữ liệu trả về theo schema trước khi cập nhật giao diện.
+  return parseSupportCsatResponse(data);
 }
