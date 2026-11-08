@@ -1,8 +1,11 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 using Pickory.IntegrationTests.Infrastructure;
+using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Entities;
 using Xunit;
 
@@ -24,7 +27,18 @@ public sealed class SendConversationMessageEndpointTests(SupportDeskWebApplicati
     {
         // Bảng trực dùng chung cho cả bộ test. Không có dòng `available` thì phiên chờ đi nhánh ngoài giờ, như test mong đợi.
         await SupportDeskTestKit.ClearPresenceAsync(database);
-        _host = SupportDeskTestKit.CreateHostWithClock(factory, _clock);
+        _host = SupportDeskTestKit.CreateHostWithClock(factory, _clock, services =>
+        {
+            // Đồng hồ giả nhảy 24 giờ để kiểm tra giới hạn tin.
+            // Gỡ worker bảo trì để không tự đóng hội thoại giữa lúc test đang kiểm tra.
+            var worker = services.SingleOrDefault(
+                descriptor => descriptor.ServiceType == typeof(IHostedService)
+                    && descriptor.ImplementationType == typeof(SupportConversationMaintenanceWorker));
+            if (worker is not null)
+            {
+                services.Remove(worker);
+            }
+        });
         _client = _host.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
     }
 

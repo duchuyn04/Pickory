@@ -104,7 +104,7 @@ Cột "Có từ" ghi task đã làm route. Ô ghi "chưa có" nghĩa là fronten
 | `PATCH /api/admin/support/sessions/{id}` | `admin-sessions.json` | SD-08 | SD-UI3 | SD-08 |
 | `POST /api/admin/support/sessions/{id}/messages` | `admin-sessions.json` | SD-07 | SD-UI2 | SD-07 |
 | `GET /api/admin/support/conversations/{id}/messages` | `admin-sessions.json` | SD-07 | SD-UI2 | SD-07 |
-| `GET /api/admin/support/sessions/{id}/customer` | `admin-customer-panel.json` | SD-11 | SD-UI3 | chưa có |
+| `GET /api/admin/support/sessions/{id}/customer` | `admin-customer-panel.json` | SD-11 | SD-UI3 | SD-11 |
 | `GET /api/admin/support/callback-requests` | `admin-callbacks.json` | SD-05 | SD-UI4 | SD-05 |
 | `PATCH /api/admin/support/callback-requests/{id}` | `admin-callbacks.json` | SD-05 | SD-UI4 | SD-05 |
 | `GET · POST · PATCH · DELETE /api/admin/support/canned-responses[/{id}]` | `admin-canned-responses.json` | SD-10 | SD-UI2 (đọc), SD-UI5 (sửa) | chưa có |

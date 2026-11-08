@@ -164,25 +164,25 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 ### SD-11: Bảng thông tin khách
 **Mô tả:** `GET /api/admin/support/sessions/{id}/customer` trả thông tin cho cột phải. Thông tin gồm tên và email của khách và đơn gần đây. Task thêm `ICustomerDirectory.GetContactAsync` vào Contracts của Identity để đọc tên và email. Ngày 2026-10-18 task bỏ "sản phẩm bot đã gợi ý" và "trang khách đang xem", vì hai trường này đến từ `shopping-assistant`.
 **Tiêu chí nghiệm thu:**
-- [ ] Khách đã đăng nhập: có tên, email và tối đa 5 đơn gần đây qua `ICommerceReader.GetOrdersForCustomerAsync`
-- [ ] Khách đã đăng nhập: tên và email đọc qua `ICustomerDirectory.GetContactAsync`
-- [ ] Khách vãng lai: có đơn đặt từ cùng `anonymousId` qua `ICommerceReader.GetOrdersForAnonymousAsync`, không có tên và email
-- [ ] Bộ integration test chạy đủ, vì task đổi Contracts của Identity
-- [ ] Response không có dữ liệu sở thích hay lịch sử xem hàng của khách
-- [ ] Mỗi đơn có `code`, để frontend dựng link tới trang đơn trong back-office
-- [ ] `sales` nhận 403. Endpoint mới có trong ma trận quyền
-- [ ] Test hợp đồng: response khớp các ví dụ của `admin-customer-panel.json`
+- [x] Khách đã đăng nhập: có tên, email và tối đa 5 đơn gần đây qua `ICommerceReader.GetOrdersForCustomerAsync`
+- [x] Khách đã đăng nhập: tên và email đọc qua `ICustomerDirectory.GetContactAsync`
+- [x] Khách vãng lai: có đơn đặt từ cùng `anonymousId` qua `ICommerceReader.GetOrdersForAnonymousAsync`, không có tên và email
+- [x] Bộ integration test chạy đủ, vì task đổi Contracts của Identity
+- [x] Response không có dữ liệu sở thích hay lịch sử xem hàng của khách
+- [x] Mỗi đơn có `code`, để frontend dựng link tới trang đơn trong back-office
+- [x] `sales` nhận 403. Endpoint mới có trong ma trận quyền
+- [x] Test hợp đồng: response khớp các ví dụ của `admin-customer-panel.json`
 **Kiểm tra:** test tích hợp với cổng đọc giả của identity và commerce
 **Phụ thuộc:** SD-06 · **Quy mô:** M
 
 ### SD-17: Xóa dữ liệu hỗ trợ
 **Mô tả:** Job hằng ngày đóng hội thoại im lặng 24 giờ và xóa hội thoại cũ hơn 90 ngày, theo quyết định 25 và 26. Handler `UserDeletedEvent` xóa hội thoại của người dùng đó. Job theo mẫu `ImageDeletionWorker`.
 **Tiêu chí nghiệm thu:**
-- [ ] Hội thoại `open` có `last_message_at` cũ hơn 24 giờ chuyển `closed`. Hội thoại 23 giờ còn `open`
-- [ ] Hội thoại cũ hơn 90 ngày bị xóa cùng tin và phiên. Hội thoại 89 ngày còn giữ
-- [ ] `UserDeletedEvent` xóa mọi hội thoại có `customer_user_id` đó, cùng tin và phiên
-- [ ] Xóa hội thoại không xóa dòng `callback_requests`. Báo cáo gọi lại vẫn đếm đúng
-- [ ] Test gọi processor trực tiếp với `FakeTimeProvider`, không chờ timer
+- [x] Hội thoại `open` có `last_message_at` cũ hơn 24 giờ chuyển `closed`. Hội thoại 23 giờ còn `open`
+- [x] Hội thoại cũ hơn 90 ngày bị xóa cùng tin và phiên. Hội thoại 89 ngày còn giữ
+- [x] `UserDeletedEvent` xóa mọi hội thoại có `customer_user_id` đó, cùng tin và phiên
+- [x] Xóa hội thoại không xóa dòng `callback_requests`. Báo cáo gọi lại vẫn đếm đúng
+- [x] Test gọi processor trực tiếp với `FakeTimeProvider`, không chờ timer
 **Kiểm tra:** test tích hợp; test gọi processor
 **Phụ thuộc:** SD-15 · **Quy mô:** S
 

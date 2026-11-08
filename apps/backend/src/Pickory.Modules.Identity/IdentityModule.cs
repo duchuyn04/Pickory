@@ -13,6 +13,8 @@ using Pickory.Modules.Identity.Actors;
 using Pickory.Modules.Identity.Audit;
 using Pickory.Modules.Identity.Consent;
 using Pickory.Modules.Identity.Contracts.Audit;
+using Pickory.Modules.Identity.Contracts.Customers;
+using Pickory.Modules.Identity.Customers;
 using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.Identity.Contracts.Staff;
 using Pickory.Modules.Identity.Features.AdminAuditLogs;
@@ -74,6 +76,8 @@ public static class IdentityModule
         services.AddScoped<AuditLogReadHandler>();
         // Module khác đọc tên nhân viên qua contract này. Tra cứu chạy trong cùng request với `DbContext` của Identity.
         services.AddScoped<IStaffDirectory, StaffDirectory>();
+        // Module khác đọc thông tin liên hệ của khách qua contract này. Tra cứu chạy cùng request với `DbContext` của Identity.
+        services.AddScoped<ICustomerDirectory, CustomerDirectory>();
         // Module khác ghi nhật ký thao tác qua contract này. Writer không giữ trạng thái, nên dùng chung một instance.
         services.AddSingleton<IAuditLogWriter, TransactionalAuditLogWriter>();
         // Cảnh báo quyền lạ trong DB mỗi lần API khởi động, giống `server.ts` của bản Node.

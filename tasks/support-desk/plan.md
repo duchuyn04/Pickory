@@ -234,8 +234,8 @@ Nhánh backend (`todo-backend.md`):
 - [x] SD-07 tin nhân viên và tin mới của khách
 - [x] SD-08 chuyển, kết thúc và tự đóng phiên
 - [x] SD-09 chấm điểm CSAT
-- [ ] SD-11 bảng thông tin khách
-- [ ] SD-17 xóa dữ liệu hỗ trợ
+- [x] SD-11 bảng thông tin khách
+- [x] SD-17 xóa dữ liệu hỗ trợ
 
 Nhánh frontend (`todo-frontend.md`):
 - [ ] SD-C2 bộ đọc dữ liệu mẫu và route giả

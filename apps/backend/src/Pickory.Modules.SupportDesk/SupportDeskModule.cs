@@ -72,6 +72,8 @@ public static class SupportDeskModule
         services.AddScoped<SupportSessionTransferService>();
         // Dịch vụ kết thúc phiên hỗ trợ CSKH cần `DbContext` để mở transaction.
         services.AddScoped<SupportSessionCloseService>();
+        // Dịch vụ tổng hợp bảng thông tin khách hàng dùng `DbContext` và reader theo từng request.
+        services.AddScoped<SupportSessionCustomerService>();
         // Opener đọc cấu hình từ DB và chạy trong transaction của tin khách, nên dùng chung scope với request.
         services.AddScoped<SupportSettingsReader>();
         services.AddScoped<SupportSessionOpener>();
@@ -83,18 +85,24 @@ public static class SupportDeskModule
         services.AddScoped<CallbackPhoneRetentionProcessor>();
         services.AddScoped<ICallbackPhoneRetentionProcessor>(
             provider => provider.GetRequiredService<CallbackPhoneRetentionProcessor>());
+        // Đăng ký lớp cụ thể cho test và interface `ISupportConversationMaintenanceProcessor` cho worker nền.
+        services.AddScoped<SupportConversationMaintenanceProcessor>();
+        services.AddScoped<ISupportConversationMaintenanceProcessor>(
+            provider => provider.GetRequiredService<SupportConversationMaintenanceProcessor>());
         // Giới hạn tin là singleton vì bộ đếm trong bộ nhớ phải dùng chung cho mọi request của một khách.
         services.AddSingleton<SupportMessageLimiters>();
         // Đăng nhập phát `UserLinkedEvent`. Handler gắn hội thoại vãng lai vào tài khoản vừa đăng nhập.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, SupportConversationLinkHandler>();
-        // Xóa tài khoản phát `UserDeletedEvent`. Handler xóa số điện thoại và ghi chú gọi lại của người dùng đó.
-        services.AddScoped<IDomainEventHandler<UserDeletedEvent>, CallbackRequestUserDeletedHandler>();
+        // Xóa tài khoản phát `UserDeletedEvent`. Handler xóa dữ liệu gọi lại và hội thoại của người dùng đó.
+        services.AddScoped<IDomainEventHandler<UserDeletedEvent>, SupportUserDeletedHandler>();
         // Worker chạy nền gọi processor mỗi 30 giây.
         services.AddHostedService<StaffPresenceTimeoutWorker>();
         // Worker nhắc lại phiên chờ quá lâu chạy mỗi phút, đúng nhịp yêu cầu của spec.
         services.AddHostedService<WaitNudgeWorker>();
         // Worker xóa số điện thoại quá hạn 30 ngày chạy mỗi ngày một lần.
         services.AddHostedService<CallbackPhoneRetentionWorker>();
+        // Worker bảo trì hội thoại CSKH chạy mỗi ngày một lần.
+        services.AddHostedService<SupportConversationMaintenanceWorker>();
         // Worker tự đóng phiên im lặng và phiên chờ ngoài giờ chạy mỗi phút một lần.
         services.AddHostedService<AutoCloseSessionWorker>();
         return services;

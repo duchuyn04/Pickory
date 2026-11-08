@@ -75,7 +75,8 @@ internal static class SupportConversationTestKit
         string anonymousId,
         string? customerUserId = null,
         SupportConversationStatus status = SupportConversationStatus.Open,
-        DateTime? lastMessageAt = null)
+        DateTime? lastMessageAt = null,
+        DateTime? closedAt = null)
     {
         IssuedAnonymousIds.Add(anonymousId);
         var createdAt = lastMessageAt ?? DateTime.UtcNow.AddHours(-1);
@@ -86,7 +87,7 @@ internal static class SupportConversationTestKit
             Status = status,
             CreatedAt = createdAt,
             LastMessageAt = createdAt,
-            ClosedAt = status == SupportConversationStatus.Closed ? createdAt : null,
+            ClosedAt = closedAt ?? (status == SupportConversationStatus.Closed ? createdAt : null),
         };
         await using var context = database.CreateSupportDeskContext();
         context.Conversations.Add(conversation);

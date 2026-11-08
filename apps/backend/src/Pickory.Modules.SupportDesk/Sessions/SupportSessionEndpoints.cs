@@ -33,6 +33,9 @@ internal static class SupportSessionEndpoints
         // Nhân viên gửi tin nhắn vào phiên hỗ trợ cần quyền trả lời hội thoại.
         endpoints.MapPost($"{SessionsPath}/{{id}}/messages", SendMessageAsync)
             .RequirePermission(Permissions.ConversationsReply);
+        // Đọc thông tin khách hàng và đơn hàng trong phiên hỗ trợ cần quyền đọc hội thoại.
+        endpoints.MapGet($"{SessionsPath}/{{id}}/customer", GetCustomerPanelAsync)
+            .RequirePermission(Permissions.ConversationsRead);
     }
 
     internal static async Task<IResult> ListQueueAsync(
@@ -125,5 +128,17 @@ internal static class SupportSessionEndpoints
         await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
         var closed = await service.CloseAsync(id, callerStaffId, context.RequestAborted);
         return Results.Ok(new ApiResponse<SupportSessionCloseResponse>(closed));
+    }
+
+    // Đọc bảng thông tin khách hàng cho cột phải màn hình hỗ trợ CSKH.
+    internal static async Task<IResult> GetCustomerPanelAsync(
+        string id,
+        HttpContext context,
+        SupportSessionCustomerService service)
+    {
+        // Phản hồi có thông tin khách hàng nên chặn lưu bộ nhớ đệm trên proxy hoặc trình duyệt.
+        context.Response.Headers.CacheControl = "no-store";
+        var result = await service.GetCustomerPanelAsync(id, context.RequestAborted);
+        return Results.Ok(new ApiResponse<SupportSessionCustomerPanelResponse>(result));
     }
 }

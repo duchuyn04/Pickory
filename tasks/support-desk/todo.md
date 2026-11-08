@@ -126,7 +126,9 @@ Task của phase này nằm ở `todo-backend.md` và `todo-frontend.md`. Hai nh
 
 ### Checkpoint SD2
 - [ ] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`
+  Chưa đạt: thiếu nút nhận phiên. Hoàn thành SD-UI2, SD-UI3 và SD-UI6 trước khi chạy lại Checkpoint SD2.
 - [ ] Ngoài giờ, khách để lại số điện thoại và tab Gọi lại hiện yêu cầu
+  Chưa đạt: thiếu form số điện thoại. Hoàn thành SD-UI6 và SD-UI4 trước khi chạy lại Checkpoint SD2.
 - [ ] Review với người dùng
 
 ---

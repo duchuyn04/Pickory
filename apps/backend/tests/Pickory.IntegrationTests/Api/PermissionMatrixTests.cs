@@ -112,6 +112,7 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
         { "PATCH", "/api/admin/support/sessions/dummy-id", [Permissions.ConversationsReply] },
         { "POST", "/api/admin/support/sessions/dummy-id/messages", [Permissions.ConversationsReply] },
         { "GET", "/api/admin/support/conversations/dummy-id/messages", [Permissions.ConversationsRead] },
+        { "GET", "/api/admin/support/sessions/dummy-id/customer", [Permissions.ConversationsRead] },
     };
     [Theory]
     [MemberData(nameof(BackofficeEndpoints))]
