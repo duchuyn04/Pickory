@@ -19,4 +19,7 @@ internal static class SupportEventNames
 
     // Khách vừa gửi yêu cầu gọi lại. Client đọc lại tab Gọi lại rồi hiện thông báo kèm âm báo.
     public const string CallbackCreated = "callback.created";
+
+    // Khách vừa gửi tin mới trong phiên có nhân viên. Client đọc lại lịch sử.
+    public const string MessageCreated = "message.created";
 }

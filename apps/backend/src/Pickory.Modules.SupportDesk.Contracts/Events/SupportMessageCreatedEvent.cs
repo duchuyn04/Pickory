@@ -10,7 +10,9 @@ public sealed record SupportMessageCreatedEvent(
     string Role,
     string Body,
     string? Action,
-    DateTime CreatedAt) : IDomainEvent
+    DateTime CreatedAt,
+    string? StaffDisplayName = null,
+    string? SessionId = null) : IDomainEvent
 {
     // Vai nhân viên trong dữ liệu SSE. Giá trị khớp nhãn Postgres của `SupportMessageRole`.
     public const string StaffRole = "staff";

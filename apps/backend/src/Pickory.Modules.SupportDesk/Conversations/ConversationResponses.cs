@@ -46,16 +46,48 @@ internal sealed record ConversationSessionResponse(string Id, string Status, int
     }
 }
 
-// Một tin trong lịch sử. Response không có `staffId`, vì tên nhân viên chưa được chốt.
-internal sealed record MessageResponse(string Id, string Role, string Body, string? Action, DateTime CreatedAt)
+// Một tin trong lịch sử. staffDisplayName mang tên hồ sơ nhân viên hoặc null khi không phải vai staff.
+internal sealed record MessageResponse(
+    string Id,
+    string Role,
+    string Body,
+    string? Action,
+    string? StaffDisplayName,
+    DateTime CreatedAt)
 {
-    public static MessageResponse From(SupportMessage message) => new(
+    public static MessageResponse From(SupportMessage message, string? staffDisplayName = null) => new(
         message.Id,
         // Tên enum viết thường khớp nhãn Postgres `customer`, `staff`, `system`.
         message.Role.ToString().ToLowerInvariant(),
         message.Body,
         message.Action,
+        staffDisplayName,
         message.CreatedAt);
 }
 
 internal sealed record MessagePageResponse(IReadOnlyList<MessageResponse> Items, string? NextCursor);
+
+// Định dạng tin nhắn dành cho nhân viên, kèm mã phiên hỗ trợ nếu có.
+internal sealed record StaffViewMessageResponse(
+    string Id,
+    string? SessionId,
+    string Role,
+    string Body,
+    string? Action,
+    string? StaffDisplayName,
+    DateTime CreatedAt)
+{
+    public static StaffViewMessageResponse From(SupportMessage message, string? staffDisplayName = null) => new(
+        message.Id,
+        message.SessionId,
+        message.Role.ToString().ToLowerInvariant(),
+        message.Body,
+        message.Action,
+        staffDisplayName,
+        message.CreatedAt);
+}
+
+// Danh sách tin nhắn phân trang dành cho nhân viên.
+internal sealed record StaffMessagePageResponse(
+    IReadOnlyList<StaffViewMessageResponse> Items,
+    string? NextCursor);

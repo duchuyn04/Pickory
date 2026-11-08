@@ -93,17 +93,17 @@ Cột "Có từ" ghi task đã làm route. Ô ghi "chưa có" nghĩa là fronten
 | Route | File mẫu | Task backend | Task frontend | Có từ |
 |---|---|---|---|---|
 | `POST /api/support/conversations` | `customer-api.json` | SD-15, SD-04 thêm `session` | SD-UI7 | SD-15, SD-04 |
-| `GET /api/support/conversations/{id}/messages` | `customer-api.json` | SD-15, SD-07 thêm `staffDisplayName` | SD-UI7 | SD-15 |
+| `GET /api/support/conversations/{id}/messages` | `customer-api.json` | SD-15, SD-07 thêm `staffDisplayName` | SD-UI7 | SD-15, SD-07 |
 | `POST /api/support/conversations/{id}/messages` | `customer-api.json` | SD-15 | SD-UI7 | SD-15 |
-| `GET /api/support/conversations/{id}/events` | `customer-events.json` | SD-16, SD-07 thêm `staffDisplayName` | SD-UI7 | SD-16 |
+| `GET /api/support/conversations/{id}/events` | `customer-events.json` | SD-16, SD-07 thêm `staffDisplayName` | SD-UI7 | SD-16, SD-07 |
 | `POST /api/support/callback-requests` | `customer-api.json` | SD-05 | SD-UI6 | SD-05 |
 | `PUT /api/support/conversations/{id}/csat` | `customer-api.json` | SD-09 | SD-UI6 | chưa có |
 | `GET /api/admin/support/sessions?view=waiting\|mine` | `admin-sessions.json` | SD-06 | SD-UI1 | SD-06 |
 | `POST /api/admin/support/sessions/{id}/assignment` | `admin-sessions.json` | SD-06 | SD-UI2 | SD-06 |
-| `PUT /api/admin/support/sessions/{id}/assignment` | `admin-sessions.json` | SD-08 | SD-UI3 | chưa có |
-| `PATCH /api/admin/support/sessions/{id}` | `admin-sessions.json` | SD-08 | SD-UI3 | chưa có |
-| `POST /api/admin/support/sessions/{id}/messages` | `admin-sessions.json` | SD-07 | SD-UI2 | chưa có |
-| `GET /api/admin/support/conversations/{id}/messages` | `admin-sessions.json` | SD-07 | SD-UI2 | chưa có |
+| `PUT /api/admin/support/sessions/{id}/assignment` | `admin-sessions.json` | SD-08 | SD-UI3 | SD-08 |
+| `PATCH /api/admin/support/sessions/{id}` | `admin-sessions.json` | SD-08 | SD-UI3 | SD-08 |
+| `POST /api/admin/support/sessions/{id}/messages` | `admin-sessions.json` | SD-07 | SD-UI2 | SD-07 |
+| `GET /api/admin/support/conversations/{id}/messages` | `admin-sessions.json` | SD-07 | SD-UI2 | SD-07 |
 | `GET /api/admin/support/sessions/{id}/customer` | `admin-customer-panel.json` | SD-11 | SD-UI3 | chưa có |
 | `GET /api/admin/support/callback-requests` | `admin-callbacks.json` | SD-05 | SD-UI4 | SD-05 |
 | `PATCH /api/admin/support/callback-requests/{id}` | `admin-callbacks.json` | SD-05 | SD-UI4 | SD-05 |
@@ -230,7 +230,7 @@ Cột "Quyền" theo mục API của `spec/SPEC-support-desk.md`. Người thi�
 
 `view=waiting` trả phiên chưa ai nhận, cũ nhất trước. `view=mine` trả phiên người gọi đang giữ.
 
-SD-06 thêm `claimedAt` và `transferNote` vào hợp đồng cũ của quyết định 30. `transferNote` bằng `null` cho tới khi SD-08 xong.
+SD-06 thêm `claimedAt` và `transferNote` vào hợp đồng cũ của quyết định 30. `transferNote` có từ task SD-08.
 
 ### Nhận phiên
 

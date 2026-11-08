@@ -6,4 +6,9 @@ public interface IStaffDirectory
     Task<IReadOnlyDictionary<string, string>> GetNamesAsync(
         IReadOnlyCollection<string> userIds,
         CancellationToken cancellationToken);
+
+    // Đọc tên trong hồ sơ nhân viên, trả null khi hồ sơ không có tên.
+    Task<IReadOnlyDictionary<string, string?>> GetProfileNamesAsync(
+        IReadOnlyCollection<string> userIds,
+        CancellationToken cancellationToken);
 }

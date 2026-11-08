@@ -15,6 +15,7 @@ using Pickory.Modules.Identity.Entities;
 using Pickory.Modules.Identity.Roles;
 using Pickory.Modules.Shipping;
 using Pickory.Modules.SupportDesk;
+using Pickory.Modules.SupportDesk.Entities;
 using Pickory.Modules.AdminConsole;
 using Xunit;
 
@@ -26,6 +27,7 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
 {
     private readonly HttpClient _client;
     private readonly PickoryWebApplicationFactory _factory;
+    private readonly ApiDatabaseFixture _database;
     private readonly string _customerCookie;
     private readonly string _salesCookie;
     private readonly string _supportCookie;
@@ -33,9 +35,11 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
 
     public PermissionMatrixTests(
         ApiWebApplicationFactory factory,
-        PermissionMatrixFixture matrixFixture)
+        PermissionMatrixFixture matrixFixture,
+        ApiDatabaseFixture database)
     {
         _factory = factory;
+        _database = database;
         // Tắt tự động nạp cookie để test kiểm soát chính xác từng phiên người dùng.
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
         // Lấy cookie của bốn tài khoản thử đã tạo một lần từ fixture dùng chung.
@@ -104,6 +108,10 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
         { "PATCH", "/api/admin/support/callback-requests/dummy-id", [Permissions.ConversationsReply] },
         { "GET", "/api/admin/support/sessions", [Permissions.ConversationsRead] },
         { "POST", "/api/admin/support/sessions/dummy-id/assignment", [Permissions.ConversationsReply] },
+        { "PUT", "/api/admin/support/sessions/dummy-id/assignment", [Permissions.ConversationsReply] },
+        { "PATCH", "/api/admin/support/sessions/dummy-id", [Permissions.ConversationsReply] },
+        { "POST", "/api/admin/support/sessions/dummy-id/messages", [Permissions.ConversationsReply] },
+        { "GET", "/api/admin/support/conversations/dummy-id/messages", [Permissions.ConversationsRead] },
     };
     [Theory]
     [MemberData(nameof(BackofficeEndpoints))]
@@ -282,6 +290,104 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
             typeof(SupportDeskModule).Assembly,
             "Pickory.Modules.SupportDesk",
             [Permissions.ConversationsRead, Permissions.ConversationsReply]);
+    }
+
+    [Fact]
+    // Vai trò chỉ có conversations:read đọc được lịch sử tin (200) nhưng bị từ chối gửi tin (403).
+    public async Task SupportDesk_ConversationsReadRole_HasAccessOnlyToReadEndpoint()
+    {
+        var role = await IdentityTestData.CreateRoleAsync(_database, [Permissions.ConversationsRead]);
+        var (staff, token) = await IdentityTestData.CreateStaffSessionAsync(_database, role.Code, "read-only-staff");
+        var cookie = $"pk_session={token}";
+
+        // Chuẩn bị hội thoại và phiên hỗ trợ trong database.
+        var conversationId = Guid.NewGuid().ToString();
+        var sessionId = Guid.NewGuid().ToString();
+        await using (var context = _database.CreateSupportDeskContext())
+        {
+            var conversation = new SupportConversation
+            {
+                Id = conversationId,
+                AnonymousId = Guid.NewGuid().ToString(),
+                Status = SupportConversationStatus.Open,
+                CreatedAt = DateTime.UtcNow,
+                LastMessageAt = DateTime.UtcNow,
+            };
+            var session = new SupportSession
+            {
+                Id = sessionId,
+                ConversationId = conversationId,
+                AnonymousId = conversation.AnonymousId,
+                HandoffAt = DateTime.UtcNow,
+                HandoffInHours = true,
+                StaffId = staff.Id,
+                ClaimedAt = DateTime.UtcNow,
+            };
+            context.Conversations.Add(conversation);
+            context.Sessions.Add(session);
+            await context.SaveChangesAsync();
+        }
+
+        // GET lịch sử tin thành công (200 OK) vì có quyền conversations:read.
+        var getReq = ActorHttp.CreateJsonRequest(
+            HttpMethod.Get, $"/api/admin/support/conversations/{conversationId}/messages", body: null, cookie);
+        using var getRes = await _client.SendAsync(getReq);
+        Assert.Equal(HttpStatusCode.OK, getRes.StatusCode);
+
+        // POST gửi tin bị chặn (403 Forbidden) vì thiếu quyền conversations:reply.
+        var postReq = ActorHttp.CreateJsonRequest(
+            HttpMethod.Post, $"/api/admin/support/sessions/{sessionId}/messages", new { body = "Chào bạn" }, cookie);
+        using var postRes = await _client.SendAsync(postReq);
+        Assert.Equal(HttpStatusCode.Forbidden, postRes.StatusCode);
+    }
+
+    [Fact]
+    // Vai trò chỉ có conversations:reply gửi được tin vào phiên nhận (201) nhưng bị từ chối đọc lịch sử (403).
+    public async Task SupportDesk_ConversationsReplyRole_HasAccessOnlyToReplyEndpoint()
+    {
+        var role = await IdentityTestData.CreateRoleAsync(_database, [Permissions.ConversationsReply]);
+        var (staff, token) = await IdentityTestData.CreateStaffSessionAsync(_database, role.Code, "reply-only-staff");
+        var cookie = $"pk_session={token}";
+
+        // Chuẩn bị hội thoại và phiên hỗ trợ gán cho nhân viên này.
+        var conversationId = Guid.NewGuid().ToString();
+        var sessionId = Guid.NewGuid().ToString();
+        await using (var context = _database.CreateSupportDeskContext())
+        {
+            var conversation = new SupportConversation
+            {
+                Id = conversationId,
+                AnonymousId = Guid.NewGuid().ToString(),
+                Status = SupportConversationStatus.Open,
+                CreatedAt = DateTime.UtcNow,
+                LastMessageAt = DateTime.UtcNow,
+            };
+            var session = new SupportSession
+            {
+                Id = sessionId,
+                ConversationId = conversationId,
+                AnonymousId = conversation.AnonymousId,
+                HandoffAt = DateTime.UtcNow,
+                HandoffInHours = true,
+                StaffId = staff.Id,
+                ClaimedAt = DateTime.UtcNow,
+            };
+            context.Conversations.Add(conversation);
+            context.Sessions.Add(session);
+            await context.SaveChangesAsync();
+        }
+
+        // POST gửi tin thành công (201 Created) vì có quyền conversations:reply.
+        var postReq = ActorHttp.CreateJsonRequest(
+            HttpMethod.Post, $"/api/admin/support/sessions/{sessionId}/messages", new { body = "Chào bạn" }, cookie);
+        using var postRes = await _client.SendAsync(postReq);
+        Assert.Equal(HttpStatusCode.Created, postRes.StatusCode);
+
+        // GET lịch sử tin bị chặn (403 Forbidden) vì thiếu quyền conversations:read.
+        var getReq = ActorHttp.CreateJsonRequest(
+            HttpMethod.Get, $"/api/admin/support/conversations/{conversationId}/messages", body: null, cookie);
+        using var getRes = await _client.SendAsync(getReq);
+        Assert.Equal(HttpStatusCode.Forbidden, getRes.StatusCode);
     }
 
     [Fact]

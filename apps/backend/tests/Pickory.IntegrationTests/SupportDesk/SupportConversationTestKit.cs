@@ -100,7 +100,9 @@ internal static class SupportConversationTestKit
         string body,
         DateTime createdAt,
         SupportMessageRole role = SupportMessageRole.Customer,
-        string? action = null)
+        string? action = null,
+        string? staffId = null,
+        string? sessionId = null)
     {
         var message = new SupportMessage
         {
@@ -108,6 +110,8 @@ internal static class SupportConversationTestKit
             Role = role,
             Body = body,
             Action = action,
+            StaffId = staffId,
+            SessionId = sessionId,
             CreatedAt = createdAt,
         };
         await using var context = database.CreateSupportDeskContext();

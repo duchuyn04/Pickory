@@ -1,6 +1,9 @@
 using System.Net;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.EntityFrameworkCore;
+using Pickory.IntegrationTests.Api.Identity;
+using Pickory.Modules.Identity.Roles;
 using Pickory.IntegrationTests.Infrastructure;
 using Pickory.Modules.SupportDesk.Entities;
 using Xunit;
@@ -24,14 +27,23 @@ public sealed class ListConversationMessagesEndpointTests(SupportDeskWebApplicat
     [Fact]
     public async Task Get_OwnerGuest_ReturnsMessagesAscendingWithPublicFieldsOnly()
     {
+        var (staff, _) = await IdentityTestData.CreateStaffSessionAsync(
+            database, DefaultRoles.SupportCode, "list-staff");
+        await using (var identity = database.CreateIdentityContext())
+        {
+            var user = await identity.Users.SingleAsync(u => u.Id == staff.Id);
+            user.Name = "Lan - CSKH";
+            await identity.SaveChangesAsync();
+        }
+
         var cookie = SupportConversationTestKit.NewGuestCookie();
         var conversation = await SupportConversationTestKit.SeedConversationAsync(
             database, SupportConversationTestKit.ReadAnonymousId(cookie));
-        await SupportConversationTestKit.SeedMessageAsync(database, conversation.Id, "Chào bạn", BaseTime.AddMinutes(2), SupportMessageRole.Staff);
+        await SupportConversationTestKit.SeedMessageAsync(
+            database, conversation.Id, "Chào bạn", BaseTime.AddMinutes(2), SupportMessageRole.Staff, staffId: staff.Id);
         await SupportConversationTestKit.SeedMessageAsync(database, conversation.Id, "Xin chào", BaseTime.AddMinutes(1));
         await SupportConversationTestKit.SeedMessageAsync(
             database, conversation.Id, "Để lại số điện thoại", BaseTime.AddMinutes(3), SupportMessageRole.System, action: "callback_form");
-
         var response = await _client.SendAsync(SupportConversationTestKit.Get(SupportConversationTestKit.MessagesPath(conversation.Id), cookie));
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -45,8 +57,42 @@ public sealed class ListConversationMessagesEndpointTests(SupportDeskWebApplicat
         Assert.Equal(["customer", "staff", "system"], items.Select(item => item.GetProperty("role").GetString()));
         Assert.Equal("callback_form", items[2].GetProperty("action").GetString());
         Assert.Equal(JsonValueKind.Null, items[0].GetProperty("action").ValueKind);
-        // Không lộ `staffId`: tên nhân viên chưa được chốt cho khách thấy.
-        Assert.Equal(["id", "role", "body", "action", "createdAt"], items[0].EnumerateObject().Select(property => property.Name));
+        // Không lộ `staffId`. Khách chỉ thấy `staffDisplayName`.
+        Assert.Equal(["id", "role", "body", "action", "staffDisplayName", "createdAt"], items[0].EnumerateObject().Select(property => property.Name));
+        // Tin staff có staffDisplayName bằng Lan - CSKH.
+        Assert.Equal("Lan - CSKH", items[1].GetProperty("staffDisplayName").GetString());
+        // Tin customer và system có staffDisplayName bằng null.
+        Assert.Equal(JsonValueKind.Null, items[0].GetProperty("staffDisplayName").ValueKind);
+        Assert.Equal(JsonValueKind.Null, items[2].GetProperty("staffDisplayName").ValueKind);
+    }
+
+    [Fact]
+    // Tên hồ sơ nhân viên chứa ký tự @ hợp lệ vẫn trả đúng staffDisplayName trong lịch sử của khách.
+    public async Task Get_StaffMessageWithAtSignName_ReturnsDisplayNameWithAtSign()
+    {
+        var (staff, _) = await IdentityTestData.CreateStaffSessionAsync(
+            database, DefaultRoles.SupportCode, "list-at-staff");
+        await using (var identity = database.CreateIdentityContext())
+        {
+            var user = await identity.Users.SingleAsync(u => u.Id == staff.Id);
+            user.Name = "Lan @ CSKH";
+            await identity.SaveChangesAsync();
+        }
+
+        var cookie = SupportConversationTestKit.NewGuestCookie();
+        var conversation = await SupportConversationTestKit.SeedConversationAsync(
+            database, SupportConversationTestKit.ReadAnonymousId(cookie));
+        await SupportConversationTestKit.SeedMessageAsync(
+            database, conversation.Id, "Chào bạn", BaseTime.AddMinutes(1), SupportMessageRole.Staff, staffId: staff.Id);
+
+        var response = await _client.SendAsync(SupportConversationTestKit.Get(
+            SupportConversationTestKit.MessagesPath(conversation.Id), cookie));
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var data = await SupportConversationTestKit.ReadDataAsync(response);
+        var items = data.GetProperty("items").EnumerateArray().ToList();
+        var staffItem = Assert.Single(items);
+        Assert.Equal("Lan @ CSKH", staffItem.GetProperty("staffDisplayName").GetString());
     }
 
     [Fact]

@@ -19,7 +19,7 @@ internal sealed class CustomerEventBroadcastHandler(CustomerEventHub eventHub)
         eventHub.Broadcast(@event.ConversationId, new SupportEvent(
             CustomerEventNames.MessageCreated,
             new CustomerMessageCreatedEventData(
-                @event.MessageId, @event.Role, @event.Body, @event.Action, @event.CreatedAt)));
+                @event.MessageId, @event.Role, @event.Body, @event.Action, @event.StaffDisplayName, @event.CreatedAt)));
         return Task.CompletedTask;
     }
 

@@ -66,6 +66,7 @@ internal sealed class WaitNudgeProcessor(
                 Role = SupportMessageRole.System,
                 Body = SupportSystemMessages.WaitReminder,
                 Action = SupportSystemMessages.CallbackAction,
+                SessionId = candidate.Id,
                 // Tin nhắc lại muộn hơn 1 mili giây. Tin của khách ghi cùng mốc giờ thì lịch sử xếp tin khách trước.
                 CreatedAt = now.AddMilliseconds(1),
             };
@@ -84,7 +85,9 @@ internal sealed class WaitNudgeProcessor(
                 SupportMessageCreatedEvent.SystemRole,
                 reminder.Body,
                 reminder.Action,
-                reminder.CreatedAt));
+                reminder.CreatedAt,
+                StaffDisplayName: null,
+                SessionId: candidate.Id));
             events.Emit(new SupportSessionRemindedEvent(candidate.Id));
             remindedCount++;
         }

@@ -189,12 +189,13 @@ public sealed class CustomerEventsEndpointTests(SupportDeskWebApplicationFactory
 
         // Khóa đúng tập trường công khai. Thiếu `staffId` và ghi chú nội bộ, vì kênh này dành cho khách.
         Assert.Equal(
-            ["id", "role", "body", "action", "createdAt"],
+            ["id", "role", "body", "action", "staffDisplayName", "createdAt"],
             received.Data.EnumerateObject().Select(property => property.Name));
         Assert.Equal(message.Id, received.Data.GetProperty("id").GetString());
         Assert.Equal("staff", received.Data.GetProperty("role").GetString());
         Assert.Equal("Đơn của bạn đang được giao.", received.Data.GetProperty("body").GetString());
         Assert.Equal(JsonValueKind.Null, received.Data.GetProperty("action").ValueKind);
+        Assert.Equal(JsonValueKind.Null, received.Data.GetProperty("staffDisplayName").ValueKind);
         Assert.Equal(message.CreatedAt, received.Data.GetProperty("createdAt").GetDateTime().ToUniversalTime());
         // Tin đọc được từ kết nối khác, nên sự kiện chỉ phát sau khi transaction commit.
         Assert.Single(await SupportConversationTestKit.ReadMessagesAsync(database, conversation.Id));
@@ -220,10 +221,11 @@ public sealed class CustomerEventsEndpointTests(SupportDeskWebApplicationFactory
         var received = await stream.ReadEventNamedAsync("message.created");
 
         Assert.Equal(
-            ["id", "role", "body", "action", "createdAt"],
+            ["id", "role", "body", "action", "staffDisplayName", "createdAt"],
             received.Data.EnumerateObject().Select(property => property.Name));
         Assert.Equal("system", received.Data.GetProperty("role").GetString());
         Assert.Equal("callback_form", received.Data.GetProperty("action").GetString());
+        Assert.Equal(JsonValueKind.Null, received.Data.GetProperty("staffDisplayName").ValueKind);
     }
 
     [Fact]

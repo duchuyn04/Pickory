@@ -4,12 +4,13 @@ using Pickory.Modules.SupportDesk.Persistence.Configurations;
 
 namespace Pickory.Modules.SupportDesk.Scheduling;
 
-// Dòng cấu hình CSKH đã đọc từ DB. Chỉ chứa trường mà bước mở phiên và job nhắc lại cần.
+// Dòng cấu hình CSKH đã đọc từ DB. Chứa trường cho bước mở phiên, job nhắc lại và job tự đóng.
 internal sealed record SupportSettingsView(
     TimeOnly OpensAt,
     TimeOnly ClosesAt,
     IReadOnlyCollection<DateOnly> Holidays,
-    int WaitNudgeMinutes)
+    int WaitNudgeMinutes,
+    int AutoCloseMinutes = 30)
 {
     // Chuyển sang cấu hình của hàm thuần, để bên gọi không tự ghép lại bộ tham số giờ làm việc.
     public WorkingHoursSettings ToWorkingHours() => new(OpensAt, ClosesAt, Holidays);
@@ -30,6 +31,6 @@ internal sealed class SupportSettingsReader(SupportDeskDbContext database)
         }
 
         return new SupportSettingsView(
-            settings.OpensAt, settings.ClosesAt, settings.Holidays, settings.WaitNudgeMinutes);
+            settings.OpensAt, settings.ClosesAt, settings.Holidays, settings.WaitNudgeMinutes, settings.AutoCloseMinutes);
     }
 }

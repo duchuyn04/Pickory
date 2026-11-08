@@ -231,8 +231,8 @@ Nhánh backend (`todo-backend.md`):
 - [x] SD-04 mở phiên chờ và nhắc lại
 - [x] SD-05 yêu cầu gọi lại
 - [x] SD-06 hàng chờ và nhận phiên
-- [ ] SD-07 tin nhân viên và tin mới của khách
-- [ ] SD-08 chuyển, kết thúc và tự đóng phiên
+- [x] SD-07 tin nhân viên và tin mới của khách
+- [x] SD-08 chuyển, kết thúc và tự đóng phiên
 - [ ] SD-09 chấm điểm CSAT
 - [ ] SD-11 bảng thông tin khách
 - [ ] SD-17 xóa dữ liệu hỗ trợ

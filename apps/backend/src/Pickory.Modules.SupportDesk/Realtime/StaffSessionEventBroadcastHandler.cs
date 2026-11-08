@@ -1,5 +1,6 @@
 using Pickory.Modules.SupportDesk.Callbacks;
 using Pickory.Modules.SupportDesk.Contracts.Events;
+using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Presence;
 using Pickory.Modules.SupportDesk.Sessions;
 using Pickory.Shared.Events;
@@ -13,7 +14,8 @@ internal sealed class StaffSessionEventBroadcastHandler(
     SupportEventHub eventHub)
     : IDomainEventHandler<SupportSessionStatusChangedEvent>,
         IDomainEventHandler<SupportSessionRemindedEvent>,
-        IDomainEventHandler<CallbackRequestCreatedEvent>
+        IDomainEventHandler<CallbackRequestCreatedEvent>,
+        IDomainEventHandler<SupportCustomerMessageDispatchedEvent>
 {
     public async Task HandleAsync(
         SupportSessionStatusChangedEvent @event, CancellationToken cancellationToken = default)
@@ -54,6 +56,14 @@ internal sealed class StaffSessionEventBroadcastHandler(
         return Task.CompletedTask;
     }
 
+    public Task HandleAsync(SupportCustomerMessageDispatchedEvent @event, CancellationToken cancellationToken = default)
+    {
+        // Chỉ gửi sự kiện tin mới cho nhân viên đang giữ phiên.
+        eventHub.BroadcastToStaff([@event.StaffId], new SupportEvent(
+            SupportEventNames.MessageCreated,
+            new StaffMessageCreatedEventData(@event.SessionId, @event.ConversationId)));
+        return Task.CompletedTask;
+    }
     private async Task BroadcastToAvailableStaffAsync(
         string eventName, string sessionId, CancellationToken cancellationToken)
     {

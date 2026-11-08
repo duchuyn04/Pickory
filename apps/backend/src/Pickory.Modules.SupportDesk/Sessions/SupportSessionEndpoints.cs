@@ -4,8 +4,10 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Pickory.Modules.Identity.Contracts.Authorization;
+using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Presence;
 using Pickory.Shared.Http;
+using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.SupportDesk.Sessions;
 
@@ -21,6 +23,15 @@ internal static class SupportSessionEndpoints
             .RequirePermission(Permissions.ConversationsRead);
         // Nhận phiên hỗ trợ cần quyền trả lời hội thoại.
         endpoints.MapPost($"{SessionsPath}/{{id}}/assignment", ClaimAsync)
+            .RequirePermission(Permissions.ConversationsReply);
+        // Chuyển phiên hỗ trợ cho đồng nghiệp cần quyền trả lời hội thoại.
+        endpoints.MapPut($"{SessionsPath}/{{id}}/assignment", TransferAsync)
+            .RequirePermission(Permissions.ConversationsReply);
+        // Kết thúc phiên hỗ trợ CSKH cần quyền trả lời hội thoại.
+        endpoints.MapPatch($"{SessionsPath}/{{id}}", CloseAsync)
+            .RequirePermission(Permissions.ConversationsReply);
+        // Nhân viên gửi tin nhắn vào phiên hỗ trợ cần quyền trả lời hội thoại.
+        endpoints.MapPost($"{SessionsPath}/{{id}}/messages", SendMessageAsync)
             .RequirePermission(Permissions.ConversationsReply);
     }
 
@@ -55,5 +66,64 @@ internal static class SupportSessionEndpoints
         return Results.Json(
             new ApiResponse<SupportSessionClaimResponse>(claimed),
             statusCode: StatusCodes.Status201Created);
+    }
+
+    // Nhân viên gửi tin nhắn vai staff vào phiên đang nhận.
+    internal static async Task<IResult> SendMessageAsync(
+        string id,
+        HttpContext context,
+        SendMessageRequest? request,
+        IValidator<SendMessageRequest> validator,
+        SupportSessionMessageService service)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        var staffId = SupportStaff.RequireStaffId(context);
+        var validRequest = await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
+        var message = await service.SendMessageAsync(id, staffId, validRequest.TrimmedBody, context.RequestAborted);
+        return Results.Json(
+            new ApiResponse<StaffViewMessageResponse>(message),
+            statusCode: StatusCodes.Status201Created);
+    }
+
+    // Nhân viên chuyển phiên đang nhận cho một đồng nghiệp đang sẵn sàng.
+    internal static async Task<IResult> TransferAsync(
+        string id,
+        HttpContext context,
+        TransferSessionRequest? request,
+        IValidator<TransferSessionRequest> validator,
+        SupportSessionTransferService service)
+    {
+        var callerStaffId = SupportStaff.RequireStaffId(context);
+        var validRequest = await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
+        // Không cho phép tự chuyển phiên cho chính người đang gọi.
+        if (validRequest.TrimmedStaffId == callerStaffId)
+        {
+            throw new ValidationException(
+            [
+                new ValidationFailure("staffId", "Không thể tự chuyển phiên cho chính mình.")
+            ]);
+        }
+
+        var transferred = await service.TransferAsync(
+            id,
+            callerStaffId,
+            validRequest.TrimmedStaffId,
+            validRequest.TrimmedNote,
+            context.RequestAborted);
+        return Results.Ok(new ApiResponse<SupportSessionClaimResponse>(transferred));
+    }
+
+    // Nhân viên kết thúc phiên hỗ trợ đang phụ trách và gửi tin mời chấm điểm CSAT.
+    internal static async Task<IResult> CloseAsync(
+        string id,
+        HttpContext context,
+        CloseSessionRequest? request,
+        IValidator<CloseSessionRequest> validator,
+        SupportSessionCloseService service)
+    {
+        var callerStaffId = SupportStaff.RequireStaffId(context);
+        await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
+        var closed = await service.CloseAsync(id, callerStaffId, context.RequestAborted);
+        return Results.Ok(new ApiResponse<SupportSessionCloseResponse>(closed));
     }
 }

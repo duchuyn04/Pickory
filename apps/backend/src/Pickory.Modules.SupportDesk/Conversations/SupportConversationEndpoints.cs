@@ -3,14 +3,15 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Pickory.Modules.Identity.Contracts.Actors;
+using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Modules.SupportDesk.Realtime;
 using Pickory.Shared.Http;
 using Pickory.Shared.Validation;
 
 namespace Pickory.Modules.SupportDesk.Conversations;
 
-// Bốn route chat của khách, không cần quyền vì khách vãng lai cũng chat được.
-// Route ghi đi qua kiểm `Origin` của actor middleware.
+// Tuyến đường hội thoại phục vụ chat của khách và lịch sử tin cho nhân viên.
+// Route ghi của khách đi qua kiểm `Origin` của actor middleware.
 internal static class SupportConversationEndpoints
 {
     private const string ConversationsPath = "/api/support/conversations";
@@ -26,6 +27,9 @@ internal static class SupportConversationEndpoints
         endpoints.MapGet(EventsPath, OpenEventStreamAsync)
             // Khai báo kiểu nội dung để tài liệu OpenAPI mô tả đúng luồng SSE. Hàm trả `IResult` nên OpenAPI không tự suy ra.
             .Produces<string>(StatusCodes.Status200OK, "text/event-stream");
+        // Đọc lịch sử tin nhắn của hội thoại cho nhân viên CSKH.
+        endpoints.MapGet("/api/admin/support/conversations/{id}/messages", ListStaffMessagesAsync)
+            .RequirePermission(Permissions.ConversationsRead);
     }
 
     internal static async Task<IResult> OpenAsync(HttpContext context, SupportConversationService service)
@@ -52,6 +56,15 @@ internal static class SupportConversationEndpoints
 
         var page = await service.ListMessagesAsync(actor, id, cursor, limit, context.RequestAborted);
         return Results.Ok(new ApiResponse<MessagePageResponse>(page));
+    }
+
+    // Nhân viên CSKH đọc lịch sử mọi phiên trong hội thoại.
+    internal static async Task<IResult> ListStaffMessagesAsync(
+        string id, string? cursor, string? limit, HttpContext context, SupportConversationService service)
+    {
+        context.Response.Headers.CacheControl = "no-store";
+        var page = await service.ListStaffMessagesAsync(id, cursor, limit, context.RequestAborted);
+        return Results.Ok(new ApiResponse<StaffMessagePageResponse>(page));
     }
 
     internal static async Task<IResult> SendMessageAsync(

@@ -4,6 +4,7 @@ using FluentValidation.Results;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Pickory.Modules.Identity.Contracts.Actors;
+using Pickory.Modules.Identity.Contracts.Staff;
 using Pickory.Modules.SupportDesk.Entities;
 using Pickory.Modules.SupportDesk.Persistence;
 using Pickory.Modules.SupportDesk.Sessions;
@@ -12,14 +13,14 @@ using Pickory.Shared.Exceptions;
 
 namespace Pickory.Modules.SupportDesk.Conversations;
 
-// Mở hội thoại, đọc lịch sử, nhận tin của khách và kiểm chủ cho kênh SSE.
-// Mọi hàm giả định route đã chặn nhân viên.
+// Dịch vụ quản lý hội thoại, gửi nhận tin nhắn và cung cấp lịch sử tin.
 internal sealed class SupportConversationService(
     SupportDeskDbContext database,
     SupportSessionOpener sessionOpener,
     TimeProvider timeProvider,
     SupportMessageLimiters limiters,
-    IEventDispatcher dispatcher)
+    IEventDispatcher dispatcher,
+    IStaffDirectory staffDirectory)
 {
     public const int DefaultPageSize = 50;
     public const int MaxPageSize = 100;
@@ -115,7 +116,30 @@ internal sealed class SupportConversationService(
 
         // Trong trang, tin xếp tăng dần để khung chat hiện tin mới nhất ở cuối.
         page.Reverse();
-        return new MessagePageResponse(page.Select(MessageResponse.From).ToList(), nextCursor);
+
+        var staffIds = page
+            .Where(message => message.Role == SupportMessageRole.Staff && !string.IsNullOrEmpty(message.StaffId))
+            .Select(message => message.StaffId!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        var staffNames = staffIds.Count > 0
+            ? await staffDirectory.GetProfileNamesAsync(staffIds, cancellationToken)
+            : new Dictionary<string, string?>();
+
+        var items = page.Select(message =>
+        {
+            string? staffDisplayName = null;
+            if (message.Role == SupportMessageRole.Staff && message.StaffId is not null
+                && staffNames.TryGetValue(message.StaffId, out var name)
+                && !string.IsNullOrWhiteSpace(name))
+            {
+                staffDisplayName = name;
+            }
+            return MessageResponse.From(message, staffDisplayName);
+        }).ToList();
+
+        return new MessagePageResponse(items, nextCursor);
     }
 
     public async Task<MessageResponse> SendMessageAsync(
@@ -153,23 +177,106 @@ internal sealed class SupportConversationService(
         // Sự kiện gom trong lúc transaction chạy và chỉ phát sau commit. Transaction hủy không phát phiên mới cho ai.
         var events = new DomainEventCollector(dispatcher);
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
+        // Phiên chờ mở trong cùng transaction với tin của khách, nên khách không thấy tin mà thiếu người xử lý.
+        var openedSession = await sessionOpener.OpenIfMissingAsync(conversation, nowMoment, events, cancellationToken);
+        var activeSession = openedSession ?? await database.Sessions
+            .SingleOrDefaultAsync(session => session.ConversationId == conversation.Id && session.ClosedAt == null, cancellationToken);
 
+        // Ghi mã phiên vào tin nhắn của khách nếu đang trong một phiên.
+        message.SessionId = activeSession?.Id;
         database.Messages.Add(message);
-        // Lưu tin trước bước kiểm phiên. `lastMessageAt` để cuối vì lệnh UPDATE đó lấy khóa dòng hội thoại.
         await database.SaveChangesAsync(cancellationToken);
 
-        // Phiên chờ mở trong cùng transaction với tin của khách, nên khách không thấy tin mà thiếu người xử lý.
-        await sessionOpener.OpenIfMissingAsync(conversation, nowMoment, events, cancellationToken);
+        // Phát sự kiện tin mới tới đúng nhân viên đang giữ phiên nếu đã có người nhận.
+        if (activeSession?.StaffId is not null)
+        {
+            events.Emit(new SupportCustomerMessageDispatchedEvent(
+                activeSession.Id, conversation.Id, activeSession.StaffId));
+        }
 
         // Cập nhật `lastMessageAt` sau bước kiểm phiên. Hai tin gửi cùng lúc không phải chờ khóa dòng hội thoại trước khi kiểm phiên.
         conversation.LastMessageAt = now;
         await database.SaveChangesAsync(cancellationToken);
-
         await transaction.CommitAsync(cancellationToken);
         // Phát sau commit. Handler đọc DB bằng kết nối khác vẫn thấy phiên và tin hệ thống mới.
         await events.FlushAsync(cancellationToken);
 
         return MessageResponse.From(message);
+    }
+
+    // Đọc lịch sử tin nhắn của hội thoại cho nhân viên theo phân trang con trỏ.
+    public async Task<StaffMessagePageResponse> ListStaffMessagesAsync(
+        string conversationId, string? cursor, string? limitText, CancellationToken cancellationToken)
+    {
+        // Kiểm tham số trước khi truy vấn DB.
+        var limit = ReadLimit(limitText);
+        DateTime? cursorCreatedAt = null;
+        string? cursorId = null;
+        if (cursor is not null)
+        {
+            if (!SupportMessageCursor.TryDecode(cursor, out var decodedAt, out var decodedId))
+            {
+                throw new ValidationException([new ValidationFailure("cursor", "Cursor không hợp lệ.")]);
+            }
+
+            cursorCreatedAt = decodedAt;
+            cursorId = decodedId;
+        }
+
+        // Kiểm tra hội thoại tồn tại trước khi lấy lịch sử tin nhắn.
+        var conversationExists = await database.Conversations.AsNoTracking()
+            .AnyAsync(conversation => conversation.Id == conversationId, cancellationToken);
+        if (!conversationExists)
+        {
+            throw ConversationNotFound();
+        }
+
+        var query = database.Messages.AsNoTracking().Where(message => message.ConversationId == conversationId);
+        if (cursorCreatedAt is not null)
+        {
+            var before = cursorCreatedAt.Value;
+            query = query.Where(message =>
+                message.CreatedAt < before || (message.CreatedAt == before && message.Id.CompareTo(cursorId) < 0));
+        }
+
+        var newestFirst = await query
+            .OrderByDescending(message => message.CreatedAt)
+            .ThenByDescending(message => message.Id)
+            .Take(limit + 1)
+            .ToListAsync(cancellationToken);
+
+        var hasOlderPage = newestFirst.Count > limit;
+        var page = newestFirst.Take(limit).ToList();
+        var nextCursor = hasOlderPage ? SupportMessageCursor.Encode(page[^1].CreatedAt, page[^1].Id) : null;
+
+        // Trong trang, tin xếp tăng dần theo thời gian tạo.
+        page.Reverse();
+
+        // Đọc danh sách tên nhân viên để hiển thị trong lịch sử tin.
+        var staffIds = page
+            .Where(message => message.Role == SupportMessageRole.Staff && !string.IsNullOrEmpty(message.StaffId))
+            .Select(message => message.StaffId!)
+            .Distinct(StringComparer.Ordinal)
+            .ToList();
+
+        var staffNames = staffIds.Count > 0
+            ? await staffDirectory.GetProfileNamesAsync(staffIds, cancellationToken)
+            : new Dictionary<string, string?>();
+
+        var items = page.Select(message =>
+        {
+            string? staffDisplayName = null;
+            if (message.Role == SupportMessageRole.Staff && message.StaffId is not null
+                && staffNames.TryGetValue(message.StaffId, out var name)
+                && !string.IsNullOrWhiteSpace(name))
+            {
+                staffDisplayName = name;
+            }
+
+            return StaffViewMessageResponse.From(message, staffDisplayName);
+        }).ToList();
+
+        return new StaffMessagePageResponse(items, nextCursor);
     }
 
     // Kiểm chủ hội thoại cho route đọc. Hội thoại của người khác và `id` không tồn tại cùng nhận 404.

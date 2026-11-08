@@ -12,3 +12,6 @@ internal sealed record SessionEventData(string SessionId);
 
 // Dữ liệu của sự kiện `callback.created`. Client đọc lại tab Gọi lại, nên dữ liệu chỉ có mã yêu cầu.
 internal sealed record CallbackCreatedEventData(string CallbackRequestId);
+
+// Dữ liệu sự kiện message.created gửi cho nhân viên khi có tin mới.
+internal sealed record StaffMessageCreatedEventData(string SessionId, string ConversationId);

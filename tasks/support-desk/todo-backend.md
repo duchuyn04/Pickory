@@ -116,37 +116,37 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 ### SD-07: Tin nhân viên và tin mới của khách
 **Mô tả:** `POST /api/admin/support/sessions/{id}/messages` lưu tin vai `staff` vào `support_messages` và đẩy tin tới khách qua SD-16. Tin mới của khách ở SD-15 được đẩy tới nhân viên giữ phiên qua `SupportEventHub`. Ngày 2026-10-18 task bỏ `IConversationService` và `CustomerMessageEvent`.
 **Tiêu chí nghiệm thu:**
-- [ ] Người không giữ phiên gửi tin nhận 403 `SUPPORT_SESSION_NOT_ASSIGNED`
-- [ ] Tin rỗng hoặc dài hơn 2.000 ký tự trả 400 `VALIDATION_ERROR`
-- [ ] Tin đầu tiên của phiên ghi `first_response_at`. Tin sau không đổi giá trị này
-- [ ] Tin hiện tên trong hồ sơ của nhân viên, đọc qua `IStaffDirectory`
-- [ ] Nhân viên chưa có tên: `staffDisplayName` bằng `null`. Response và sự kiện không chứa email của nhân viên
-- [ ] Khách nhận tin qua SSE phía khách trong 2 giây
-- [ ] Tin mới của khách tới nhân viên giữ phiên qua SSE. Nhân viên khác không nhận
-- [ ] Sự kiện tin phía nhân viên tên `message.created`, dữ liệu `{ sessionId, conversationId }`
-- [ ] Tin phía khách (lịch sử và sự kiện `message.created`) có thêm `staffDisplayName`. Tin không phải `staff` có giá trị `null`
-- [ ] Thêm `GET /api/admin/support/conversations/{id}/messages` cho nhân viên, cần `conversations:read`. Mỗi tin có `sessionId`
-- [ ] Test hợp đồng: response khớp ví dụ gửi tin và lịch sử tin của `admin-sessions.json`, và ví dụ lịch sử của `customer-api.json`
-- [ ] Endpoint mới có trong ma trận quyền
+- [x] Người không giữ phiên gửi tin nhận 403 `SUPPORT_SESSION_NOT_ASSIGNED`
+- [x] Tin rỗng hoặc dài hơn 2.000 ký tự trả 400 `VALIDATION_ERROR`
+- [x] Tin đầu tiên của phiên ghi `first_response_at`. Tin sau không đổi giá trị này
+- [x] Tin hiện tên trong hồ sơ của nhân viên, đọc qua `IStaffDirectory`
+- [x] Nhân viên chưa có tên: `staffDisplayName` bằng `null`. Response và sự kiện không chứa email của nhân viên
+- [x] Khách nhận tin qua SSE phía khách trong 2 giây
+- [x] Tin mới của khách tới nhân viên giữ phiên qua SSE. Nhân viên khác không nhận
+- [x] Sự kiện tin phía nhân viên tên `message.created`, dữ liệu `{ sessionId, conversationId }`
+- [x] Tin phía khách (lịch sử và sự kiện `message.created`) có thêm `staffDisplayName`. Tin không phải `staff` có giá trị `null`
+- [x] Thêm `GET /api/admin/support/conversations/{id}/messages` cho nhân viên, cần `conversations:read`. Mỗi tin có `sessionId`
+- [x] Test hợp đồng: response khớp ví dụ gửi tin và lịch sử tin của `admin-sessions.json`, và ví dụ lịch sử của `customer-api.json`
+- [x] Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp đọc cả SSE nhân viên và SSE phía khách
 **Phụ thuộc:** SD-06 · **Quy mô:** M
 
 ### SD-08: Chuyển, kết thúc và tự đóng phiên
 **Mô tả:** `PUT /api/admin/support/sessions/{id}/assignment` chuyển phiên cho đồng nghiệp kèm ghi chú nội bộ. `PATCH /api/admin/support/sessions/{id}` với `status: "closed"` kết thúc phiên. Job mỗi phút tự đóng phiên `human` không có tin trong 30 phút. Ngày 2026-10-18 task bỏ `IConversationService.CloseHumanSessionAsync`.
 **Tiêu chí nghiệm thu:**
-- [ ] Chỉ người đang giữ phiên chuyển được. Người khác nhận 403 `SUPPORT_SESSION_NOT_ASSIGNED`
-- [ ] Người nhận không ở trạng thái `available` trả 409 `SUPPORT_STAFF_UNAVAILABLE`
-- [ ] Ghi chú nội bộ không xuất hiện trong lịch sử tin của khách
-- [ ] Chuyển ghi đúng 1 dòng audit `support.session.transfer`. Kết thúc ghi đúng 1 dòng `support.session.close`
-- [ ] Kết thúc gửi khách tin hệ thống có `action = csat_form`
-- [ ] Sau khi kết thúc, tin mới của khách mở phiên chờ mới trong cùng hội thoại
-- [ ] Phiên im lặng 30 phút tự đóng với `closed_by = auto`, không ghi audit
-- [ ] Phiên chờ có `handoff_in_hours = false` mà chưa ai nhận tự đóng sau `autoCloseMinutes`, với `closed_by = auto`
-- [ ] Phiên chờ mở trong giờ không tự đóng khi chưa ai nhận. Phiên này chỉ nhận nhắc lại của SD-04
-- [ ] Phiên đã kết thúc trả 409 `SUPPORT_SESSION_CLOSED` cho cả chuyển và kết thúc
-- [ ] Hàng chờ `view=mine` của người nhận có `transferNote` của lần chuyển gần nhất
-- [ ] Kết thúc và tự đóng phát `session.closed` tới khách và tới nhân viên. Chuyển phát `session.assigned` tới nhân viên
-- [ ] Test hợp đồng: response khớp các ví dụ chuyển và kết thúc phiên của `admin-sessions.json`
+- [x] Chỉ người đang giữ phiên chuyển được. Người khác nhận 403 `SUPPORT_SESSION_NOT_ASSIGNED`
+- [x] Người nhận không ở trạng thái `available` trả 409 `SUPPORT_STAFF_UNAVAILABLE`
+- [x] Ghi chú nội bộ không xuất hiện trong lịch sử tin của khách
+- [x] Chuyển ghi đúng 1 dòng audit `support.session.transfer`. Kết thúc ghi đúng 1 dòng `support.session.close`
+- [x] Kết thúc gửi khách tin hệ thống có `action = csat_form`
+- [x] Sau khi kết thúc, tin mới của khách mở phiên chờ mới trong cùng hội thoại
+- [x] Phiên im lặng 30 phút tự đóng với `closed_by = auto`, không ghi audit
+- [x] Phiên chờ có `handoff_in_hours = false` mà chưa ai nhận tự đóng sau `autoCloseMinutes`, với `closed_by = auto`
+- [x] Phiên chờ mở trong giờ không tự đóng khi chưa ai nhận. Phiên này chỉ nhận nhắc lại của SD-04
+- [x] Phiên đã kết thúc trả 409 `SUPPORT_SESSION_CLOSED` cho cả chuyển và kết thúc
+- [x] Hàng chờ `view=mine` của người nhận có `transferNote` của lần chuyển gần nhất
+- [x] Kết thúc và tự đóng phát `session.closed` tới khách và tới nhân viên. Chuyển phát `session.assigned` tới nhân viên
+- [x] Test hợp đồng: response khớp các ví dụ chuyển và kết thúc phiên của `admin-sessions.json`
 **Kiểm tra:** test tích hợp; test gọi processor với `FakeTimeProvider`
 **Phụ thuộc:** SD-07 · **Quy mô:** M
 

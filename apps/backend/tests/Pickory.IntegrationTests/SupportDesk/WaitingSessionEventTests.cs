@@ -132,7 +132,7 @@ public sealed class WaitingSessionEventTests(SupportDeskWebApplicationFactory fa
         Assert.Equal("callback_form", systemMessage.Data.GetProperty("action").GetString());
         // Kênh khách không nhận gì ngoài dữ liệu công khai của tin.
         Assert.Equal(
-            ["id", "role", "body", "action", "createdAt"],
+            ["id", "role", "body", "action", "staffDisplayName", "createdAt"],
             systemMessage.Data.EnumerateObject().Select(property => property.Name));
     }
 

@@ -55,6 +55,8 @@ public static class SupportDeskModule
         services.AddScoped<IDomainEventHandler<SupportSessionRemindedEvent>, StaffSessionEventBroadcastHandler>();
         // Yêu cầu gọi lại mới cũng chỉ đi tới kênh nhân viên. Handler dùng chung với hai sự kiện phiên.
         services.AddScoped<IDomainEventHandler<CallbackRequestCreatedEvent>, StaffSessionEventBroadcastHandler>();
+        // Tin nhắn mới của khách gửi tới nhân viên đang giữ phiên qua sự kiện nội bộ.
+        services.AddScoped<IDomainEventHandler<SupportCustomerMessageDispatchedEvent>, StaffSessionEventBroadcastHandler>();
         // Vòng đời scoped vì dịch vụ và job giữ `SupportDeskDbContext` của request hoặc của một vòng worker.
         services.AddScoped<SupportConversationService>();
         services.AddScoped<CallbackRequestService>();
@@ -64,11 +66,19 @@ public static class SupportDeskModule
         services.AddScoped<SupportSessionQueueService>();
         // Dịch vụ nhận phiên hỗ trợ cần DbContext của request để mở transaction.
         services.AddScoped<SupportSessionClaimService>();
+        // Dịch vụ nhân viên gửi tin nhắn cần DbContext của request để mở transaction.
+        services.AddScoped<SupportSessionMessageService>();
+        // Dịch vụ chuyển phiên hỗ trợ cho đồng nghiệp cần `DbContext` để mở transaction.
+        services.AddScoped<SupportSessionTransferService>();
+        // Dịch vụ kết thúc phiên hỗ trợ CSKH cần `DbContext` để mở transaction.
+        services.AddScoped<SupportSessionCloseService>();
         // Opener đọc cấu hình từ DB và chạy trong transaction của tin khách, nên dùng chung scope với request.
         services.AddScoped<SupportSettingsReader>();
         services.AddScoped<SupportSessionOpener>();
         // Processor của job nhắc lại cũng cần scope riêng cho mỗi vòng chạy.
         services.AddScoped<WaitNudgeProcessor>();
+        // Processor của job tự đóng phiên im lặng cũng cần scope riêng cho mỗi vòng chạy.
+        services.AddScoped<AutoCloseSessionProcessor>();
         // Đăng ký lớp cụ thể cho test và interface `ICallbackPhoneRetentionProcessor` cho worker nền.
         services.AddScoped<CallbackPhoneRetentionProcessor>();
         services.AddScoped<ICallbackPhoneRetentionProcessor>(
@@ -85,6 +95,8 @@ public static class SupportDeskModule
         services.AddHostedService<WaitNudgeWorker>();
         // Worker xóa số điện thoại quá hạn 30 ngày chạy mỗi ngày một lần.
         services.AddHostedService<CallbackPhoneRetentionWorker>();
+        // Worker tự đóng phiên im lặng và phiên chờ ngoài giờ chạy mỗi phút một lần.
+        services.AddHostedService<AutoCloseSessionWorker>();
         return services;
     }
 

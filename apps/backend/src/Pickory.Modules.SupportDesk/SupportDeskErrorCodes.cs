@@ -13,4 +13,7 @@ internal static class SupportDeskErrorCodes
     public const string SessionNotFound = "SUPPORT_SESSION_NOT_FOUND";
     public const string SessionClosed = "SUPPORT_SESSION_CLOSED";
     public const string SessionAlreadyClaimed = "SUPPORT_SESSION_ALREADY_CLAIMED";
+    public const string SessionNotAssigned = "SUPPORT_SESSION_NOT_ASSIGNED";
+    // Nhân viên nhận phiên chuyển không ở trạng thái sẵn sàng.
+    public const string StaffUnavailable = "SUPPORT_STAFF_UNAVAILABLE";
 }

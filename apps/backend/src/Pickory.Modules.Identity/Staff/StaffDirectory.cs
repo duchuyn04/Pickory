@@ -29,4 +29,26 @@ public sealed class StaffDirectory(IdentityDbContext database) : IStaffDirectory
             row => row.Id,
             row => string.IsNullOrWhiteSpace(row.Name) ? row.Email : row.Name!);
     }
+
+    public async Task<IReadOnlyDictionary<string, string?>> GetProfileNamesAsync(
+        IReadOnlyCollection<string> userIds,
+        CancellationToken cancellationToken)
+    {
+        // Danh sách rỗng không cần truy vấn DB.
+        if (userIds.Count == 0)
+        {
+            return new Dictionary<string, string?>();
+        }
+
+        var ids = userIds.Distinct(StringComparer.Ordinal).ToList();
+        var rows = await database.Users.AsNoTracking()
+            .Where(user => ids.Contains(user.Id) && user.Kind == UserKind.Staff)
+            .Select(user => new { user.Id, user.Name })
+            .ToListAsync(cancellationToken);
+
+        // Trả đúng tên trong hồ sơ hoặc null khi tên rỗng, không dùng email thay thế.
+        return rows.ToDictionary(
+            row => row.Id,
+            row => string.IsNullOrWhiteSpace(row.Name) ? null : row.Name);
+    }
 }

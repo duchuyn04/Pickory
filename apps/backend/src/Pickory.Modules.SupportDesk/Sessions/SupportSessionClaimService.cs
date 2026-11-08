@@ -73,6 +73,7 @@ internal sealed class SupportSessionClaimService(
             Role = SupportMessageRole.System,
             Body = SupportSystemMessages.SessionClaimed,
             Action = null,
+            SessionId = sessionId,
             CreatedAt = now,
         };
         database.Messages.Add(systemMessage);
@@ -103,7 +104,9 @@ internal sealed class SupportSessionClaimService(
             SupportMessageCreatedEvent.SystemRole,
             systemMessage.Body,
             systemMessage.Action,
-            systemMessage.CreatedAt));
+            systemMessage.CreatedAt,
+            StaffDisplayName: null,
+            SessionId: sessionId));
         await events.FlushAsync(cancellationToken);
 
         return new SupportSessionClaimResponse(sessionId, staffId, claimedUtc);

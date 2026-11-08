@@ -94,6 +94,7 @@ internal sealed class SupportSessionOpener(
                 : SupportSystemMessages.OutsideHours(settings.OpensAt, settings.ClosesAt),
             // Chỉ tin ngoài giờ mở form số điện thoại. Tin trong giờ không cần khách nhập gì.
             Action = inHours ? null : SupportSystemMessages.CallbackAction,
+            SessionId = session.Id,
             // Tin hệ thống ghi sau tin của khách một mili giây. Hai tin cùng giờ thì lịch sử xếp theo mã, nên thứ tự sẽ ngẫu nhiên.
             CreatedAt = now.AddMilliseconds(1),
         };
@@ -110,7 +111,9 @@ internal sealed class SupportSessionOpener(
             SupportMessageCreatedEvent.SystemRole,
             systemMessage.Body,
             systemMessage.Action,
-            systemMessage.CreatedAt));
+            systemMessage.CreatedAt,
+            StaffDisplayName: null,
+            SessionId: session.Id));
         return session;
     }
 

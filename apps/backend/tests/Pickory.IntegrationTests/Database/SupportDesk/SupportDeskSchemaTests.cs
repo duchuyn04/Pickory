@@ -29,7 +29,7 @@ public sealed class SupportDeskSchemaTests(SupportDeskWebApplicationFactory fact
             "support_messages",
             [
                 "id:text:NO", "conversationId:text:NO", "role:SupportMessageRole:NO", "staffId:text:YES",
-                "body:text:NO", "action:text:YES", $"createdAt:{Timestamp}:NO",
+                "sessionId:text:YES", "body:text:NO", "action:text:YES", $"createdAt:{Timestamp}:NO",
             ]
         },
         {

@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Time.Testing;
 using Pickory.IntegrationTests.Infrastructure;
@@ -46,7 +47,8 @@ public sealed class SendConversationMessageEndpointTests(SupportDeskWebApplicati
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
         var data = await SupportConversationTestKit.ReadDataAsync(response);
-        Assert.Equal(["id", "role", "body", "action", "createdAt"], data.EnumerateObject().Select(property => property.Name));
+        Assert.Equal(["id", "role", "body", "action", "staffDisplayName", "createdAt"], data.EnumerateObject().Select(property => property.Name));
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("staffDisplayName").ValueKind);
         Assert.Equal("customer", data.GetProperty("role").GetString());
         Assert.Equal("Cho mình hỏi về đơn hàng", data.GetProperty("body").GetString());
 

@@ -30,7 +30,9 @@ internal static class SupportEventTestKit
         ReadEventRole(message.Role),
         message.Body,
         message.Action,
-        message.CreatedAt);
+        message.CreatedAt,
+        null,
+        message.SessionId);
 
     // Ghi tin trong transaction thật, commit rồi mới phát sự kiện.
     // `afterSaveBeforeCommit` là bước chen của bài kiểm thứ tự commit, chạy sau `SaveChanges` và trước commit.
