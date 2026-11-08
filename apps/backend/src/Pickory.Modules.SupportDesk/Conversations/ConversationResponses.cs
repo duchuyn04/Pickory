@@ -91,3 +91,6 @@ internal sealed record StaffViewMessageResponse(
 internal sealed record StaffMessagePageResponse(
     IReadOnlyList<StaffViewMessageResponse> Items,
     string? NextCursor);
+
+// Response của `PUT /api/support/conversations/{id}/csat`.
+internal sealed record SubmitCsatResponse(string SessionId, int Score);

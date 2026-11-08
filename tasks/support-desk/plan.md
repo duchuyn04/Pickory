@@ -233,7 +233,7 @@ Nhánh backend (`todo-backend.md`):
 - [x] SD-06 hàng chờ và nhận phiên
 - [x] SD-07 tin nhân viên và tin mới của khách
 - [x] SD-08 chuyển, kết thúc và tự đóng phiên
-- [ ] SD-09 chấm điểm CSAT
+- [x] SD-09 chấm điểm CSAT
 - [ ] SD-11 bảng thông tin khách
 - [ ] SD-17 xóa dữ liệu hỗ trợ
 

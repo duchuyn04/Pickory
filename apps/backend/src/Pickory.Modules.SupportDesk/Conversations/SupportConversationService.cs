@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using System.Globalization;
 using FluentValidation;
 using FluentValidation.Results;
@@ -278,6 +279,45 @@ internal sealed class SupportConversationService(
 
         return new StaffMessagePageResponse(items, nextCursor);
     }
+    // Lưu điểm đánh giá CSAT cho phiên đã kết thúc gần nhất của hội thoại.
+    public async Task<SubmitCsatResponse> SubmitCsatAsync(
+        Actor actor,
+        string conversationId,
+        int score,
+        CancellationToken cancellationToken)
+    {
+        // Kiểm tra quyền sở hữu hội thoại. Không tìm thấy hoặc của chủ khác đều trả 404.
+        var conversationExists = await ConversationOwnership.OwnedBy(database.Conversations.AsNoTracking(), actor)
+            .AnyAsync(conversation => conversation.Id == conversationId, cancellationToken);
+        if (!conversationExists)
+        {
+            throw ConversationNotFound();
+        }
+
+        // Tìm phiên đã kết thúc gần nhất. Ưu tiên `ClosedAt`, sau đó `HandoffAt` rồi `Id`.
+        var session = await database.Sessions
+            .Where(session => session.ConversationId == conversationId && session.ClosedAt != null)
+            .OrderByDescending(session => session.ClosedAt)
+            .ThenByDescending(session => session.HandoffAt)
+            .ThenByDescending(session => session.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+
+        // Hội thoại chưa có phiên nào kết thúc thì không được chấm điểm.
+        if (session is null)
+        {
+            throw new AppException(
+                SupportDeskErrorCodes.SessionOpen,
+                StatusCodes.Status409Conflict,
+                "Phiên hỗ trợ chưa kết thúc nên chưa chấm điểm được.");
+        }
+
+        // Ghi đè điểm CSAT của cùng phiên hỗ trợ.
+        session.Csat = score;
+        await database.SaveChangesAsync(cancellationToken);
+
+        return new SubmitCsatResponse(session.Id, score);
+    }
+
 
     // Kiểm chủ hội thoại cho route đọc. Hội thoại của người khác và `id` không tồn tại cùng nhận 404.
     public async Task EnsureOwnerAsync(Actor actor, string conversationId, CancellationToken cancellationToken)

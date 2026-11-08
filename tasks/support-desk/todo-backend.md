@@ -153,11 +153,11 @@ Module nghe `UserLinkedEvent` để gắn hội thoại vãng lai vào tài kho�
 ### SD-09: Chấm điểm CSAT
 **Mô tả:** `PUT /api/support/conversations/{id}/csat` lưu điểm 1 đến 5 cho phiên vừa kết thúc của hội thoại.
 **Tiêu chí nghiệm thu:**
-- [ ] Người không phải chủ hội thoại nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
-- [ ] Điểm ngoài khoảng 1 đến 5 trả 400 `VALIDATION_ERROR`
-- [ ] Hội thoại chưa có phiên đã kết thúc trả 409 `SUPPORT_SESSION_OPEN`
-- [ ] Gửi lại điểm cho cùng phiên ghi đè điểm cũ. Phiên chỉ có 1 điểm
-- [ ] Test hợp đồng: response khớp các ví dụ chấm điểm của `customer-api.json`
+- [x] Người không phải chủ hội thoại nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`
+- [x] Điểm ngoài khoảng 1 đến 5 trả 400 `VALIDATION_ERROR`
+- [x] Hội thoại chưa có phiên đã kết thúc trả 409 `SUPPORT_SESSION_OPEN`
+- [x] Gửi lại điểm cho cùng phiên ghi đè điểm cũ. Phiên chỉ có 1 điểm
+- [x] Test hợp đồng: response khớp các ví dụ chấm điểm của `customer-api.json`
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** SD-08 · **Quy mô:** S
 

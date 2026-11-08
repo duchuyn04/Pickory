@@ -16,4 +16,6 @@ internal static class SupportDeskErrorCodes
     public const string SessionNotAssigned = "SUPPORT_SESSION_NOT_ASSIGNED";
     // Nhân viên nhận phiên chuyển không ở trạng thái sẵn sàng.
     public const string StaffUnavailable = "SUPPORT_STAFF_UNAVAILABLE";
+    // Phiên hỗ trợ chưa kết thúc nên chưa thể chấm điểm.
+    public const string SessionOpen = "SUPPORT_SESSION_OPEN";
 }

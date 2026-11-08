@@ -17,12 +17,14 @@ internal static class SupportConversationEndpoints
     private const string ConversationsPath = "/api/support/conversations";
     private const string MessagesPath = "/api/support/conversations/{id}/messages";
     private const string EventsPath = "/api/support/conversations/{id}/events";
+    private const string CsatPath = "/api/support/conversations/{id}/csat";
 
     public static void Map(IEndpointRouteBuilder endpoints)
     {
         endpoints.MapPost(ConversationsPath, OpenAsync);
         endpoints.MapGet(MessagesPath, ListMessagesAsync);
         endpoints.MapPost(MessagesPath, SendMessageAsync);
+        endpoints.MapPut(CsatPath, SubmitCsatAsync);
         // Luồng SSE không kết thúc, client đóng kết nối khi rời trang `/support`.
         endpoints.MapGet(EventsPath, OpenEventStreamAsync)
             // Khai báo kiểu nội dung để tài liệu OpenAPI mô tả đúng luồng SSE. Hàm trả `IResult` nên OpenAPI không tự suy ra.
@@ -83,6 +85,25 @@ internal static class SupportConversationEndpoints
         var validRequest = await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
         var message = await service.SendMessageAsync(actor, id, validRequest.TrimmedBody, context.RequestAborted);
         return Results.Json(new ApiResponse<MessageResponse>(message), statusCode: StatusCodes.Status201Created);
+    }
+
+    internal static async Task<IResult> SubmitCsatAsync(
+        string id,
+        HttpContext context,
+        SubmitCsatRequest? request,
+        IValidator<SubmitCsatRequest> validator,
+        SupportConversationService service)
+    {
+        // Dữ liệu đánh giá thuộc hội thoại cá nhân nên không lưu bản sao trên proxy hay trình duyệt.
+        context.Response.Headers.CacheControl = "no-store";
+        var actor = context.GetActor();
+        // Chặn nhân viên gọi route đánh giá dành riêng cho khách trước khi kiểm tra dữ liệu.
+        ConversationOwnership.RejectStaff(actor);
+
+        // Kiểm tra dữ liệu điểm gửi lên trước khi truy vấn cơ sở dữ liệu.
+        var validRequest = await RequestValidation.ValidateAsync(validator, request, context.RequestAborted);
+        var response = await service.SubmitCsatAsync(actor, id, validRequest.ScoreValue!.Value, context.RequestAborted);
+        return Results.Ok(new ApiResponse<SubmitCsatResponse>(response));
     }
 
     internal static async Task<IResult> OpenEventStreamAsync(
