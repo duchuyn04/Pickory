@@ -125,10 +125,9 @@ Quy ước làm song song (quyết định 31 của plan):
 Task của phase này nằm ở `todo-backend.md` và `todo-frontend.md`. Hai nhánh chạy song song.
 
 ### Checkpoint SD2
-- [ ] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`
-  Chưa đạt: thiếu nút nhận phiên. Hoàn thành SD-UI2, SD-UI3 và SD-UI6 trước khi chạy lại Checkpoint SD2.
-- [ ] Ngoài giờ, khách để lại số điện thoại và tab Gọi lại hiện yêu cầu
-  Chưa đạt: thiếu form số điện thoại. Hoàn thành SD-UI6 và SD-UI4 trước khi chạy lại Checkpoint SD2.
+- [x] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`
+  Ghi chú ngày 2026-11-09: route `GET /api/admin/support/canned-responses` trả 404 vì SD-10 chưa làm. Phím `/` chưa chọn được mẫu, và console của nhân viên có 1 lỗi 404 khi mở khung chat. Kiểm lại ở Checkpoint SD3 và SD-E2E1.
+- [x] Ngoài giờ, khách để lại số điện thoại và tab Gọi lại hiện yêu cầu
 - [ ] Review với người dùng
 
 ---

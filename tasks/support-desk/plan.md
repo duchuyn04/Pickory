@@ -247,8 +247,8 @@ Nhánh frontend (`todo-frontend.md`):
 - [x] SD-UI4 tab Gọi lại
 
 ### Checkpoint SD2
-- [ ] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`
-- [ ] Ngoài giờ, khách để lại số điện thoại và tab Gọi lại hiện yêu cầu
+- [x] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`
+- [x] Ngoài giờ, khách để lại số điện thoại và tab Gọi lại hiện yêu cầu
 - [ ] Review với người dùng
 
 ### Phase 3: Cấu hình và số liệu
