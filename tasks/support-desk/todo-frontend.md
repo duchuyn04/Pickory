@@ -124,14 +124,14 @@ Người dùng chọn cách sửa này ngày 2026-11-04. Backend không đổi.
 ### SD-UI4: Tab Gọi lại
 **Mô tả:** Tab Gọi lại liệt kê yêu cầu `pending` trước, kèm số điện thoại, ghi chú và thời điểm gửi. Nhân viên đánh dấu "Đã gọi" hoặc "Không liên lạc được". Ngày 2026-11-03 task nhận thêm hai sự kiện `callback.created` và `session.reminded` ở cột hàng chờ.
 **Tiêu chí nghiệm thu:**
-- [ ] Schema `zod` đọc được mọi ví dụ của `admin-callbacks.json`. `phone` bằng `null` hiện "Đã xóa số"
-- [ ] Yêu cầu mới hiện trong tab mà không tải lại trang
+- [x] Schema `zod` đọc được mọi ví dụ của `admin-callbacks.json`. `phone` bằng `null` hiện "Đã xóa số"
+- [x] Yêu cầu mới hiện trong tab mà không tải lại trang
   Kiểm đầu cuối ở SD-E2E2.
-- [ ] Sự kiện `session.reminded` phát thông báo nhắc lại, theo lựa chọn âm báo của SD-UI1
-- [ ] Người thiếu `conversations:reply` thấy danh sách nhưng không thấy nút đánh dấu
-- [ ] Số điện thoại hiện dạng link `tel:`
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang
-- [ ] Playwright console có 0 lỗi và 0 cảnh báo
+- [x] Sự kiện `session.reminded` phát thông báo nhắc lại, theo lựa chọn âm báo của SD-UI1
+- [x] Người thiếu `conversations:reply` thấy danh sách nhưng không thấy nút đánh dấu
+- [x] Số điện thoại hiện dạng link `tel:`
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang
+- [x] Playwright console có 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; ảnh chụp
 **Phụ thuộc:** SD-UI1, SD-C2 · **Quy mô:** S
 

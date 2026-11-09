@@ -1,6 +1,7 @@
 import { apiRequest } from '../../../shared/api';
 import {
   parseCallbackRequests,
+  parseCallbackRequest,
   parseCannedResponses,
   parseClosedSession,
   parseQueueSessions,
@@ -11,6 +12,7 @@ import {
   parseStaffPresenceList,
   parseStaffViewMessage,
   type CallbackRequest,
+  type CallbackStatus,
   type CannedResponse,
   type ClosedSession,
   type PresenceStatus,
@@ -114,4 +116,19 @@ export async function closeSupportSession(sessionId: string): Promise<ClosedSess
     body: JSON.stringify({ status: 'closed' }),
   });
   return parseClosedSession(data);
+}
+
+// Hai trạng thái nhân viên được đặt. `pending` chỉ do máy chủ tạo ra.
+export type HandledCallbackStatus = Exclude<CallbackStatus, 'pending'>;
+
+// Đánh dấu một yêu cầu gọi lại đã gọi hoặc không liên lạc được. Chống bấm đôi nằm ở component gọi hàm này.
+export async function updateCallbackRequestStatus(
+  requestId: string,
+  status: HandledCallbackStatus,
+): Promise<CallbackRequest> {
+  const data = await apiRequest<unknown>(`/api/admin/support/callback-requests/${requestId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  });
+  return parseCallbackRequest(data);
 }

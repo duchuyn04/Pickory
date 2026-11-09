@@ -6,8 +6,10 @@ import {
   fetchSessionCustomer,
   sendStaffMessage,
   transferSupportSession,
+  updateCallbackRequestStatus,
 } from '../../../../../src/features/support-desk/admin/support-desk-api';
 import {
+  parseCallbackRequest,
   parseCallbackRequests,
   parseCannedResponses,
   parseClosedSession,
@@ -41,6 +43,32 @@ describe('schema yêu cầu gọi lại đọc ví dụ của admin-callbacks.js
     const response = example.response as { data: unknown };
 
     expect(parseCallbackRequests(response.data)).toEqual(response.data);
+  });
+
+  it('đọc được ví dụ "đánh dấu đã gọi"', () => {
+    const example = findSupportDeskExample('admin-callbacks.json', 'đánh dấu đã gọi');
+    const response = example.response as { data: unknown };
+
+    expect(parseCallbackRequest(response.data)).toEqual(response.data);
+  });
+
+  it('updateCallbackRequestStatus gửi PATCH với body status và đọc response mẫu', async () => {
+    const example = findSupportDeskExample('admin-callbacks.json', 'đánh dấu đã gọi');
+    const fetchMock = vi.fn(async () =>
+      Response.json(example.response, { status: example.status }),
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const updated = await updateCallbackRequestStatus(
+      'cb000000-0000-4000-8000-000000000001',
+      'done',
+    );
+
+    expect(updated).toEqual((example.response as { data: unknown }).data);
+    const [requestedUrl, init] = fetchMock.mock.calls[0] as unknown as [string, RequestInit];
+    expect(requestedUrl).toBe(example.path);
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(String(init.body))).toEqual(example.request);
   });
 });
 

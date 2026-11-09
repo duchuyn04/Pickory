@@ -12,6 +12,7 @@ import {
 import { useCan } from '../../identity/hooks/use-actor';
 import { applyPresenceChange } from './presence-state';
 import {
+  CALLBACKS_QUERY_KEY,
   PRESENCE_QUERY_KEY,
   SESSIONS_QUERY_KEY,
   SUPPORT_EVENTS_URL,
@@ -26,11 +27,23 @@ import {
 import { SupportEventStream, type StreamStatus } from '../shared/support-event-stream';
 
 const PRESENCE_EVENT = 'presence.changed';
-// Ba sự kiện của phiên. Hợp đồng ở quyết định 30 của `tasks/support-desk/plan.md`.
-const SESSION_EVENTS = ['session.waiting', 'session.assigned', 'session.closed'];
+// Bốn sự kiện của phiên. Hợp đồng ở quyết định 30 của `tasks/support-desk/plan.md`.
+const SESSION_EVENTS = [
+  'session.waiting',
+  'session.reminded',
+  'session.assigned',
+  'session.closed',
+];
 // Tin mới của hội thoại: chỉ đọc lại lịch sử tin của hội thoại trong sự kiện.
 const MESSAGE_CREATED_EVENT = 'message.created';
-const SUPPORT_EVENT_NAMES = [PRESENCE_EVENT, ...SESSION_EVENTS, MESSAGE_CREATED_EVENT];
+// Yêu cầu gọi lại mới: chỉ đọc lại danh sách yêu cầu gọi lại.
+const CALLBACK_CREATED_EVENT = 'callback.created';
+const SUPPORT_EVENT_NAMES = [
+  PRESENCE_EVENT,
+  ...SESSION_EVENTS,
+  MESSAGE_CREATED_EVENT,
+  CALLBACK_CREATED_EVENT,
+];
 
 export type SupportEventHandler = (eventName: string, data: unknown) => void;
 
@@ -91,6 +104,10 @@ export function SupportEventsProvider({ children }: { children: ReactNode }) {
           if (SESSION_EVENTS.includes(eventName)) {
             // Sự kiện của phiên chỉ báo có thay đổi. Client đọc lại danh sách thay vì tin dữ liệu trong sự kiện.
             void queryClient.invalidateQueries({ queryKey: SESSIONS_QUERY_KEY });
+          }
+          if (eventName === CALLBACK_CREATED_EVENT) {
+            // Theo hợp đồng, sự kiện chỉ báo có yêu cầu mới. Client đọc lại danh sách thay vì thêm dòng từ dữ liệu sự kiện.
+            void queryClient.invalidateQueries({ queryKey: CALLBACKS_QUERY_KEY });
           }
           if (eventName === MESSAGE_CREATED_EVENT) {
             const created = parseMessageCreatedEvent(data);

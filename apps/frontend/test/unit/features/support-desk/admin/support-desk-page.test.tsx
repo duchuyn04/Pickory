@@ -135,11 +135,11 @@ describe('hàng chờ', () => {
     expect(waitingBadge()).toBeNull();
   });
 
-  it('tab Gọi lại chỉ hiện yêu cầu pending', async () => {
+  it('tab Gọi lại liệt kê cả yêu cầu đã xử lý, yêu cầu cần gọi đứng trước', async () => {
     desk = openDesk(READ_ONLY, {
       callbacks: [
-        callbackRequest('1', 'pending'),
         callbackRequest('2', 'done'),
+        callbackRequest('1', 'pending'),
         callbackRequest('3', 'pending'),
       ],
     });
@@ -150,7 +150,9 @@ describe('hàng chờ', () => {
     await waitFor(() => textOf(desk.harness.container).includes('0900000001'), 'yêu cầu 1');
     const text = textOf(desk.harness.container);
     expect(text).toContain('0900000003');
-    expect(text).not.toContain('0900000002');
+    expect(text).toContain('0900000002');
+    expect(text.indexOf('0900000001')).toBeLessThan(text.indexOf('0900000002'));
+    expect(text.indexOf('0900000003')).toBeLessThan(text.indexOf('0900000002'));
   });
 
   it('chỉ đọc danh sách của tab đang mở, và đọc "Của tôi" khi chuyển tab', async () => {

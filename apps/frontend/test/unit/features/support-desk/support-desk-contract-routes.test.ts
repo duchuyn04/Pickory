@@ -394,3 +394,87 @@ describe('mockRoute với responseOverride', () => {
     ]);
   });
 });
+
+describe('mockRoute với respondWith', () => {
+  it('tính lại thân phản hồi ở mỗi request, nên route có trạng thái được', async () => {
+    const fakePage = createFakePage();
+    const routes = createSupportDeskRouteMocks({
+      page: fakePage.page,
+      apiOrigin: API_ORIGIN,
+      loadOpenApiDocument: createOpenApiLoader({ paths: {} }).load,
+    });
+    let requestCount = 0;
+    await routes.mockRoute('admin-callbacks.json', 'danh sách yêu cầu gọi lại', {
+      respondWith: () => {
+        requestCount += 1;
+        return { body: { data: [{ order: requestCount }] } };
+      },
+    });
+    const url = 'http://localhost/api/admin/support/callback-requests';
+
+    const first = await dispatchRequest(fakePage, 'GET', url);
+    const second = await dispatchRequest(fakePage, 'GET', url);
+
+    expect(readResponseBody(first)).toEqual({ data: [{ order: 1 }] });
+    expect(readResponseBody(second)).toEqual({ data: [{ order: 2 }] });
+  });
+
+  it('không gọi respondWith khi request khác method của ví dụ', async () => {
+    const fakePage = createFakePage();
+    const routes = createSupportDeskRouteMocks({
+      page: fakePage.page,
+      apiOrigin: API_ORIGIN,
+      loadOpenApiDocument: createOpenApiLoader({ paths: {} }).load,
+    });
+    let calls = 0;
+    await routes.mockRoute('admin-callbacks.json', 'danh sách yêu cầu gọi lại', {
+      respondWith: () => {
+        calls += 1;
+        return { body: { data: [] } };
+      },
+    });
+
+    const dispatched = await dispatchRequest(
+      fakePage,
+      'POST',
+      'http://localhost/api/admin/support/callback-requests',
+    );
+
+    expect(calls).toBe(0);
+    expect(dispatched.fulfilled).toEqual([]);
+  });
+});
+
+describe('mockRoute kiểm tra tùy chọn phản hồi', () => {
+  it('từ chối khi dùng cả respondWith và responseOverride', async () => {
+    const fakePage = createFakePage();
+    const routes = createSupportDeskRouteMocks({
+      page: fakePage.page,
+      apiOrigin: API_ORIGIN,
+      loadOpenApiDocument: createOpenApiLoader({ paths: {} }).load,
+    });
+
+    await expect(
+      routes.mockRoute('admin-callbacks.json', 'danh sách yêu cầu gọi lại', {
+        respondWith: () => ({ body: { data: [] } }),
+        responseOverride: { data: [] },
+      }),
+    ).rejects.toThrow('Không dùng `respondWith` cùng `responseOverride` cho một route.');
+  });
+
+  it('báo lỗi rõ khi respondWith trả body undefined', async () => {
+    const fakePage = createFakePage();
+    const routes = createSupportDeskRouteMocks({
+      page: fakePage.page,
+      apiOrigin: API_ORIGIN,
+      loadOpenApiDocument: createOpenApiLoader({ paths: {} }).load,
+    });
+    await routes.mockRoute('admin-callbacks.json', 'danh sách yêu cầu gọi lại', {
+      respondWith: () => ({ body: undefined }),
+    });
+
+    await expect(
+      dispatchRequest(fakePage, 'GET', 'http://localhost/api/admin/support/callback-requests'),
+    ).rejects.toThrow('`respondWith` phải trả `body` khác `undefined`.');
+  });
+});

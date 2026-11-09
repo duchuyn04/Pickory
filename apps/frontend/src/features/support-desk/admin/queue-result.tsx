@@ -5,7 +5,8 @@ import { ErrorAlert } from '../../../shared/error-alert';
 interface QueueResultProps<Row> {
   query: UseQueryResult<Row[]>;
   loadingMessage: string;
-  emptyMessage: string;
+  // `emptyMessage` bỏ trống thì nơi gọi tự vẽ trạng thái rỗng.
+  emptyMessage?: string;
   errorMessage: string;
   // Giữ dữ liệu đang hiện khi lần đọc lại nền lỗi. Khung chat dùng, để một lỗi mạng không xóa lịch sử tin.
   keepDataOnError?: boolean;
@@ -45,6 +46,9 @@ export function QueueResult<Row>({
       </p>
     );
   }
-  if (query.data.length === 0) return <p className="empty-state">{emptyMessage}</p>;
+  // Không có `emptyMessage` thì nơi gọi tự vẽ danh sách rỗng, để trạng thái của nó không mất khi danh sách hết dòng.
+  if (query.data.length === 0 && emptyMessage !== undefined) {
+    return <p className="empty-state">{emptyMessage}</p>;
+  }
   return <>{children(query.data)}</>;
 }

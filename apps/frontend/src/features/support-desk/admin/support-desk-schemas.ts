@@ -30,19 +30,23 @@ const queueSessionSchema = z.object({
   transferNote: z.string().nullable(),
 });
 
+// Chuỗi giờ của API luôn có múi giờ. Chuỗi hỏng bị loại ở đây để bộ định dạng ngày không ném lỗi.
+const apiTimeSchema = z.string().datetime({ offset: true });
+
+// Hợp đồng chỉ có ba trạng thái. Giá trị lạ làm lỗi đọc, để nhân viên không thấy dòng không rõ nghĩa.
+const callbackStatusSchema = z.enum(['pending', 'done', 'unreachable']);
+
 const callbackRequestSchema = z.object({
   id: z.string(),
   conversationId: z.string(),
   // Job xóa số sau 30 ngày, nên `phone` có thể bằng `null`.
   phone: z.string().nullable(),
   note: z.string().nullable(),
-  status: z.string(),
-  createdAt: z.string(),
-  handledAt: z.string().nullable(),
+  status: callbackStatusSchema,
+  createdAt: apiTimeSchema,
+  // Yêu cầu chưa xử lý chưa có thời điểm xử lý.
+  handledAt: apiTimeSchema.nullable(),
 });
-
-// Chuỗi giờ của API luôn có múi giờ. Chuỗi hỏng bị loại ở đây để bộ định dạng ngày không ném lỗi.
-const apiTimeSchema = z.string().datetime({ offset: true });
 
 // Một tin trong lịch sử của nhân viên. Là `Message` phía khách thêm `sessionId` theo hợp đồng của SD-UI2.
 const staffViewMessageSchema = z.object({
@@ -126,6 +130,7 @@ export type StaffPresence = z.infer<typeof staffPresenceSchema>;
 export type PresenceChange = z.infer<typeof presenceChangeSchema>;
 export type QueueSession = z.infer<typeof queueSessionSchema>;
 export type CallbackRequest = z.infer<typeof callbackRequestSchema>;
+export type CallbackStatus = z.infer<typeof callbackStatusSchema>;
 export type StaffViewMessage = z.infer<typeof staffViewMessageSchema>;
 export type StaffMessagePage = z.infer<typeof staffMessagePageSchema>;
 export type SessionAssignment = z.infer<typeof sessionAssignmentSchema>;
@@ -201,4 +206,9 @@ export function parseSessionClosedEvent(data: unknown): { sessionId: string } | 
 export function parsePresenceChange(data: unknown): PresenceChange | null {
   const result = presenceChangeSchema.safeParse(data);
   return result.success ? result.data : null;
+}
+
+// Đọc một yêu cầu gọi lại, là response của lệnh `PATCH` đánh dấu.
+export function parseCallbackRequest(data: unknown): CallbackRequest {
+  return parseApiData(callbackRequestSchema, data);
 }

@@ -244,7 +244,7 @@ Nhánh frontend (`todo-frontend.md`):
 - [x] SD-UI6 form số điện thoại và form CSAT
 - [x] SD-UI2 khung chat và mẫu trả lời nhanh
 - [x] SD-UI3 thông tin khách và hộp thoại chuyển phiên
-- [ ] SD-UI4 tab Gọi lại
+- [x] SD-UI4 tab Gọi lại
 
 ### Checkpoint SD2
 - [ ] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`

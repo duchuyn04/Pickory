@@ -19,6 +19,7 @@ import { stubWebFonts } from './commerce-order-fixtures';
 import { e2eEnvironment } from './environment';
 import { activateStaffAccount, inviteStaff } from './staff-fixtures';
 import { createSupportDeskRouteMocks } from './support-desk-contract-routes';
+import { findSupportDeskExample } from '../test/unit/features/support-desk/contract-fixtures';
 
 // SD-UI1: màn CSKH, hai công tắc (sẵn sàng, âm báo) và trạng thái kết nối.
 // Hai route `sessions` và `callback-requests` chưa có nên spec trả dữ liệu mẫu bằng helper SD-C2, còn `events` và `presence` dùng backend thật.
@@ -224,7 +225,7 @@ test.describe('SD-UI1: màn CSKH', () => {
     await expect.poll(() => readAvailableStaffIds(page)).not.toContain(staffId);
   });
 
-  test('hàng chờ hiện dữ liệu mẫu, badge khớp số phiên, tab Gọi lại chỉ có yêu cầu pending', async () => {
+  test('hàng chờ hiện dữ liệu mẫu, badge khớp số phiên, tab Gọi lại có hai nhóm với yêu cầu cần gọi đứng trước', async () => {
     const { page } = support;
     await openDeskPage(page);
 
@@ -237,10 +238,20 @@ test.describe('SD-UI1: màn CSKH', () => {
     await expect(page.getByText('Đơn PK123 của mình giao tới đâu rồi?')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Gọi lại', exact: true }).click();
-    const callbackList = page.getByRole('list', { name: 'Yêu cầu gọi lại' });
-    // File mẫu có hai yêu cầu, một dòng đã gọi. Tab chỉ hiện dòng `pending`.
-    await expect(callbackList.getByRole('listitem')).toHaveCount(1);
-    await expect(callbackList.getByText('0901234567')).toBeVisible();
+    const callbackRegion = page.getByRole('group', { name: 'Yêu cầu gọi lại' });
+    // File mẫu có hai yêu cầu: một dòng cần gọi lại và một dòng đã xử lý.
+    const pendingGroup = callbackRegion.getByRole('list', { name: /^Cần gọi lại/ });
+    const handledGroup = callbackRegion.getByRole('list', { name: 'Đã xử lý' });
+    await expect(pendingGroup.getByRole('listitem')).toHaveCount(1);
+    await expect(handledGroup.getByRole('listitem')).toHaveCount(1);
+    // Số `0901234567` là link `tel:`, và dòng cần gọi lại đứng trước dòng đã xử lý.
+    await expect(pendingGroup.getByRole('link', { name: '0901234567' })).toHaveAttribute(
+      'href',
+      'tel:0901234567',
+    );
+    const pendingGroupBox = await readBox(pendingGroup);
+    const handledGroupBox = await readBox(handledGroup);
+    expect(pendingGroupBox.y).toBeLessThan(handledGroupBox.y);
 
     await page.getByRole('tab', { name: 'Của tôi', exact: true }).click();
     const mineList = page.getByRole('list', { name: 'Phiên của tôi' });
@@ -1018,4 +1029,296 @@ test.describe('SD-UI1: màn CSKH', () => {
       data: { status: 'away' },
     });
   });
+
+  // SD-UI4: tab Gọi lại dùng route giả có trạng thái trên trang riêng, vì backend chưa có hai route callback.
+  // `callback.created` và `session.reminded` chỉ có unit test, vì backend chưa phát hai sự kiện này.
+  type CallbackRow = Record<string, unknown>;
+
+  interface CallbackDesk {
+    page: Page;
+    consoleIssues: string[];
+    // Body của mọi request PATCH mà giao diện đã gửi.
+    patchBodies: unknown[];
+    rows: CallbackRow[];
+  }
+
+  const PATCH_ERROR_MESSAGE = 'Máy chủ đang bận. Hãy thử lại sau.';
+
+  async function openCallbackDesk(
+    options: { patchFails?: boolean; width?: number; height?: number; longNote?: boolean } = {},
+  ): Promise<CallbackDesk> {
+    const page = await support.context.newPage();
+    // Case lỗi chủ động trả 500 cho PATCH. Chỉ đúng lỗi tải đó được bỏ qua, mọi dòng console khác vẫn tính.
+    const allowedFailures: AllowedLoadFailure[] = options.patchFails
+      ? [{ urlPattern: /\/api\/admin\/support\/callback-requests\//, status: 500 }]
+      : [];
+    const consoleIssues = collectConsoleIssues(page, allowedFailures);
+    await page.setViewportSize({ width: options.width ?? 1280, height: options.height ?? 800 });
+    await stubWebFonts(page);
+    await mockUnfinishedQueueRoutes(page);
+
+    const listExample = findSupportDeskExample('admin-callbacks.json', 'danh sách yêu cầu gọi lại');
+    const rows = structuredClone((listExample.response as { data: CallbackRow[] }).data);
+    // Ghi chú một chuỗi dài không dấu cách, để đo việc ngắt dòng trong cột hẹp.
+    if (options.longNote) rows[0] = { ...rows[0], note: 'GoiLaiSauMuoiTam'.repeat(12) };
+    const patchBodies: unknown[] = [];
+    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
+    // Danh sách đọc từ `rows`, nên PATCH thành công làm lần đọc lại kế tiếp trả đúng trạng thái mới.
+    await routes.mockRoute('admin-callbacks.json', 'danh sách yêu cầu gọi lại', {
+      respondWith: () => ({ body: { data: rows } }),
+    });
+    await routes.mockRoute('admin-callbacks.json', 'đánh dấu đã gọi', {
+      respondWith: (request) => {
+        const body = request.postDataJSON() as { status: string };
+        patchBodies.push(body);
+        if (options.patchFails) {
+          return {
+            status: 500,
+            body: { error: { code: 'INTERNAL', message: PATCH_ERROR_MESSAGE } },
+          };
+        }
+        const row = rows[0] as CallbackRow;
+        row.status = body.status;
+        row.handledAt = '2026-11-04T01:30:00Z';
+        return { body: { data: row } };
+      },
+    });
+    return { page, consoleIssues, patchBodies, rows };
+  }
+
+  async function openCallbacksTab(page: Page) {
+    await openDeskPage(page);
+    await page.getByRole('tab', { name: 'Gọi lại', exact: true }).click();
+    await expect(page.getByRole('heading', { level: 3, name: /^Cần gọi lại/ })).toBeVisible();
+  }
+
+  const PENDING_PHONE = '0901234567';
+
+  test('SD-UI4: Đã gọi gửi PATCH body done, dòng sang nhóm Đã xử lý và tiêu điểm về tiêu đề nhóm', async () => {
+    const desk = await openCallbackDesk();
+    const { page } = desk;
+    try {
+      await openCallbacksTab(page);
+      const pendingGroup = page.getByRole('list', { name: /^Cần gọi lại/ });
+      const handledGroup = page.getByRole('list', { name: 'Đã xử lý' });
+      await expect(pendingGroup.getByRole('listitem')).toHaveCount(1);
+      await expect(handledGroup.getByRole('listitem')).toHaveCount(1);
+      // Số điện thoại là link `tel:`. Dòng đã xóa số hiện chữ thường.
+      await expect(pendingGroup.getByRole('link', { name: PENDING_PHONE })).toHaveAttribute(
+        'href',
+        `tel:${PENDING_PHONE}`,
+      );
+      await expect(handledGroup.getByText('Đã xóa số')).toBeVisible();
+      await expect(handledGroup.getByRole('link')).toHaveCount(0);
+      // Dòng cần gọi lại đứng trước dòng đã xử lý trong cột.
+      const pendingBox = await readBox(pendingGroup);
+      const handledBox = await readBox(handledGroup);
+      expect(pendingBox.y).toBeLessThan(handledBox.y);
+
+      const patchRequest = page.waitForRequest(
+        (request) =>
+          request.method() === 'PATCH' &&
+          request.url().includes('/api/admin/support/callback-requests/'),
+      );
+      await page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }).click();
+      expect((await patchRequest).postDataJSON()).toEqual({ status: 'done' });
+
+      // Nhóm Cần gọi lại biến mất, cả hai dòng nằm ở nhóm Đã xử lý và dòng vừa đánh dấu có nhãn Đã gọi.
+      await expect(page.getByRole('heading', { level: 3, name: /^Cần gọi lại/ })).toHaveCount(0);
+      await expect(handledGroup.getByRole('listitem')).toHaveCount(2);
+      // Dòng mẫu đã xử lý cũng có nhãn Đã gọi, nên chỉ tìm nhãn trong dòng vừa đánh dấu.
+      await expect(
+        handledGroup
+          .getByRole('listitem')
+          .filter({ hasText: PENDING_PHONE })
+          .getByText('Đã gọi', { exact: true }),
+      ).toBeVisible();
+      await expect(page.getByText('Không có yêu cầu nào cần gọi lại.')).toBeVisible();
+      await expect(page.getByRole('status').filter({ hasText: 'Đã đánh dấu' })).toHaveText(
+        `Đã đánh dấu yêu cầu ${PENDING_PHONE} là Đã gọi.`,
+      );
+      await expect(page.getByRole('heading', { level: 3, name: 'Đã xử lý' })).toBeFocused();
+      expect(desk.patchBodies).toEqual([{ status: 'done' }]);
+      expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
+    } finally {
+      await page.close();
+    }
+  });
+
+  test('SD-UI4: Không liên lạc được gửi PATCH body unreachable và hiện nhãn tương ứng', async () => {
+    const desk = await openCallbackDesk();
+    const { page } = desk;
+    try {
+      await openCallbacksTab(page);
+
+      await page
+        .getByRole('button', { name: `Đánh dấu không liên lạc được: ${PENDING_PHONE}` })
+        .click();
+
+      const handledGroup = page.getByRole('list', { name: 'Đã xử lý' });
+      await expect(handledGroup.getByText('Không liên lạc được', { exact: true })).toBeVisible();
+      expect(desk.patchBodies).toEqual([{ status: 'unreachable' }]);
+      expect(desk.rows[0]?.status).toBe('unreachable');
+      expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
+    } finally {
+      await page.close();
+    }
+  });
+
+  test('SD-UI4: bàn phím tới link và hai nút theo thứ tự, Enter trên nút Đã gọi lưu và trả tiêu điểm về tiêu đề', async () => {
+    const desk = await openCallbackDesk();
+    const { page } = desk;
+    try {
+      await openCallbacksTab(page);
+      await page.getByRole('tab', { name: 'Gọi lại', exact: true }).focus();
+
+      await page.keyboard.press('Tab');
+      await expect(page.getByRole('link', { name: PENDING_PHONE })).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(
+        page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }),
+      ).toBeFocused();
+      await page.keyboard.press('Tab');
+      await expect(
+        page.getByRole('button', { name: `Đánh dấu không liên lạc được: ${PENDING_PHONE}` }),
+      ).toBeFocused();
+      await page.keyboard.press('Shift+Tab');
+      await page.keyboard.press('Enter');
+
+      await expect(page.getByRole('heading', { level: 3, name: 'Đã xử lý' })).toBeFocused();
+      expect(desk.patchBodies).toEqual([{ status: 'done' }]);
+      expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
+    } finally {
+      await page.close();
+    }
+  });
+
+  test('SD-UI4: PATCH lỗi hiện thông báo của API dưới dòng, dòng giữ ở nhóm Cần gọi lại và nút bật lại', async () => {
+    const desk = await openCallbackDesk({ patchFails: true });
+    const { page } = desk;
+    try {
+      await openCallbacksTab(page);
+
+      await page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }).click();
+
+      const pendingGroup = page.getByRole('list', { name: /^Cần gọi lại/ });
+      await expect(pendingGroup.getByRole('alert')).toContainText(PATCH_ERROR_MESSAGE);
+      await expect(pendingGroup.getByRole('listitem')).toHaveCount(1);
+      await expect(
+        page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }),
+      ).toBeEnabled();
+      await expect(
+        page.getByRole('button', { name: `Đánh dấu không liên lạc được: ${PENDING_PHONE}` }),
+      ).toBeEnabled();
+      expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
+    } finally {
+      await page.close();
+    }
+  });
+
+  for (const viewport of [
+    { name: '1280', width: 1280, height: 800 },
+    { name: '375', width: 375, height: 812 },
+  ]) {
+    test(`SD-UI4: ảnh chụp tab Gọi lại ${viewport.name}px không tràn ngang, ghi chú dài ngắt dòng`, async () => {
+      const testInfo = test.info();
+      const desk = await openCallbackDesk({
+        width: viewport.width,
+        height: viewport.height,
+        longNote: true,
+      });
+      const { page } = desk;
+      try {
+        await openCallbacksTab(page);
+        await expectNoHorizontalOverflow(page);
+
+        const queueBox = await readBox(page.getByRole('region', { name: 'Hàng chờ' }));
+        const pendingRow = page
+          .getByRole('list', { name: /^Cần gọi lại/ })
+          .getByRole('listitem')
+          .first();
+        const rowBox = await readBox(pendingRow);
+        const noteBox = await readBox(pendingRow.locator('.support-callback-note'));
+        const phoneBox = await readBox(pendingRow.getByRole('link'));
+        const doneButtonBox = await readBox(pendingRow.getByRole('button', { name: /đã gọi/ }));
+        const unreachableButtonBox = await readBox(
+          pendingRow.getByRole('button', { name: /không liên lạc được/ }),
+        );
+        const noteTextWidth = await pendingRow
+          .locator('.support-callback-note')
+          .evaluate((element) => ({
+            scrollWidth: element.scrollWidth,
+            clientWidth: element.clientWidth,
+          }));
+        const measurements = {
+          viewport: { width: viewport.width, height: viewport.height },
+          queue: queueBox,
+          row: rowBox,
+          note: noteBox,
+          noteTextWidth,
+          phone: phoneBox,
+          doneButton: doneButtonBox,
+          unreachableButton: unreachableButtonBox,
+        };
+        await testInfo.attach(`measurements-callbacks-${viewport.name}`, {
+          body: JSON.stringify(measurements, null, 2),
+          contentType: 'application/json',
+        });
+        const tolerance = 0.5;
+        const queueRight = queueBox.x + queueBox.width;
+        // Dòng, ghi chú và hai nút đều nằm trong cột hàng chờ, và cột nằm trong khung nhìn.
+        expect(queueRight).toBeLessThanOrEqual(viewport.width + tolerance);
+        for (const box of [rowBox, noteBox, phoneBox, doneButtonBox, unreachableButtonBox]) {
+          expect(box.x).toBeGreaterThanOrEqual(queueBox.x - tolerance);
+          expect(box.x + box.width).toBeLessThanOrEqual(queueRight + tolerance);
+        }
+        // Hộp của ghi chú luôn vừa cột, kể cả khi chữ tràn ra ngoài hộp. `scrollWidth` lớn hơn `clientWidth` nghĩa là chữ tràn.
+        expect(noteTextWidth.scrollWidth).toBeLessThanOrEqual(noteTextWidth.clientWidth);
+        await page.screenshot({
+          path: screenshotPath(testInfo, `callbacks-${viewport.name}-groups.png`),
+          fullPage: true,
+        });
+        expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
+      } finally {
+        await page.close();
+      }
+    });
+
+    test(`SD-UI4: ảnh chụp lỗi của dòng ${viewport.name}px không tràn ngang`, async () => {
+      const testInfo = test.info();
+      const desk = await openCallbackDesk({
+        width: viewport.width,
+        height: viewport.height,
+        patchFails: true,
+      });
+      const { page } = desk;
+      try {
+        await openCallbacksTab(page);
+        await page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }).click();
+        const pendingRow = page
+          .getByRole('list', { name: /^Cần gọi lại/ })
+          .getByRole('listitem')
+          .first();
+        const alert = pendingRow.getByRole('alert');
+        await expect(alert).toContainText(PATCH_ERROR_MESSAGE);
+        await expectNoHorizontalOverflow(page);
+
+        const rowBox = await readBox(pendingRow);
+        const alertBox = await readBox(alert);
+        await testInfo.attach(`measurements-callback-error-${viewport.name}`, {
+          body: JSON.stringify({ row: rowBox, alert: alertBox }, null, 2),
+          contentType: 'application/json',
+        });
+        expect(alertBox.x + alertBox.width).toBeLessThanOrEqual(rowBox.x + rowBox.width + 0.5);
+        expect(alertBox.y).toBeGreaterThanOrEqual(rowBox.y);
+        await page.screenshot({
+          path: screenshotPath(testInfo, `callbacks-${viewport.name}-error.png`),
+          fullPage: true,
+        });
+        expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
+      } finally {
+        await page.close();
+      }
+    });
+  }
 });

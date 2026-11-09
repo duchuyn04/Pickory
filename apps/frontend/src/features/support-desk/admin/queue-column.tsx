@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { TabList, tabId } from '../../../shared/tab-list';
-import { formatVietnamDateTime } from '../../../shared/vietnam-time';
+import { CallbackList } from './callback-list';
 import { QueueResult } from './queue-result';
 import {
   CALLBACKS_QUERY_KEY,
@@ -9,8 +9,8 @@ import {
   fetchCallbackRequests,
   fetchSessions,
 } from './support-desk-api';
-import type { CallbackRequest, QueueSession } from './support-desk-schemas';
-import { formatWaitingTime, selectPendingCallbacks, waitingBadgeCount } from './queue-view';
+import type { QueueSession } from './support-desk-schemas';
+import { formatWaitingTime, waitingBadgeCount } from './queue-view';
 
 type QueueTab = 'waiting' | 'mine' | 'callbacks';
 
@@ -64,19 +64,6 @@ function SessionList({
               Chờ {formatWaitingTime(session.waitingSeconds + secondsSinceFetch)}
             </span>
           </button>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function CallbackList({ requests }: { requests: CallbackRequest[] }) {
-  return (
-    <ul className="support-queue-list" aria-label="Yêu cầu gọi lại">
-      {requests.map((request) => (
-        <li key={request.id} className="support-queue-item">
-          <p className="support-queue-preview wrap-anywhere">{request.phone}</p>
-          <span className="cell-sub">Gửi lúc {formatVietnamDateTime(request.createdAt)}</span>
         </li>
       ))}
     </ul>
@@ -172,18 +159,9 @@ export function QueueColumn({ selectedSessionId, onSelectSession }: QueueColumnP
           <QueueResult
             query={callbacksQuery}
             loadingMessage="Đang nạp yêu cầu gọi lại..."
-            emptyMessage="Chưa có yêu cầu gọi lại nào."
             errorMessage="Không tải được yêu cầu gọi lại."
           >
-            {(requests) => {
-              // Chỉ dòng `pending` là việc còn phải làm. Lọc ở client vì hợp đồng trả cả các dòng đã xong.
-              const pendingRequests = selectPendingCallbacks(requests);
-              return pendingRequests.length === 0 ? (
-                <p className="empty-state">Chưa có yêu cầu gọi lại nào.</p>
-              ) : (
-                <CallbackList requests={pendingRequests} />
-              );
-            }}
+            {(requests) => <CallbackList requests={requests} />}
           </QueueResult>
         )}
       </div>

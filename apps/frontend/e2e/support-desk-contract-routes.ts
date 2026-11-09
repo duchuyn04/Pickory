@@ -1,4 +1,4 @@
-import type { Page, Route } from '@playwright/test';
+import type { Page, Request, Route } from '@playwright/test';
 import {
   findSupportDeskExample,
   selectSupportDeskEvents,
@@ -33,6 +33,8 @@ export interface EventStreamMockOptions {
 export interface MockRouteOptions {
   // Ghi đè thân phản hồi của ví dụ khi test cần lượng dữ liệu khác mẫu, ví dụ 50 tin cho cuộn trang.
   responseOverride?: unknown;
+  // Tính phản hồi ở mỗi request, và `status` bỏ trống thì dùng status của ví dụ. Không dùng cùng `responseOverride`.
+  respondWith?: (request: Request) => { status?: number; body: unknown };
 }
 
 export interface SupportDeskRouteMocks {
@@ -58,6 +60,10 @@ export function createSupportDeskRouteMocks(
   return {
     async mockRoute(fixtureFile, exampleName, mockOptions) {
       const example = findSupportDeskExample(fixtureFile, exampleName);
+      // Hai cách đặt phản hồi loại trừ nhau. Dùng cả hai thì test không rõ phản hồi nào được trả.
+      if (mockOptions?.respondWith !== undefined && mockOptions.responseOverride !== undefined) {
+        throw new Error('Không dùng `respondWith` cùng `responseOverride` cho một route.');
+      }
       // Không gắn dữ liệu giả cho route backend đã có. Test đỏ để người sửa gỡ lời gọi helper.
       await assertRouteIsMissing(openApiUrl, loadOpenApiDocument, example);
       const effectiveExample =
@@ -66,7 +72,7 @@ export function createSupportDeskRouteMocks(
           : example;
       await options.page.route(
         (url) => matchesExampleUrl(url, effectiveExample),
-        (route) => fulfillExample(route, effectiveExample),
+        (route) => fulfillExample(route, effectiveExample, mockOptions?.respondWith),
       );
     },
 
@@ -201,16 +207,26 @@ function matchesExampleUrl(url: URL, example: ContractExample): boolean {
   return true;
 }
 
-async function fulfillExample(route: Route, example: ContractExample): Promise<void> {
+async function fulfillExample(
+  route: Route,
+  example: ContractExample,
+  respondWith: MockRouteOptions['respondWith'],
+): Promise<void> {
   // Request khác method thì để route kế tiếp hoặc backend thật nhận.
   if (route.request().method().toUpperCase() !== example.method.toUpperCase()) {
     await route.fallback();
     return;
   }
+  // Hàm `respondWith` chạy ở mỗi request, nên test dựng được route có trạng thái, ví dụ PATCH đổi kết quả của GET.
+  const customResponse = respondWith?.(route.request());
+  // `JSON.stringify(undefined)` cho thân rỗng. Báo lỗi rõ để test không nhận phản hồi trống mà không biết lý do.
+  if (customResponse !== undefined && customResponse.body === undefined) {
+    throw new Error('`respondWith` phải trả `body` khác `undefined`.');
+  }
   await route.fulfill({
-    status: example.status,
+    status: customResponse?.status ?? example.status,
     contentType: 'application/json',
-    body: JSON.stringify(example.response),
+    body: JSON.stringify(customResponse ? customResponse.body : example.response),
   });
 }
 

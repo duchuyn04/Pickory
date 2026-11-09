@@ -132,6 +132,12 @@ export interface DeskState {
   sendForbidden: boolean;
   // Dữ liệu bảng thông tin khách theo phiên.
   customerInfo: unknown;
+  // Lệnh `PATCH` yêu cầu gọi lại trả lỗi 500, hoặc 404 CALLBACK_REQUEST_NOT_FOUND.
+  callbackUpdateFailure: 'none' | 'server' | 'not-found';
+  // Có giá trị này thì lệnh `PATCH` yêu cầu gọi lại chỉ trả lời sau khi lời hứa xong.
+  callbackUpdateGate?: Promise<void>;
+  // Có giá trị này thì lệnh `GET` danh sách yêu cầu gọi lại chỉ trả lời sau khi lời hứa xong.
+  callbackListGate?: Promise<void>;
 }
 
 export function queueSession(id: string, preview = `Khách hỏi về đơn ${id}`) {
@@ -146,7 +152,11 @@ export function queueSession(id: string, preview = `Khách hỏi về đơn ${id
   };
 }
 
-export function callbackRequest(id: string, status: string) {
+export function callbackRequest(
+  id: string,
+  status: string,
+  overrides: Record<string, unknown> = {},
+) {
   return {
     id,
     conversationId: `conversation-${id}`,
@@ -154,7 +164,8 @@ export function callbackRequest(id: string, status: string) {
     note: null,
     status,
     createdAt: '2026-10-22T08:00:00Z',
-    handledAt: null,
+    handledAt: status === 'pending' ? null : '2026-10-22T09:00:00Z',
+    ...overrides,
   };
 }
 
@@ -196,6 +207,7 @@ export function openDesk(
     claimNotFound: false,
     messagesFail: false,
     sendForbidden: false,
+    callbackUpdateFailure: 'none',
     customerInfo: {
       customer: { isGuest: false, name: 'Nguyễn Minh Anh', email: 'minhanh@example.com' },
       orders: [
@@ -238,7 +250,53 @@ export function openDesk(
       if (view === 'waiting') return state.waitingMissing ? notFound() : state.waiting;
       return state.mine;
     }
-    if (url.pathname === '/api/admin/support/callback-requests') return state.callbacks;
+    if (url.pathname === '/api/admin/support/callback-requests') {
+      // Cổng giữ lần đọc danh sách, để test kiểm giao diện trước khi lần đọc lại xong.
+      return state.callbackListGate
+        ? state.callbackListGate.then(() => state.callbacks)
+        : state.callbacks;
+    }
+    // Đánh dấu yêu cầu gọi lại: `PATCH /api/admin/support/callback-requests/{id}` với body `{ status }`.
+    const callbackUpdateMatch = /^\/api\/admin\/support\/callback-requests\/([^/]+)$/.exec(
+      url.pathname,
+    );
+    if (callbackUpdateMatch !== null && method === 'PATCH') {
+      const callbackId = callbackUpdateMatch[1];
+      const { status } = JSON.parse(String(init?.body)) as { status: string };
+      const applyUpdate = () => {
+        if (state.callbackUpdateFailure === 'server') {
+          return new Response(
+            JSON.stringify({ error: { code: 'INTERNAL', message: 'Máy chủ đang bận.' } }),
+            { status: 500 },
+          );
+        }
+        if (state.callbackUpdateFailure === 'not-found') {
+          // Yêu cầu đã bị xóa ở máy chủ, nên lần đọc lại danh sách sau đó không còn dòng này.
+          state.callbacks = state.callbacks.filter(
+            (candidate) => (candidate as { id: string }).id !== callbackId,
+          );
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'CALLBACK_REQUEST_NOT_FOUND',
+                message: 'Yêu cầu gọi lại không còn nữa.',
+              },
+            }),
+            { status: 404 },
+          );
+        }
+        // Cập nhật dòng trong trạng thái giả, để lần đọc lại danh sách khớp với response.
+        const row = state.callbacks.find(
+          (candidate) => (candidate as { id: string }).id === callbackId,
+        ) as Record<string, unknown> | undefined;
+        if (row === undefined) return notFound();
+        row.status = status;
+        row.handledAt = '2026-10-22T09:30:00Z';
+        return row;
+      };
+      // Cổng giữ request đang chờ, để test bấm tiếp lần hai khi lần một chưa xong.
+      return state.callbackUpdateGate ? state.callbackUpdateGate.then(applyUpdate) : applyUpdate();
+    }
     if (url.pathname === '/api/admin/support/canned-responses') return state.cannedResponses;
     // Lịch sử tin của một hội thoại: `/api/admin/support/conversations/{id}/messages`.
     const conversationMessagesMatch =

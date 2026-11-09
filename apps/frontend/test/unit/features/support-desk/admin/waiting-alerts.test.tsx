@@ -14,6 +14,7 @@ import {
   openDesk,
   openDeskPage,
   queueSession,
+  supportRequests,
   textOf,
   type OpenedDesk,
 } from './support-desk-test-kit';
@@ -243,5 +244,102 @@ describe('âm báo', () => {
     await userGesture();
 
     expect(FakeAudioContext.instances).toHaveLength(0);
+  });
+});
+
+async function customerStillWaits(sessionId: string) {
+  await act(async () => activeEventSource().emit('session.reminded', { sessionId }));
+}
+
+describe('nhắc lại session.reminded', () => {
+  it('hiện thông báo nhắc lại với tiêu đề và tag riêng khi đang sẵn sàng', async () => {
+    installFakeNotification('granted');
+    await openAvailableDesk();
+    await openDeskPage(desk);
+    await waitUntilAvailable();
+
+    await customerStillWaits('1');
+
+    expect(FakeNotification.shown).toHaveLength(1);
+    expect(FakeNotification.shown[0]?.title).toBe('Khách vẫn đang chờ');
+    expect(FakeNotification.shown[0]?.options).toEqual({
+      body: 'Một hội thoại đã chờ lâu mà chưa có người nhận.',
+      tag: 'support-reminded',
+    });
+  });
+
+  it('thông báo của session.waiting giữ tag support-waiting, khác tag của nhắc lại', async () => {
+    installFakeNotification('granted');
+    await openAvailableDesk();
+    await openDeskPage(desk);
+    await waitUntilAvailable();
+
+    await customerWaits('2');
+
+    expect(FakeNotification.shown[0]?.options?.tag).toBe('support-waiting');
+  });
+
+  it('không hiện thông báo nhắc lại khi nhân viên đang Tạm vắng', async () => {
+    installFakeNotification('granted');
+    desk = openDesk(READ_AND_REPLY, { availableStaffIds: [] });
+    await openDeskPage(desk);
+
+    await customerStillWaits('1');
+
+    expect(FakeNotification.shown).toHaveLength(0);
+  });
+
+  it('không hiện thông báo khi quyền chưa được cấp', async () => {
+    installFakeNotification('default');
+    await openAvailableDesk();
+    await openDeskPage(desk);
+    await waitUntilAvailable();
+
+    await customerStillWaits('1');
+
+    expect(FakeNotification.shown).toHaveLength(0);
+  });
+
+  it('phát tiếng khi âm báo bật, và im khi âm báo đã tắt', async () => {
+    await openAvailableDesk();
+    await openDeskPage(desk);
+    await waitUntilAvailable();
+    await userGesture();
+
+    await customerStillWaits('1');
+    expect(FakeAudioContext.started).toBeGreaterThan(0);
+    const startedWhileOn = FakeAudioContext.started;
+
+    await act(async () => soundSwitch()?.click());
+    await customerStillWaits('1');
+
+    expect(FakeAudioContext.started).toBe(startedWhileOn);
+  });
+
+  it('không phát tiếng khi nhân viên đang Tạm vắng', async () => {
+    desk = openDesk(READ_AND_REPLY, { availableStaffIds: [] });
+    await openDeskPage(desk);
+    await userGesture();
+
+    await customerStillWaits('1');
+
+    expect(FakeAudioContext.started).toBe(0);
+  });
+
+  it('đọc lại danh sách phiên khi nhận session.reminded', async () => {
+    await openAvailableDesk();
+    await openDeskPage(desk);
+    const readsBefore = supportRequests(desk.harness).filter((url) =>
+      url.includes('view=waiting'),
+    ).length;
+
+    await customerStillWaits('1');
+
+    await waitFor(
+      () =>
+        supportRequests(desk.harness).filter((url) => url.includes('view=waiting')).length >
+        readsBefore,
+      'đọc lại hàng chờ',
+    );
   });
 });
