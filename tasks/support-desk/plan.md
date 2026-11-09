@@ -254,7 +254,7 @@ Nhánh frontend (`todo-frontend.md`):
 ### Phase 3: Cấu hình và số liệu
 Nhánh backend (`todo-backend.md`):
 - [x] SD-10 cấu hình và mẫu trả lời nhanh
-- [ ] SD-13 `ISupportMetrics`
+- [x] SD-13 `ISupportMetrics`
 
 Nhánh frontend (`todo-frontend.md`):
 - [ ] SD-UI5 màn cấu hình CSKH. Task này chỉ cần SD-C2, nên frontend làm được trước Phase 3.

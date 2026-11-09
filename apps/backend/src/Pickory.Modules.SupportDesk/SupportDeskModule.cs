@@ -10,7 +10,9 @@ using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.SupportDesk.Callbacks;
 using Pickory.Modules.SupportDesk.CannedResponses;
 using Pickory.Modules.SupportDesk.Contracts.Events;
+using Pickory.Modules.SupportDesk.Contracts.Metrics;
 using Pickory.Modules.SupportDesk.Conversations;
+using Pickory.Modules.SupportDesk.Metrics;
 using Pickory.Modules.SupportDesk.Persistence;
 using Pickory.Modules.SupportDesk.Presence;
 using Pickory.Modules.SupportDesk.Realtime;
@@ -95,6 +97,8 @@ public static class SupportDeskModule
         services.AddScoped<SupportConversationMaintenanceProcessor>();
         services.AddScoped<ISupportConversationMaintenanceProcessor>(
             provider => provider.GetRequiredService<SupportConversationMaintenanceProcessor>());
+        // Cổng số liệu cho `admin-console` đọc bằng `DbContext` của request, nên dùng scoped.
+        services.AddScoped<ISupportMetrics, SupportMetrics>();
         // Giới hạn tin là singleton vì bộ đếm trong bộ nhớ phải dùng chung cho mọi request của một khách.
         services.AddSingleton<SupportMessageLimiters>();
         // Đăng nhập phát `UserLinkedEvent`. Handler gắn hội thoại vãng lai vào tài khoản vừa đăng nhập.

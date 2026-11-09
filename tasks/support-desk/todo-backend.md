@@ -213,14 +213,14 @@ Hết task backend của Phase 2. Báo người dùng để chạy Checkpoint SD
 ### SD-13: `ISupportMetrics`
 **Mô tả:** Cài `ISupportMetrics.GetAsync` và `GetPendingCountsAsync` cho `admin-console`. Khoảng ngày tính theo giờ Việt Nam. Ngày 2026-10-18 task bỏ chỉ số `draftUsageRate`, vì `SD-12` đã bỏ.
 **Tiêu chí nghiệm thu:**
-- [ ] `handoffs`, `handledInHours`, `callbacksRequested`, `callbacksCompleted` khớp số đếm tay trên bộ dữ liệu dựng sẵn
-- [ ] `firstResponseSeconds` p50 và p90 tính từ `handoff_at` tới `first_response_at`, khớp số tính tay
-- [ ] `handleMinutes` p50 và p90 tính từ `claimed_at` tới `closed_at`
-- [ ] `csat` trả trung bình và số lượt chấm, bỏ phiên chưa chấm
-- [ ] `SupportMetricsSnapshot` không có trường `draftUsageRate`
-- [ ] Khoảng không có dữ liệu trả số 0 và phân vị rỗng, không ném lỗi
-- [ ] Phiên lúc 23:30 giờ Việt Nam thuộc đúng ngày theo giờ Việt Nam
-- [ ] `GetPendingCountsAsync` trả số phiên đang chờ và số yêu cầu gọi lại `pending`
+- [x] `handoffs`, `handledInHours`, `callbacksRequested`, `callbacksCompleted` khớp số đếm tay trên bộ dữ liệu dựng sẵn
+- [x] `firstResponseSeconds` p50 và p90 tính từ `handoff_at` tới `first_response_at`, khớp số tính tay
+- [x] `handleMinutes` p50 và p90 tính từ `claimed_at` tới `closed_at`
+- [x] `csat` trả trung bình và số lượt chấm, bỏ phiên chưa chấm
+- [x] `SupportMetricsSnapshot` không có trường `draftUsageRate`
+- [x] Khoảng không có dữ liệu trả số 0 và phân vị rỗng, không ném lỗi
+- [x] Phiên lúc 23:30 giờ Việt Nam thuộc đúng ngày theo giờ Việt Nam
+- [x] `GetPendingCountsAsync` trả số phiên đang chờ và số yêu cầu gọi lại `pending`
 **Kiểm tra:** test tích hợp trên dữ liệu dựng sẵn
 **Phụ thuộc:** SD-08, SD-09 · **Quy mô:** M
 
