@@ -1,0 +1,341 @@
+/* Trang /support của khách theo design system: nền xám, thẻ trắng, token dùng chung. */
+
+.support-page {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+/* Thẻ chat: đầu thẻ, vùng tin và thanh soạn xếp dọc, không lề trong để từng vùng tự chia. */
+.support-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* Đầu thẻ chat: tên kênh, badge trạng thái và câu báo lưu 90 ngày. */
+.support-chat-head {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.support-chat-head-row {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.support-chat-title {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.support-chat-status {
+  margin: 0;
+  min-height: 1em;
+}
+
+.support-chat-retention {
+  margin: var(--space-1) 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+/* Vùng tin cuộn riêng. Giá trị `vh` đứng trước để trình duyệt chưa biết `dvh` vẫn có chiều cao. */
+.support-message-scroll {
+  display: flex;
+  flex-direction: column;
+  height: min(640px, calc(100vh - 340px));
+  height: min(640px, calc(100dvh - 340px));
+  padding: var(--space-4);
+  overflow-y: auto;
+}
+
+/* Vùng cuộn nhận focus bàn phím thì hiện viền focus của design system. */
+.support-message-scroll:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.support-message-list {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.support-message {
+  display: flex;
+  flex-direction: column;
+  max-width: 75%;
+}
+
+/* Tin trong cùng một nhóm sát nhau. Tin mở nhóm cách nhóm trước một khoảng rõ hơn. */
+.support-message + .support-message {
+  margin-top: var(--space-1);
+}
+
+.support-message.starts-group {
+  margin-top: var(--space-4);
+}
+
+/* Tin khách nằm bên phải, tin nhân viên bên trái. */
+.support-message.is-customer {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.support-message.is-staff {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+/* Dòng phụ: tên người gửi và giờ gửi, chữ nhỏ phụ. */
+.support-message-meta {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-1);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+.support-message-sender {
+  font-weight: 600;
+}
+
+/* Mốc ngày giữa các tin khác ngày, canh giữa và chữ nhỏ trung tính. */
+.support-message-day {
+  align-self: center;
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+/* Bong bóng tin. Giữ xuống dòng của tin, vì ô soạn cho Shift+Enter xuống dòng. */
+.support-message-bubble {
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-card);
+  font-size: var(--text-sm);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* Tin khách dùng nền nhạt của đỏ. Đỏ đặc chỉ dành cho nút chính theo design system. */
+.support-message.is-customer .support-message-bubble {
+  background: var(--color-brand-soft);
+  color: var(--color-ink);
+  border-bottom-right-radius: var(--radius-chip);
+}
+
+.support-message.is-staff .support-message-bubble {
+  background: var(--color-surface-muted);
+  color: var(--color-ink);
+  border: 1px solid var(--color-border);
+  border-bottom-left-radius: var(--radius-chip);
+}
+
+/* Tin hệ thống canh giữa, chữ nhỏ trung tính, không bong bóng. */
+.support-message.is-system {
+  align-self: center;
+  align-items: center;
+  max-width: 100%;
+}
+
+.support-message-system {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}
+
+/* Hội thoại chưa có tin: khối gợi ý nằm giữa vùng tin. */
+.support-message-empty {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Vùng chứa form hành động trong tin hệ thống. */
+.support-message-action {
+  margin-top: var(--space-2);
+}
+
+/* Khối form gọi lại hoặc CSAT nằm trong mạch tin hệ thống. */
+.support-form-card {
+  width: 420px;
+  max-width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.support-form-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-body);
+  font-weight: 600;
+  color: var(--color-ink);
+}
+
+.support-form-desc {
+  margin: 0 0 var(--space-3);
+  font-size: var(--text-label);
+  color: var(--color-ink-muted);
+}
+
+.support-form-card form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.support-form-card .field {
+  margin: 0;
+}
+
+.support-form-alert {
+  margin-bottom: var(--space-3);
+}
+
+/* Hàng 5 nút chọn điểm CSAT. */
+.csat-scores-row {
+  display: flex;
+  gap: var(--space-2);
+  justify-content: space-between;
+}
+
+.csat-score-btn {
+  flex: 1;
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--text-body);
+  font-weight: 600;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  cursor: pointer;
+}
+
+.csat-score-btn:hover {
+  background: var(--color-surface-hover);
+  border-color: var(--color-border-strong);
+}
+
+.csat-score-btn.is-selected {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: 700;
+}
+
+.csat-score-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.csat-score-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.csat-selected-label {
+  margin: 0;
+  font-size: var(--text-label);
+  color: var(--color-ink-muted);
+}
+
+.csat-selected-label strong {
+  color: var(--color-ink);
+}
+
+/* Thanh soạn nằm đáy thẻ, viền trên tách riêng khỏi vùng tin. */
+.support-composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+/* Hàng soạn: ô nhập giãn, nút gửi cao bằng một dòng ô nhập. */
+.support-composer-bar {
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+.support-composer-field {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+}
+
+/* Ô nhập cao một dòng lúc đầu, tự cao tới khoảng năm dòng rồi cuộn trong ô. */
+.support-composer-field textarea {
+  min-height: 42px;
+  max-height: 136px;
+  resize: none;
+  overflow-y: auto;
+}
+
+.support-composer-send {
+  flex-shrink: 0;
+  min-height: 42px;
+}
+
+.support-composer-send .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* Dòng gợi ý và bộ đếm dưới thanh soạn. */
+.support-composer-meta {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.support-composer-hint {
+  margin: 0;
+}
+
+.support-composer-counter {
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+@media (max-width: 767px) {
+  .support-page {
+    padding: var(--space-3);
+  }
+
+  /* Thẻ chat chiếm gần hết chiều cao màn, thanh soạn luôn thấy được. */
+  .support-message-scroll {
+    height: calc(100vh - 330px);
+    height: calc(100dvh - 330px);
+    min-height: 220px;
+  }
+
+  /* Dòng gợi ý chiếm chỗ trên màn hẹp, ẩn theo yêu cầu bố cục mobile. */
+  .support-composer-hint {
+    display: none;
+  }
+}

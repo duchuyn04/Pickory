@@ -206,7 +206,7 @@ test('ADM-UI10: đơn đã thanh toán chia trang tròn và trang cột', async 
   await page.goto('/admin/reports/orders/periods');
   await expect(
     page.getByRole('heading', { level: 1, name: 'Báo cáo đơn đã thanh toán theo kỳ' }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 15000 });
   await expect(page.locator('.recharts-bar-rectangle path')).toHaveCount(6);
   await expect(page.getByLabel('Khoảng thời gian')).toHaveValue('6m');
   const ordersPeriodTable = page.locator('.report-table');

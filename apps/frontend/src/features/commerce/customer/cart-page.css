@@ -289,6 +289,13 @@
   text-align: right;
 }
 
+.cart-summary-policy-link {
+  align-self: flex-start;
+  color: var(--color-link);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
 .cart-summary-actions {
   display: flex;
   flex-direction: column;

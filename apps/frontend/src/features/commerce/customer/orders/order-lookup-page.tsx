@@ -62,7 +62,9 @@ export function OrderLookupPage() {
       // Gửi mã đơn đã chuẩn hóa chữ hoa và email đã cắt khoảng trắng, giống cách server so khớp.
       const result = await requestOrderLookup(normalizeOrderCode(orderCode), email.trim());
       // Token chỉ trả một lần. Chuyển ngay tới trang chi tiết đơn thay vì chờ email.
-      navigate(`/orders/${encodeURIComponent(result.code)}?t=${encodeURIComponent(result.accessToken)}`);
+      navigate(
+        `/orders/${encodeURIComponent(result.code)}?t=${encodeURIComponent(result.accessToken)}`,
+      );
     } catch (caughtError: unknown) {
       handleRequestError(caughtError);
     } finally {
@@ -99,10 +101,7 @@ export function OrderLookupPage() {
   }
 
   return (
-    <AuthCard
-      title="Tra cứu đơn hàng"
-      subtitle="Nhập mã đơn và email đặt hàng để xem đơn ngay."
-    >
+    <AuthCard title="Tra cứu đơn hàng" subtitle="Nhập mã đơn và email đặt hàng để xem đơn ngay.">
       {error && <ErrorAlert message={error} />}
 
       <form noValidate onSubmit={handleSubmit} className="stack">

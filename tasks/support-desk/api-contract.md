@@ -114,6 +114,10 @@ Cột "Có từ" ghi task đã làm route. Ô ghi "chưa có" nghĩa là fronten
 
 `GET · PUT /api/admin/support/presence` đã chạy thật từ SD-03, nên route này không có file mẫu.
 
+### Danh sách nhân viên sẵn sàng
+
+Quyết định ngày 2026-11-09: route `GET /api/admin/support/presence` trả danh sách nhân viên với bốn trường `staffId`, `status`, `lastSeenAt`, `displayName`. Nhân viên chưa có tên thì `displayName` bằng `null`. Trường này không chứa email. Frontend SD-UI3 đọc trường này. Backend thêm trường ở một việc riêng.
+
 ## Route phía khách
 
 Mọi route ở mục này kiểm chủ hội thoại theo quyết định 13 của plan. Người không phải chủ nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`. Nhân viên gọi route phía khách nhận 403 `FORBIDDEN`.

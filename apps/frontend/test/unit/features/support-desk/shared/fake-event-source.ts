@@ -1,4 +1,4 @@
-import type { EventSourceLike } from '../../../../../src/features/support-desk/admin/support-event-stream';
+import type { EventSourceLike } from '../../../../../src/features/support-desk/shared/support-event-stream';
 
 const CONNECTING = 0;
 const OPEN = 1;

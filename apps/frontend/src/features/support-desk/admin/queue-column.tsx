@@ -1,16 +1,16 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { useEffect, useState, type ReactNode } from 'react';
-import { ErrorAlert } from '../../../shared/error-alert';
+import { useQuery } from '@tanstack/react-query';
+import { useEffect, useState } from 'react';
 import { TabList, tabId } from '../../../shared/tab-list';
-import { formatVietnamDateTime } from '../../../shared/vietnam-time';
+import { CallbackList } from './callback-list';
+import { QueueResult } from './queue-result';
 import {
   CALLBACKS_QUERY_KEY,
   SESSIONS_QUERY_KEY,
   fetchCallbackRequests,
   fetchSessions,
 } from './support-desk-api';
-import type { CallbackRequest, QueueSession } from './support-desk-schemas';
-import { formatWaitingTime, selectPendingCallbacks, waitingBadgeCount } from './queue-view';
+import type { QueueSession } from './support-desk-schemas';
+import { formatWaitingTime, waitingBadgeCount } from './queue-view';
 
 type QueueTab = 'waiting' | 'mine' | 'callbacks';
 
@@ -29,56 +29,18 @@ function useNow(intervalMs: number): number {
   return now;
 }
 
-interface QueueResultProps<Row> {
-  query: UseQueryResult<Row[]>;
-  loadingMessage: string;
-  emptyMessage: string;
-  errorMessage: string;
-  children: (rows: Row[]) => ReactNode;
-}
-
-// Ba trạng thái dùng chung của mỗi tab: đang nạp, lỗi có nút "Thử lại", và rỗng.
-function QueueResult<Row>({
-  query,
-  loadingMessage,
-  emptyMessage,
-  errorMessage,
-  children,
-}: QueueResultProps<Row>) {
-  if (query.isError) {
-    return (
-      <div className="support-queue-alert">
-        <ErrorAlert message={errorMessage} />
-        <button
-          type="button"
-          className="btn btn-sm"
-          disabled={query.isFetching}
-          onClick={() => void query.refetch()}
-        >
-          Thử lại
-        </button>
-      </div>
-    );
-  }
-  if (query.data === undefined) {
-    return (
-      <p role="status" className="empty-state">
-        {loadingMessage}
-      </p>
-    );
-  }
-  if (query.data.length === 0) return <p className="empty-state">{emptyMessage}</p>;
-  return <>{children(query.data)}</>;
-}
-
 function SessionList({
   label,
   sessions,
   fetchedAt,
+  selectedSessionId,
+  onSelect,
 }: {
   label: string;
   sessions: QueueSession[];
   fetchedAt: number;
+  selectedSessionId: string | null;
+  onSelect: (session: QueueSession) => void;
 }) {
   const now = useNow(CLOCK_TICK_MS);
   // `waitingSeconds` là số giây lúc máy chủ trả danh sách. Cộng thêm thời gian trôi qua từ lúc đó.
@@ -87,25 +49,21 @@ function SessionList({
   return (
     <ul className="support-queue-list" aria-label={label}>
       {sessions.map((session) => (
-        <li key={session.id} className="support-queue-item">
-          {/* Tin của khách là dữ liệu bên ngoài, nên chỉ vẽ bằng text node của React. */}
-          <p className="support-queue-preview wrap-anywhere">{session.preview}</p>
-          <span className="cell-sub">
-            Chờ {formatWaitingTime(session.waitingSeconds + secondsSinceFetch)}
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-function CallbackList({ requests }: { requests: CallbackRequest[] }) {
-  return (
-    <ul className="support-queue-list" aria-label="Yêu cầu gọi lại">
-      {requests.map((request) => (
-        <li key={request.id} className="support-queue-item">
-          <p className="support-queue-preview wrap-anywhere">{request.phone}</p>
-          <span className="cell-sub">Gửi lúc {formatVietnamDateTime(request.createdAt)}</span>
+        <li key={session.id}>
+          {/* Dòng là một nút chọn phiên cho khung chat, dùng được bằng bàn phím như mọi nút khác. */}
+          <button
+            type="button"
+            className="support-queue-item"
+            aria-current={session.id === selectedSessionId ? 'true' : undefined}
+            onClick={() => onSelect(session)}
+          >
+            {/* Tin của khách là dữ liệu bên ngoài, nên chỉ vẽ bằng text node của React. */}
+            {/* `span` thay `p` vì nút chỉ chứa phrasing content. Lớp CSS vẫn hiển thị dạng khối. */}
+            <span className="support-queue-preview wrap-anywhere">{session.preview}</span>
+            <span className="cell-sub">
+              Chờ {formatWaitingTime(session.waitingSeconds + secondsSinceFetch)}
+            </span>
+          </button>
         </li>
       ))}
     </ul>
@@ -113,7 +71,13 @@ function CallbackList({ requests }: { requests: CallbackRequest[] }) {
 }
 
 // Cột hàng chờ: ba tab Đang chờ, Của tôi, Gọi lại. Mỗi tab đọc danh sách riêng từ API.
-export function QueueColumn() {
+interface QueueColumnProps {
+  selectedSessionId: string | null;
+  // Nguồn `waiting` nghĩa là phiên chưa giữ; `mine` nghĩa là phiên đang giữ.
+  onSelectSession: (session: QueueSession, source: 'waiting' | 'mine') => void;
+}
+
+export function QueueColumn({ selectedSessionId, onSelectSession }: QueueColumnProps) {
   const [selectedTab, setSelectedTab] = useState<QueueTab>('waiting');
 
   // Hàng chờ luôn được đọc, vì số dòng của nó là badge trên tab dù nhân viên đang xem tab khác.
@@ -167,6 +131,8 @@ export function QueueColumn() {
                 label="Phiên đang chờ"
                 sessions={sessions}
                 fetchedAt={waitingQuery.dataUpdatedAt}
+                selectedSessionId={selectedSessionId}
+                onSelect={(session) => onSelectSession(session, 'waiting')}
               />
             )}
           </QueueResult>
@@ -183,6 +149,8 @@ export function QueueColumn() {
                 label="Phiên của tôi"
                 sessions={sessions}
                 fetchedAt={mineQuery.dataUpdatedAt}
+                selectedSessionId={selectedSessionId}
+                onSelect={(session) => onSelectSession(session, 'mine')}
               />
             )}
           </QueueResult>
@@ -191,18 +159,9 @@ export function QueueColumn() {
           <QueueResult
             query={callbacksQuery}
             loadingMessage="Đang nạp yêu cầu gọi lại..."
-            emptyMessage="Chưa có yêu cầu gọi lại nào."
             errorMessage="Không tải được yêu cầu gọi lại."
           >
-            {(requests) => {
-              // Chỉ dòng `pending` là việc còn phải làm. Lọc ở client vì hợp đồng trả cả các dòng đã xong.
-              const pendingRequests = selectPendingCallbacks(requests);
-              return pendingRequests.length === 0 ? (
-                <p className="empty-state">Chưa có yêu cầu gọi lại nào.</p>
-              ) : (
-                <CallbackList requests={pendingRequests} />
-              );
-            }}
+            {(requests) => <CallbackList requests={requests} />}
           </QueueResult>
         )}
       </div>

@@ -1,12 +1,17 @@
 import { useEffect, useRef } from 'react';
 import { readSoundEnabled } from './alert-preferences';
 import { useSupportEvents } from './support-events-provider';
-import { alertWaitingSession, closeWaitingTone, prepareWaitingTone } from './waiting-alert';
+import {
+  alertReminderSession,
+  alertWaitingSession,
+  closeWaitingTone,
+  prepareWaitingTone,
+} from './waiting-alert';
 import { usePresence } from './use-presence';
 
 const GESTURE_EVENTS = ['click', 'keydown'] as const;
 
-// Component này báo bằng âm thanh và thông báo trình duyệt khi có khách vào hàng chờ, và không vẽ gì ra trang.
+// Component này báo âm thanh và thông báo trình duyệt khi khách vào hàng chờ hoặc chờ lâu. Nó không vẽ gì ra trang.
 // Nó nằm trong khung quản trị, nên nhân viên "Sẵn sàng" ở trang nào cũng được báo.
 export function WaitingSessionAlerts() {
   const { subscribe } = useSupportEvents();
@@ -20,9 +25,15 @@ export function WaitingSessionAlerts() {
 
   useEffect(() => {
     return subscribe((eventName) => {
-      if (eventName !== 'session.waiting') return;
-      // Nhân viên "Tạm vắng" không muốn bị làm phiền, nên không báo.
+      const isWaitingEvent = eventName === 'session.waiting';
+      const isReminderEvent = eventName === 'session.reminded';
+      if (!isWaitingEvent && !isReminderEvent) return;
+      // Nhân viên "Tạm vắng" không muốn bị làm phiền, nên không báo cả hai loại.
       if (!isAvailableRef.current) return;
+      if (isReminderEvent) {
+        alertReminderSession();
+        return;
+      }
       alertWaitingSession();
     });
   }, [subscribe]);

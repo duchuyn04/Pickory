@@ -344,6 +344,13 @@
   font-size: var(--text-lg);
 }
 
+.checkout-summary-policy-link {
+  align-self: flex-start;
+  color: var(--color-link);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
 .checkout-summary > .btn {
   min-height: 48px;
 }

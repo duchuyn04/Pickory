@@ -62,7 +62,16 @@ test('Checkpoint C2: admin tạo danh mục, sản phẩm bốn SKU, ảnh và �
   await expect(page.locator('[data-image-id]')).toHaveCount(1);
   expect(imageProvider.uploadCount()).toBe(1);
   await page.getByLabel('Mô tả ảnh 1 *').fill('Mặt trước điện thoại');
+  // Chờ API lưu dữ liệu ảnh và form chuyển về trạng thái không còn thay đổi.
+  const savePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/admin/products/') &&
+      response.request().method() === 'PATCH' &&
+      response.status() === 200,
+  );
   await page.getByRole('button', { name: 'Lưu sản phẩm' }).click();
+  await savePromise;
+  await expect(page.locator('#product-status-unsaved-hint')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Đăng bán' })).toBeEnabled();
 
   // Cờ tồn tại trong cùng tài liệu, nên mất cờ đồng nghĩa trang đã tải lại.
@@ -77,7 +86,7 @@ test('Checkpoint C2: admin tạo danh mục, sản phẩm bốn SKU, ảnh và �
   await page.getByRole('link', { name: 'Về danh sách' }).click();
   await page.getByLabel('Tên hoặc mã SKU').fill('Điện thoại Checkpoint C2');
   const productRow = page.getByRole('row', { name: /Điện thoại Checkpoint C2/ });
-  await expect(productRow.locator('.badge')).toHaveText('Đang bán');
+  await expect(productRow.locator('.badge').first()).toHaveText('Đang bán');
   await productRow.getByRole('link', { name: 'Chỉnh sửa' }).click();
   // Chờ điều hướng kết thúc để `reload` tải form sửa thay vì tải lại danh sách.
   await expect(page).toHaveURL(productUrl);

@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
+import { stubWebFonts } from './commerce-order-fixtures';
 
 // Tiền tố ảnh: `before` chụp bản cũ để so sánh, `after` chụp bản mới. Mặc định là `after`.
 const shotPrefix = process.env.UI_RESULT_SHOT_PREFIX ?? 'after';
@@ -85,6 +86,10 @@ const customerActor = {
 // Các màn kết quả dùng API giả vì mỗi màn cần một trạng thái khó tạo thật (link hết hạn, thư đã gửi).
 // Luồng thật của từng API đã có spec riêng.
 test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy', () => {
+  test.beforeEach(async ({ page }) => {
+    // Chặn tải phông chữ ngoài để tránh lỗi mạng Google Fonts làm đỏ console.
+    await stubWebFonts(page);
+  });
   test('đã gửi yêu cầu quên mật khẩu', async ({ page }) => {
     const issues = collectConsoleIssues(page);
     await page.route('**/api/auth/password-resets', (route) =>

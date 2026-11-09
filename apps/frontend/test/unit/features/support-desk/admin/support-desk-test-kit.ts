@@ -5,7 +5,7 @@ import {
   waitFor,
   type AdminListHarness,
 } from '../../identity/admin/admin-list-test-kit';
-import { FakeEventSource } from './fake-event-source';
+import { FakeEventSource } from '../shared/fake-event-source';
 
 export { FakeEventSource };
 
@@ -119,6 +119,25 @@ export interface DeskState {
   putFails: boolean;
   // Có giá trị này thì lệnh `GET` danh sách sẵn sàng chỉ trả lời sau khi lời hứa xong, kèm danh sách tại lúc gọi.
   presenceGate?: Promise<void>;
+  // Lịch sử tin theo hội thoại, dạng `{ items, nextCursor }` của hợp đồng.
+  messagePages: Record<string, unknown>;
+  cannedResponses: unknown[];
+  // POST nhận phiên trả 409 SUPPORT_SESSION_ALREADY_CLAIMED.
+  claimConflict: boolean;
+  // POST nhận phiên trả 404 SUPPORT_SESSION_NOT_FOUND, để test nhánh lỗi khác 409.
+  claimNotFound: boolean;
+  // GET lịch sử tin trả 404, để test lần đọc lại nền lỗi.
+  messagesFail: boolean;
+  // POST gửi tin trả 403 SUPPORT_SESSION_NOT_ASSIGNED.
+  sendForbidden: boolean;
+  // Dữ liệu bảng thông tin khách theo phiên.
+  customerInfo: unknown;
+  // Lệnh `PATCH` yêu cầu gọi lại trả lỗi 500, hoặc 404 CALLBACK_REQUEST_NOT_FOUND.
+  callbackUpdateFailure: 'none' | 'server' | 'not-found';
+  // Có giá trị này thì lệnh `PATCH` yêu cầu gọi lại chỉ trả lời sau khi lời hứa xong.
+  callbackUpdateGate?: Promise<void>;
+  // Có giá trị này thì lệnh `GET` danh sách yêu cầu gọi lại chỉ trả lời sau khi lời hứa xong.
+  callbackListGate?: Promise<void>;
 }
 
 export function queueSession(id: string, preview = `Khách hỏi về đơn ${id}`) {
@@ -128,11 +147,26 @@ export function queueSession(id: string, preview = `Khách hỏi về đơn ${id
     preview,
     waitingSeconds: 90,
     handoffAt: '2026-10-22T08:00:00Z',
+    claimedAt: null,
+    transferNote: null,
   };
 }
 
-export function callbackRequest(id: string, status: string) {
-  return { id, phone: `0900000${id.padStart(3, '0')}`, status, createdAt: '2026-10-22T08:00:00Z' };
+export function callbackRequest(
+  id: string,
+  status: string,
+  overrides: Record<string, unknown> = {},
+) {
+  return {
+    id,
+    conversationId: `conversation-${id}`,
+    phone: `0900000${id.padStart(3, '0')}`,
+    note: null,
+    status,
+    createdAt: '2026-10-22T08:00:00Z',
+    handledAt: status === 'pending' ? null : '2026-10-22T09:00:00Z',
+    ...overrides,
+  };
 }
 
 function notFound() {
@@ -167,6 +201,25 @@ export function openDesk(
     availableStaffIds: [],
     waitingMissing: false,
     putFails: false,
+    messagePages: {},
+    cannedResponses: [],
+    claimConflict: false,
+    claimNotFound: false,
+    messagesFail: false,
+    sendForbidden: false,
+    callbackUpdateFailure: 'none',
+    customerInfo: {
+      customer: { isGuest: false, name: 'Nguyễn Minh Anh', email: 'minhanh@example.com' },
+      orders: [
+        {
+          code: 'PK123',
+          status: 'shipping',
+          total: 459000,
+          itemCount: 2,
+          createdAt: '2026-11-01T09:12:00Z',
+        },
+      ],
+    },
     ...stateOverrides,
   };
 
@@ -197,7 +250,148 @@ export function openDesk(
       if (view === 'waiting') return state.waitingMissing ? notFound() : state.waiting;
       return state.mine;
     }
-    if (url.pathname === '/api/admin/support/callback-requests') return state.callbacks;
+    if (url.pathname === '/api/admin/support/callback-requests') {
+      // Cổng giữ lần đọc danh sách, để test kiểm giao diện trước khi lần đọc lại xong.
+      return state.callbackListGate
+        ? state.callbackListGate.then(() => state.callbacks)
+        : state.callbacks;
+    }
+    // Đánh dấu yêu cầu gọi lại: `PATCH /api/admin/support/callback-requests/{id}` với body `{ status }`.
+    const callbackUpdateMatch = /^\/api\/admin\/support\/callback-requests\/([^/]+)$/.exec(
+      url.pathname,
+    );
+    if (callbackUpdateMatch !== null && method === 'PATCH') {
+      const callbackId = callbackUpdateMatch[1];
+      const { status } = JSON.parse(String(init?.body)) as { status: string };
+      const applyUpdate = () => {
+        if (state.callbackUpdateFailure === 'server') {
+          return new Response(
+            JSON.stringify({ error: { code: 'INTERNAL', message: 'Máy chủ đang bận.' } }),
+            { status: 500 },
+          );
+        }
+        if (state.callbackUpdateFailure === 'not-found') {
+          // Yêu cầu đã bị xóa ở máy chủ, nên lần đọc lại danh sách sau đó không còn dòng này.
+          state.callbacks = state.callbacks.filter(
+            (candidate) => (candidate as { id: string }).id !== callbackId,
+          );
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: 'CALLBACK_REQUEST_NOT_FOUND',
+                message: 'Yêu cầu gọi lại không còn nữa.',
+              },
+            }),
+            { status: 404 },
+          );
+        }
+        // Cập nhật dòng trong trạng thái giả, để lần đọc lại danh sách khớp với response.
+        const row = state.callbacks.find(
+          (candidate) => (candidate as { id: string }).id === callbackId,
+        ) as Record<string, unknown> | undefined;
+        if (row === undefined) return notFound();
+        row.status = status;
+        row.handledAt = '2026-10-22T09:30:00Z';
+        return row;
+      };
+      // Cổng giữ request đang chờ, để test bấm tiếp lần hai khi lần một chưa xong.
+      return state.callbackUpdateGate ? state.callbackUpdateGate.then(applyUpdate) : applyUpdate();
+    }
+    if (url.pathname === '/api/admin/support/canned-responses') return state.cannedResponses;
+    // Lịch sử tin của một hội thoại: `/api/admin/support/conversations/{id}/messages`.
+    const conversationMessagesMatch =
+      /^\/api\/admin\/support\/conversations\/([^/]+)\/messages$/.exec(url.pathname);
+    if (conversationMessagesMatch !== null && method === 'GET') {
+      const conversationKey = conversationMessagesMatch[1];
+      if (conversationKey === undefined) return { items: [], nextCursor: null };
+      // Cờ lỗi bật sau khi dữ liệu đã tải: lần đọc lại nền trả 404 để test giữ dữ liệu đang hiện.
+      if (state.messagesFail) return notFound();
+      return state.messagePages[conversationKey] ?? { items: [], nextCursor: null };
+    }
+    // Bảng thông tin khách hàng: `GET /api/admin/support/sessions/{id}/customer`.
+    const sessionCustomerMatch = /^\/api\/admin\/support\/sessions\/([^/]+)\/customer$/.exec(
+      url.pathname,
+    );
+    if (sessionCustomerMatch !== null && method === 'GET') {
+      return state.customerInfo;
+    }
+    // Nhận phiên: `POST /api/admin/support/sessions/{id}/assignment`, không có body.
+    const assignmentMatch = /^\/api\/admin\/support\/sessions\/([^/]+)\/assignment$/.exec(
+      url.pathname,
+    );
+    if (assignmentMatch !== null && method === 'POST') {
+      if (state.claimNotFound) {
+        return new Response(
+          JSON.stringify({
+            error: { code: 'SUPPORT_SESSION_NOT_FOUND', message: 'Không có phiên.' },
+          }),
+          { status: 404 },
+        );
+      }
+      if (state.claimConflict) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: 'SUPPORT_SESSION_ALREADY_CLAIMED',
+              message: 'Đã có người nhận.',
+            },
+          }),
+          { status: 409 },
+        );
+      }
+      return {
+        sessionId: assignmentMatch[1],
+        staffId: STAFF_ID,
+        claimedAt: '2026-10-22T08:05:00Z',
+      };
+    }
+    if (assignmentMatch !== null && method === 'PUT') {
+      const { staffId } = JSON.parse(String(init?.body)) as {
+        staffId: string;
+        note: string | null;
+      };
+      return {
+        sessionId: assignmentMatch[1],
+        staffId,
+        claimedAt: '2026-10-22T08:05:00Z',
+      };
+    }
+    // Đóng phiên: `PATCH /api/admin/support/sessions/{id}` với status `closed`.
+    const sessionCloseMatch = /^\/api\/admin\/support\/sessions\/([^/]+)$/.exec(url.pathname);
+    if (sessionCloseMatch !== null && method === 'PATCH') {
+      return {
+        sessionId: sessionCloseMatch[1],
+        closedAt: '2026-10-22T08:30:00Z',
+        closedBy: STAFF_ID,
+      };
+    }
+    // Gửi tin: `POST /api/admin/support/sessions/{id}/messages` với body `{ body }`.
+    const sessionMessagesMatch = /^\/api\/admin\/support\/sessions\/([^/]+)\/messages$/.exec(
+      url.pathname,
+    );
+    if (sessionMessagesMatch !== null && method === 'POST') {
+      if (state.sendForbidden) {
+        return new Response(
+          JSON.stringify({
+            error: {
+              code: 'SUPPORT_SESSION_NOT_ASSIGNED',
+              message: 'Bạn chưa nhận hội thoại này nên không gửi tin được.',
+            },
+          }),
+          { status: 403 },
+        );
+      }
+      const { body } = JSON.parse(String(init?.body)) as { body: string };
+      return {
+        id: 'message-staff-new',
+        sessionId: sessionMessagesMatch[1],
+        role: 'staff',
+        body,
+        action: null,
+        staffDisplayName: 'Lan - CSKH',
+        createdAt: '2026-10-22T08:06:00Z',
+      };
+    }
     return [];
   });
   return { harness, state };

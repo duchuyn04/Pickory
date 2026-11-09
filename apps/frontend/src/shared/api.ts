@@ -67,11 +67,26 @@ function toDisplayMessage(
   return error.message;
 }
 
-/**
- * Gọi API và trả về phần `data`. Lỗi mạng hoặc lỗi từ API đều thành `ApiError`
- * để giao diện hiển thị `message` tiếng Việt mà không phải tự phân tích response.
- */
-export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+// Promise dùng chung cho request đầu tiên của tab.
+// Khởi tạo ngay khi nạp module để các luồng sự kiện luôn chờ request đầu.
+let resolveInitialRequestGate: (() => void) | null = null;
+const initialRequestGate = new Promise<void>((resolve) => {
+  resolveInitialRequestGate = resolve;
+});
+let hasStartedInitialRequest = false;
+let isInitialRequestSettled = false;
+
+// Kiểm tra xem request API đầu tiên có đang chờ hoặc chưa hoàn tất hay không.
+export function isInitialApiRequestPending(): boolean {
+  return !isInitialRequestSettled;
+}
+
+// Chờ request API đầu tiên của tab kết thúc trước khi thực hiện kết nối tiếp theo.
+export function waitForInitialApiRequest(): Promise<void> {
+  return initialRequestGate;
+}
+
+async function executeRequest<T>(path: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
     response = await fetch(path, {
@@ -94,4 +109,29 @@ export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T
   }
   // Thân không theo mẫu chung, ví dụ trang lỗi HTML của proxy. Câu lỗi không nói về dạng phản hồi kỹ thuật.
   throw new ApiError('UNKNOWN_ERROR', response.status, messageForStatus(response.status));
+}
+
+/**
+ * Gọi API và trả về phần `data`. Lỗi mạng hoặc lỗi từ API đều thành `ApiError`
+ * để giao diện hiển thị `message` tiếng Việt mà không phải tự phân tích response.
+ */
+export async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
+  // Request đầu tiên của tab chạy một mình để nhận cookie pk_anon từ máy chủ.
+  const isFirstRequest = !hasStartedInitialRequest;
+  if (isFirstRequest) {
+    hasStartedInitialRequest = true;
+  } else {
+    // Các request gửi sau phải chờ request đầu tiên hoàn tất.
+    await initialRequestGate;
+  }
+
+  try {
+    return await executeRequest<T>(path, init);
+  } finally {
+    // Giải phóng bước chờ trong mọi nhánh thành công và thất bại.
+    if (isFirstRequest) {
+      isInitialRequestSettled = true;
+      resolveInitialRequestGate?.();
+    }
+  }
 }

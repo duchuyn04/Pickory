@@ -304,9 +304,7 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
     await lookupContext.close();
   });
 
-  test('429 hiện câu thử lại sau và mở lại nút gửi', async ({
-    page,
-  }) => {
+  test('429 hiện câu thử lại sau và mở lại nút gửi', async ({ page }) => {
     const issues = collectConsoleIssues(page, [
       { urlPattern: /\/api\/order-lookups/, status: 429 },
     ]);

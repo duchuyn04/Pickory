@@ -3,6 +3,36 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+// Tách deferred promise để điều khiển thời điểm phản hồi của request đầu.
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+
+// Tải lại module qua vi.resetModules để kịch bản có trạng thái request đầu độc lập.
+async function loadFreshStockLiveContext() {
+  vi.resetModules();
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
+  vi.stubGlobal('EventSource', FakeEventSource);
+  const stockLiveModule = await import('../../../../src/features/catalog/shared/stock-live');
+  const apiModule = await import('../../../../src/shared/api');
+  return {
+    StockLiveProvider: stockLiveModule.StockLiveProvider,
+    apiRequest: apiModule.apiRequest,
+  };
+}
+
 import type { ProductListItem } from '../../../../src/features/catalog/customer/catalog-api';
 import { ProductCard } from '../../../../src/features/catalog/customer/product-card';
 import {
@@ -10,6 +40,7 @@ import {
   parseStockEvent,
   StockLiveProvider,
 } from '../../../../src/features/catalog/shared/stock-live';
+import { apiRequest } from '../../../../src/shared/api';
 import { buildProductDetail } from './customer/product-fixtures';
 
 class FakeEventSource {
@@ -71,9 +102,15 @@ const product: ProductListItem = {
 let container: HTMLDivElement;
 let root: Root;
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true);
   vi.stubGlobal('EventSource', FakeEventSource);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })),
+  );
+  // Giải phóng bước chờ request đầu để các test chức năng của luồng mở kết nối.
+  await apiRequest('/api/init');
   FakeEventSource.reset();
   container = document.createElement('div');
   document.body.append(container);
@@ -202,5 +239,116 @@ describe('StockLiveProvider', () => {
     await act(async () => root.render(<p>Nội dung</p>));
 
     expect(source.closed).toBe(true);
+  });
+
+  it('chờ request API đầu tiên hoàn tất mới tạo kết nối EventSource', async () => {
+    const { StockLiveProvider: FreshStockLiveProvider, apiRequest: freshApiRequest } =
+      await loadFreshStockLiveContext();
+    const firstDeferred = createDeferred<Response>();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => firstDeferred.promise),
+    );
+
+    // Kích hoạt request đầu tiên của tab để đưa bước chờ vào trạng thái đang chờ.
+    const firstApiCall = freshApiRequest('/api/init');
+
+    await act(async () => {
+      root.render(
+        <FreshStockLiveProvider>
+          <p>Nội dung</p>
+        </FreshStockLiveProvider>,
+      );
+    });
+
+    // Trong lúc request đầu đang chạy, EventSource chưa được khởi tạo.
+    expect(FakeEventSource.instances).toHaveLength(0);
+
+    // Giải phóng request đầu để kích hoạt mở kết nối EventSource.
+    await act(async () => {
+      firstDeferred.resolve(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
+      await firstApiCall;
+    });
+
+    // Khi request đầu hoàn tất, kết nối EventSource được tạo.
+    expect(FakeEventSource.instances).toHaveLength(1);
+    expect(FakeEventSource.instances[0]!.url).toBe('/api/stock-events');
+  });
+
+  it('gỡ component trong lúc chờ request đầu thì không mở kết nối EventSource sau đó', async () => {
+    const { StockLiveProvider: FreshStockLiveProvider, apiRequest: freshApiRequest } =
+      await loadFreshStockLiveContext();
+    const firstDeferred = createDeferred<Response>();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => firstDeferred.promise),
+    );
+
+    const firstApiCall = freshApiRequest('/api/init');
+
+    await act(async () => {
+      root.render(
+        <FreshStockLiveProvider>
+          <p>Nội dung</p>
+        </FreshStockLiveProvider>,
+      );
+    });
+
+    expect(FakeEventSource.instances).toHaveLength(0);
+
+    // Gỡ provider trong lúc request đầu vẫn đang chạy.
+    await act(async () => {
+      root.render(<p>Đã gỡ</p>);
+    });
+
+    // Giải phóng request đầu sau khi đã gỡ component.
+    await act(async () => {
+      firstDeferred.resolve(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
+      await firstApiCall;
+    });
+
+    // Kết nối không được tạo sau khi provider đã bị gỡ.
+    expect(FakeEventSource.instances).toHaveLength(0);
+  });
+
+  it('provider gắn trước khi request API bắt đầu thì chờ request đó hoàn tất mới mở kết nối', async () => {
+    const { StockLiveProvider: FreshStockLiveProvider, apiRequest: freshApiRequest } =
+      await loadFreshStockLiveContext();
+    const firstDeferred = createDeferred<Response>();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => firstDeferred.promise),
+    );
+
+    // Gắn provider trước khi có bất kỳ request API nào được kích hoạt.
+    await act(async () => {
+      root.render(
+        <FreshStockLiveProvider>
+          <p>Nội dung</p>
+        </FreshStockLiveProvider>,
+      );
+    });
+
+    // Khi chưa có request API nào chạy, luồng vẫn ở trạng thái chờ.
+    expect(FakeEventSource.instances).toHaveLength(0);
+
+    // Bắt đầu request API đầu tiên với deferred promise chưa mở.
+    const firstApiCall = freshApiRequest('/api/init');
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Trong lúc request đầu đang chạy, luồng vẫn chưa được tạo.
+    expect(FakeEventSource.instances).toHaveLength(0);
+
+    // Giải phóng request đầu tiên để mở cổng kết nối.
+    await act(async () => {
+      firstDeferred.resolve(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
+      await firstApiCall;
+    });
+
+    // Khi request đầu hoàn tất, kết nối EventSource được khởi tạo.
+    expect(FakeEventSource.instances).toHaveLength(1);
+    expect(FakeEventSource.instances[0]!.url).toBe('/api/stock-events');
   });
 });

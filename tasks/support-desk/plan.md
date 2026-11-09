@@ -238,12 +238,13 @@ Nhánh backend (`todo-backend.md`):
 - [x] SD-17 xóa dữ liệu hỗ trợ
 
 Nhánh frontend (`todo-frontend.md`):
-- [ ] SD-C2 bộ đọc dữ liệu mẫu và route giả
-- [ ] SD-UI7 trang `/support` của khách
-- [ ] SD-UI6 form số điện thoại và form CSAT
-- [ ] SD-UI2 khung chat và mẫu trả lời nhanh
-- [ ] SD-UI3 thông tin khách và hộp thoại chuyển phiên
-- [ ] SD-UI4 tab Gọi lại
+- [x] SD-C2 bộ đọc dữ liệu mẫu và route giả
+- [x] SD-UI7 trang `/support` của khách
+- [x] SD-UI8 một mã khách vãng lai cho mọi request đầu trang
+- [x] SD-UI6 form số điện thoại và form CSAT
+- [x] SD-UI2 khung chat và mẫu trả lời nhanh
+- [x] SD-UI3 thông tin khách và hộp thoại chuyển phiên
+- [x] SD-UI4 tab Gọi lại
 
 ### Checkpoint SD2
 - [ ] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`

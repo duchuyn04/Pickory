@@ -1,6 +1,6 @@
 import { Icon } from '../../../shared/icons';
 import { useSupportEvents } from './support-events-provider';
-import type { StreamStatus } from './support-event-stream';
+import type { StreamStatus } from '../shared/support-event-stream';
 
 // Vùng `aria-live` luôn có trong trang, nên trình đọc màn hình đọc được chữ khi nó xuất hiện sau đó.
 // Không dùng `role="status"` vì các màn quản trị đếm vùng `status` để biết trang còn đang tải.

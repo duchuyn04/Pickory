@@ -55,24 +55,49 @@ export async function requestNotificationPermission(): Promise<NotificationSuppo
   return Notification.requestPermission();
 }
 
-function showWaitingNotification(): void {
+interface StaffNotificationContent {
+  title: string;
+  body: string;
+  // `tag` gộp các thông báo cùng loại. Mỗi loại cần `tag` riêng để loại này không đè loại kia.
+  tag: string;
+}
+
+const WAITING_NOTIFICATION: StaffNotificationContent = {
+  title: 'Có khách đang chờ',
+  body: 'Một hội thoại mới vừa vào hàng chờ CSKH.',
+  tag: 'support-waiting',
+};
+
+const REMINDER_NOTIFICATION: StaffNotificationContent = {
+  title: 'Khách vẫn đang chờ',
+  body: 'Một hội thoại đã chờ lâu mà chưa có người nhận.',
+  tag: 'support-reminded',
+};
+
+function showNotification({ title, body, tag }: StaffNotificationContent): void {
   // Chưa được cấp quyền thì không hiện. Hỏi quyền là việc của nút "Bật thông báo".
   if (readNotificationPermission() !== 'granted') return;
   try {
-    // `tag` gộp nhiều thông báo liên tiếp thành một, để hàng chờ đông không làm ngập màn hình.
-    new Notification('Có khách đang chờ', {
-      body: 'Một hội thoại mới vừa vào hàng chờ CSKH.',
-      tag: 'support-waiting',
-    });
+    // Cùng `tag` thì thông báo mới thay thông báo cũ, để hàng chờ đông không làm ngập màn hình.
+    new Notification(title, { body, tag });
   } catch {
     // Một số trình duyệt di động chặn `new Notification`. Âm báo vẫn đủ để nhân viên biết.
     return;
   }
 }
 
-// Báo nhân viên có khách vào hàng chờ. Nơi gọi đã kiểm nhân viên đang "Sẵn sàng".
-export function alertWaitingSession(): void {
+function alertStaff(notification: StaffNotificationContent): void {
   // Đọc lựa chọn tại lúc báo. Nhân viên tắt âm báo ở màn CSKH thì mọi trang quản trị đều im.
   if (readSoundEnabled()) playWaitingTone();
-  showWaitingNotification();
+  showNotification(notification);
+}
+
+// Báo nhân viên có khách vào hàng chờ. Nơi gọi đã kiểm nhân viên đang "Sẵn sàng".
+export function alertWaitingSession(): void {
+  alertStaff(WAITING_NOTIFICATION);
+}
+
+// Nhắc nhân viên có khách chờ lâu chưa ai nhận. Dùng chung âm hai nốt, nhưng thông báo có `tag` riêng.
+export function alertReminderSession(): void {
+  alertStaff(REMINDER_NOTIFICATION);
 }

@@ -128,17 +128,17 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     await page.getByRole('button', { name: '+ Thêm thương hiệu', exact: true }).click();
     const brandDialog = page.getByRole('dialog');
     await expect(brandDialog).toBeVisible();
-    await brandDialog.getByLabel('Tên thương hiệu *', { exact: true }).fill('VinSmart E2E');
+    await brandDialog.getByLabel('Tên thương hiệu *', { exact: true }).fill('A-VinSmart E2E');
     await brandDialog.getByLabel('Chọn ảnh từ máy').setInputFiles({
       name: 'vinsmart.png',
       mimeType: 'image/png',
       buffer: tinyPng,
     });
-    await expect(brandDialog.getByRole('img', { name: 'Logo của VinSmart E2E' })).toBeVisible();
+    await expect(brandDialog.getByRole('img', { name: 'Logo của A-VinSmart E2E' })).toBeVisible();
     expect(imageProvider.uploadCount()).toBe(1);
     await brandDialog.getByRole('button', { name: 'Tạo thương hiệu', exact: true }).click();
     await expect(brandDialog).toBeHidden();
-    await expect(page.getByText('VinSmart E2E')).toBeVisible();
+    await expect(page.getByText('A-VinSmart E2E')).toBeVisible();
   });
 
   await test.step('Tạo sản phẩm sử dụng thuộc tính enum và kiểm tra chặn xóa thuộc tính', async () => {
@@ -155,7 +155,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     expect(brandsResponse.ok()).toBe(true);
     const brandsJson = await brandsResponse.json();
     const brandItem = brandsJson.data.find(
-      (brand: { name: string }) => brand.name === 'VinSmart E2E',
+      (brand: { name: string }) => brand.name === 'A-VinSmart E2E',
     );
     expect(brandItem).toBeDefined();
 
@@ -216,13 +216,13 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
     await dialog.getByRole('button', { name: 'Đóng', exact: true }).click();
     await expect(dialog).toBeHidden();
 
-    // Chuyển sang màn hình thương hiệu và thử xóa thương hiệu VinSmart E2E đang có sản phẩm.
+    // Chuyển sang màn hình thương hiệu và thử xóa thương hiệu A-VinSmart E2E đang có sản phẩm.
     await goToAdminPage(page, 'Thương hiệu');
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/admin/brands`);
-    await expect(page.getByText('VinSmart E2E')).toBeVisible();
+    await expect(page.getByText('A-VinSmart E2E')).toBeVisible();
 
     page.once('dialog', (confirmDialog) => confirmDialog.accept());
-    await page.getByRole('button', { name: 'Xóa VinSmart E2E', exact: true }).click();
+    await page.getByRole('button', { name: 'Xóa A-VinSmart E2E', exact: true }).click();
 
     // Kiểm tra lỗi BRAND_HAS_PRODUCTS hiển thị bằng tiếng Việt trong vùng role alert.
     const brandAlert = page.getByRole('alert');
@@ -288,7 +288,9 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
 
     // Chụp màn hình thương hiệu ở chế độ admin trên thiết bị di động (375px).
     await goToAdminPage(page, 'Thương hiệu');
-    await expect(page.getByRole('button', { name: 'Sửa VinSmart E2E', exact: true })).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: 'Sửa A-VinSmart E2E', exact: true }),
+    ).toBeVisible();
     await expectNoHorizontalPageOverflow(page);
     await expectAtMostTextLines(page.getByRole('heading', { level: 1 }), 2);
     await expectAtMostTextLines(
@@ -349,7 +351,7 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
 
     // Sales xem được thương hiệu nhưng không có các nút thao tác chỉnh sửa.
     await goToAdminPage(page, 'Thương hiệu');
-    await expect(page.getByText('VinSmart E2E')).toBeVisible();
+    await expect(page.getByText('A-VinSmart E2E')).toBeVisible();
     await expect(page.getByRole('button', { name: '+ Thêm thương hiệu' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Sửa/ })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Xóa/ })).toHaveCount(0);

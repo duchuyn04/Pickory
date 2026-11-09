@@ -14,6 +14,22 @@
   gap: var(--space-4);
 }
 
+.support-transfer-status {
+  position: static;
+  margin-bottom: var(--space-3);
+}
+
+.support-transfer-status:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
 .support-desk-grid > .card {
   margin-bottom: 0;
 }
@@ -52,16 +68,34 @@
   list-style: none;
 }
 
+/* Dòng là một nút chọn phiên: bỏ kiểu nút mặc định, giữ bố cục khối của dòng cũ. */
 .support-queue-item {
+  display: block;
+  width: 100%;
   padding: var(--space-3) 14px;
+  border: 0;
   border-bottom: 1px solid var(--color-border-subtle);
+  background: none;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.support-queue-item:hover {
+  background: var(--color-surface-hover);
+}
+
+/* Dòng đang mở: nền thương hiệu nhạt và viền trái, không chỉ dựa vào màu. */
+.support-queue-item[aria-current='true'] {
+  background: var(--color-brand-soft);
+  box-shadow: inset 3px 0 0 var(--color-brand);
 }
 
 .support-queue-item:last-child {
   border-bottom: 0;
 }
 
-/* Tin đầu của khách cắt ở hai dòng, để hàng chờ dài vẫn quét nhanh được. */
+/* Tin đầu của khách cắt ở hai dòng, để hàng chờ dài vẫn quét nhanh được. `span` cần khối vì nằm trong nút. */
 .support-queue-preview {
   display: -webkit-box;
   margin: 0 0 var(--space-1);

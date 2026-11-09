@@ -227,6 +227,17 @@ const iconPaths = {
       <path d="M12 8h.01" />
     </>
   ),
+  messageCircle: (
+    <>
+      <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+    </>
+  ),
+  send: (
+    <>
+      <path d="m22 2-7 20-4-9-9-4Z" />
+      <path d="M22 2 11 13" />
+    </>
+  ),
   search: (
     <>
       <circle cx="11" cy="11" r="8" />

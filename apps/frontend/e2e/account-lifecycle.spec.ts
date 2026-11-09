@@ -5,6 +5,8 @@ import { readEmailVerificationLink, readPasswordResetLink } from './outbox';
 
 // Vòng đời tài khoản qua giao diện thật: đăng ký, xác thực email, quên mật khẩu, đặt lại mật khẩu và đổi mật khẩu.
 test('khách đăng ký, xác thực email, quên mật khẩu, đặt lại và đổi mật khẩu', async ({ page }) => {
+  // Nâng thời gian chờ vì kịch bản chạy trọn vẹn 6 bước qua backend thật.
+  test.setTimeout(120000);
   const consoleIssues: string[] = [];
   page.on('console', (message) => {
     if (message.location().url.endsWith('/favicon.ico')) return;

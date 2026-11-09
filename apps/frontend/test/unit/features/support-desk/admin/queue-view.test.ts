@@ -1,26 +1,82 @@
 import { describe, expect, it } from 'vitest';
 import {
+  HANDLED_CALLBACK_LIMIT,
+  callbackPhoneHref,
   formatWaitingTime,
-  selectPendingCallbacks,
+  groupCallbackRequests,
   waitingBadgeCount,
 } from '../../../../../src/features/support-desk/admin/queue-view';
 
-describe('selectPendingCallbacks', () => {
-  it('chỉ giữ dòng pending, theo thứ tự ban đầu', () => {
+function row(id: string, status: string) {
+  return { id, status };
+}
+
+describe('groupCallbackRequests', () => {
+  it('đưa dòng pending sang nhóm cần gọi, dù dòng đã xử lý đứng đầu mảng', () => {
     const rows = [
-      { id: 'a', phone: '0900000001', status: 'pending', createdAt: '2026-10-22T01:00:00Z' },
-      { id: 'b', phone: '0900000002', status: 'done', createdAt: '2026-10-22T02:00:00Z' },
-      { id: 'c', phone: '0900000003', status: 'pending', createdAt: '2026-10-22T03:00:00Z' },
-      { id: 'd', phone: '0900000004', status: 'cancelled', createdAt: '2026-10-22T04:00:00Z' },
+      row('a', 'done'),
+      row('b', 'pending'),
+      row('c', 'unreachable'),
+      row('d', 'pending'),
     ];
 
-    expect(selectPendingCallbacks(rows).map((row) => row.id)).toEqual(['a', 'c']);
+    const groups = groupCallbackRequests(rows);
+
+    expect(groups.pending.map((item) => item.id)).toEqual(['b', 'd']);
+    expect(groups.handled.map((item) => item.id)).toEqual(['a', 'c']);
+    expect(groups.hasHiddenHandled).toBe(false);
   });
 
-  it('trả mảng rỗng khi không có dòng pending', () => {
-    const rows = [{ id: 'b', phone: '0900000002', status: 'done', createdAt: 'x' }];
+  it('trả hai nhóm rỗng khi không có dòng nào', () => {
+    expect(groupCallbackRequests([])).toEqual({
+      pending: [],
+      handled: [],
+      hasHiddenHandled: false,
+    });
+  });
 
-    expect(selectPendingCallbacks(rows)).toEqual([]);
+  it('chỉ giữ các dòng đã xử lý đầu tiên theo thứ tự API và báo có dòng bị ẩn', () => {
+    const handledRows = Array.from({ length: HANDLED_CALLBACK_LIMIT + 3 }, (_, index) =>
+      row(`h${index}`, 'done'),
+    );
+
+    const groups = groupCallbackRequests([row('p', 'pending'), ...handledRows]);
+
+    expect(groups.handled).toHaveLength(HANDLED_CALLBACK_LIMIT);
+    expect(groups.handled[0]?.id).toBe('h0');
+    expect(groups.handled.at(-1)?.id).toBe(`h${HANDLED_CALLBACK_LIMIT - 1}`);
+    expect(groups.hasHiddenHandled).toBe(true);
+    expect(groups.pending).toHaveLength(1);
+  });
+
+  it('đúng 20 dòng đã xử lý thì không báo bị ẩn', () => {
+    const handledRows = Array.from({ length: HANDLED_CALLBACK_LIMIT }, (_, index) =>
+      row(`h${index}`, 'done'),
+    );
+
+    expect(groupCallbackRequests(handledRows).hasHiddenHandled).toBe(false);
+  });
+});
+
+describe('callbackPhoneHref', () => {
+  it.each([
+    ['0901234567', 'tel:0901234567'],
+    ['0901 234 567', 'tel:0901234567'],
+    ['+84 (901) 234-567', 'tel:+84901234567'],
+    ['0901.234.567', 'tel:0901234567'],
+  ])('chỉ giữ chữ số và dấu +: %s', (phone, expected) => {
+    expect(callbackPhoneHref(phone)).toBe(expected);
+  });
+
+  it.each([
+    ['09-01+23', 'tel:090123'],
+    ['+84+901', 'tel:+84901'],
+  ])('chỉ giữ dấu + ở đầu số: %s', (phone, expected) => {
+    expect(callbackPhoneHref(phone)).toBe(expected);
+  });
+
+  it.each([' - . ', '+', '+ -'])('trả null khi không còn chữ số nào: "%s"', (phone) => {
+    expect(callbackPhoneHref(phone)).toBeNull();
   });
 });
 

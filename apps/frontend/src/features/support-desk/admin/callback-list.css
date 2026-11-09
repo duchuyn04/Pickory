@@ -1,0 +1,129 @@
+/* Tab Gọi lại trong cột hàng chờ. Cột rộng khoảng 340px ở màn lớn và đầy khung ở màn hẹp. */
+
+.support-callbacks {
+  min-width: 0;
+}
+
+/* Dòng thông báo luôn có trong DOM. Khi rỗng chỉ bỏ khoảng đệm, không dùng display: none. */
+.support-callbacks-status {
+  margin: 0;
+  color: var(--color-success);
+  font-size: var(--text-xs);
+}
+
+.support-callbacks-status:not(:empty) {
+  padding: var(--space-2) 14px;
+  border-bottom: 1px solid var(--color-border-subtle);
+  background: var(--color-success-soft);
+}
+
+/* Tiêu đề nhóm là một thanh nền xám nhạt, để nhóm "Cần gọi lại" và "Đã xử lý" tách nhau rõ. */
+.support-callback-group-title {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  margin: 0;
+  padding: var(--space-2) 14px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-surface-muted);
+  color: var(--color-ink-secondary);
+  font-size: var(--text-label);
+  font-weight: 700;
+}
+
+.support-callback-group-title:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
+}
+
+.support-callback-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.support-callback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3) 14px;
+  border-bottom: 1px solid var(--color-border-subtle);
+}
+
+.support-callback:last-child {
+  border-bottom: 0;
+}
+
+/* Dòng đã xử lý nhạt hơn: nền xám và chữ phụ, nhưng vẫn đủ tương phản AA. */
+.support-callback.is-handled {
+  background: var(--color-surface-muted);
+}
+
+.support-callback-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+/* Số điện thoại là mục dễ thấy nhất của dòng, vì nhân viên bấm để gọi. */
+.support-callback-phone {
+  min-width: 0;
+  color: var(--color-link);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.support-callback-phone:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-chip);
+}
+
+.support-callback-phone-plain {
+  color: var(--color-ink);
+}
+
+.is-handled .support-callback-phone {
+  color: var(--color-ink-muted);
+}
+
+.support-callbacks-error {
+  margin: var(--space-3) 14px;
+}
+
+.support-callback-phone-deleted {
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+.support-callback-note {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+}
+
+.is-handled .support-callback-note {
+  color: var(--color-ink-muted);
+}
+
+/* Hai nút xuống hàng khi cột quá hẹp, nên không tràn ngang. */
+.support-callback-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.support-callback-error {
+  margin-top: var(--space-2);
+}
+
+.support-callbacks-note {
+  margin: 0;
+  padding: var(--space-2) 14px;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}

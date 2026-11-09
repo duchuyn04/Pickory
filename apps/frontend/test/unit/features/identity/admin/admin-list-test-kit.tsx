@@ -9,6 +9,7 @@ import type { ActorData } from '../../../../../src/features/identity/hooks/use-a
 // Bộ dựng chung cho test màn danh sách admin: dựng ứng dụng, giả `fetch` và ghi lại URL đã gọi.
 export interface AdminListHarness {
   container: HTMLDivElement;
+  client: QueryClient;
   // Mọi URL `GET` đã gọi, theo thứ tự.
   requestedUrls: string[];
   // Mọi request ghi (khác `GET`), kèm body đã giải mã JSON.
@@ -80,6 +81,7 @@ export function createHarness(
           </StrictMode>,
         );
       }),
+    client,
     cleanup: async () => {
       await act(async () => root.unmount());
       container.remove();

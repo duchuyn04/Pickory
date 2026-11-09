@@ -261,14 +261,15 @@ test('ADM-UI5: doanh thu theo kỳ là một trang riêng, không tràn ngang', 
     await expect(page).toHaveURL(/range=30d/);
     await expect(page).toHaveURL(/granularity=day/);
     await expect(page.getByLabel('Chia theo')).toHaveValue('day');
-    await expect(revenueTable).toContainText('01/05/2026');
+    const earliestDay = `01/${vietnamMonth(-5).slice(5, 7)}/${vietnamMonth(-5).slice(0, 4)}`;
+    await expect(revenueTable).toContainText(earliestDay);
 
     // Mở lại URL cho cùng khoảng thời gian.
     await page.reload();
     await expect(page.getByLabel('Khoảng thời gian')).toHaveValue('30d');
     await expect(page.getByLabel('Chia theo')).toHaveValue('day');
     await expect(page.locator('.report-panel').first().locator('.report-table')).toContainText(
-      '01/05/2026',
+      earliestDay,
     );
   });
 
