@@ -40,6 +40,11 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                         .HasColumnName("createdAt")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("deletedAt");
+
                     b.Property<string>("LogoPublicId")
                         .HasColumnType("text")
                         .HasColumnName("logoPublicId");
@@ -64,7 +69,8 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique()
-                        .HasDatabaseName("brands_slug_key");
+                        .HasDatabaseName("brands_slug_key")
+                        .HasFilter("\"deletedAt\" IS NULL");
 
                     b.ToTable("brands", (string)null);
                 });
@@ -87,6 +93,11 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
                         .HasColumnType("timestamp(3) without time zone")
                         .HasColumnName("createdAt")
                         .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasPrecision(3)
+                        .HasColumnType("timestamp(3) without time zone")
+                        .HasColumnName("deletedAt");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -118,7 +129,8 @@ namespace Pickory.Modules.Catalog.Persistence.Migrations
 
                     b.HasIndex("Slug")
                         .IsUnique()
-                        .HasDatabaseName("categories_slug_key");
+                        .HasDatabaseName("categories_slug_key")
+                        .HasFilter("\"deletedAt\" IS NULL");
 
                     b.ToTable("categories", (string)null);
                 });

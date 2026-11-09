@@ -11,15 +11,15 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-08: `IStockService` giữ hàng và trả hàng, gồm cả trường hợp bên gọi sở hữu transaction.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class StockServiceTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class StockServiceTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly PickoryWebApplicationFactory _factory;
     private readonly StockTestData _data;
     private readonly string _suffix = Guid.NewGuid().ToString("N")[..10];
 
-    public StockServiceTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public StockServiceTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _factory = factory;

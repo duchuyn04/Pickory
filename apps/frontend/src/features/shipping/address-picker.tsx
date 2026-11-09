@@ -4,6 +4,7 @@ import { ErrorAlert } from '../../shared/error-alert';
 import { FieldError, fieldErrorProps, type FieldErrors } from '../../shared/field-error';
 import { addressQueryKeys, fetchProvinces, fetchWards, type AddressOption } from './address-api';
 import { AddressCombobox } from './address-combobox';
+import { getErrorMessage } from '../../shared/error-message';
 import './address-picker.css';
 
 // Địa chỉ giao hàng. Giữ cả mã và tên vì đơn hàng lưu mã và tên tại thời điểm đặt (spec shipping).
@@ -166,7 +167,8 @@ interface LoadErrorProps {
 // Lỗi tải danh sách nằm ngay dưới ô cần danh sách đó, kèm nút thử lại.
 function LoadError({ message, reason, onRetry }: LoadErrorProps) {
   // Câu lỗi của API đã là tiếng Việt. Lỗi lạ thì chỉ hiện câu chung, không lộ chữ kỹ thuật cho khách.
-  const reasons = reason instanceof Error && reason.message ? [reason.message] : [];
+  const reasonText = getErrorMessage(reason, '');
+  const reasons = reasonText ? [reasonText] : [];
   return (
     <div className="address-picker-load-error">
       <ErrorAlert message={message} items={reasons} />

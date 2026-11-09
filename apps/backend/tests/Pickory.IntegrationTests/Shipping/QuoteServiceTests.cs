@@ -11,8 +11,8 @@ namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-05 lát 2: `QuoteAsync` kiểm tham số, cấu hình, địa chỉ nhận, bảo hiểm và gói dịch vụ trước khi gọi GHN.
 // Dùng DB thật và `FakeGhnClient` bọc trong `RecordingGhnClient`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class QuoteServiceTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class QuoteServiceTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly ShippingAddress ActiveAddress = QuoteTestSetup.ActiveAddress;
 

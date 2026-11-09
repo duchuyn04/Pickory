@@ -9,6 +9,7 @@ import { ReportMonthControl } from './report-period-controls';
 import { ReportPieChart } from './report-pie-chart';
 import { fetchSalesReport } from './reports-api';
 import { useMonthReportParams } from './use-report-params';
+import { getErrorMessage } from '../../../shared/error-message';
 import './reports.css';
 
 const MONTH_EMPTY_MESSAGE = 'Chưa có dữ liệu trong tháng này';
@@ -61,7 +62,10 @@ export function RevenueBrandsReportPage() {
         )}
         {monthQuery.isError && (
           <ErrorAlert
-            message={monthQuery.error?.message ?? 'Không tải được doanh thu theo thương hiệu.'}
+            message={getErrorMessage(
+              monthQuery.error,
+              'Không tải được doanh thu theo thương hiệu.',
+            )}
           />
         )}
         {monthQuery.isSuccess && total === 0 && (

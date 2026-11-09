@@ -19,6 +19,7 @@ import {
   type AddressFieldErrors,
   type AddressFormValues,
 } from './address-form';
+import { getErrorMessage } from '../../../../shared/error-message';
 
 const ID_PREFIX = 'book';
 
@@ -86,7 +87,7 @@ export function AddressFormDialog({ editing, isFirstAddress, onClose }: AddressF
         return;
       }
       // Lỗi 422 đủ 10 địa chỉ và lỗi khác đã có thông báo tiếng Việt nên hiện nguyên văn.
-      setApiError(error instanceof Error ? error.message : 'Lưu địa chỉ thất bại.');
+      setApiError(getErrorMessage(error, 'Lưu địa chỉ thất bại.'));
     }
   }
 

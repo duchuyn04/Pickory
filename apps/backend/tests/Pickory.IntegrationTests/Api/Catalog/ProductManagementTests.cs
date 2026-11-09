@@ -20,8 +20,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // Kiểm tra luồng quản lý sản phẩm từ phân quyền tới toàn vẹn dữ liệu.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ProductManagementTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class ProductManagementTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly PickoryWebApplicationFactory _factory;
@@ -34,7 +34,7 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
     private readonly List<string> _createdBrandIds = new();
     private readonly List<string> _createdMovementIds = new();
 
-    public ProductManagementTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ProductManagementTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _factory = factory;
@@ -61,7 +61,9 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
         await using var catalogDatabase = _database.CreateCatalogContext();
 
         // Tìm toàn bộ sản phẩm thuộc các danh mục hoặc thương hiệu đã tạo trong bài test.
+        // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm đã bị xóa mềm, tránh khóa ngoại chặn xóa danh mục và thương hiệu.
         var relevantProductIds = await catalogDatabase.Products
+            .IgnoreQueryFilters()
             .Where(product => _createdProductIds.Contains(product.Id) ||
                         _createdCategoryIds.Contains(product.CategoryId) ||
                         _createdBrandIds.Contains(product.BrandId))
@@ -87,6 +89,7 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
 
             // Xóa các sản phẩm kiểm thử cùng toàn bộ SKU và lịch sử slug đi kèm.
             var products = await catalogDatabase.Products
+                .IgnoreQueryFilters()
                 .Include(product => product.Skus)
                 .Include(product => product.SlugHistory)
                 .Where(product => relevantProductIds.Contains(product.Id))
@@ -99,6 +102,7 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
         if (_createdCategoryIds.Count > 0)
         {
             var categories = await catalogDatabase.Categories
+                .IgnoreQueryFilters()
                 .Where(category => _createdCategoryIds.Contains(category.Id))
                 .ToListAsync();
             catalogDatabase.Categories.RemoveRange(categories);
@@ -109,6 +113,7 @@ public sealed class ProductManagementTests : IClassFixture<PickoryWebApplication
         if (_createdBrandIds.Count > 0)
         {
             var brands = await catalogDatabase.Brands
+                .IgnoreQueryFilters()
                 .Where(brand => _createdBrandIds.Contains(brand.Id))
                 .ToListAsync();
             catalogDatabase.Brands.RemoveRange(brands);

@@ -225,6 +225,10 @@ namespace Pickory.Modules.SupportDesk.Persistence.Migrations
                         .HasColumnType("\"SupportMessageRole\"")
                         .HasColumnName("role");
 
+                    b.Property<string>("SessionId")
+                        .HasColumnType("text")
+                        .HasColumnName("sessionId");
+
                     b.Property<string>("StaffId")
                         .HasColumnType("text")
                         .HasColumnName("staffId");

@@ -18,6 +18,8 @@ internal sealed class SupportMessageConfiguration : IEntityTypeConfiguration<Sup
         entity.Property(value => value.Role).IsRequired();
         // Tin của khách và tin hệ thống không có nhân viên gửi, nên `staffId` được rỗng.
         entity.Property(value => value.StaffId).IsRequired(false);
+        // Cột mã phiên hỗ trợ cho phép rỗng khi tin tạo ngoài phiên.
+        entity.Property(value => value.SessionId).IsRequired(false);
         // Độ dài tối đa 2.000 ký tự do API kiểm. Cột không giới hạn độ dài, nên đổi giới hạn không cần migration.
         entity.Property(value => value.Body).IsRequired();
         entity.Property(value => value.Action).IsRequired(false);

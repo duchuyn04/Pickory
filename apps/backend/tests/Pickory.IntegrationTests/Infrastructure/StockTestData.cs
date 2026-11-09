@@ -96,9 +96,10 @@ public sealed class StockTestData(IntegrationDatabaseFixture database, string su
         await context.InventoryMovements
             .Where(movement => context.Skus.Any(sku => sku.Id == movement.SkuId && _productIds.Contains(sku.ProductId)))
             .ExecuteDeleteAsync();
-        await context.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
-        await context.Categories.Where(category => category.Id == _categoryId).ExecuteDeleteAsync();
-        await context.Brands.Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm, danh mục và thương hiệu đã bị xóa mềm trong test.
+        await context.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+        await context.Categories.IgnoreQueryFilters().Where(category => category.Id == _categoryId).ExecuteDeleteAsync();
+        await context.Brands.IgnoreQueryFilters().Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
     }
 
     public async Task<int> StockOfAsync(string skuId)

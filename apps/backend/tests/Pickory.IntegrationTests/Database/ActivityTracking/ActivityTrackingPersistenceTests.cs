@@ -10,9 +10,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database.ActivityTracking;
 
 // ACT-04: bảng `daily_counters` đúng kiểu cột và khóa chính, DB tự từ chối dòng trùng, và schema không có cột định danh khách.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ActivityTrackingPersistenceTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(ActivityTrackingCollection.Name)]
+public sealed class ActivityTrackingPersistenceTests(ActivityTrackingWebApplicationFactory factory)
+    : IClassFixture<ActivityTrackingWebApplicationFactory>
 {
     // Ngày xa quá khứ mà không luồng thật nào ghi. Test đếm lượt commit dòng của hôm nay vào cùng DB test, nên ngày gần đây dễ trùng khóa chính.
     private static readonly DateOnly UnusedCounterDate = new(2000, 1, 1);

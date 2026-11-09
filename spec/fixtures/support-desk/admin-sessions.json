@@ -1,0 +1,179 @@
+{
+  "description": "Mẫu request và response của route phiên hỗ trợ phía nhân viên: hàng chờ, nhận, chuyển, kết thúc, gửi tin và lịch sử tin.",
+  "examples": [
+    {
+      "name": "hàng chờ",
+      "method": "GET",
+      "path": "/api/admin/support/sessions?view=waiting",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": [
+          {
+            "id": "5e550000-0000-4000-8000-000000000001",
+            "conversationId": "c0a80000-0000-4000-8000-000000000001",
+            "preview": "Đơn PK123 của mình giao tới đâu rồi?",
+            "waitingSeconds": 95,
+            "handoffAt": "2026-11-03T02:15:05Z",
+            "claimedAt": null,
+            "transferNote": null
+          }
+        ]
+      }
+    },
+    {
+      "name": "phiên của tôi sau khi đồng nghiệp chuyển",
+      "method": "GET",
+      "path": "/api/admin/support/sessions?view=mine",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": [
+          {
+            "id": "5e550000-0000-4000-8000-000000000002",
+            "conversationId": "c0a80000-0000-4000-8000-000000000002",
+            "preview": "Mình muốn đổi size áo.",
+            "waitingSeconds": 40,
+            "handoffAt": "2026-11-03T01:50:00Z",
+            "claimedAt": "2026-11-03T01:50:40Z",
+            "transferNote": "Khách cần đổi size, đơn PK098 đã giao."
+          }
+        ]
+      }
+    },
+    {
+      "name": "nhận phiên",
+      "method": "POST",
+      "path": "/api/admin/support/sessions/5e550000-0000-4000-8000-000000000001/assignment",
+      "request": null,
+      "status": 201,
+      "response": {
+        "data": {
+          "sessionId": "5e550000-0000-4000-8000-000000000001",
+          "staffId": "staff-0001",
+          "claimedAt": "2026-11-03T02:16:40Z"
+        }
+      }
+    },
+    {
+      "name": "nhận phiên đã có người nhận",
+      "method": "POST",
+      "path": "/api/admin/support/sessions/5e550000-0000-4000-8000-000000000001/assignment",
+      "request": null,
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "SUPPORT_SESSION_ALREADY_CLAIMED",
+          "message": "Đã có người nhận hội thoại này."
+        }
+      }
+    },
+    {
+      "name": "chuyển phiên cho đồng nghiệp",
+      "method": "PUT",
+      "path": "/api/admin/support/sessions/5e550000-0000-4000-8000-000000000001/assignment",
+      "request": {
+        "staffId": "staff-0002",
+        "note": "Khách cần đổi size, đơn PK098 đã giao."
+      },
+      "status": 200,
+      "response": {
+        "data": {
+          "sessionId": "5e550000-0000-4000-8000-000000000001",
+          "staffId": "staff-0002",
+          "claimedAt": "2026-11-03T02:20:00Z"
+        }
+      }
+    },
+    {
+      "name": "chuyển cho người đang tạm vắng",
+      "method": "PUT",
+      "path": "/api/admin/support/sessions/5e550000-0000-4000-8000-000000000001/assignment",
+      "request": { "staffId": "staff-0003", "note": null },
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "SUPPORT_STAFF_UNAVAILABLE",
+          "message": "Người nhận không ở trạng thái sẵn sàng."
+        }
+      }
+    },
+    {
+      "name": "kết thúc phiên",
+      "method": "PATCH",
+      "path": "/api/admin/support/sessions/5e550000-0000-4000-8000-000000000001",
+      "request": { "status": "closed" },
+      "status": 200,
+      "response": {
+        "data": {
+          "sessionId": "5e550000-0000-4000-8000-000000000001",
+          "closedAt": "2026-11-03T02:30:00Z",
+          "closedBy": "staff-0001"
+        }
+      }
+    },
+    {
+      "name": "nhân viên gửi tin",
+      "method": "POST",
+      "path": "/api/admin/support/sessions/5e550000-0000-4000-8000-000000000001/messages",
+      "request": { "body": "Chào bạn, mình kiểm đơn PK123 ngay nhé." },
+      "status": 201,
+      "response": {
+        "data": {
+          "id": "a0000000-0000-4000-8000-000000000003",
+          "sessionId": "5e550000-0000-4000-8000-000000000001",
+          "role": "staff",
+          "body": "Chào bạn, mình kiểm đơn PK123 ngay nhé.",
+          "action": null,
+          "staffDisplayName": "Lan - CSKH",
+          "createdAt": "2026-11-03T02:17:40Z"
+        }
+      }
+    },
+    {
+      "name": "người không giữ phiên gửi tin",
+      "method": "POST",
+      "path": "/api/admin/support/sessions/5e550000-0000-4000-8000-000000000001/messages",
+      "request": { "body": "Chào bạn." },
+      "status": 403,
+      "response": {
+        "error": {
+          "code": "SUPPORT_SESSION_NOT_ASSIGNED",
+          "message": "Bạn chưa nhận hội thoại này nên không gửi tin được."
+        }
+      }
+    },
+    {
+      "name": "lịch sử tin của hội thoại cho nhân viên",
+      "method": "GET",
+      "path": "/api/admin/support/conversations/c0a80000-0000-4000-8000-000000000001/messages?limit=50",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "items": [
+            {
+              "id": "a0000000-0000-4000-8000-000000000001",
+              "sessionId": "5e550000-0000-4000-8000-000000000001",
+              "role": "customer",
+              "body": "Đơn PK123 của mình giao tới đâu rồi?",
+              "action": null,
+              "staffDisplayName": null,
+              "createdAt": "2026-11-03T02:15:05Z"
+            },
+            {
+              "id": "a0000000-0000-4000-8000-000000000003",
+              "sessionId": "5e550000-0000-4000-8000-000000000001",
+              "role": "staff",
+              "body": "Chào bạn, mình kiểm đơn PK123 ngay nhé.",
+              "action": null,
+              "staffDisplayName": "Lan - CSKH",
+              "createdAt": "2026-11-03T02:17:40Z"
+            }
+          ],
+          "nextCursor": null
+        }
+      }
+    }
+  ]
+}

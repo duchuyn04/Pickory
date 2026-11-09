@@ -16,8 +16,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // ADM-19: kiểm lệnh tạo đơn mẫu trên DB thật của bộ test.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class DemoOrdersCommandTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class DemoOrdersCommandTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private static readonly DateTimeOffset TestClockInstant = new(2040, 7, 15, 12, 0, 0, TimeSpan.Zero);
     private readonly FakeTimeProvider _clock = new(TestClockInstant);
@@ -28,7 +28,7 @@ public sealed class DemoOrdersCommandTests : IClassFixture<PickoryWebApplication
     private readonly List<string> _categoryIds = [];
     private readonly List<string> _productIds = [];
 
-    public DemoOrdersCommandTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public DemoOrdersCommandTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _database = database;
         _host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
@@ -260,17 +260,17 @@ public sealed class DemoOrdersCommandTests : IClassFixture<PickoryWebApplication
         if (_productIds.Count > 0)
         {
             await catalog.Skus.Where(sku => _productIds.Contains(sku.ProductId)).ExecuteDeleteAsync();
-            await catalog.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+            await catalog.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
         }
 
         if (_brandIds.Count > 0)
         {
-            await catalog.Brands.Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
+            await catalog.Brands.IgnoreQueryFilters().Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
         }
 
         if (_categoryIds.Count > 0)
         {
-            await catalog.Categories.Where(category => _categoryIds.Contains(category.Id)).ExecuteDeleteAsync();
+            await catalog.Categories.IgnoreQueryFilters().Where(category => _categoryIds.Contains(category.Id)).ExecuteDeleteAsync();
         }
     }
 

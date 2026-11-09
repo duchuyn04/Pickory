@@ -1,5 +1,7 @@
 using System.Data.Common;
 using System.Net;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
@@ -13,11 +15,14 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-15: `POST /api/support/conversations`. Route trả hội thoại `open` của người gọi, hoặc tạo mới.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class OpenConversationEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class OpenConversationEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+
+    // Mốc mở phiên cố định của test. Khóa `createdAt` và `handoffAt` không phụ thuộc giờ chạy test.
+    private static readonly DateTime HandoffAt = new(2026, 11, 3, 3, 0, 0, DateTimeKind.Utc);
 
     public Task InitializeAsync() => Task.CompletedTask;
 
@@ -34,9 +39,13 @@ public sealed class OpenConversationEndpointTests(PickoryWebApplicationFactory f
         // Hội thoại chứa dữ liệu cá nhân nên response không được lưu bản sao.
         Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
         var data = await SupportConversationTestKit.ReadDataAsync(response);
-        Assert.Equal(["id", "status", "createdAt", "showRetentionNotice"], data.EnumerateObject().Select(property => property.Name));
+        Assert.Equal(
+            ["id", "status", "createdAt", "showRetentionNotice", "session"],
+            data.EnumerateObject().Select(property => property.Name));
         Assert.Equal("open", data.GetProperty("status").GetString());
         Assert.True(data.GetProperty("showRetentionNotice").GetBoolean());
+        // Hội thoại vừa tạo chưa có phiên nào, nên khách thấy `session` rỗng.
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("session").ValueKind);
 
         var stored = Assert.Single(await SupportConversationTestKit.ReadConversationsAsync(
             database, SupportConversationTestKit.ReadAnonymousId(cookie)));
@@ -129,6 +138,107 @@ public sealed class OpenConversationEndpointTests(PickoryWebApplicationFactory f
         await SupportConversationTestKit.AssertErrorAsync(response, HttpStatusCode.Forbidden, "FORBIDDEN");
         Assert.Empty(await SupportConversationTestKit.ReadConversationsAsync(
             database, SupportConversationTestKit.ReadAnonymousId(staffWithAnonymousCookie.Split("; ")[1])));
+    }
+
+    [Fact]
+    public async Task Post_NewConversation_MatchesTheContractExample()
+    {
+        var cookie = SupportConversationTestKit.NewGuestCookie();
+
+        var response = await _client.SendAsync(
+            SupportConversationTestKit.Post(SupportConversationTestKit.ConversationsPath, cookie));
+
+        // Ví dụ ghi `session` bằng `null` cho hội thoại vừa tạo.
+        await AssertMatchesContractExampleAsync(response, "tạo hội thoại lần đầu");
+    }
+
+    [Fact]
+    public async Task Post_ConversationWithWaitingSession_MatchesTheContractExample()
+    {
+        var cookie = SupportConversationTestKit.NewGuestCookie();
+        var conversation = await SupportConversationTestKit.SeedConversationAsync(
+            database, SupportConversationTestKit.ReadAnonymousId(cookie));
+        var waitingSession = await SupportSessionTestKit.SeedSessionAsync(database, conversation, HandoffAt);
+
+        var response = await _client.SendAsync(
+            SupportConversationTestKit.Post(SupportConversationTestKit.ConversationsPath, cookie));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        // Ví dụ "mở lại hội thoại đang có phiên chờ" là tiêu chí của SD-04.
+        await AssertMatchesContractExampleAsync(response, "mở lại hội thoại đang có phiên chờ");
+        // Phép so hợp đồng bỏ qua giá trị `null`, nên test khóa thêm phiên thật mà response phải trả.
+        var session = (await SupportConversationTestKit.ReadDataAsync(response)).GetProperty("session");
+        Assert.Equal(waitingSession.Id, session.GetProperty("id").GetString());
+        Assert.Equal("waiting", session.GetProperty("status").GetString());
+    }
+
+    [Fact]
+    public async Task Post_ConversationWithClaimedSession_ReportsAssignedStatus()
+    {
+        var cookie = SupportConversationTestKit.NewGuestCookie();
+        var conversation = await SupportConversationTestKit.SeedConversationAsync(
+            database, SupportConversationTestKit.ReadAnonymousId(cookie));
+        await SupportSessionTestKit.SeedSessionAsync(
+            database, conversation, HandoffAt, staffId: "staff-1", claimedAt: HandoffAt.AddSeconds(30));
+
+        var response = await _client.SendAsync(
+            SupportConversationTestKit.Post(SupportConversationTestKit.ConversationsPath, cookie));
+
+        var session = (await SupportConversationTestKit.ReadDataAsync(response)).GetProperty("session");
+        // Phiên có nhân viên giữ nhưng chưa đóng là trạng thái `assigned`.
+        Assert.Equal("assigned", session.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Null, session.GetProperty("csatScore").ValueKind);
+    }
+
+    [Fact]
+    public async Task Post_ConversationWithClosedSession_ReportsClosedStatusAndTheScore()
+    {
+        var cookie = SupportConversationTestKit.NewGuestCookie();
+        var conversation = await SupportConversationTestKit.SeedConversationAsync(
+            database, SupportConversationTestKit.ReadAnonymousId(cookie));
+        await SupportSessionTestKit.SeedSessionAsync(
+            database,
+            conversation,
+            HandoffAt,
+            staffId: "staff-1",
+            claimedAt: HandoffAt.AddSeconds(30),
+            closedAt: HandoffAt.AddMinutes(5),
+            csat: 4);
+
+        var response = await _client.SendAsync(
+            SupportConversationTestKit.Post(SupportConversationTestKit.ConversationsPath, cookie));
+
+        var session = (await SupportConversationTestKit.ReadDataAsync(response)).GetProperty("session");
+        // Phiên đã đóng thì trạng thái `closed`, kèm điểm khách đã chấm.
+        Assert.Equal("closed", session.GetProperty("status").GetString());
+        Assert.Equal(4, session.GetProperty("csatScore").GetInt32());
+    }
+
+    [Fact]
+    public async Task Post_ConversationWithSeveralSessions_ReportsTheLatestByHandoffAt()
+    {
+        var cookie = SupportConversationTestKit.NewGuestCookie();
+        var conversation = await SupportConversationTestKit.SeedConversationAsync(
+            database, SupportConversationTestKit.ReadAnonymousId(cookie));
+        // Hội thoại có một phiên cũ đã đóng và một phiên chờ mới hơn. Đây là lần khách cần hỗ trợ thứ hai.
+        await SupportSessionTestKit.SeedSessionAsync(
+            database, conversation, HandoffAt, staffId: "staff-1", closedAt: HandoffAt.AddMinutes(5), csat: 5);
+        var newest = await SupportSessionTestKit.SeedSessionAsync(database, conversation, HandoffAt.AddHours(1));
+
+        var response = await _client.SendAsync(
+            SupportConversationTestKit.Post(SupportConversationTestKit.ConversationsPath, cookie));
+
+        var session = (await SupportConversationTestKit.ReadDataAsync(response)).GetProperty("session");
+        Assert.Equal(newest.Id, session.GetProperty("id").GetString());
+        Assert.Equal("waiting", session.GetProperty("status").GetString());
+    }
+
+    // Gửi request đọc hội thoại cho khách và so response với một ví dụ của `customer-api.json`.
+    private static async Task AssertMatchesContractExampleAsync(HttpResponseMessage response, string exampleName)
+    {
+        // Phân tích chuỗi thô để helper so được cây JSON, giống dữ liệu đọc từ file mẫu.
+        var responseBody = JsonNode.Parse(await response.Content.ReadAsStringAsync());
+        SupportDeskContract.AssertMatches(responseBody, response.StatusCode, "customer-api.json", exampleName);
     }
 
     [Fact]

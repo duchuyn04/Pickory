@@ -75,7 +75,8 @@ internal static class SupportConversationTestKit
         string anonymousId,
         string? customerUserId = null,
         SupportConversationStatus status = SupportConversationStatus.Open,
-        DateTime? lastMessageAt = null)
+        DateTime? lastMessageAt = null,
+        DateTime? closedAt = null)
     {
         IssuedAnonymousIds.Add(anonymousId);
         var createdAt = lastMessageAt ?? DateTime.UtcNow.AddHours(-1);
@@ -86,7 +87,7 @@ internal static class SupportConversationTestKit
             Status = status,
             CreatedAt = createdAt,
             LastMessageAt = createdAt,
-            ClosedAt = status == SupportConversationStatus.Closed ? createdAt : null,
+            ClosedAt = closedAt ?? (status == SupportConversationStatus.Closed ? createdAt : null),
         };
         await using var context = database.CreateSupportDeskContext();
         context.Conversations.Add(conversation);
@@ -100,7 +101,9 @@ internal static class SupportConversationTestKit
         string body,
         DateTime createdAt,
         SupportMessageRole role = SupportMessageRole.Customer,
-        string? action = null)
+        string? action = null,
+        string? staffId = null,
+        string? sessionId = null)
     {
         var message = new SupportMessage
         {
@@ -108,6 +111,8 @@ internal static class SupportConversationTestKit
             Role = role,
             Body = body,
             Action = action,
+            StaffId = staffId,
+            SessionId = sessionId,
             CreatedAt = createdAt,
         };
         await using var context = database.CreateSupportDeskContext();
@@ -139,6 +144,18 @@ internal static class SupportConversationTestKit
         return await context.Messages.AsNoTracking()
             .Where(message => message.ConversationId == conversationId)
             .OrderBy(message => message.CreatedAt)
+            .ToListAsync();
+    }
+
+    // Tin của một vai trò. Test đếm tin của khách không bị lẫn tin hệ thống mà phiên chờ sinh ra.
+    public static async Task<IReadOnlyList<SupportMessage>> ReadMessagesByRoleAsync(
+        IntegrationDatabaseFixture database, string conversationId, SupportMessageRole role)
+    {
+        await using var context = database.CreateSupportDeskContext();
+        return await context.Messages.AsNoTracking()
+            .Where(message => message.ConversationId == conversationId && message.Role == role)
+            .OrderBy(message => message.CreatedAt)
+            .ThenBy(message => message.Id)
             .ToListAsync();
     }
 

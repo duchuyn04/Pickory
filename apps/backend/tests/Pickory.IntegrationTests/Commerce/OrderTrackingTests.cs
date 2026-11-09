@@ -18,7 +18,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-10: Theo dõi đơn và khách tự hủy.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string OrdersPath = "/api/orders";
@@ -32,7 +32,7 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
     private readonly HttpClient _client;
     private readonly List<string> _keys = [];
 
-    public OrderTrackingTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public OrderTrackingTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _kit = new CartTestKit(factory, database);

@@ -20,8 +20,8 @@ namespace Pickory.IntegrationTests.Shipping;
 
 // COM-E2E3: route `POST /api/e2e/ghn/orders/{trackingCode}/status` đổi trạng thái đơn của `FakeGhnClient` cho Playwright.
 // Route mở một cửa đổi trạng thái đơn không cần đăng nhập, nên các test dưới đây chứng minh route không có ở host thường.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class GhnE2eStatusRouteTests(IntegrationDatabaseFixture database) : IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class GhnE2eStatusRouteTests(ShippingDatabaseFixture database) : IAsyncLifetime
 {
     private const string WebhookSecret = "e2e-ghn-webhook-secret";
 

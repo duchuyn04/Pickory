@@ -14,8 +14,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-19: đánh giá sản phẩm. Test đi qua route thật và đọc lại DB để chứng minh dữ liệu đã lưu.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ProductReviewTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class ProductReviewTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const string ReportsPath = "/api/reviews";
     private const string LockReviewsSql = "LOCK TABLE reviews IN SHARE ROW EXCLUSIVE MODE";
@@ -29,7 +29,7 @@ public sealed class ProductReviewTests : IClassFixture<PickoryWebApplicationFact
     private readonly List<string> _orderIds = [];
     private readonly List<string> _productIds = [];
 
-    public ProductReviewTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ProductReviewTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

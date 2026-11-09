@@ -21,7 +21,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-09: thư xác nhận gửi sau commit, chỉ khi đơn mới được tạo, lỗi gửi chỉ ghi log và log không chứa token xem đơn.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed partial class OrderConfirmationEmailTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string OrdersPath = "/api/orders";
@@ -37,7 +37,7 @@ public sealed partial class OrderConfirmationEmailTests : IClassFixture<Checkout
     private readonly List<WebApplicationFactory<Program>> _derivedFactories = [];
     private int _logsBefore;
 
-    public OrderConfirmationEmailTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public OrderConfirmationEmailTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _kit = new CartTestKit(factory, database);

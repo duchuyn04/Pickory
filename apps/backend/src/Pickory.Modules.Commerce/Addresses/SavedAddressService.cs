@@ -11,7 +11,7 @@ using Pickory.Shared.Exceptions;
 namespace Pickory.Modules.Commerce.Addresses;
 
 // Sổ địa chỉ của khách đã đăng nhập. Mỗi thao tác ghi chạy trong một transaction và giữ khóa theo khách.
-internal sealed class SavedAddressService(CommerceDbContext database, IAddressDirectory addressDirectory)
+internal sealed class SavedAddressService(CommerceDbContext database, IAddressDirectory addressDirectory, TimeProvider timeProvider)
 {
     public const int MaxAddressesPerUser = 10;
     public const string LimitReachedCode = "ADDRESS_LIMIT_REACHED";
@@ -129,15 +129,19 @@ internal sealed class SavedAddressService(CommerceDbContext database, IAddressDi
         await using var transaction = await database.Database.BeginTransactionAsync(cancellationToken);
         await LockUserAddressesAsync(userId, cancellationToken);
 
-        // Xóa theo cả `id` và `UserId`. Không dòng nào bị xóa nghĩa là địa chỉ không của khách này hoặc không tồn tại.
-        var deleted = await database.SavedAddresses
-            .Where(row => row.Id == id && row.UserId == userId)
-            .ExecuteDeleteAsync(cancellationToken);
-        if (deleted == 0)
+        // Đọc địa chỉ còn sống theo cả `id` và `UserId`. Địa chỉ của khách khác, địa chỉ đã xóa và `id` lạ cùng trả 404.
+        var address = await database.SavedAddresses
+            .SingleOrDefaultAsync(row => row.Id == id && row.UserId == userId, cancellationToken);
+        if (address is null)
         {
             throw new AppException(NotFoundCode, 404, NotFoundMessage);
         }
 
+        // Đánh dấu xóa mềm thay vì xóa dòng. Bản ghi còn lại để đối soát với đơn hàng đã dùng địa chỉ này.
+        address.DeletedAt = timeProvider.GetUtcNow().UtcDateTime;
+        // Địa chỉ đã xóa không còn là mặc định, để lần khôi phục sau không tự chọn lại địa chỉ cũ.
+        address.IsDefault = false;
+        await database.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
     }
 
@@ -153,6 +157,7 @@ internal sealed class SavedAddressService(CommerceDbContext database, IAddressDi
     // Bỏ cờ mặc định của mọi địa chỉ khác của khách. Gọi sau khi giữ khóa, nên luôn còn tối đa một địa chỉ mặc định.
     private async Task ClearDefaultAsync(string userId, string? exceptId, CancellationToken cancellationToken)
     {
+        // Bộ lọc toàn cục giới hạn lệnh cập nhật ở địa chỉ còn sống, nên địa chỉ đã xóa không bị đổi cờ.
         await database.SavedAddresses
             .Where(address => address.UserId == userId && address.IsDefault && address.Id != exceptId)
             .ExecuteUpdateAsync(setters => setters.SetProperty(address => address.IsDefault, false), cancellationToken);

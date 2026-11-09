@@ -11,14 +11,14 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api;
 
 // Kiểm tra toàn bộ hợp đồng API và hành vi middleware qua WebApplicationFactory.
-[Collection(IntegrationDatabaseCollection.Name)]
-public class ApiIntegrationTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(ApiCollection.Name)]
+public class ApiIntegrationTests : IClassFixture<ApiWebApplicationFactory>
 {
     private readonly HttpClient _client;
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
 
-    public ApiIntegrationTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ApiIntegrationTests(ApiWebApplicationFactory factory, ApiDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

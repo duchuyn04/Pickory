@@ -17,8 +17,8 @@ using ShipmentEntity = Pickory.Modules.Shipping.Entities.Shipment;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-14: chi tiết đơn của nhân viên. Đủ liên hệ, địa chỉ, dòng hàng, hóa đơn VAT, lịch sử trạng thái và vận đơn.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminOrderDetailTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class AdminOrderDetailTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const string OrdersPath = "/api/admin/orders";
 
@@ -28,7 +28,7 @@ public sealed class AdminOrderDetailTests : IClassFixture<PickoryWebApplicationF
     private readonly AdminOrderTestKit _kit;
     private readonly HttpClient _client;
 
-    public AdminOrderDetailTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminOrderDetailTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _database = database;
         _kit = new AdminOrderTestKit(database);

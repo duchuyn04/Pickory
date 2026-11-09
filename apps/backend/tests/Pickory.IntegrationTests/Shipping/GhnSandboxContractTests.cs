@@ -14,6 +14,7 @@ using Xunit.Abstractions;
 namespace Pickory.IntegrationTests.Shipping;
 
 // Contract test với sandbox GHN, chỉ chạy khi `GHN_LIVE_TESTS=1`. SHIP-03 thêm các test đọc, SHIP-09 thêm test tạo rồi hủy đơn và đo p95 báo phí.
+[Collection(ShippingCollection.Name)]
 public sealed class GhnSandboxContractTests
 {
     private const int FeeSampleCount = 20;

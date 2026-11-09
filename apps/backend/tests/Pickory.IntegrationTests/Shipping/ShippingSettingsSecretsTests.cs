@@ -12,7 +12,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-06: response cấu hình shipping không lộ token, bí mật webhook của GHN. `ghnShopId` đọc từ biến môi trường.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(ShippingCollection.Name)]
 public sealed class ShippingSettingsSecretsTests : IClassFixture<ConfiguredGhnWebApplicationFactory>, IAsyncLifetime
 {
     private const string SettingsPath = "/api/admin/shipping/settings";
@@ -22,7 +22,7 @@ public sealed class ShippingSettingsSecretsTests : IClassFixture<ConfiguredGhnWe
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public ShippingSettingsSecretsTests(ConfiguredGhnWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ShippingSettingsSecretsTests(ConfiguredGhnWebApplicationFactory factory, ShippingDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

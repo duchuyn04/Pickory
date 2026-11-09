@@ -9,6 +9,7 @@ import { canCheckout, checkoutHint } from './cart-labels';
 import { useCart, useRemoveCartItem, useSetCartQuantity } from './use-cart';
 import './cart-page.css';
 import { PurchaseProgress } from './purchase-progress';
+import { getErrorMessage } from '../../../shared/error-message';
 
 function EmptyCart() {
   return (
@@ -101,7 +102,7 @@ export function CartPage() {
       return true;
     } catch (error) {
       // Thông báo của API đã là tiếng Việt, nên hiện nguyên văn cạnh dòng bị lỗi.
-      setLineError(skuId, error instanceof Error ? error.message : 'Không đổi được số lượng.');
+      setLineError(skuId, getErrorMessage(error, 'Không đổi được số lượng.'));
       return false;
     } finally {
       setBusySkuId(null);
@@ -114,7 +115,7 @@ export function CartPage() {
     try {
       await removeItem.mutateAsync(skuId);
     } catch (error) {
-      setLineError(skuId, error instanceof Error ? error.message : 'Không xóa được sản phẩm.');
+      setLineError(skuId, getErrorMessage(error, 'Không xóa được sản phẩm.'));
     } finally {
       setBusySkuId(null);
     }
@@ -142,7 +143,10 @@ export function CartPage() {
         </p>
       )}
       {cartQuery.isError && (
-        <ErrorAlert message={cartQuery.error.message} className="catalog-alert" />
+        <ErrorAlert
+          message={getErrorMessage(cartQuery.error, 'Không tải được giỏ hàng.')}
+          className="catalog-alert"
+        />
       )}
 
       {cartQuery.data &&

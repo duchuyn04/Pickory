@@ -42,7 +42,7 @@ export type CallbackRequest = z.infer<typeof callbackRequestSchema>;
 function parseApiData<Schema extends z.ZodType>(schema: Schema, data: unknown): z.infer<Schema> {
   const result = schema.safeParse(data);
   if (result.success) return result.data;
-  throw new ApiError('INVALID_RESPONSE', 200, 'Phản hồi từ máy chủ không đúng hợp đồng.');
+  throw new ApiError('INVALID_RESPONSE', 200, 'Không đọc được dữ liệu từ máy chủ. Hãy thử lại.');
 }
 
 export function parseStaffPresence(data: unknown): StaffPresence {

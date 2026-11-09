@@ -10,8 +10,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database;
 
 // Migration dữ liệu của identity xóa dòng quyền AI còn sót trong `role_permissions` khi module AI bị gỡ.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class RemoveAiPermissionsMigrationTests(IntegrationDatabaseFixture database)
+[Collection(IdentityCollection.Name)]
+public sealed class RemoveAiPermissionsMigrationTests(IdentityDatabaseFixture database)
 {
     private const string MigrationName = "RemoveAiPermissions";
 

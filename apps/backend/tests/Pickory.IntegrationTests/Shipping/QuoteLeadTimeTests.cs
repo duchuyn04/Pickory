@@ -12,8 +12,8 @@ namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-05 lát 4: lỗi của leadtime không được làm hỏng báo phí vì ngày giao chỉ là thông tin phụ.
 // Nhóm đầu dùng `FakeGhnClient` có chế độ lỗi, nhóm sau dùng `GhnHttpClient` thật để kiểm timeout và hủy.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class QuoteLeadTimeTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class QuoteLeadTimeTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private const string FeePath = "/shiip/public-api/v2/shipping-order/fee";
     private const string LeadTimePath = "/shiip/public-api/v2/shipping-order/leadtime";

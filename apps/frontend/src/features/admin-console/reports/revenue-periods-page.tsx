@@ -10,6 +10,7 @@ import { ReportPeriodControl } from './report-period-controls';
 import { fetchSalesReport } from './reports-api';
 import { RevenueFunnelPanel } from './revenue-funnel-panel';
 import { usePeriodReportParams } from './use-report-params';
+import { getErrorMessage } from '../../../shared/error-message';
 import './reports.css';
 
 const PERIOD_EMPTY_MESSAGE = 'Chưa có dữ liệu trong khoảng này';
@@ -70,7 +71,9 @@ export function RevenuePeriodsReportPage() {
           </p>
         )}
         {periodQuery.isError && (
-          <ErrorAlert message={periodQuery.error?.message ?? 'Không tải được doanh thu theo kỳ.'} />
+          <ErrorAlert
+            message={getErrorMessage(periodQuery.error, 'Không tải được doanh thu theo kỳ.')}
+          />
         )}
         {periodQuery.isSuccess && !hasRevenue && (
           <p className="empty-state">{PERIOD_EMPTY_MESSAGE}</p>

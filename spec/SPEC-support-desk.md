@@ -112,6 +112,8 @@ Quyền `support-settings:manage`, `conversations:read`, `conversations:reply` n
 
 Route theo REST mức tài nguyên, theo quyết định 11 của plan.
 
+Dạng request, response, sự kiện SSE và mã lỗi của từng route nằm ở `tasks/support-desk/api-contract.md`. Dữ liệu mẫu dùng chung cho frontend và backend nằm ở `spec/fixtures/support-desk/`.
+
 | Method | Path | Quyền | Mô tả |
 |---|---|---|---|
 | POST | `/api/support/conversations` | khách | Lấy hội thoại đang mở hoặc tạo mới |
@@ -126,6 +128,7 @@ Route theo REST mức tài nguyên, theo quyết định 11 của plan.
 | PUT | `/api/admin/support/sessions/{id}/assignment` | `conversations:reply` | Chuyển cho đồng nghiệp |
 | PATCH | `/api/admin/support/sessions/{id}` | `conversations:reply` | Kết thúc phiên với `status: "closed"` |
 | POST | `/api/admin/support/sessions/{id}/messages` | `conversations:reply` | Gửi tin (người đã nhận mới gửi được) |
+| GET | `/api/admin/support/conversations/{id}/messages` | `conversations:read` | Lịch sử tin của mọi phiên trong hội thoại |
 | GET | `/api/admin/support/sessions/{id}/customer` | `conversations:read` | Bảng thông tin khách |
 | GET · PUT | `/api/admin/support/presence` | `conversations:reply` | Danh sách nhân viên sẵn sàng; đổi trạng thái của mình |
 | GET · PATCH | `/api/admin/support/callback-requests[/{id}]` | `conversations:read` · `conversations:reply` | Danh sách gọi lại, đánh dấu đã gọi |
@@ -245,9 +248,11 @@ Chatbot chuyển sang dự án riêng `chatbot-rag`, Pickory bỏ `shopping-assi
 
 1. Thời gian chờ quá 10 phút thì nhắc lại, phiên không có tin trong 30 phút thì tự đóng: các mốc này có hợp không?
 2. Có cần phân loại hội thoại (hỏi sản phẩm, khiếu nại, bảo hành) để báo cáo không? Mặc định: chưa.
-3. Bảng route REST ở mục API theo quyết định 11 của plan. Người dùng chưa chốt bảng này (Câu hỏi mở 1 của plan).
-4. Bảng thông tin khách cần cổng đọc tên, email và tên ngắn của nhân viên ở `identity`. Plan đề xuất `IUserDirectory`, chờ duyệt (Câu hỏi mở 2 của plan).
-5. Đơn của khách vãng lai đọc qua `ICommerceReader.GetOrdersForAnonymousAsync` (Câu hỏi mở 3 của plan).
-6. Phiên chờ ngoài giờ kéo dài tới khi nào. Plan đề xuất đóng phiên khi khách gửi SĐT, hoặc sau 30 phút (Câu hỏi mở 5 của plan).
-7. Ước tính thời gian chờ khi chưa có dữ liệu: plan dùng 5 phút mỗi phiên (Câu hỏi mở 7 của plan).
-8. Khách mở `/support` từ fallback của `chatbot-rag` thì nhân viên không thấy câu khách đã hỏi bot. Plan đề xuất MVP chưa chuyển ngữ cảnh (Câu hỏi mở 13 của plan).
+Ngày 2026-11-04 người dùng chốt các câu 3 đến 8. Chi tiết ở mục "Câu hỏi mở" của plan.
+
+3. Bảng route REST ở mục API theo quyết định 11 của plan. Đã duyệt.
+4. Tên và email của khách đọc qua `ICustomerDirectory` mới ở `identity`. Tin nhân viên hiện tên trong hồ sơ, đọc qua `IStaffDirectory`, không lộ email.
+5. Đơn của khách vãng lai đọc qua `ICommerceReader.GetOrdersForAnonymousAsync`.
+6. Phiên chờ ngoài giờ đóng khi khách gửi SĐT. Khách không gửi thì phiên tự đóng sau `autoCloseMinutes`.
+7. Ước tính thời gian chờ khi chưa có dữ liệu: 5 phút mỗi phiên.
+8. Khách mở `/support` từ fallback của `chatbot-rag` thì nhân viên không thấy câu khách đã hỏi bot. MVP chưa chuyển ngữ cảnh.

@@ -1,0 +1,19 @@
+{
+  "description": "Mẫu sự kiện SSE của `GET /api/admin/support/events`. Client nhận sự kiện phiên, tin hoặc gọi lại thì đọc lại danh sách liên quan. Client không vẽ giao diện từ dữ liệu của sự kiện.",
+  "events": [
+    { "name": "presence.changed", "data": { "staffId": "staff-0001", "status": "available" } },
+    { "name": "heartbeat", "data": { "at": "2026-11-03T02:15:30Z" } },
+    { "name": "session.waiting", "data": { "sessionId": "5e550000-0000-4000-8000-000000000001" } },
+    { "name": "session.reminded", "data": { "sessionId": "5e550000-0000-4000-8000-000000000001" } },
+    { "name": "session.assigned", "data": { "sessionId": "5e550000-0000-4000-8000-000000000001" } },
+    { "name": "session.closed", "data": { "sessionId": "5e550000-0000-4000-8000-000000000001" } },
+    {
+      "name": "message.created",
+      "data": {
+        "sessionId": "5e550000-0000-4000-8000-000000000001",
+        "conversationId": "c0a80000-0000-4000-8000-000000000001"
+      }
+    },
+    { "name": "callback.created", "data": { "callbackRequestId": "cb000000-0000-4000-8000-000000000001" } }
+  ]
+}

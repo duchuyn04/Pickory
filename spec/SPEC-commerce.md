@@ -181,6 +181,7 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 ### Sổ địa chỉ
 
 Khách có tài khoản lưu tối đa 10 địa chỉ, chọn 1 địa chỉ mặc định. Địa chỉ dùng mã của danh mục `shipping`.
+Xóa địa chỉ là xóa mềm: API đặt `deletedAt`, giữ dòng để đối soát với đơn cũ. Xóa tài khoản xóa hẳn mọi địa chỉ, kể cả dòng đã xóa mềm.
 
 ### Đánh giá sản phẩm
 
@@ -262,7 +263,7 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 | GET | `/api/orders/:code/payment` | chủ đơn, hoặc có token | Cho trang chờ thanh toán hỏi định kỳ |
 | POST | `/api/orders/:code/cancellation` | chủ đơn, hoặc có token | Khách tự hủy |
 | POST | `/api/order-lookups` | công khai | Tra cứu đơn bằng mã đơn và email, trả token xem đơn |
-| GET · POST · PATCH · DELETE | `/api/me/addresses[/:id]` | khách đã đăng nhập | Sổ địa chỉ |
+| GET · POST · PATCH · DELETE | `/api/me/addresses[/:id]` | khách đã đăng nhập | Sổ địa chỉ. `DELETE` là xóa mềm. |
 | GET | `/api/products/:id/reviews` | công khai | Điểm trung bình, phân bố số sao và trang đánh giá đang hiện |
 | POST · PATCH | `/api/products/:id/reviews[/mine]` | người đã mua | Viết, sửa đánh giá |
 | POST | `/api/reviews/:id/reports` | khách đã đăng nhập | Báo cáo vi phạm |
@@ -333,7 +334,7 @@ model PaymentTransaction {
   receivedAt    DateTime @default(now())
   @@map("payment_transactions")
 }
-model SavedAddress  { /* userId, label, name, phone, address Json, isDefault */ }
+model SavedAddress  { /* userId, label, name, phone, address Json, isDefault, deletedAt? */ }
 model Review        { /* productId, userId, orderId, rating, body, hiddenAt?, hiddenReason?, reportCount, createdAt, updatedAt; @@unique([productId, userId]) */ }
 model ReviewReport  { /* reviewId, userId, createdAt; @@unique([reviewId, userId]), mỗi khách báo cáo một review 1 lần */ }
 model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerSku, maxCartLines, sepayAccountNumber, sepayBankCode */ }

@@ -11,9 +11,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database.Commerce;
 
 // COM-03: schema commerce ghi và đọc lại đúng, và DB tự từ chối dữ liệu trùng hoặc mồ côi.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CommercePersistenceTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(CommerceCollection.Name)]
+public sealed class CommercePersistenceTests(CommerceWebApplicationFactory factory)
+    : IClassFixture<CommerceWebApplicationFactory>
 {
     private static readonly DateTime WrittenAt = new(2026, 10, 11, 8, 7, 6, 543, DateTimeKind.Utc);
 

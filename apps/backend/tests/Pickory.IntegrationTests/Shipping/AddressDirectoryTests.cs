@@ -9,8 +9,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // COM-07: `IAddressDirectory` tra tên chuẩn từ danh mục. Bốn trường hợp không hợp lệ cùng trả `null`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AddressDirectoryTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class AddressDirectoryTests : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private const string ActiveProvince = "7000001";
     private const string OtherProvince = "7000002";
@@ -23,7 +23,7 @@ public sealed class AddressDirectoryTests : IClassFixture<PickoryWebApplicationF
 
     private readonly PickoryWebApplicationFactory _factory;
 
-    public AddressDirectoryTests(PickoryWebApplicationFactory factory)
+    public AddressDirectoryTests(ShippingWebApplicationFactory factory)
     {
         _factory = factory;
     }

@@ -2,6 +2,7 @@ import {
   resolveCategoryAttributes,
   type AttributeDefinition,
 } from '../../../shared/catalog/attributes';
+import { UserFacingError } from '../../../shared/error-message';
 
 // Số trục tùy chọn tối đa cho phép trên một sản phẩm.
 export const MAX_AXES = 3;
@@ -73,7 +74,7 @@ export function toCombinationKey(optionValues: Record<string, string> | null | u
 export function buildVariantCombinations(options: ProductOption[]): Record<string, string>[] {
   // Giới hạn số trục tùy chọn để ngăn số lượng SKU tăng cấp số nhân.
   if (options.length > MAX_AXES) {
-    throw new Error(`Sản phẩm chỉ được có tối đa ${MAX_AXES} trục tùy chọn.`);
+    throw new UserFacingError(`Sản phẩm chỉ được có tối đa ${MAX_AXES} trục tùy chọn.`);
   }
 
   // Sản phẩm không có trục tùy chọn có đúng một biến thể mặc định với thuộc tính rỗng.
@@ -87,7 +88,9 @@ export function buildVariantCombinations(options: ProductOption[]): Record<strin
   // Đếm trước tổng số tổ hợp để phát hiện sớm trường hợp vượt ngưỡng.
   const totalCount = sanitizedAxes.reduce((count, axis) => count * axis.values.length, 1);
   if (totalCount > MAX_COMBINATIONS) {
-    throw new Error(`Tổng số tổ hợp biến thể vượt quá giới hạn tối đa ${MAX_COMBINATIONS}.`);
+    throw new UserFacingError(
+      `Tổng số tổ hợp biến thể vượt quá giới hạn tối đa ${MAX_COMBINATIONS}.`,
+    );
   }
 
   // Tích Descartes: nhân từng tổ hợp hiện có với các giá trị của trục tiếp theo.
@@ -245,20 +248,20 @@ function sanitizeAxes(options: ProductOption[]): ProductOption[] {
   for (const option of options) {
     // Tên trục tùy chọn không được để trống hoặc chỉ có khoảng trắng.
     if (!option.name || option.name.trim().length === 0) {
-      throw new Error('Tên trục tùy chọn không được để trống.');
+      throw new UserFacingError('Tên trục tùy chọn không được để trống.');
     }
 
     const trimmedName = option.name.trim();
     // Chặn trục có tên trùng lặp để tránh xung đột dữ liệu biến thể.
     if (seenNames.has(trimmedName)) {
-      throw new Error(`Tên trục tùy chọn "${trimmedName}" bị trùng lặp.`);
+      throw new UserFacingError(`Tên trục tùy chọn "${trimmedName}" bị trùng lặp.`);
     }
     seenNames.add(trimmedName);
 
     // Mỗi trục phải có ít nhất một giá trị để có thể sinh biến thể.
     const rawValues = option.values ?? [];
     if (rawValues.length === 0) {
-      throw new Error(`Trục tùy chọn "${trimmedName}" phải có ít nhất 1 giá trị.`);
+      throw new UserFacingError(`Trục tùy chọn "${trimmedName}" phải có ít nhất 1 giá trị.`);
     }
 
     // Chuẩn hóa và kiểm tra danh sách giá trị của trục hiện tại.
@@ -280,13 +283,15 @@ function sanitizeValues(axisName: string, values: string[]): string[] {
   for (const rawValue of values) {
     // Giá trị biến thể không được rỗng để khách hàng có thể chọn mua.
     if (!rawValue || rawValue.trim().length === 0) {
-      throw new Error(`Giá trị của trục tùy chọn "${axisName}" không được để trống.`);
+      throw new UserFacingError(`Giá trị của trục tùy chọn "${axisName}" không được để trống.`);
     }
 
     const trimmedValue = rawValue.trim();
     // Chặn giá trị trùng nhau trong cùng một trục để tránh sinh trùng biến thể.
     if (seenValues.has(trimmedValue)) {
-      throw new Error(`Giá trị "${trimmedValue}" của trục tùy chọn "${axisName}" bị trùng lặp.`);
+      throw new UserFacingError(
+        `Giá trị "${trimmedValue}" của trục tùy chọn "${axisName}" bị trùng lặp.`,
+      );
     }
     seenValues.add(trimmedValue);
     sanitized.push(trimmedValue);

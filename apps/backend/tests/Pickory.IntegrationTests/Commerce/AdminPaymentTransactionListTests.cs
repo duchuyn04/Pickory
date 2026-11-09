@@ -10,8 +10,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-13: danh sách giao dịch SePay cho nhân viên. Bộ lọc trạng thái khớp, cờ đơn, phân trang và thứ tự ổn định.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminPaymentTransactionListTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class AdminPaymentTransactionListTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const string TransactionsPath = "/api/admin/payments/transactions";
 
@@ -22,7 +22,7 @@ public sealed class AdminPaymentTransactionListTests : IClassFixture<PickoryWebA
     private readonly AdminOrderTestKit _kit;
     private readonly HttpClient _client;
 
-    public AdminPaymentTransactionListTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminPaymentTransactionListTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _database = database;
         _kit = new AdminOrderTestKit(database);

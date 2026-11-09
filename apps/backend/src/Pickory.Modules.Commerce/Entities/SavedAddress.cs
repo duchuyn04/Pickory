@@ -12,4 +12,6 @@ public sealed class SavedAddress
     public string Phone { get; set; } = string.Empty;
     public JsonDocument Address { get; set; } = null!;
     public bool IsDefault { get; set; }
+    // Thời điểm xóa mềm. Địa chỉ đã xóa không còn trong sổ và không tính vào hạn mức.
+    public DateTime? DeletedAt { get; set; }
 }

@@ -17,6 +17,7 @@ import {
 import { useActor } from '../hooks/use-actor';
 import { AuthCard, AuthDivider, GoogleSignInLink, PasswordInput } from './auth-ui';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 
 // Trang đăng ký tài khoản khách bằng email và mật khẩu.
 export function RegisterPage() {
@@ -79,11 +80,7 @@ export function RegisterPage() {
       navigate('/', { replace: true });
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (email đã dùng, quá nhiều lần đăng ký...) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
-      }
+      setError(getErrorMessage(err, 'Đã có lỗi xảy ra. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }

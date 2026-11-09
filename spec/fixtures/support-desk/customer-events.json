@@ -1,0 +1,41 @@
+{
+  "description": "Mẫu sự kiện SSE của `GET /api/support/conversations/{id}/events`. Trường `data` của mỗi sự kiện là JSON. Client bỏ qua sự kiện có tên lạ.",
+  "events": [
+    {
+      "name": "message.created",
+      "data": {
+        "id": "a0000000-0000-4000-8000-000000000003",
+        "role": "staff",
+        "body": "Chào bạn, mình kiểm đơn PK123 ngay nhé.",
+        "action": null,
+        "staffDisplayName": "Lan - CSKH",
+        "createdAt": "2026-11-03T02:17:40Z"
+      }
+    },
+    {
+      "name": "message.created",
+      "data": {
+        "id": "a0000000-0000-4000-8000-000000000005",
+        "role": "system",
+        "body": "Hiện ngoài giờ hỗ trợ (8:00 đến 21:00). Bạn để lại SĐT, CSKH sẽ gọi lại.",
+        "action": "callback_form",
+        "staffDisplayName": null,
+        "createdAt": "2026-11-03T14:04:00Z"
+      }
+    },
+    {
+      "name": "message.created",
+      "data": {
+        "id": "a0000000-0000-4000-8000-000000000006",
+        "role": "system",
+        "body": "Phiên hỗ trợ đã kết thúc. Bạn chấm điểm giúp CSKH nhé.",
+        "action": "csat_form",
+        "staffDisplayName": null,
+        "createdAt": "2026-11-03T02:30:00Z"
+      }
+    },
+    { "name": "session.waiting", "data": { "sessionId": "5e550000-0000-4000-8000-000000000001" } },
+    { "name": "session.assigned", "data": { "sessionId": "5e550000-0000-4000-8000-000000000001" } },
+    { "name": "session.closed", "data": { "sessionId": "5e550000-0000-4000-8000-000000000001" } }
+  ]
+}

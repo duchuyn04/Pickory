@@ -9,15 +9,15 @@ namespace Pickory.IntegrationTests.Commerce;
 
 // COM-04 quyết định 4 và 5: request ghi đồng thời không tạo hai giỏ và không làm request lỗi 500.
 // Mỗi test lặp nhiều vòng với mã ẩn danh mới, và kết quả đúng phải giống nhau ở mọi vòng.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CartConcurrencyTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class CartConcurrencyTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const int Rounds = 8;
     private const int ParallelRequests = 6;
 
     private readonly CartTestKit _kit;
 
-    public CartConcurrencyTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CartConcurrencyTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _kit = new CartTestKit(factory, database);
     }

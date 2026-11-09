@@ -8,9 +8,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Hợp đồng của khách vãng lai theo test ID-02 của bản Node: cookie `pk_anon`, kiểm tra nguồn và `GET /api/me`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ActorGuestTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class ActorGuestTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
+    : IClassFixture<IdentityWebApplicationFactory>
 {
     // Nguồn web khớp `WEB_ORIGIN` của môi trường test. Request ghi từ nguồn này qua bước kiểm tra nguồn.
     private const string WebOrigin = "http://localhost:5173";

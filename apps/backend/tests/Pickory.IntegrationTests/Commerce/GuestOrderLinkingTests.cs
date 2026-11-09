@@ -17,8 +17,8 @@ namespace Pickory.IntegrationTests.Commerce;
 
 // COM-21: khi email của khách được xác thực, đơn vãng lai cùng email gắn vào tài khoản đó.
 // Test phát sự kiện qua dispatcher thật, nên cả việc đăng ký handler trong module cũng được kiểm.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class GuestOrderLinkingTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class GuestOrderLinkingTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
@@ -26,7 +26,7 @@ public sealed class GuestOrderLinkingTests : IClassFixture<PickoryWebApplication
     private readonly LinkingTestSeed _seed;
     private readonly HttpClient _client;
 
-    public GuestOrderLinkingTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public GuestOrderLinkingTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

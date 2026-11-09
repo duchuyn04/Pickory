@@ -10,13 +10,13 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Port từ test ID-14 của bản Node cho tra cứu, khóa và mở khóa khách hàng.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminCustomersTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class AdminCustomersTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public AdminCustomersTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminCustomersTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _database = database;
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

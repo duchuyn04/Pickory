@@ -28,6 +28,7 @@ import {
   type FallbackFeeFieldErrors,
   type FallbackFeeFormValues,
 } from '../fallback-fee-validation';
+import { getErrorMessage } from '../../../shared/error-message';
 import './fallback-fee.css';
 
 const SHIPPING_SETTINGS_PERMISSION = 'shipping-settings:manage';
@@ -108,11 +109,7 @@ export function FallbackFeePage() {
 
       {feeQuery.isError && (
         <ErrorAlert
-          message={
-            feeQuery.error instanceof Error && feeQuery.error.message
-              ? feeQuery.error.message
-              : 'Không tải được phí ship dự phòng.'
-          }
+          message={getErrorMessage(feeQuery.error, 'Không tải được phí ship dự phòng.')}
         />
       )}
 
@@ -190,9 +187,7 @@ function FallbackFeeForm({ initialFee }: FallbackFeeFormProps) {
         setFormErrors(mapped.unmatched);
       } else {
         // Lỗi khác (403, 503, mạng) hiện đầu form. Dữ liệu đã nhập giữ nguyên để thử lại.
-        setFormErrors([
-          error instanceof Error ? error.message : 'Không lưu được phí ship dự phòng.',
-        ]);
+        setFormErrors([getErrorMessage(error, 'Không lưu được phí ship dự phòng.')]);
       }
     } finally {
       setIsSubmitting(false);

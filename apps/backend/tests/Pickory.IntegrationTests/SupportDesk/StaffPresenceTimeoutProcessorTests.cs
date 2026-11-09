@@ -10,9 +10,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-03: job chuyển nhân viên mất nhịp tim sang `away`. Test gọi thẳng processor với đồng hồ giả, không chờ worker.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class StaffPresenceTimeoutProcessorTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class StaffPresenceTimeoutProcessorTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private readonly FakeTimeProvider _clock = new(SupportDeskTestKit.NowAtMillisecondPrecision());
     private WebApplicationFactory<Program> _host = null!;

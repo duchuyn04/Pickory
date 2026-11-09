@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { apiRequest } from '../../../shared/api';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import '../customer/account.css';
 import '../customer/customer-auth.css';
 
@@ -36,11 +37,7 @@ export function DeleteAccountDialog() {
       navigate('/', { replace: true });
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (ví dụ sai mật khẩu, cần đăng nhập lại Google) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Xóa tài khoản thất bại. Vui lòng thử lại.');
-      }
+      setError(getErrorMessage(err, 'Xóa tài khoản thất bại. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }

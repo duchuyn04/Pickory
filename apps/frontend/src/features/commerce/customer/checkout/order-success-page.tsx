@@ -11,6 +11,7 @@ import { buildNextSteps, type NextStepState } from '../orders/order-next-steps';
 import { OrderItemsList, OrderPaymentRows, formatShippingAddress } from '../orders/order-sections';
 import { buildOrderSuccessLink } from '../orders/order-success-link';
 import { fetchOrderDetail, type OrderDetail } from '../orders/orders-api';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './checkout-page.css';
 
 interface OrderSuccessState {
@@ -217,7 +218,9 @@ export function OrderSuccessPage() {
         </div>
       </section>
 
-      {orderError && <ErrorAlert message={orderError.message} />}
+      {orderError && (
+        <ErrorAlert message={getErrorMessage(orderError, 'Không tải được đơn hàng.')} />
+      )}
       {canLoadOrder && isOrderLoading && <OrderSuccessSkeleton />}
       {order && <OrderSuccessDetails order={order} />}
     </main>

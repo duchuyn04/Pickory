@@ -8,8 +8,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-06: giỏ hàng đọc giới hạn mới ngay ở request sau khi PUT cấu hình thành công.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CommerceSettingsCartLimitTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class CommerceSettingsCartLimitTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const string SettingsPath = "/api/admin/commerce/settings";
     private const string AuditTargetType = "commerce_settings";
@@ -18,7 +18,7 @@ public sealed class CommerceSettingsCartLimitTests : IClassFixture<PickoryWebApp
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public CommerceSettingsCartLimitTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CommerceSettingsCartLimitTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _database = database;
         _kit = new CartTestKit(factory, database);

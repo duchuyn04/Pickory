@@ -4,6 +4,7 @@ import { Icon } from '../../../shared/icons';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import type { RoleData } from './role-form';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 
 // Một dòng nhân viên như GET /api/admin/staff trả về; roles là mã role chứ không phải đối tượng.
 export interface StaffRow {
@@ -79,11 +80,7 @@ export function AssignRolesDialog({
       onClose();
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (tự sửa role mình, admin cuối cùng, không đủ quyền...) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Gán vai trò thất bại.');
-      }
+      setError(getErrorMessage(err, 'Gán vai trò thất bại.'));
     } finally {
       setLoading(false);
     }

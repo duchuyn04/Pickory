@@ -9,9 +9,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database.SupportDesk;
 
 // SD-02: schema của support-desk đúng cột, enum, chỉ mục unique một phần, khóa ngoại và dòng cấu hình mặc định.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class SupportDeskSchemaTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(SupportDeskCollection.Name)]
+public sealed class SupportDeskSchemaTests(SupportDeskWebApplicationFactory factory)
+    : IClassFixture<SupportDeskWebApplicationFactory>
 {
     private const string Timestamp = "timestamp without time zone";
 
@@ -29,7 +29,7 @@ public sealed class SupportDeskSchemaTests(PickoryWebApplicationFactory factory)
             "support_messages",
             [
                 "id:text:NO", "conversationId:text:NO", "role:SupportMessageRole:NO", "staffId:text:YES",
-                "body:text:NO", "action:text:YES", $"createdAt:{Timestamp}:NO",
+                "sessionId:text:YES", "body:text:NO", "action:text:YES", $"createdAt:{Timestamp}:NO",
             ]
         },
         {

@@ -8,13 +8,13 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // `GET /api/admin/audit-logs` cho người có quyền xem nhật ký thao tác. Route chỉ đọc, không có route sửa hoặc xóa.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminAuditLogsTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class AdminAuditLogsTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public AdminAuditLogsTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminAuditLogsTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _database = database;
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

@@ -11,6 +11,7 @@ import { getEmailError } from '../../../shared/identity-validation';
 import { ResultPanel } from '../../../shared/result-panel';
 import { AuthCard } from './auth-ui';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 
 // Trang nhập email để nhận link đặt lại mật khẩu.
 export function ForgotPasswordPage() {
@@ -41,11 +42,7 @@ export function ForgotPasswordPage() {
       setSubmitted(true);
     } catch (err: unknown) {
       // Chỉ lỗi thật (mạng, dữ liệu sai định dạng) mới tới đây; email không tồn tại không gây lỗi.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
-      }
+      setError(getErrorMessage(err, 'Đã có lỗi xảy ra. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }

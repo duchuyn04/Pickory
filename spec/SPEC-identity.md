@@ -97,6 +97,7 @@ Danh mục này mở rộng khi viết spec các module sau. Thêm quyền mới
 - Không ai tự sửa role của chính mình.
 - Chống leo thang đặc quyền: nhân viên không phải admin không được tự sửa role mà chính mình đang giữ; chỉ được cấp những quyền mà chính actor đang sở hữu (`requestedPermissions ⊆ actor.permissions`); chỉ admin mới có quyền mời hoặc gán role `admin`.
 - Không xóa được role đang có người giữ, phải gỡ role khỏi mọi người trước.
+- Xóa role là xóa mềm: API đặt `deletedAt`, giữ dòng role và quyền để đối soát. Mã role đã xóa được dùng lại.
 - Không gán được `customer` cùng role nhân viên cho một tài khoản (tài khoản khách và tài khoản nhân viên tách riêng).
 - Đổi quyền của role có hiệu lực ngay từ request tiếp theo, không cần đăng nhập lại.
 ### Actor
@@ -250,7 +251,7 @@ ordersRouter.patch(
 | PUT | `/api/admin/staff/:id/roles` | `staff:manage` | Gán role |
 | PATCH | `/api/admin/staff/:id` | `staff:manage` | Khóa, mở khóa. Body `{ "locked": true \| false }`, thiếu hoặc sai kiểu trả 400 `VALIDATION_ERROR`, trường khác cũng bị từ chối |
 | GET | `/api/admin/roles` | `roles:manage` | Danh sách role kèm quyền |
-| POST · PATCH · DELETE | `/api/admin/roles[/:id]` | `roles:manage` | Tạo, sửa, xóa role |
+| POST · PATCH · DELETE | `/api/admin/roles[/:id]` | `roles:manage` | Tạo, sửa, xóa mềm role |
 | GET | `/api/admin/permissions` | `roles:manage` | Danh mục quyền (từ code) |
 | GET | `/api/admin/customers[/:id]` | `customers:read` | Tra cứu khách |
 | PATCH | `/api/admin/customers/:id` | `customers:manage` | Khóa, mở khóa khách. Body `{ "locked": true \| false }`, luật giống route nhân viên |
@@ -276,9 +277,10 @@ model User {
 
 model Role {
   id          String           @id @default(uuid())
-  code        String           @unique   // 'admin', 'sales', 'support', ...
+  code        String           @unique   // 'admin', 'sales', 'support', ...; duy nhất trong các dòng chưa xóa
   name        String                     // 'Nhân viên bán hàng'
   isSystem    Boolean          @default(false)
+  deletedAt   DateTime?
   permissions RolePermission[]
   @@map("roles")
 }

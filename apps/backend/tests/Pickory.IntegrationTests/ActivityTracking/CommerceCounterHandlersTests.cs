@@ -28,8 +28,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.ActivityTracking;
 
 // ACT-07: hai handler cộng `add_to_cart` và `order_placed` khi Commerce phát sự kiện. Test đi qua API giỏ và API đặt đơn thật rồi đọc `daily_counters`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CommerceCounterHandlersTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
+[Collection(ActivityTrackingCollection.Name)]
+public sealed class CommerceCounterHandlersTests : IClassFixture<ActivityTrackingCheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string OrdersPath = "/api/orders";
     private const string PreviewPath = "/api/checkout/previews";
@@ -39,7 +39,7 @@ public sealed class CommerceCounterHandlersTests : IClassFixture<CheckoutWebAppl
     private const string SepayApiKey = "ACT07-secret-not-for-logs";
     private const string SepayAccount = "1017588888";
 
-    private readonly CheckoutWebApplicationFactory _factory;
+    private readonly ActivityTrackingCheckoutWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly CartTestKit _kit;
     private readonly HttpClient _client;
@@ -52,7 +52,7 @@ public sealed class CommerceCounterHandlersTests : IClassFixture<CheckoutWebAppl
     // Log của bộ phát nằm chung cả class. Test chỉ xét log phát sinh từ vị trí này trở đi.
     private int _logsBefore;
 
-    public CommerceCounterHandlersTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CommerceCounterHandlersTests(ActivityTrackingCheckoutWebApplicationFactory factory, ActivityTrackingDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

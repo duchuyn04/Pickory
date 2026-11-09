@@ -8,6 +8,7 @@ import { ReviewSummaryPanel } from './review-summary-panel';
 import { ReviewWritePanel } from './review-write-panel';
 import { chooseWriteState } from './review-write-state';
 import { reportReview, useMyReview, useProductReviews, type PublicReview } from './reviews-api';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './reviews.css';
 
 const ALREADY_REPORTED_CODE = 'REVIEW_ALREADY_REPORTED';
@@ -64,13 +65,7 @@ export function ReviewsSection({ productId, getNow = currentTime }: ReviewsSecti
       ) : summary === undefined ? (
         // Chưa có trang đầu nghĩa là lần tải đầu lỗi. Lỗi tải trang sau không vào nhánh này, để tóm tắt vẫn hiện.
         <div className="stack-sm">
-          <ErrorAlert
-            message={
-              reviewsQuery.error instanceof Error
-                ? reviewsQuery.error.message
-                : 'Không tải được đánh giá.'
-            }
-          />
+          <ErrorAlert message={getErrorMessage(reviewsQuery.error, 'Không tải được đánh giá.')} />
           <div>
             <button
               type="button"
@@ -124,11 +119,7 @@ export function ReviewsSection({ productId, getNow = currentTime }: ReviewsSecti
           {/* Lỗi tải trang sau hiện cạnh nút, vì tóm tắt và các dòng đã tải vẫn còn dùng được. */}
           {reviewsQuery.isFetchNextPageError && (
             <ErrorAlert
-              message={
-                reviewsQuery.error instanceof Error
-                  ? reviewsQuery.error.message
-                  : 'Không tải được thêm đánh giá.'
-              }
+              message={getErrorMessage(reviewsQuery.error, 'Không tải được thêm đánh giá.')}
             />
           )}
           <div>

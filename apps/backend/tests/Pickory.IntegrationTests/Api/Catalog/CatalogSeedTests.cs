@@ -21,14 +21,14 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-12: `catalog:seed` ghi dữ liệu mẫu qua đường ghi của trang quản trị, và chạy lại không tạo bản ghi trùng.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CatalogSeedTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class CatalogSeedTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly SeedCatalog _catalog = CatalogSeedData.Create();
 
-    public CatalogSeedTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CatalogSeedTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _factory = factory;
         _database = database;
@@ -56,12 +56,13 @@ public sealed class CatalogSeedTests : IClassFixture<PickoryWebApplicationFactor
         var productSlugs = _catalog.Products.Select(product => product.Slug).ToList();
         var categorySlugs = _catalog.Categories.Select(category => SlugGenerator.ToSlug(category.Name)).ToList();
         var brandSlugs = _catalog.BrandNames.Select(SlugGenerator.ToSlug).ToList();
-        var skuIds = context.Skus.Where(sku => productSlugs.Contains(sku.Product!.Slug)).Select(sku => sku.Id);
+        var skuIds = context.Skus.IgnoreQueryFilters().Where(sku => productSlugs.Contains(sku.Product!.Slug)).Select(sku => sku.Id);
         // Movement giữ khóa ngoại Restrict tới SKU, nên phải xóa trước sản phẩm.
         await context.InventoryMovements.Where(movement => skuIds.Contains(movement.SkuId)).ExecuteDeleteAsync();
-        await context.Products.Where(product => productSlugs.Contains(product.Slug)).ExecuteDeleteAsync();
-        await context.Categories.Where(category => categorySlugs.Contains(category.Slug)).ExecuteDeleteAsync();
-        await context.Brands.Where(brand => brandSlugs.Contains(brand.Slug)).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả dòng đã xóa mềm, tránh khóa ngoại chặn xóa danh mục và hãng.
+        await context.Products.IgnoreQueryFilters().Where(product => productSlugs.Contains(product.Slug)).ExecuteDeleteAsync();
+        await context.Categories.IgnoreQueryFilters().Where(category => categorySlugs.Contains(category.Slug)).ExecuteDeleteAsync();
+        await context.Brands.IgnoreQueryFilters().Where(brand => brandSlugs.Contains(brand.Slug)).ExecuteDeleteAsync();
     }
 
     // Kho ảnh giả giữ ảnh giữa các test của lớp này. Xóa ảnh mẫu để mỗi test bắt đầu với kho chưa có ảnh nào.

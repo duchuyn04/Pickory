@@ -11,15 +11,15 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-21: khi khách xóa tài khoản, giỏ và sổ địa chỉ bị xóa. Đánh giá và đơn hàng được ẩn danh, giữ nguyên nội dung.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AccountDeletionCommerceDataTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class AccountDeletionCommerceDataTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly CartTestKit _kit;
     private readonly LinkingTestSeed _seed;
 
-    public AccountDeletionCommerceDataTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AccountDeletionCommerceDataTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;
@@ -107,6 +107,14 @@ public sealed class AccountDeletionCommerceDataTests : IClassFixture<PickoryWebA
         var skuId = (await _kit.AddProductAsync()).SkuIds[0];
         await _kit.SeedCartAsync(userId, null, (skuId, 1));
         await _kit.SeedCartAsync(otherUserId, null, (skuId, 1));
+        await _kit.AddSavedAddressAsync(userId);
+        // Đánh dấu một địa chỉ đã xóa mềm trước đó. Xóa tài khoản vẫn phải xóa hẳn dữ liệu cá nhân này.
+        await using (var commerce = _database.CreateCommerceContext())
+        {
+            var softDeleted = await commerce.SavedAddresses.SingleAsync(address => address.UserId == userId);
+            softDeleted.DeletedAt = DateTime.UtcNow;
+            await commerce.SaveChangesAsync();
+        }
         await _kit.AddSavedAddressAsync(userId);
         await _kit.AddSavedAddressAsync(otherUserId);
 

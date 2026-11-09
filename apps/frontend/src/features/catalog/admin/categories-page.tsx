@@ -16,6 +16,7 @@ import { AttributeEditor } from './attribute-editor';
 import { toCatalogErrorMessage } from './catalog-errors';
 import { buildCategoryTree, filterCategoryTree } from './catalog-filters';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import './catalog-admin.css';
 
 // Bản ghi danh mục trả về từ API quản trị bao gồm đầy đủ thuộc tính riêng.
@@ -241,9 +242,7 @@ export function CategoriesPage() {
       )}
 
       {isError && (
-        <ErrorAlert
-          message={error instanceof Error ? error.message : 'Tải danh sách danh mục thất bại.'}
-        />
+        <ErrorAlert message={getErrorMessage(error, 'Tải danh sách danh mục thất bại.')} />
       )}
 
       <section className="card card-flush">

@@ -12,13 +12,15 @@ import {
   type SavedAddress,
 } from './addresses-api';
 import { AddressFormDialog } from './address-form-dialog';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './address-book.css';
 
 type OpenDialog =
   { kind: 'form'; editing: SavedAddress | null } | { kind: 'delete'; address: SavedAddress };
 
+// Lỗi của API đã là tiếng Việt. Lỗi khác loại mang chữ kỹ thuật nên hiện câu dự phòng.
 function errorMessage(error: unknown, fallback: string): string {
-  return error instanceof Error ? error.message : fallback;
+  return getErrorMessage(error, fallback);
 }
 
 // Thẻ sổ địa chỉ trên trang tài khoản. Trang chỉ ghép component, mọi logic nằm ở đây.
@@ -92,13 +94,7 @@ export function AddressBook() {
           Đang nạp sổ địa chỉ...
         </p>
       ) : addressesQuery.isError ? (
-        <ErrorAlert
-          message={
-            addressesQuery.error instanceof Error
-              ? addressesQuery.error.message
-              : 'Tải sổ địa chỉ thất bại.'
-          }
-        />
+        <ErrorAlert message={getErrorMessage(addressesQuery.error, 'Tải sổ địa chỉ thất bại.')} />
       ) : addresses.length === 0 ? (
         <p className="muted">Bạn chưa lưu địa chỉ nào. Thêm địa chỉ để đặt hàng nhanh hơn.</p>
       ) : (

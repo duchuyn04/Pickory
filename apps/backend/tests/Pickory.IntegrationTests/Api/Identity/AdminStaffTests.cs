@@ -16,14 +16,14 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Port từ test ID-12, ID-13 và ID-15 của bản Node cho mời, gán role, khóa và mở khóa nhân viên.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminStaffTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class AdminStaffTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public AdminStaffTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminStaffTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

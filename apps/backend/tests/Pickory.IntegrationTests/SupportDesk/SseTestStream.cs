@@ -43,11 +43,15 @@ internal sealed class SseTestStream : IDisposable
         return new SseTestStream(response, new StreamReader(stream));
     }
 
-    // Đọc sự kiện kế tiếp. Dòng bắt đầu bằng `:` là chú thích của SSE nên bỏ qua.
-    public async Task<ReceivedSseEvent> ReadEventAsync()
+    // Đọc sự kiện kế tiếp với hạn chờ mặc định.
+    public Task<ReceivedSseEvent> ReadEventAsync() => ReadEventAsync(DefaultTimeout);
+
+    // Đọc sự kiện kế tiếp với hạn chờ riêng. Tiêu chí tin của nhân viên trong SD-16 cần hạn chờ 2 giây.
+    // Dòng bắt đầu bằng `:` là chú thích của SSE nên bỏ qua.
+    public async Task<ReceivedSseEvent> ReadEventAsync(TimeSpan timeout)
     {
         // Token riêng cho mỗi sự kiện. Chuỗi nhiều lần đọc chậm trên máy bận không dồn vào một hạn chờ chung.
-        using var readTimeout = new CancellationTokenSource(DefaultTimeout);
+        using var readTimeout = new CancellationTokenSource(timeout);
         var parser = new SseEventParser();
         while (true)
         {
@@ -61,15 +65,41 @@ internal sealed class SseTestStream : IDisposable
         }
     }
 
+    // Đọc cho tới khi gặp sự kiện có tên mong muốn, dùng hạn chờ mặc định.
+    public Task<ReceivedSseEvent> ReadEventNamedAsync(string expectedName) =>
+        ReadEventNamedAsync(expectedName, DefaultTimeout);
+
     // Đọc cho tới khi gặp sự kiện có tên mong muốn. Sự kiện khác (ví dụ nhịp tim) bị bỏ qua.
-    public async Task<ReceivedSseEvent> ReadEventNamedAsync(string expectedName)
+    public async Task<ReceivedSseEvent> ReadEventNamedAsync(string expectedName, TimeSpan timeout)
     {
         while (true)
         {
-            var received = await ReadEventAsync();
+            var received = await ReadEventAsync(timeout);
             if (received.Name == expectedName)
             {
                 return received;
+            }
+        }
+    }
+
+    // Đọc dòng kế tiếp của luồng, kể cả dòng chú thích giữ kết nối. Test nhịp chú thích cần thấy đúng dòng này.
+    public async Task<string> ReadLineAsync()
+    {
+        using var readTimeout = new CancellationTokenSource(DefaultTimeout);
+        return await _reader.ReadLineAsync(readTimeout.Token)
+            ?? throw new InvalidOperationException("Luồng SSE đã đóng trước khi có dòng kế tiếp.");
+    }
+
+    // Đọc tới dòng chú thích kế tiếp, bỏ qua dòng trống ngăn cách của khối chú thích.
+    // Thiếu chú thích thì hạn chờ của `ReadLineAsync` làm test đỏ thay vì treo.
+    public async Task<string> ReadCommentLineAsync()
+    {
+        while (true)
+        {
+            var line = await ReadLineAsync();
+            if (line.StartsWith(':'))
+            {
+                return line;
             }
         }
     }

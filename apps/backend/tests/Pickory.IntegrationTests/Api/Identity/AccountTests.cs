@@ -15,14 +15,14 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Port từ test ID-10 của bản Node cho sửa hồ sơ, đổi mật khẩu và xóa tài khoản khách.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AccountTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class AccountTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public AccountTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AccountTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

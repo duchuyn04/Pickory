@@ -6,12 +6,12 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Các route đăng ký, xác thực email, quên mật khẩu và đặt mật khẩu là tài nguyên. Route cũ đặt theo hành động không còn đăng ký.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AccountLifecycleRoutesTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class AccountLifecycleRoutesTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private readonly HttpClient _client;
 
-    public AccountLifecycleRoutesTests(PickoryWebApplicationFactory factory)
+    public AccountLifecycleRoutesTests(IdentityWebApplicationFactory factory)
     {
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
     }

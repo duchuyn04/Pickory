@@ -11,7 +11,7 @@ using Pickory.Shared.Exceptions;
 namespace Pickory.Modules.Identity.Features.AdminRoles;
 
 // Tạo, sửa, xóa role và đọc danh sách role cho trang quản trị.
-public sealed partial class RoleManagementHandler(IdentityDbContext database)
+public sealed partial class RoleManagementHandler(IdentityDbContext database, TimeProvider timeProvider)
 {
     public async Task<IReadOnlyList<RoleResponse>> ListAsync(CancellationToken cancellationToken)
     {
@@ -126,8 +126,10 @@ public sealed partial class RoleManagementHandler(IdentityDbContext database)
             throw new AppException("ROLE_IN_USE", 400, $"Không thể xóa role đang có {role.Users.Count} người dùng giữ. Vui lòng gỡ role trước.");
         }
 
-        // Quyền của role bị xóa theo role. Nhật ký chỉ có trạng thái trước vì sau khi xóa không còn trạng thái nào.
-        database.Roles.Remove(role);
+        // Đánh dấu xóa mềm thay vì xóa dòng. Nhật ký kiểm toán và dữ liệu cũ vẫn giữ tham chiếu role.
+        var now = timeProvider.GetUtcNow().UtcDateTime;
+        role.DeletedAt = now;
+        // Nhật ký chỉ có trạng thái trước vì role đã xóa không còn hiển thị trạng thái hiện tại.
         AuditRecorder.Add(
             database,
             actor.UserId!,

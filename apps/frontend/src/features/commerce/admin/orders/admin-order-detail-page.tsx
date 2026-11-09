@@ -26,10 +26,17 @@ import {
   paymentStatusBadgeClass,
   substituteFeeBadgeClass,
 } from './order-badges';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './admin-orders.css';
 
 // Người làm của một lần đổi trạng thái. Backend trả tên nhân viên; mã đầy đủ nằm trong `title` để đối chiếu.
-function HistoryActor({ actorId, actorName }: { actorId: string | null; actorName: string | null }) {
+function HistoryActor({
+  actorId,
+  actorName,
+}: {
+  actorId: string | null;
+  actorName: string | null;
+}) {
   // `null` nghĩa là hệ thống hoặc khách vãng lai chuyển, không có nhân viên nào đứng tên.
   if (actorId === null) return <span>Hệ thống</span>;
   // Tài khoản đã xóa hoặc ngoài danh mục nhân viên thì lùi về mã rút gọn.
@@ -115,7 +122,7 @@ export function AdminOrderDetailPage() {
   if (error || !order) {
     return (
       <div className="page">
-        <ErrorAlert message={error instanceof Error ? error.message : 'Tải đơn hàng thất bại.'} />
+        <ErrorAlert message={getErrorMessage(error, 'Tải đơn hàng thất bại.')} />
         <div className="row-actions">
           <Link className="btn" to="/admin/orders">
             Về danh sách đơn hàng

@@ -11,8 +11,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-14: danh sách đơn của nhân viên. Phân trang, bộ lọc, ngày theo giờ Việt Nam và thứ tự ổn định.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminOrderListTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class AdminOrderListTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const string OrdersPath = "/api/admin/orders";
 
@@ -23,7 +23,7 @@ public sealed class AdminOrderListTests : IClassFixture<PickoryWebApplicationFac
     private readonly AdminOrderTestKit _kit;
     private readonly HttpClient _client;
 
-    public AdminOrderListTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminOrderListTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _database = database;
         _kit = new AdminOrderTestKit(database);

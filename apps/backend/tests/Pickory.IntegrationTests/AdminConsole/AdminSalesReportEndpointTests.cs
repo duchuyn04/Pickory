@@ -21,8 +21,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.AdminConsole;
 
 // ADM-12: kiểm tra endpoint GET /api/admin/reports/sales qua DB thật và container thật.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminSalesReportEndpointTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(AdminConsoleCollection.Name)]
+public sealed class AdminSalesReportEndpointTests : IClassFixture<AdminConsoleWebApplicationFactory>, IAsyncLifetime
 {
     private const string ReportsPath = "/api/admin/reports/sales";
     private static readonly DateTimeOffset TestClockInstant = new(2040, 7, 1, 12, 0, 0, TimeSpan.Zero);
@@ -40,7 +40,7 @@ public sealed class AdminSalesReportEndpointTests : IClassFixture<PickoryWebAppl
     private string _supportCookie = null!;
     private string _customerCookie = null!;
 
-    public AdminSalesReportEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminSalesReportEndpointTests(AdminConsoleWebApplicationFactory factory, AdminConsoleDatabaseFixture database)
     {
         _host = factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
         {
@@ -561,17 +561,18 @@ public sealed class AdminSalesReportEndpointTests : IClassFixture<PickoryWebAppl
         if (_catalogProductIds.Count > 0)
         {
             await catalog.Skus.Where(sku => _catalogProductIds.Contains(sku.ProductId)).ExecuteDeleteAsync();
-            await catalog.Products.Where(product => _catalogProductIds.Contains(product.Id)).ExecuteDeleteAsync();
+            // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm đã xóa mềm, tránh khóa ngoại chặn xóa hãng và danh mục.
+            await catalog.Products.IgnoreQueryFilters().Where(product => _catalogProductIds.Contains(product.Id)).ExecuteDeleteAsync();
         }
 
         if (_catalogBrandIds.Count > 0)
         {
-            await catalog.Brands.Where(brand => _catalogBrandIds.Contains(brand.Id)).ExecuteDeleteAsync();
+            await catalog.Brands.IgnoreQueryFilters().Where(brand => _catalogBrandIds.Contains(brand.Id)).ExecuteDeleteAsync();
         }
 
         if (_catalogCategoryIds.Count > 0)
         {
-            await catalog.Categories.Where(category => _catalogCategoryIds.Contains(category.Id)).ExecuteDeleteAsync();
+            await catalog.Categories.IgnoreQueryFilters().Where(category => _catalogCategoryIds.Contains(category.Id)).ExecuteDeleteAsync();
         }
     }
 }

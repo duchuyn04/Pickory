@@ -3,6 +3,7 @@ import { Icon } from '../../../shared/icons';
 import { useDialogFocus } from '../../../shared/use-dialog-focus';
 import { PermissionGrid, type PermissionItem } from './permission-grid';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 
 export interface RoleData {
   // Không có id nghĩa là role chưa được tạo.
@@ -74,11 +75,7 @@ export function RoleForm({ role, allPermissions, onSave, onClose }: RoleFormProp
       onClose();
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (không đủ quyền để cấp, mã trùng...) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Lưu thông tin role thất bại.');
-      }
+      setError(getErrorMessage(err, 'Lưu thông tin role thất bại.'));
     } finally {
       setLoading(false);
     }

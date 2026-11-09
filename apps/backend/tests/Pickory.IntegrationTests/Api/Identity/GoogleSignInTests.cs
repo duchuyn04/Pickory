@@ -15,8 +15,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Port từ test ID-09 và ID-17 của bản Node cho đăng nhập Google và chống chiếm trước tài khoản.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class GoogleSignInTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class GoogleSignInTests : IClassFixture<IdentityWebApplicationFactory>
 {
     // Callback lấy từ `API_BASE_URL` của môi trường test, không lấy từ header `Host`.
     private const string CallbackUri = "http://localhost:3000/api/auth/google/callback";
@@ -24,7 +24,7 @@ public sealed class GoogleSignInTests : IClassFixture<PickoryWebApplicationFacto
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public GoogleSignInTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public GoogleSignInTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

@@ -1,4 +1,5 @@
 import { ApiError } from '../../../shared/api';
+import { getErrorMessage } from '../../../shared/error-message';
 
 // Chuyển đổi mã lỗi từ API thành thông điệp tiếng Việt rõ ràng cho người dùng.
 export function toCatalogErrorMessage(err: unknown, fallbackMessage: string): string {
@@ -16,15 +17,8 @@ export function toCatalogErrorMessage(err: unknown, fallbackMessage: string): st
     if (err.code === 'CATEGORY_HAS_PRODUCTS') {
       return 'Danh mục đang có sản phẩm, không thể xóa.';
     }
-    if (err.message) {
-      return err.message;
-    }
   }
 
-  // Trả thông điệp lỗi nguyên bản nếu đối tượng lỗi là Error thông thường.
-  if (err instanceof Error && err.message) {
-    return err.message;
-  }
-
-  return fallbackMessage;
+  // Câu của API và câu kiểm dữ liệu trong form đã là tiếng Việt. Lỗi JS hay lỗi thư viện hiện câu dự phòng.
+  return getErrorMessage(err, fallbackMessage);
 }

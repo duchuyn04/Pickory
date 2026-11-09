@@ -12,9 +12,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Hợp đồng phiên `pk_session` theo actor middleware của bản Node.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ActorSessionTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class ActorSessionTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
+    : IClassFixture<IdentityWebApplicationFactory>
 {
     // Test tự đọc và gửi cookie. Client không tự lưu cookie giữa các request.
     private readonly HttpClient _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

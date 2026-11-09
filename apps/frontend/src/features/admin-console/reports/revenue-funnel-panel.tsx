@@ -4,6 +4,7 @@ import { funnelRows } from './funnel-steps';
 import { formatReportDate } from './report-format';
 import { ReportFunnelChart } from './report-funnel-chart';
 import { fetchFunnelReport } from './reports-api';
+import { getErrorMessage } from '../../../shared/error-message';
 import './reports.css';
 
 interface RevenueFunnelPanelProps {
@@ -37,7 +38,9 @@ export function RevenueFunnelPanel({ from, to }: RevenueFunnelPanelProps) {
         </p>
       )}
       {funnelQuery.isError && (
-        <ErrorAlert message={funnelQuery.error?.message ?? 'Không tải được phễu chuyển đổi.'} />
+        <ErrorAlert
+          message={getErrorMessage(funnelQuery.error, 'Không tải được phễu chuyển đổi.')}
+        />
       )}
       {funnelQuery.isSuccess && (
         <ReportFunnelChart

@@ -16,9 +16,9 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Database;
 
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(DatabaseCollection.Name)]
+public sealed class DotnetSchemaIntegrationTests(DatabaseWebApplicationFactory factory)
+    : IClassFixture<DatabaseWebApplicationFactory>
 {
     [Fact]
     public async Task EfMigrations_CreateAllTablesMatchingReferenceSchemaAndModuleModels()
@@ -55,11 +55,16 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
         // Bản chụp Prisma giữ index cũ; so với schema baseline thật thay vì sửa bản tham chiếu.
         await using (var baselineTransaction = await identity.Database.BeginTransactionAsync())
         {
-            var migrator = catalog.GetService<IMigrator>();
-            var latest = catalog.GetService<IMigrationsAssembly>().Migrations.Keys.Order(StringComparer.Ordinal).Last();
+            var catalogMigrator = catalog.GetService<IMigrator>();
+            var catalogLatest = catalog.GetService<IMigrationsAssembly>().Migrations.Keys.Order(StringComparer.Ordinal).Last();
+            var identityMigrator = identity.GetService<IMigrator>();
+            var identityLatest = identity.GetService<IMigrationsAssembly>().Migrations.Keys.Order(StringComparer.Ordinal).Last();
+            // Hạ Identity về mốc Prisma trước. Cột mới như `roles.deletedAt` không có trong bản chụp gốc.
+            await identity.Database.ExecuteSqlRawAsync(identityMigrator.GenerateScript(
+                identityLatest, "20261005125639_PrismaBaseline", MigrationsSqlGenerationOptions.NoTransactions));
             // Hạ riêng Catalog trong transaction để vẫn kiểm đầy đủ metadata gốc của Prisma.
-            await identity.Database.ExecuteSqlRawAsync(migrator.GenerateScript(
-                latest, "20261005125646_PrismaBaseline", MigrationsSqlGenerationOptions.NoTransactions));
+            await identity.Database.ExecuteSqlRawAsync(catalogMigrator.GenerateScript(
+                catalogLatest, "20261005125646_PrismaBaseline", MigrationsSqlGenerationOptions.NoTransactions));
             var baseline = await ApplicationDatabaseSchema.ReadAsync(identity);
             var baselineWithoutNewModules = baseline.Where(entry => !ApplicationDatabaseSchema.IsShippingObject(entry.Key) &&
                 !ApplicationDatabaseSchema.IsCommerceObject(entry.Key) &&
@@ -93,11 +98,13 @@ public sealed class DotnetSchemaIntegrationTests(PickoryWebApplicationFactory fa
 
     internal static void AssertTestConnection(DbContext context)
     {
-        // Không cho phép context dự phòng bằng DB phát triển.
+        // Không cho phép context kết nối vào DB phát triển hoặc DB ngoài nhóm test.
         var expected = new NpgsqlConnectionStringBuilder(PostgresConnectionString.Convert(PickoryWebApplicationFactory.ResolveTestDatabaseUrl()));
         var actual = new NpgsqlConnectionStringBuilder(context.Database.GetDbConnection().ConnectionString);
+        var databaseMatches = actual.Database == expected.Database ||
+                              (actual.Database?.StartsWith(expected.Database + "_", StringComparison.OrdinalIgnoreCase) == true);
         Assert.True(expected.Host == actual.Host && expected.Port == actual.Port &&
-                    expected.Database == actual.Database && expected.Username == actual.Username,
+                    databaseMatches && expected.Username == actual.Username,
             $"{context.GetType().Name} must use TEST_DATABASE_URL, not the development database.");
         Assert.Equal("Npgsql.EntityFrameworkCore.PostgreSQL", context.Database.ProviderName);
     }

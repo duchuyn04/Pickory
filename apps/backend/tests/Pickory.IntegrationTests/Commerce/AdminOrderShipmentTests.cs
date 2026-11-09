@@ -26,7 +26,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-16: nhân viên tạo và hủy vận đơn GHN cho đơn, và đơn đổi trạng thái theo sự kiện giao hàng của shipping.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class AdminOrderShipmentTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string AdminOrdersPath = "/api/admin/orders";
@@ -51,7 +51,7 @@ public sealed class AdminOrderShipmentTests : IClassFixture<CheckoutWebApplicati
     private readonly List<string> _keys = [];
     private readonly List<string> _codes = [];
 
-    public AdminOrderShipmentTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminOrderShipmentTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

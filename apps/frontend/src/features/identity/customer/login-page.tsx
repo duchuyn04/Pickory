@@ -12,6 +12,7 @@ import { getEmailError, getPasswordError } from '../../../shared/identity-valida
 import { useActor } from '../hooks/use-actor';
 import { AuthCard, AuthDivider, GoogleSignInLink, PasswordInput } from './auth-ui';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 
 // Trang đăng nhập của khách (nhân viên đăng nhập ở /admin/login).
 export function LoginPage() {
@@ -58,11 +59,7 @@ export function LoginPage() {
       navigate('/', { replace: true });
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API: sai email và sai mật khẩu cùng một câu, còn bị khóa thì có câu riêng.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
-      }
+      setError(getErrorMessage(err, 'Đã có lỗi xảy ra. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }

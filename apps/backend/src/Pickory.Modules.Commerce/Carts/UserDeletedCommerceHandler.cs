@@ -19,7 +19,9 @@ public sealed class UserDeletedCommerceHandler(CommerceDbContext database) : IDo
             .Where(cart => cart.UserId == @event.UserId)
             .ExecuteDeleteAsync(cancellationToken);
 
+        // Bỏ qua bộ lọc xóa mềm. Xóa tài khoản phải xóa cả địa chỉ khách đã tự xóa trước đó để không giữ dữ liệu cá nhân.
         await database.SavedAddresses
+            .IgnoreQueryFilters()
             .Where(address => address.UserId == @event.UserId)
             .ExecuteDeleteAsync(cancellationToken);
 

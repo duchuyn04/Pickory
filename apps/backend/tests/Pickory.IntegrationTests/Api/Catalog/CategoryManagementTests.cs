@@ -14,15 +14,15 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // Kiểm tra toàn bộ luồng quản lý danh mục sản phẩm từ route công khai tới quản trị.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CategoryManagementTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class CategoryManagementTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
     private string _adminCookie = null!;
     private string _salesCookie = null!;
 
-    public CategoryManagementTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CategoryManagementTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         // Tắt tự động nạp cookie để bài test kiểm soát phiên người dùng chính xác.
@@ -563,6 +563,42 @@ public sealed class CategoryManagementTests : IClassFixture<PickoryWebApplicatio
         Assert.Equal(HttpStatusCode.BadRequest, deleteChildResponse.StatusCode);
         using var childJson = await ActorHttp.ReadJsonAsync(deleteChildResponse);
         Assert.Equal("CATEGORY_HAS_PRODUCTS", childJson.RootElement.GetProperty("error").GetProperty("code").GetString());
+    }
+
+    [Fact]
+    // Xóa danh mục là xóa mềm: dòng giữ `deletedAt`, cây công khai ẩn dòng, và slug được giải phóng cho bản mới.
+    public async Task DeleteCategory_MarksDeletedHidesItAndReleasesSlug()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var name = $"Danh mục xóa mềm {suffix}";
+        var createRequest = ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/categories", new { name }, _adminCookie);
+        var createResponse = await _client.SendAsync(createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        using var createJson = await ActorHttp.ReadJsonAsync(createResponse);
+        var categoryId = createJson.RootElement.GetProperty("data").GetProperty("id").GetString()!;
+        var slug = createJson.RootElement.GetProperty("data").GetProperty("slug").GetString()!;
+
+        var deleteResponse = await _client.SendAsync(
+            ActorHttp.CreateJsonRequest(HttpMethod.Delete, $"/api/admin/categories/{categoryId}", null, _adminCookie));
+        Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
+
+        // Cây công khai không còn danh mục đã xóa.
+        var treeResponse = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, "/api/categories"));
+        using var treeJson = await ActorHttp.ReadJsonAsync(treeResponse);
+        Assert.DoesNotContain(treeJson.RootElement.GetProperty("data").EnumerateArray(),
+            item => item.GetProperty("id").GetString() == categoryId);
+
+        // Dòng vẫn còn trong DB với thời điểm xóa.
+        await using var catalog = _database.CreateCatalogContext();
+        var stored = await catalog.Categories.IgnoreQueryFilters().SingleAsync(category => category.Id == categoryId);
+        Assert.NotNull(stored.DeletedAt);
+
+        // Tạo lại cùng tên nhận đúng slug cũ, vì chỉ mục duy nhất bỏ qua dòng đã xóa.
+        var recreateResponse = await _client.SendAsync(
+            ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/categories", new { name }, _adminCookie));
+        Assert.Equal(HttpStatusCode.Created, recreateResponse.StatusCode);
+        using var recreateJson = await ActorHttp.ReadJsonAsync(recreateResponse);
+        Assert.Equal(slug, recreateJson.RootElement.GetProperty("data").GetProperty("slug").GetString());
     }
 
     [Fact]

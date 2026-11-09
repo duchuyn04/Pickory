@@ -9,9 +9,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database;
 
 // COM-27: migration thêm cột `shippingFeeSource` vào bảng `orders`. Đơn đặt trước migration phải nhận nguồn `ghn`.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CommerceOrderFeeSourceMigrationTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(CommerceCollection.Name)]
+public sealed class CommerceOrderFeeSourceMigrationTests(CommerceWebApplicationFactory factory)
+    : IClassFixture<CommerceWebApplicationFactory>
 {
     private const string FeeSourceMigrationId = "20261019144909_AddOrderShippingFeeSource";
 
@@ -22,8 +22,10 @@ public sealed class CommerceOrderFeeSourceMigrationTests(PickoryWebApplicationFa
         var context = scope.ServiceProvider.GetRequiredService<CommerceDbContext>();
         DotnetSchemaIntegrationTests.AssertTestConnection(context);
         var migrationIds = context.GetService<IMigrationsAssembly>().Migrations.Keys.Order(StringComparer.Ordinal).ToList();
-        Assert.Equal(FeeSourceMigrationId, migrationIds[^1]);
-        var previousMigrationId = migrationIds[^2];
+        // Migration này không còn là mới nhất khi module thêm migration sau. Tìm vị trí thật để lấy mốc trước nó.
+        var feeSourceIndex = migrationIds.IndexOf(FeeSourceMigrationId);
+        Assert.True(feeSourceIndex > 0, "Migration nguồn phí vận chuyển phải có trong lịch sử Commerce.");
+        var previousMigrationId = migrationIds[feeSourceIndex - 1];
         var migrator = context.GetService<IMigrator>();
 
         // Rollback giữ nguyên DB test. Mọi thay đổi schema và dòng đơn tạm chỉ tồn tại trong transaction này.

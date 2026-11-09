@@ -7,10 +7,14 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Pickory.Modules.Identity.Contracts.Events;
+using Pickory.Modules.SupportDesk.Callbacks;
+using Pickory.Modules.SupportDesk.Contracts.Events;
 using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Persistence;
 using Pickory.Modules.SupportDesk.Presence;
 using Pickory.Modules.SupportDesk.Realtime;
+using Pickory.Modules.SupportDesk.Scheduling;
+using Pickory.Modules.SupportDesk.Sessions;
 using Pickory.Shared.Events;
 using Pickory.Shared.Persistence;
 
@@ -38,16 +42,69 @@ public static class SupportDeskModule
         services.AddSingleton<SupportEventHub>();
         // Streamer không giữ trạng thái riêng nên là singleton. Nó tự tạo scope khi cần ghi DB.
         services.AddSingleton<SupportEventStreamer>();
+        // Hub phía khách cũng là singleton. Kết nối thuộc một hội thoại nên mọi producer phải phát qua cùng danh sách.
+        services.AddSingleton<CustomerEventHub>();
+        // Streamer phía khách không giữ trạng thái riêng. Nó đọc đồng hồ và vòng đời ứng dụng để đóng kết nối.
+        services.AddSingleton<CustomerEventStreamer>();
+        // Handler chuyển sự kiện miền đã commit cho kết nối của đúng hội thoại. Một handler nghe hai loại sự kiện của kênh khách.
+        services.AddScoped<IDomainEventHandler<SupportMessageCreatedEvent>, CustomerEventBroadcastHandler>();
+        services.AddScoped<IDomainEventHandler<SupportSessionStatusChangedEvent>, CustomerEventBroadcastHandler>();
+        // Phiên chờ cũng phải báo cho nhân viên sẵn sàng. Handler thứ hai nghe cùng sự kiện nhưng phát qua kênh nhân viên.
+        services.AddScoped<IDomainEventHandler<SupportSessionStatusChangedEvent>, StaffSessionEventBroadcastHandler>();
+        // Sự kiện nhắc lại là sự kiện nội bộ của module. Handler đăng ký ở đây chứ không ở `Contracts`.
+        services.AddScoped<IDomainEventHandler<SupportSessionRemindedEvent>, StaffSessionEventBroadcastHandler>();
+        // Yêu cầu gọi lại mới cũng chỉ đi tới kênh nhân viên. Handler dùng chung với hai sự kiện phiên.
+        services.AddScoped<IDomainEventHandler<CallbackRequestCreatedEvent>, StaffSessionEventBroadcastHandler>();
+        // Tin nhắn mới của khách gửi tới nhân viên đang giữ phiên qua sự kiện nội bộ.
+        services.AddScoped<IDomainEventHandler<SupportCustomerMessageDispatchedEvent>, StaffSessionEventBroadcastHandler>();
         // Vòng đời scoped vì dịch vụ và job giữ `SupportDeskDbContext` của request hoặc của một vòng worker.
         services.AddScoped<SupportConversationService>();
+        services.AddScoped<CallbackRequestService>();
         services.AddScoped<StaffPresenceService>();
         services.AddScoped<StaffPresenceTimeoutProcessor>();
+        // Dịch vụ đọc danh sách hàng chờ dùng DbContext theo từng phạm vi request.
+        services.AddScoped<SupportSessionQueueService>();
+        // Dịch vụ nhận phiên hỗ trợ cần DbContext của request để mở transaction.
+        services.AddScoped<SupportSessionClaimService>();
+        // Dịch vụ nhân viên gửi tin nhắn cần DbContext của request để mở transaction.
+        services.AddScoped<SupportSessionMessageService>();
+        // Dịch vụ chuyển phiên hỗ trợ cho đồng nghiệp cần `DbContext` để mở transaction.
+        services.AddScoped<SupportSessionTransferService>();
+        // Dịch vụ kết thúc phiên hỗ trợ CSKH cần `DbContext` để mở transaction.
+        services.AddScoped<SupportSessionCloseService>();
+        // Dịch vụ tổng hợp bảng thông tin khách hàng dùng `DbContext` và reader theo từng request.
+        services.AddScoped<SupportSessionCustomerService>();
+        // Opener đọc cấu hình từ DB và chạy trong transaction của tin khách, nên dùng chung scope với request.
+        services.AddScoped<SupportSettingsReader>();
+        services.AddScoped<SupportSessionOpener>();
+        // Processor của job nhắc lại cũng cần scope riêng cho mỗi vòng chạy.
+        services.AddScoped<WaitNudgeProcessor>();
+        // Processor của job tự đóng phiên im lặng cũng cần scope riêng cho mỗi vòng chạy.
+        services.AddScoped<AutoCloseSessionProcessor>();
+        // Đăng ký lớp cụ thể cho test và interface `ICallbackPhoneRetentionProcessor` cho worker nền.
+        services.AddScoped<CallbackPhoneRetentionProcessor>();
+        services.AddScoped<ICallbackPhoneRetentionProcessor>(
+            provider => provider.GetRequiredService<CallbackPhoneRetentionProcessor>());
+        // Đăng ký lớp cụ thể cho test và interface `ISupportConversationMaintenanceProcessor` cho worker nền.
+        services.AddScoped<SupportConversationMaintenanceProcessor>();
+        services.AddScoped<ISupportConversationMaintenanceProcessor>(
+            provider => provider.GetRequiredService<SupportConversationMaintenanceProcessor>());
         // Giới hạn tin là singleton vì bộ đếm trong bộ nhớ phải dùng chung cho mọi request của một khách.
         services.AddSingleton<SupportMessageLimiters>();
         // Đăng nhập phát `UserLinkedEvent`. Handler gắn hội thoại vãng lai vào tài khoản vừa đăng nhập.
         services.AddScoped<IDomainEventHandler<UserLinkedEvent>, SupportConversationLinkHandler>();
+        // Xóa tài khoản phát `UserDeletedEvent`. Handler xóa dữ liệu gọi lại và hội thoại của người dùng đó.
+        services.AddScoped<IDomainEventHandler<UserDeletedEvent>, SupportUserDeletedHandler>();
         // Worker chạy nền gọi processor mỗi 30 giây.
         services.AddHostedService<StaffPresenceTimeoutWorker>();
+        // Worker nhắc lại phiên chờ quá lâu chạy mỗi phút, đúng nhịp yêu cầu của spec.
+        services.AddHostedService<WaitNudgeWorker>();
+        // Worker xóa số điện thoại quá hạn 30 ngày chạy mỗi ngày một lần.
+        services.AddHostedService<CallbackPhoneRetentionWorker>();
+        // Worker bảo trì hội thoại CSKH chạy mỗi ngày một lần.
+        services.AddHostedService<SupportConversationMaintenanceWorker>();
+        // Worker tự đóng phiên im lặng và phiên chờ ngoài giờ chạy mỗi phút một lần.
+        services.AddHostedService<AutoCloseSessionWorker>();
         return services;
     }
 
@@ -67,6 +124,8 @@ public static class SupportDeskModule
         SupportEventsEndpoints.Map(moduleRoutes);
         StaffPresenceEndpoints.Map(moduleRoutes);
         SupportConversationEndpoints.Map(moduleRoutes);
+        CallbackRequestEndpoints.Map(moduleRoutes);
+        SupportSessionEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }

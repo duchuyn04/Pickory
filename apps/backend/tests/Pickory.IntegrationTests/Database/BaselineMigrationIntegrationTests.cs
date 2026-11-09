@@ -14,19 +14,19 @@ using Xunit;
 
 namespace Pickory.IntegrationTests.Database;
 
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class BaselineMigrationIntegrationTests(PickoryWebApplicationFactory factory)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(DatabaseCollection.Name)]
+public sealed class BaselineMigrationIntegrationTests(DatabaseWebApplicationFactory factory)
+    : IClassFixture<DatabaseWebApplicationFactory>
 {
     private static readonly string[] HistorySchemas = ["ef_identity", "ef_catalog", "ef_shipping", "ef_commerce", "ef_activity_tracking", "ef_support_desk"];
 
     [Theory]
-    [InlineData("identity", "ef_identity", "20261019190331_RemoveAiPermissions")]
-    [InlineData("catalog", "ef_catalog", "20261027074126_SoftDeleteProducts")]
+    [InlineData("identity", "ef_identity", "20261030050727_AddRoleSoftDelete")]
+    [InlineData("catalog", "ef_catalog", "20261030050718_AddCatalogSoftDelete")]
     [InlineData("shipping", "ef_shipping", "20261019123657_AddShippingQuoteCache")]
-    [InlineData("commerce", "ef_commerce", "20261019144909_AddOrderShippingFeeSource")]
+    [InlineData("commerce", "ef_commerce", "20261030050733_AddSavedAddressSoftDelete")]
     [InlineData("activity-tracking", "ef_activity_tracking", "20261020093013_InitialActivityTracking")]
-    [InlineData("support-desk", "ef_support_desk", "20261026031746_SupportConversationOwnerIndexes")]
+    [InlineData("support-desk", "ef_support_desk", "20261107081718_SupportMessageSessionId")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(
         string module, string historySchema, string migrationId)
     {

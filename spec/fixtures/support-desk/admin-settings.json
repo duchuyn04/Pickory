@@ -1,0 +1,85 @@
+{
+  "description": "Mẫu request và response của cấu hình CSKH. Giờ ghi dạng `HH:mm` theo giờ Việt Nam. Ngày nghỉ ghi dạng `yyyy-MM-dd`.",
+  "examples": [
+    {
+      "name": "đọc cấu hình",
+      "method": "GET",
+      "path": "/api/admin/support/settings",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "opensAt": "08:00",
+          "closesAt": "21:00",
+          "holidays": ["2027-02-06", "2027-02-07"],
+          "waitNudgeMinutes": 10,
+          "autoCloseMinutes": 30,
+          "updatedAt": "2026-11-03T01:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "lưu cấu hình",
+      "method": "PUT",
+      "path": "/api/admin/support/settings",
+      "request": {
+        "opensAt": "08:30",
+        "closesAt": "21:00",
+        "holidays": ["2027-02-06"],
+        "waitNudgeMinutes": 10,
+        "autoCloseMinutes": 30
+      },
+      "status": 200,
+      "response": {
+        "data": {
+          "opensAt": "08:30",
+          "closesAt": "21:00",
+          "holidays": ["2027-02-06"],
+          "waitNudgeMinutes": 10,
+          "autoCloseMinutes": 30,
+          "updatedAt": "2026-11-03T03:00:00Z"
+        }
+      }
+    },
+    {
+      "name": "giờ mở cửa sau giờ đóng cửa",
+      "method": "PUT",
+      "path": "/api/admin/support/settings",
+      "request": {
+        "opensAt": "22:00",
+        "closesAt": "21:00",
+        "holidays": [],
+        "waitNudgeMinutes": 10,
+        "autoCloseMinutes": 30
+      },
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "Giờ mở cửa phải trước giờ đóng cửa.",
+          "details": [{ "key": "opensAt", "message": "Giờ mở cửa phải trước giờ đóng cửa." }]
+        }
+      }
+    },
+    {
+      "name": "mốc nhắc lại không trước mốc tự đóng",
+      "method": "PUT",
+      "path": "/api/admin/support/settings",
+      "request": {
+        "opensAt": "08:00",
+        "closesAt": "21:00",
+        "holidays": [],
+        "waitNudgeMinutes": 30,
+        "autoCloseMinutes": 30
+      },
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "Mốc nhắc lại phải nhỏ hơn mốc tự đóng.",
+          "details": [{ "key": "waitNudgeMinutes", "message": "Mốc nhắc lại phải nhỏ hơn mốc tự đóng." }]
+        }
+      }
+    }
+  ]
+}

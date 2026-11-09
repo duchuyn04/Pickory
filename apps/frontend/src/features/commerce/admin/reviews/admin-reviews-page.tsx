@@ -22,6 +22,7 @@ import {
   isPriorityReview,
   type ModerationAction,
 } from './review-moderation-logic';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './admin-reviews.css';
 
 const PANEL_ID = 'review-panel';
@@ -103,11 +104,7 @@ export function AdminReviewsPage() {
           ) : reviewsQuery.isError ? (
             <div className="review-list-alert">
               <ErrorAlert
-                message={
-                  reviewsQuery.error instanceof Error
-                    ? reviewsQuery.error.message
-                    : 'Tải danh sách đánh giá thất bại.'
-                }
+                message={getErrorMessage(reviewsQuery.error, 'Tải danh sách đánh giá thất bại.')}
               />
               <button
                 type="button"

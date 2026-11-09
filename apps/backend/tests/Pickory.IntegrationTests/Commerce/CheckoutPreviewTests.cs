@@ -13,7 +13,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-07: `POST /api/checkout/previews` đọc giỏ của người gọi, báo phí qua shipping và không ghi DB.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class CheckoutPreviewTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string PreviewPath = "/api/checkout/previews";
@@ -29,7 +29,7 @@ public sealed class CheckoutPreviewTests : IClassFixture<CheckoutWebApplicationF
     private readonly CheckoutWebApplicationFactory _factory;
     private readonly CartTestKit _kit;
 
-    public CheckoutPreviewTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CheckoutPreviewTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _kit = new CartTestKit(factory, database);

@@ -16,8 +16,8 @@ namespace Pickory.IntegrationTests.Commerce;
 
 // COM-05: gộp giỏ vãng lai vào giỏ tài khoản khi nhận `UserLinkedEvent`, và dọn dữ liệu khi nhận `UserDeletedEvent`.
 // Test phát sự kiện qua dispatcher thật, nên cả việc đăng ký handler trong module cũng được kiểm.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class CartMergeTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class CartMergeTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const int Rounds = 6;
 
@@ -25,7 +25,7 @@ public sealed class CartMergeTests : IClassFixture<PickoryWebApplicationFactory>
     private readonly IntegrationDatabaseFixture _database;
     private readonly CartTestKit _kit;
 
-    public CartMergeTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CartMergeTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

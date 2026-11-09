@@ -17,8 +17,8 @@ namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-14: route `PUT` và `DELETE /api/e2e/ghn/failures/calculate-fee` bật và tắt lỗi báo phí của `FakeGhnClient` cho Playwright.
 // Route làm hỏng báo phí mà không cần đăng nhập, nên host thường và host có token GHN không được có route này.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class GhnE2eFailureRouteTests(IntegrationDatabaseFixture database) : IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class GhnE2eFailureRouteTests(ShippingDatabaseFixture database) : IAsyncLifetime
 {
     private const string FailurePath = "/api/e2e/ghn/failures/calculate-fee";
 

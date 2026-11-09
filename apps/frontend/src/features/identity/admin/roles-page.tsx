@@ -10,6 +10,7 @@ import type { PermissionItem } from '../components/permission-grid';
 import { RoleForm, type RoleData } from '../components/role-form';
 import { filterRoles } from './role-filters';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import './identity-admin.css';
 
 // Role khi đã tạo thì có id, kèm số người đang giữ để biết role nào xóa được.
@@ -102,11 +103,7 @@ export function RolesPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin-roles'] });
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (role hệ thống, role đang có người giữ...) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setActionError(err.message);
-      } else {
-        setActionError('Xóa role thất bại.');
-      }
+      setActionError(getErrorMessage(err, 'Xóa role thất bại.'));
     }
   }
 
@@ -133,11 +130,7 @@ export function RolesPage() {
 
       {permissionsIsError && (
         <ErrorAlert
-          message={
-            permissionsError instanceof Error
-              ? permissionsError.message
-              : 'Tải danh sách quyền hạn thất bại.'
-          }
+          message={getErrorMessage(permissionsError, 'Tải danh sách quyền hạn thất bại.')}
         />
       )}
 
@@ -146,11 +139,7 @@ export function RolesPage() {
           Đang nạp danh sách role...
         </p>
       ) : rolesIsError ? (
-        <ErrorAlert
-          message={
-            rolesError instanceof Error ? rolesError.message : 'Tải danh sách vai trò thất bại.'
-          }
-        />
+        <ErrorAlert message={getErrorMessage(rolesError, 'Tải danh sách vai trò thất bại.')} />
       ) : (
         <section className="card card-flush">
           <div className="filters-row">

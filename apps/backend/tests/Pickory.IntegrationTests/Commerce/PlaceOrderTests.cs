@@ -34,7 +34,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-08: `POST /api/orders` tính lại tiền, giữ hàng, tạo đơn có snapshot và xóa dòng đã đặt khỏi giỏ trong một transaction.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class PlaceOrderTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string OrdersPath = "/api/orders";
@@ -53,7 +53,7 @@ public sealed class PlaceOrderTests : IClassFixture<CheckoutWebApplicationFactor
     private readonly List<string> _keys = [];
     private readonly List<WebApplicationFactory<Program>> _derivedFactories = [];
 
-    public PlaceOrderTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public PlaceOrderTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _kit = new CartTestKit(factory, database);

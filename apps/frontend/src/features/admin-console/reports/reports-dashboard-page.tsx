@@ -15,6 +15,7 @@ import {
 import { currentVietnamMonth } from './report-period';
 import { ReportPieChart, type ReportPieSlice } from './report-pie-chart';
 import { fetchSalesReport, type SalesReportData } from './reports-api';
+import { getErrorMessage } from '../../../shared/error-message';
 import './reports.css';
 
 const MONTH_EMPTY_MESSAGE = 'Chưa có dữ liệu trong tháng này';
@@ -158,7 +159,7 @@ function ReportCard({ card, month }: ReportCardProps) {
         </p>
       )}
       {query.isError && (
-        <ErrorAlert message={query.error?.message ?? `Không tải được ${lowerTitle}.`} />
+        <ErrorAlert message={getErrorMessage(query.error, `Không tải được ${lowerTitle}.`)} />
       )}
       {query.isSuccess && model && !hasData && <p className="empty-state">{MONTH_EMPTY_MESSAGE}</p>}
 

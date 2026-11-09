@@ -13,8 +13,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-06: chữ ký tải ảnh, gắn ảnh vào sản phẩm, kiểm lại ảnh và job xóa ảnh khi bỏ ảnh.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ProductImageTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class ProductImageTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly PickoryWebApplicationFactory _factory;
@@ -26,7 +26,7 @@ public sealed class ProductImageTests : IClassFixture<PickoryWebApplicationFacto
     private string _brandId = null!;
     private readonly List<string> _productIds = new();
 
-    public ProductImageTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ProductImageTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _factory = factory;
@@ -66,9 +66,10 @@ public sealed class ProductImageTests : IClassFixture<PickoryWebApplicationFacto
         await StockInvariant.AssertHoldsAsync(_database);
         await using var context = _database.CreateCatalogContext();
         await context.ImageDeletionJobs.Where(job => job.PublicId.Contains(_suffix)).ExecuteDeleteAsync();
-        await context.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
-        await context.Categories.Where(category => category.Id == _categoryId).ExecuteDeleteAsync();
-        await context.Brands.Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm, danh mục và thương hiệu đã bị xóa mềm trong test.
+        await context.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+        await context.Categories.IgnoreQueryFilters().Where(category => category.Id == _categoryId).ExecuteDeleteAsync();
+        await context.Brands.IgnoreQueryFilters().Where(brand => brand.Id == _brandId).ExecuteDeleteAsync();
     }
 
     // Mô phỏng trình duyệt vừa tải ảnh lên Cloudinary: ảnh có trong kho ảnh giả với kích thước và định dạng cho trước.

@@ -16,6 +16,18 @@ Người dùng chọn giữ `support-desk` và làm độc lập. Các thay đ�
 
 Task và quyết định bị bỏ vẫn nằm trong file để tra cứu, kèm dòng "Đã bỏ ngày 2026-10-18".
 
+## Thay đổi cách làm ngày 2026-11-03
+
+Người dùng muốn frontend và backend làm song song, không chờ nhau. Trước ngày này, mỗi task UI chờ task backend của cùng màn. Ví dụ: SD-UI2 chờ SD-07, và SD-UI3 chờ SD-08 với SD-11.
+
+Các thay đổi:
+
+- Thêm `tasks/support-desk/api-contract.md`. File này ghi dạng dữ liệu của mọi route và sự kiện SSE còn lại.
+- Thêm dữ liệu mẫu (fixture) dùng chung ở `spec/fixtures/support-desk/`. Backend và frontend cùng kiểm code theo các file này.
+- Thêm `SD-C1` (bộ kiểm hợp đồng phía backend) và `SD-C2` (bộ đọc dữ liệu mẫu phía frontend).
+- Task UI phụ thuộc hợp đồng và `SD-C2`, không phụ thuộc task backend. Hai nhánh gặp nhau ở `SD-E2E1` và `SD-E2E2`.
+- Quyết định 31 ghi luật làm song song.
+
 ## Overview
 
 Module `support-desk` là kênh chat giữa khách và nhân viên CSKH. Khách mở `/support`, gửi tin và chờ nhân viên nhận. Nhân viên nhận hội thoại, trả lời realtime và xem đơn của khách. Module cũng quản lý giờ làm việc, yêu cầu gọi lại ngoài giờ, mẫu trả lời nhanh, CSAT và số liệu CSKH.
@@ -23,7 +35,7 @@ Module `support-desk` là kênh chat giữa khách và nhân viên CSKH. Khách 
 `support-desk` phụ thuộc `identity` và `commerce`. Module đứng sau `commerce` và trước `admin-console` trong thứ tự build.
 
 Spec gốc: `spec/SPEC.md`, `spec/SPEC-support-desk.md`. Spec còn viết theo phạm vi cũ (chatbot chuyển giao, AI soạn nháp) và theo interface bản Node. Plan này chuyển interface sang .NET theo `tasks/dotnet-migration/plan.md`.
-Danh sách task chi tiết: `tasks/support-desk/todo.md`.
+Danh sách task chi tiết: `tasks/support-desk/todo.md`, `tasks/support-desk/todo-backend.md`, `tasks/support-desk/todo-frontend.md`.
 
 ## Phần đã phủ bởi plan cũ
 
@@ -45,26 +57,42 @@ Các mục dưới đây đã có trong code hoặc trong plan cũ. Plan này kh
 
 ## Đồ thị phụ thuộc
 
+Đồ thị từ ngày 2026-11-03. Phần đã xong hoặc đang chờ review (SD-16):
+
 ```
-SD-01 logic thuần: giờ làm việc, ước tính thời gian chờ, biến mẫu, phân vị
- └── SD-02 khung module, Contracts, schema, migration
-      ├── SD-03 hub SSE nhân viên + trạng thái sẵn sàng ─────────── SD-UI1 hàng chờ, công tắc, thông báo
-      ├── SD-15 hội thoại và tin của khách
-      │    └── SD-16 kênh SSE phía khách ─────────────────────────── SD-UI7 trang /support của khách
-      │         └── SD-04 mở phiên chờ + job nhắc lại (cần SD-03)
-      │              ├── SD-05 yêu cầu gọi lại ──────────────────── SD-UI4 tab Gọi lại; SD-UI6 form SĐT, form CSAT
-      │              └── SD-06 hàng chờ + nhận hội thoại
-      │                   └── SD-07 tin nhân viên + tin mới của khách ── SD-UI2 khung chat, mẫu `/`
-      │                        └── SD-08 chuyển, kết thúc, tự đóng ──── SD-UI3 bảng thông tin khách, hộp thoại chuyển
-      │                             ├── SD-09 CSAT
-      │                             └── SD-11 bảng thông tin khách (chờ Câu hỏi mở 2, 3)
-      ├── SD-17 xóa dữ liệu hỗ trợ
-      └── SD-10 cấu hình + mẫu trả lời nhanh ─────────────────────── SD-UI5 màn cấu hình
-SD-08, SD-09 └── SD-13 `ISupportMetrics`
-mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
+SD-01 → SD-02 → SD-03 → SD-UI1
+          └──── SD-15 → SD-16
+hợp đồng: tasks/support-desk/api-contract.md + spec/fixtures/support-desk/
 ```
 
-`SD-04` cần `SD-03` và `SD-16`. Tin hệ thống của phiên chờ phải tới nhân viên qua hub nhân viên và tới khách qua kênh của khách. `SD-12` đã bỏ, nên `SD-13` chỉ cần dữ liệu phiên và CSAT.
+Phần còn lại chia hai nhánh chạy song song. Hai nhánh chỉ dùng chung hợp đồng.
+
+```
+Nhánh backend                                   Nhánh frontend
+SD-C1 bộ kiểm hợp đồng                          SD-C2 bộ đọc dữ liệu mẫu, route giả cho E2E
+SD-04 mở phiên chờ + nhắc lại                   SD-UI7 trang /support của khách
+ ├── SD-05 yêu cầu gọi lại                       └── SD-UI6 form SĐT, form CSAT
+ └── SD-06 hàng chờ + nhận                      SD-UI2 khung chat, nút Nhận, mẫu `/`
+      └── SD-07 tin nhân viên + tin của khách    └── SD-UI3 thông tin khách, chuyển, kết thúc
+           └── SD-08 chuyển, kết thúc, tự đóng  SD-UI4 tab Gọi lại, sự kiện nhắc lại
+                ├── SD-09 CSAT                  SD-UI5 màn cấu hình, mẫu trả lời
+                └── SD-11 thông tin khách
+SD-17 xóa dữ liệu hỗ trợ
+SD-10 cấu hình + mẫu trả lời nhanh
+SD-08, SD-09 → SD-13 `ISupportMetrics`
+```
+
+Hai nhánh gặp nhau ở bước cuối:
+
+```
+SD-04..SD-10 + SD-UI2, SD-UI3, SD-UI6, SD-UI7 → SD-E2E1 luồng trong giờ
+SD-05, SD-06 + SD-UI4, SD-UI6, SD-UI7         → SD-E2E2 luồng ngoài giờ
+SD-E2E1, SD-E2E2, SD-13, SD-17                → SD-14 nghiệm thu
+```
+
+- `SD-04` cần `SD-03` và `SD-16`. Tin hệ thống của phiên chờ tới nhân viên qua hub nhân viên. Tin đó tới khách qua kênh của khách.
+- `SD-12` đã bỏ, nên `SD-13` chỉ cần dữ liệu phiên và CSAT.
+- Mọi task UI còn lại chỉ cần `SD-C2` và task UI đứng trước trong nhánh frontend.
 
 ## Architecture Decisions
 
@@ -83,7 +111,7 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
 8. Giờ làm việc là hàm thuần có `TimeProvider`. `WorkingHoursCalendar` đổi giờ UTC sang `Asia/Ho_Chi_Minh`, rồi so với khung giờ và ngày nghỉ. Khung giờ là nửa mở: 8:00 thuộc trong giờ, 21:00 thuộc ngoài giờ. "Trong giờ" còn cần ít nhất một nhân viên `available`.
 9. Ước tính thời gian chờ. N bằng thời gian chờ trung bình 7 ngày nhân số phiên đang chờ cộng 1, chia số nhân viên sẵn sàng, làm tròn lên. Chưa có dữ liệu 7 ngày thì dùng 5 phút cho mỗi phiên. Hằng số này nằm trong `SupportSettings` để admin chỉnh sau.
 10. Phiên lưu thêm cột cho báo cáo. Spec chưa có các cột này. `support_sessions` thêm `handoff_in_hours`, `customer_user_id`, `anonymous_id`. Báo cáo đếm phiên trong giờ mà không cần tính lại lịch cũ. Hai cột định danh cho phép xóa dữ liệu khi nhận `UserDeletedEvent`.
-11. Route theo REST mức tài nguyên. Spec còn dùng route đặt theo hành động. Plan đề xuất bảng dưới, chờ người dùng chốt ở Câu hỏi mở 1. Response giữ dạng `{ data }`, không kèm link.
+11. Route theo REST mức tài nguyên. Spec cũ dùng route đặt theo hành động. Người dùng duyệt bảng dưới ngày 2026-11-04 (Câu hỏi mở 1). Response giữ dạng `{ data }`, không kèm link.
 
     | Spec | Đề xuất REST |
     | --- | --- |
@@ -114,6 +142,7 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
     - `SUPPORT_CONVERSATION_CLOSED` (409): khách gửi tin vào hội thoại đã đóng.
     - `SUPPORT_MESSAGE_RATE_LIMITED` (429): khách gửi tin vượt giới hạn ở quyết định 27.
     - Đã bỏ ngày 2026-10-18: `SUPPORT_DRAFT_UNAVAILABLE` và `SUPPORT_UNAVAILABLE`.
+    - Thêm ngày 2026-11-03: `SUPPORT_SESSION_NOT_FOUND` (404), `CALLBACK_REQUEST_NOT_FOUND` (404), `CANNED_RESPONSE_NOT_FOUND` (404). Chi tiết ở `tasks/support-desk/api-contract.md`.
 13. Chủ hội thoại. Route phía khách đọc `support_conversations` của module. Khách đăng nhập là chủ khi `customer_user_id` bằng `Actor.UserId`. Khách vãng lai là chủ khi `customer_user_id` rỗng và `anonymous_id` bằng `Actor.AnonymousId`. Không khớp thì trả 404 `SUPPORT_CONVERSATION_NOT_FOUND`, để không lộ hội thoại có tồn tại.
     Cập nhật ngày 2026-10-26:
     - Điều kiện `customer_user_id` rỗng của khách vãng lai là mới.
@@ -162,10 +191,26 @@ mọi task └── SD-E2E1, SD-E2E2 └── SD-14 nghiệm thu
     - Client kiểm dữ liệu trả về bằng `zod`. Dữ liệu sai hợp đồng hiện như một lỗi tải, kèm nút "Thử lại".
     - Route chưa có trả 404. Cột hàng chờ hiện lỗi ngắn và trang không vỡ.
     - Mỗi lần luồng SSE mở lại, client đọc lại `GET /api/admin/support/presence` và danh sách của tab đang mở (quyết định 7).
+    - Ngày 2026-11-03: `tasks/support-desk/api-contract.md` mở rộng hợp đồng này cho mọi route còn lại. Hàng chờ thêm `claimedAt` và `transferNote`. Danh sách gọi lại thêm `conversationId`, `note`, `handledAt`, và `phone` có thể bằng `null`.
+31. Làm song song theo hợp đồng. Từ ngày 2026-11-03, frontend và backend làm theo `tasks/support-desk/api-contract.md`.
+    - Dữ liệu mẫu ở `spec/fixtures/support-desk/` là ví dụ chuẩn của hợp đồng.
+    - Backend so response thật với dữ liệu mẫu bằng helper của `SD-C1`. Helper so khóa và kiểu, không so giá trị.
+    - Frontend kiểm schema `zod` đọc được dữ liệu mẫu bằng Vitest.
+    - Route backend chưa có thì E2E của frontend trả dữ liệu mẫu bằng `page.route`, theo cách SD-UI1 đã làm.
+    - Frontend gỡ `page.route` của một route khi task backend của route đó đã tick.
+    - `SD-E2E1` và `SD-E2E2` chạy với backend thật, không có `page.route` cho route support-desk.
+    - Bên nào cần đổi dạng dữ liệu thì sửa hợp đồng và dữ liệu mẫu trước, trong cùng một commit. Bên kia sửa code theo khi test hợp đồng báo đỏ.
+    - Ngày 2026-11-04 người dùng chốt Câu hỏi mở 2 và 3. Hai quyết định này không đổi dạng dữ liệu của hợp đồng.
 
 ## Task List
 
-Chi tiết từng task ở `tasks/support-desk/todo.md`.
+Mục này là bảng tiến độ chung của hai nhóm. Mỗi task nằm trên một dòng riêng. Hai nhóm tick trên hai nhánh git khác nhau mà không đụng cùng một dòng.
+
+Chi tiết từng task:
+
+- `tasks/support-desk/todo.md`: quy ước chung, Phase 1, checkpoint, E2E và nghiệm thu.
+- `tasks/support-desk/todo-backend.md`: task của nhánh backend.
+- `tasks/support-desk/todo-frontend.md`: task của nhánh frontend.
 
 ### Phase 1: Nền tảng
 - [x] SD-01 · [x] SD-02 · [x] SD-03 · [x] SD-UI1
@@ -177,7 +222,28 @@ Chi tiết từng task ở `tasks/support-desk/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 2: Hội thoại phía khách, tiếp nhận và trả lời
-- [x] SD-15 · [ ] SD-16 · [ ] SD-UI7 · [ ] SD-04 · [ ] SD-05 · [ ] SD-06 · [ ] SD-07 · [ ] SD-UI2 · [ ] SD-08 · [ ] SD-09 · [ ] SD-11 · [ ] SD-UI3 · [ ] SD-UI4 · [ ] SD-UI6 · [ ] SD-17
+Hai nhánh chạy song song theo quyết định 31.
+
+Nhánh backend (`todo-backend.md`):
+- [x] SD-15 hội thoại và tin của khách
+- [x] SD-16 kênh SSE phía khách
+- [x] SD-C1 bộ kiểm hợp đồng
+- [x] SD-04 mở phiên chờ và nhắc lại
+- [x] SD-05 yêu cầu gọi lại
+- [x] SD-06 hàng chờ và nhận phiên
+- [x] SD-07 tin nhân viên và tin mới của khách
+- [x] SD-08 chuyển, kết thúc và tự đóng phiên
+- [x] SD-09 chấm điểm CSAT
+- [x] SD-11 bảng thông tin khách
+- [x] SD-17 xóa dữ liệu hỗ trợ
+
+Nhánh frontend (`todo-frontend.md`):
+- [ ] SD-C2 bộ đọc dữ liệu mẫu và route giả
+- [ ] SD-UI7 trang `/support` của khách
+- [ ] SD-UI6 form số điện thoại và form CSAT
+- [ ] SD-UI2 khung chat và mẫu trả lời nhanh
+- [ ] SD-UI3 thông tin khách và hộp thoại chuyển phiên
+- [ ] SD-UI4 tab Gọi lại
 
 ### Checkpoint SD2
 - [ ] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`
@@ -185,7 +251,12 @@ Chi tiết từng task ở `tasks/support-desk/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 3: Cấu hình và số liệu
-- [ ] SD-10 · [ ] SD-UI5 · [ ] SD-13
+Nhánh backend (`todo-backend.md`):
+- [ ] SD-10 cấu hình và mẫu trả lời nhanh
+- [ ] SD-13 `ISupportMetrics`
+
+Nhánh frontend (`todo-frontend.md`):
+- [ ] SD-UI5 màn cấu hình CSKH. Task này chỉ cần SD-C2, nên frontend làm được trước Phase 3.
 
 Đã bỏ ngày 2026-10-18: SD-12.
 
@@ -194,7 +265,10 @@ Chi tiết từng task ở `tasks/support-desk/todo.md`.
 - [ ] Review với người dùng
 
 ### Phase 4: E2E và nghiệm thu
-- [ ] SD-E2E1 · [ ] SD-E2E2 · [ ] SD-14
+Hai nhánh gặp nhau ở phase này. Chi tiết ở `todo.md`.
+- [ ] SD-E2E1 luồng CSKH trong giờ
+- [ ] SD-E2E2 luồng ngoài giờ và hai người nhận
+- [ ] SD-14 nghiệm thu support-desk
 
 ### Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt
@@ -229,25 +303,29 @@ Spec chưa cập nhật theo phạm vi mới. Bảng dưới ghi tiêu chí theo
 | SSE bị proxy giữ đệm | Thông báo trễ quá 3 giây | Gửi header `Cache-Control: no-cache` và `X-Accel-Buffering: no`; E2E đo qua Vite proxy |
 | Hub SSE chỉ sống trong một instance | Chạy nhiều instance làm mất thông báo | Ghi giới hạn MVP một instance, giống ai-gateway |
 | Biên giờ làm việc sai múi giờ | Báo ngoài giờ lúc đang trong giờ | Unit test 7:59, 8:00, 20:59, 21:00, ngày nghỉ với `FakeTimeProvider` |
-| Thiếu cổng đọc người dùng ở identity | Bảng thông tin khách thiếu tên và email | SD-11 chờ Câu hỏi mở 2; các task khác không chờ |
+| Thiếu cổng đọc người dùng ở identity | Bảng thông tin khách thiếu tên và email | SD-11 thêm `ICustomerDirectory` vào Contracts của Identity (Câu hỏi mở 2) |
+| Hai nhánh hiểu hợp đồng khác nhau | Giao diện vỡ khi nối backend thật | Quyết định 31: test hợp đồng ở hai bên đọc cùng dữ liệu mẫu; E2E cuối chạy với backend thật |
+| Frontend giữ `page.route` sau khi backend xong | E2E xanh nhưng không kiểm route thật | `SD-E2E1` và `SD-E2E2` có tiêu chí không còn `page.route` cho route support-desk |
 
 ## Câu hỏi mở
 
-1. Route REST thay route hành động. Spec dùng `/claim`, `/transfer`, `/close`, `/csat`, `/queue`. Plan đề xuất bảng ở quyết định 11, gồm thêm `GET /api/admin/support/presence` và bốn route phía khách. Người dùng duyệt bảng này không? Nếu duyệt, cần cập nhật `spec/SPEC-support-desk.md` trước SD-06.
-2. Cổng đọc người dùng ở identity. Bảng thông tin khách cần tên và email. Tin nhân viên cần tên ngắn, ví dụ "Lan - CSKH". Đề xuất thêm `IUserDirectory` vào `Pickory.Modules.Identity.Contracts`:
-   - `GetCustomerContactAsync(string userId, CancellationToken)` trả tên và email;
-   - `GetStaffDisplayNamesAsync(IReadOnlyList<string> staffIds, CancellationToken)` trả tên hiển thị của nhân viên.
-   Đây là thay đổi Contracts, thuộc "Ask first". Tên ngắn lấy từ đâu cũng cần chốt: tên đầu của hồ sơ, hay một trường mới do nhân viên tự đặt.
-3. Đơn của khách vãng lai. Spec của `commerce` chỉ có `getOrdersForCustomer(userId, limit)`. Bảng thông tin khách cần đơn theo `anonymousId`. Dùng `ICommerceReader.GetOrdersForAnonymousAsync(string anonymousId, int limit, CancellationToken)`. `tasks/commerce/todo.md` đã thêm hàm này vào Contracts của `commerce`.
+1. Route REST thay route hành động. Đã chốt ngày 2026-11-04: người dùng duyệt bảng ở quyết định 11. `spec/SPEC-support-desk.md` đã dùng bảng này.
+2. Cổng đọc người dùng ở identity. Đã chốt ngày 2026-11-04:
+   - Tin nhân viên hiện tên trong hồ sơ của nhân viên, không có trường tên ngắn riêng. SD-07 đọc tên từ `IStaffDirectory` đã có trong Contracts của Identity.
+   - `IStaffDirectory.GetNamesAsync` trả email khi hồ sơ không có tên. Khách không được thấy email này, nên `staffDisplayName` bằng `null` khi nhân viên chưa có tên.
+   - SD-11 thêm `ICustomerDirectory.GetContactAsync(string userId, CancellationToken)` vào Contracts của Identity. Hàm này trả tên và email của khách.
+3. Đơn của khách vãng lai. Đã chốt ngày 2026-11-04: SD-11 dùng `ICommerceReader.GetOrdersForAnonymousAsync`. Hàm này đã có trong Contracts của `commerce`.
 4. Đã bỏ ngày 2026-10-18. Module không còn dùng `IConversationService`.
-5. Hội thoại ngoài giờ chờ tới khi nào? Ngoài giờ không có ai nhận, nên phiên chờ kéo dài tới sáng hôm sau. Đề xuất: khách gửi số điện thoại thì đóng phiên ngay. Khách không gửi thì phiên tự đóng sau 30 phút.
+5. Hội thoại ngoài giờ chờ tới khi nào? Đã chốt ngày 2026-11-04:
+   - Khách gửi số điện thoại khi hội thoại có phiên chờ chưa ai nhận: module đóng phiên đó ngay (SD-05).
+   - Phiên chờ mở ngoài giờ mà khách không gửi số: job tự đóng phiên sau `autoCloseMinutes` (SD-08).
 6. Đã chốt bằng quyết định 26: module tự xóa hội thoại, tin và phiên cũ hơn 90 ngày.
-7. Ước tính thời gian chờ khi chưa có dữ liệu. Plan dùng 5 phút mỗi phiên (quyết định 9). Người dùng muốn mức khác không?
+7. Ước tính thời gian chờ khi chưa có dữ liệu. Đã chốt ngày 2026-11-04: giữ 5 phút mỗi phiên (quyết định 9).
 8. Mốc nhắc lại 10 phút và tự đóng 30 phút. Đây là Open Question 1 của spec. Plan giữ mặc định của spec và đặt hai mốc trong `support_settings`.
-9. Phân loại hội thoại. Đây là Open Question 2 của spec. Plan giữ mặc định: chưa làm.
+9. Phân loại hội thoại. Đây là Open Question 2 của spec. Đã chốt ngày 2026-11-04: chưa làm.
 10. Giới hạn tin của khách. Đã chốt ngày 2026-10-18: 10 tin mỗi phút và 200 tin mỗi ngày theo `anonymous_id` (quyết định 27).
 11. Thông tin khách vãng lai. Đã chốt ngày 2026-10-18: khách không phải nhập tên hay số điện thoại trước khi chat. Nhân viên hỏi trong lúc chat khi cần.
 12. Lối vào `/support`. Đã chốt ngày 2026-10-18: link "Liên hệ CSKH" ở chân trang và trên `/help`. Thanh đầu trang không có link này. Fallback của `chatbot-rag` trỏ tới cùng trang.
     - Ngày 2026-10-20: `knowledge-base` làm sau module này. Module này dựng chân trang và đặt link ở đó.
     - Link trên `/help` do KB-UI1 của `tasks/knowledge-base/todo.md` thêm sau.
-13. Ngữ cảnh từ chatbot. Khách mở `/support` từ fallback của `chatbot-rag` thì nhân viên không thấy câu khách đã hỏi bot. Đề xuất: MVP chưa chuyển ngữ cảnh. Việc này mở lại khi `chatbot-rag` có human handoff.
+13. Ngữ cảnh từ chatbot. Khách mở `/support` từ fallback của `chatbot-rag` thì nhân viên không thấy câu khách đã hỏi bot. Đã chốt ngày 2026-11-04: MVP chưa chuyển ngữ cảnh. Việc này mở lại khi `chatbot-rag` có human handoff.

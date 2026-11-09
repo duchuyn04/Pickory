@@ -11,15 +11,15 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // Kiểm tra toàn bộ luồng quản lý thương hiệu từ route công khai tới quản trị.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class BrandManagementTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class BrandManagementTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
     private string _adminCookie = null!;
     private string _salesCookie = null!;
 
-    public BrandManagementTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public BrandManagementTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         // Tắt tự động nạp cookie để bài test kiểm soát phiên người dùng chính xác.
@@ -119,6 +119,42 @@ public sealed class BrandManagementTests : IClassFixture<PickoryWebApplicationFa
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         using var json = await ActorHttp.ReadJsonAsync(response);
         Assert.Equal("BRAND_HAS_PRODUCTS", json.RootElement.GetProperty("error").GetProperty("code").GetString());
+    }
+
+    [Fact]
+    // Xóa thương hiệu là xóa mềm: dòng giữ `deletedAt`, danh sách ẩn dòng, và slug được giải phóng cho bản mới.
+    public async Task DeleteBrand_MarksDeletedHidesItAndReleasesSlug()
+    {
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var name = $"Hãng xóa mềm {suffix}";
+        var createRequest = ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/brands", new { name }, _adminCookie);
+        var createResponse = await _client.SendAsync(createRequest);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        using var createJson = await ActorHttp.ReadJsonAsync(createResponse);
+        var brandId = createJson.RootElement.GetProperty("data").GetProperty("id").GetString()!;
+        var slug = createJson.RootElement.GetProperty("data").GetProperty("slug").GetString()!;
+
+        var deleteResponse = await _client.SendAsync(
+            ActorHttp.CreateJsonRequest(HttpMethod.Delete, $"/api/admin/brands/{brandId}", null, _adminCookie));
+        Assert.Equal(HttpStatusCode.OK, deleteResponse.StatusCode);
+
+        // Danh sách công khai không còn thương hiệu đã xóa.
+        var listResponse = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, "/api/brands"));
+        using var listJson = await ActorHttp.ReadJsonAsync(listResponse);
+        Assert.DoesNotContain(listJson.RootElement.GetProperty("data").EnumerateArray(),
+            item => item.GetProperty("id").GetString() == brandId);
+
+        // Dòng vẫn còn trong DB với thời điểm xóa.
+        await using var catalog = _database.CreateCatalogContext();
+        var stored = await catalog.Brands.IgnoreQueryFilters().SingleAsync(brand => brand.Id == brandId);
+        Assert.NotNull(stored.DeletedAt);
+
+        // Tạo lại cùng tên nhận đúng slug cũ, vì chỉ mục duy nhất bỏ qua dòng đã xóa.
+        var recreateResponse = await _client.SendAsync(
+            ActorHttp.CreateJsonRequest(HttpMethod.Post, "/api/admin/brands", new { name }, _adminCookie));
+        Assert.Equal(HttpStatusCode.Created, recreateResponse.StatusCode);
+        using var recreateJson = await ActorHttp.ReadJsonAsync(recreateResponse);
+        Assert.Equal(slug, recreateJson.RootElement.GetProperty("data").GetProperty("slug").GetString());
     }
 
     [Fact]

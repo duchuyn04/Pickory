@@ -21,8 +21,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-20: hàng chờ kiểm duyệt và ẩn, hiện đánh giá. Test đi qua route thật và đọc lại DB, audit và sự kiện.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminReviewModerationTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CommerceCollection.Name)]
+public sealed class AdminReviewModerationTests : IClassFixture<CommerceWebApplicationFactory>, IAsyncLifetime
 {
     private const string AdminReviewsPath = "/api/admin/reviews";
     private const string AuditTargetType = "review";
@@ -36,7 +36,7 @@ public sealed class AdminReviewModerationTests : IClassFixture<PickoryWebApplica
     private readonly List<string> _orderIds = [];
     private readonly List<string> _reviewIds = [];
 
-    public AdminReviewModerationTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminReviewModerationTests(CommerceWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

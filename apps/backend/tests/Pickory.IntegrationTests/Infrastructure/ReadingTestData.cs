@@ -160,13 +160,14 @@ public sealed class ReadingTestData(IntegrationDatabaseFixture database, string 
             .Where(movement => context.Skus.Any(sku => sku.Id == movement.SkuId && _productIds.Contains(sku.ProductId)))
             .ExecuteDeleteAsync();
         // Xóa sản phẩm trước vì khóa ngoại tới danh mục và hãng. SKU, ảnh và lịch sử slug xóa theo.
-        await context.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm, danh mục và thương hiệu đã bị xóa mềm trong test.
+        await context.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
         // Danh mục con sinh sau danh mục cha, nên xóa theo thứ tự ngược.
         foreach (var categoryId in Enumerable.Reverse(_categoryIds))
         {
-            await context.Categories.Where(category => category.Id == categoryId).ExecuteDeleteAsync();
+            await context.Categories.IgnoreQueryFilters().Where(category => category.Id == categoryId).ExecuteDeleteAsync();
         }
 
-        await context.Brands.Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
+        await context.Brands.IgnoreQueryFilters().Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
     }
 }

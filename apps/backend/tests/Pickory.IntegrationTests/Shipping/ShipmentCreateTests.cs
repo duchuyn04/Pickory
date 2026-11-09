@@ -14,8 +14,8 @@ using Shipment = Pickory.Modules.Shipping.Contracts.Shipments.Shipment;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-07 lát 1: tạo vận đơn thành công lưu `shipments`, một dòng `shipment_events` và phát một sự kiện sau commit.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentCreateTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentCreateTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly RecordingGhnClient _ghn = new(new FakeGhnClient());
     private readonly RecordingEventDispatcher _events = new();

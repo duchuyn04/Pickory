@@ -10,7 +10,8 @@ using Pickory.Modules.SupportDesk.Realtime;
 
 namespace Pickory.IntegrationTests.SupportDesk;
 
-// Dụng cụ chung cho test SD-03: dựng host có đồng hồ giả và đọc ghi bảng `staff_presence`.
+// Dụng cụ chung cho test SSE của nhân viên và khách.
+// Công cụ dựng host có đồng hồ giả, đọc ghi bảng `staff_presence` và chờ số kết nối của hai hub.
 internal static class SupportDeskTestKit
 {
     // Cột `lastSeenAt` có độ chính xác mili giây. Giờ bắt đầu cắt đến mili giây để so sánh giờ đã ghi với đồng hồ giả không lệch.
@@ -47,25 +48,38 @@ internal static class SupportDeskTestKit
     }
 
     // Host riêng với đồng hồ giả bắt đầu ở giờ thật. Phiên đăng nhập tạo bằng giờ thật vẫn còn hạn trong host này.
-    public static WebApplicationFactory<Program> CreateHostWithClock(PickoryWebApplicationFactory factory, FakeTimeProvider clock)
+    // `configureServices` cho test đăng ký thêm dịch vụ thử, ví dụ handler theo dõi thứ tự commit.
+    public static WebApplicationFactory<Program> CreateHostWithClock(
+        PickoryWebApplicationFactory factory,
+        FakeTimeProvider clock,
+        Action<IServiceCollection>? configureServices = null)
     {
         return factory.WithWebHostBuilder(builder => builder.ConfigureTestServices(services =>
         {
             // Đồng hồ giả thay đồng hồ thật của cả host, nên nhịp tim và job `away` chỉ chạy khi test tiến đồng hồ.
             services.RemoveAll<TimeProvider>();
             services.AddSingleton<TimeProvider>(clock);
+            configureServices?.Invoke(services);
         }));
     }
 
-    // Chờ hub có đúng số kết nối mong muốn, tối đa 5 giây. Vòng chờ ngắn thay cho chờ cố định, nên test nhanh khi máy nhanh.
-    public static async Task WaitForConnectionCountAsync(SupportEventHub hub, int expectedCount)
+    // Chờ hub nhân viên có đúng số kết nối mong muốn.
+    public static Task WaitForConnectionCountAsync(SupportEventHub hub, int expectedCount) =>
+        WaitForConnectionCountAsync(() => hub.ConnectionCount, "Hub nhân viên", expectedCount);
+
+    // Chờ hub phía khách có đúng số kết nối mong muốn. Mọi hội thoại dùng chung một hub.
+    public static Task WaitForConnectionCountAsync(CustomerEventHub hub, int expectedCount) =>
+        WaitForConnectionCountAsync(() => hub.ConnectionCount, "Hub phía khách", expectedCount);
+
+    // Chờ tới khi số kết nối bằng mong muốn, tối đa 5 giây. Vòng chờ ngắn thay cho chờ cố định, nên test nhanh khi máy nhanh.
+    private static async Task WaitForConnectionCountAsync(Func<int> readCount, string hubName, int expectedCount)
     {
         var deadline = DateTime.UtcNow + SseTestStream.DefaultTimeout;
-        while (hub.ConnectionCount != expectedCount)
+        while (readCount() != expectedCount)
         {
             if (DateTime.UtcNow > deadline)
             {
-                throw new TimeoutException($"Hub có {hub.ConnectionCount} kết nối, test chờ {expectedCount}.");
+                throw new TimeoutException($"{hubName} có {readCount()} kết nối, test chờ {expectedCount}.");
             }
 
             await Task.Delay(10);

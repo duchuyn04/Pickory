@@ -9,7 +9,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-06: response và audit của cấu hình commerce không lộ `SEPAY_WEBHOOK_API_KEY`.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class CommerceSettingsSecretsTests : IClassFixture<ConfiguredSepayWebApplicationFactory>, IAsyncLifetime
 {
     private const string SettingsPath = "/api/admin/commerce/settings";
@@ -18,7 +18,7 @@ public sealed class CommerceSettingsSecretsTests : IClassFixture<ConfiguredSepay
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public CommerceSettingsSecretsTests(ConfiguredSepayWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public CommerceSettingsSecretsTests(ConfiguredSepayWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _database = database;
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });

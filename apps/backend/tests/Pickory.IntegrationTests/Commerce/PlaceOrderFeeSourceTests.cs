@@ -19,7 +19,7 @@ namespace Pickory.IntegrationTests.Commerce;
 
 // COM-27: đơn ghi lại nguồn phí vận chuyển (GHN, phí đã lưu, phí dự phòng), còn khách không thấy nguồn phí ở route nào.
 // Kho seed ở Hà Nội (miền Bắc) và địa chỉ nhận ở Hồ Chí Minh (miền Nam), nên tuyến là liên vùng.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class PlaceOrderFeeSourceTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string OrdersPath = "/api/orders";
@@ -40,7 +40,7 @@ public sealed class PlaceOrderFeeSourceTests : IClassFixture<CheckoutWebApplicat
     private readonly HttpClient _client;
     private readonly List<string> _keys = [];
 
-    public PlaceOrderFeeSourceTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public PlaceOrderFeeSourceTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _kit = new CartTestKit(factory, database);

@@ -9,8 +9,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-10: Kiểm tra chi tiết đơn, chi tiết nhiều slug và so sánh trên dữ liệu cố định.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class PublicProductDetailTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class PublicProductDetailTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ReadingTestData _data;
@@ -19,7 +19,7 @@ public sealed class PublicProductDetailTests : IClassFixture<PickoryWebApplicati
     private Category _childCategory = null!;
     private Category _otherCategory = null!;
 
-    public PublicProductDetailTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public PublicProductDetailTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         // Tắt tự đi theo chuyển hướng để test đọc được mã 301 và header `Location`.
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false, AllowAutoRedirect = false });

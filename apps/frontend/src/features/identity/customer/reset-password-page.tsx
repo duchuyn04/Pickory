@@ -12,6 +12,7 @@ import { getConfirmPasswordError, getPasswordError } from '../../../shared/ident
 import { AuthCard, PasswordInput } from './auth-ui';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { ResultPanel } from '../../../shared/result-panel';
+import { getErrorMessage } from '../../../shared/error-message';
 
 // Trang đặt mật khẩu mới từ link trong email; dùng chung cho quên mật khẩu và lời mời nhân viên.
 export function ResetPasswordPage() {
@@ -73,11 +74,7 @@ export function ResetPasswordPage() {
       setSubmitted(true);
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (link hết hạn, đã dùng...) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('Đã có lỗi xảy ra. Vui lòng thử lại.');
-      }
+      setError(getErrorMessage(err, 'Đã có lỗi xảy ra. Vui lòng thử lại.'));
     } finally {
       setLoading(false);
     }

@@ -29,6 +29,24 @@ internal sealed class SupportEventHub
         }
     }
 
+    // Chỉ gửi tới kết nối của các nhân viên được chọn. Sự kiện phiên chờ dùng hàm này để nhân viên tạm vắng không nhận.
+    public void BroadcastToStaff(IReadOnlyCollection<string> staffIds, SupportEvent supportEvent)
+    {
+        // Đổi sang tập mã một lần. Vòng dưới so với từng kết nối, và danh sách nhân viên có thể dài.
+        var receivers = new HashSet<string>(staffIds, StringComparer.Ordinal);
+        // Duyệt bản chụp của từ điển, giống `Broadcast`.
+        foreach (var connection in _connections.Values)
+        {
+            // Kết nối của nhân viên ngoài danh sách không nhận gì.
+            if (!receivers.Contains(connection.StaffId))
+            {
+                continue;
+            }
+
+            connection.Send(supportEvent);
+        }
+    }
+
     // Chỉ `SupportEventConnection` gọi hàm này khi đóng, để hub không giữ kết nối đã đóng.
     internal void Remove(Guid connectionId)
     {

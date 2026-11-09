@@ -9,8 +9,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Database.Catalog;
 
 // Worker xóa ảnh: xóa xong thì đánh dấu xong, lỗi thì hẹn giờ thử lại, quá 8 lần thì dừng và ghi log lỗi.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ImageDeletionProcessorTests(IntegrationDatabaseFixture database) : IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class ImageDeletionProcessorTests(CatalogDatabaseFixture database) : IAsyncLifetime
 {
     // Mốc thời gian xa trong tương lai để job của test khác không đến hạn cùng lúc với job của test này.
     private static readonly DateTimeOffset Now = new(2099, 1, 1, 8, 0, 0, TimeSpan.Zero);

@@ -38,15 +38,15 @@ internal sealed class StaffPresenceService(
     public async Task<IReadOnlyList<StaffPresenceResponse>> ListAvailableAsync(CancellationToken cancellationToken)
     {
         // Chỉ nhân viên `available` mới nhận hội thoại. Thứ tự theo mã nhân viên để kết quả ổn định giữa các lần gọi.
-        var rows = await database.StaffPresences
-            .AsNoTracking()
-            .Where(row => row.Status == StaffPresenceStatus.Available)
-            .OrderBy(row => row.StaffId)
-            .ToListAsync(cancellationToken);
+        var rows = await AvailableRows().ToListAsync(cancellationToken);
         return rows
             .Select(row => new StaffPresenceResponse(row.StaffId, StaffPresenceWire.ToWire(row.Status), row.LastSeenAt))
             .ToList();
     }
+
+    // Mã nhân viên đang `available`. Bên gọi cần tập mã để chỉ gửi sự kiện phiên chờ tới người nhận được phiên.
+    public Task<List<string>> ListAvailableStaffIdsAsync(CancellationToken cancellationToken) =>
+        AvailableRows().Select(row => row.StaffId).ToListAsync(cancellationToken);
 
     // Nhịp tim chỉ làm mới `lastSeenAt` khi dòng đã có. Mở kết nối SSE không được tự bật nhân viên sang `available`.
     public async Task RecordHeartbeatAsync(string staffId, CancellationToken cancellationToken)
@@ -56,6 +56,13 @@ internal sealed class StaffPresenceService(
             .Where(row => row.StaffId == staffId)
             .ExecuteUpdateAsync(set => set.SetProperty(row => row.LastSeenAt, now), cancellationToken);
     }
+
+    // Truy vấn dùng chung của hai hàm đọc nhân viên sẵn sàng. Điều kiện lọc chỉ khai báo ở một chỗ.
+    private IQueryable<StaffPresence> AvailableRows() =>
+        database.StaffPresences.AsNoTracking()
+            .Where(row => row.Status == StaffPresenceStatus.Available)
+            // Thứ tự theo mã nhân viên để kết quả ổn định giữa các lần gọi.
+            .OrderBy(row => row.StaffId);
 
     // Cột `lastSeenAt` chỉ lưu tới mili giây. Cắt giờ trước khi ghi để giá trị trả cho client bằng giá trị đọc lại từ DB.
     private DateTime GetNowAtColumnPrecision()

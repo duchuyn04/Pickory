@@ -16,7 +16,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-25: Tra cứu đơn hàng bằng mã đơn và email, trả token để mở đơn ngay trên trình duyệt.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class OrderLookupTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string LookupPath = "/api/order-lookups";
@@ -32,7 +32,7 @@ public sealed class OrderLookupTests : IClassFixture<CheckoutWebApplicationFacto
     private readonly List<string> _keys = [];
     private int _logsBefore;
 
-    public OrderLookupTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public OrderLookupTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _kit = new CartTestKit(factory, database);

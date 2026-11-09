@@ -8,8 +8,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-12: kiểm địa chỉ nhận bằng API xem trước của GHN. Hàm không tạo vận đơn, không ghi DB, và không ném lỗi khi GHN gặp sự cố.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentAddressCheckTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentAddressCheckTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly RecordingGhnClient _ghn = new(new FakeGhnClient());
     private readonly ListLogger<ShippingService> _logger = new();

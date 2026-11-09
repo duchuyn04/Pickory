@@ -9,6 +9,7 @@ import { useListFilters } from '../../../shared/use-list-filters';
 import { useCan } from '../hooks/use-actor';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { ErrorAlert } from '../../../shared/error-alert';
+import { getErrorMessage } from '../../../shared/error-message';
 import './identity-admin.css';
 
 // Một dòng khách hàng như API trả về; không có passwordHash.
@@ -93,11 +94,7 @@ export function CustomersPage() {
       await queryClient.invalidateQueries({ queryKey: ['admin-customers'] });
     } catch (err: unknown) {
       // Hiện nguyên thông báo của API (không đủ quyền, không tìm thấy khách...) vì đã là tiếng Việt.
-      if (err instanceof Error) {
-        setActionError(err.message);
-      } else {
-        setActionError('Thao tác khóa/mở khóa khách hàng thất bại.');
-      }
+      setActionError(getErrorMessage(err, 'Thao tác khóa/mở khóa khách hàng thất bại.'));
     }
   }
 
@@ -151,7 +148,7 @@ export function CustomersPage() {
           </p>
         ) : isError ? (
           <ErrorAlert
-            message={error instanceof Error ? error.message : 'Tải danh sách khách hàng thất bại.'}
+            message={getErrorMessage(error, 'Tải danh sách khách hàng thất bại.')}
             className="identity-table-alert"
           />
         ) : data && data.items.length === 0 && (hasFilters || page > 1) ? (

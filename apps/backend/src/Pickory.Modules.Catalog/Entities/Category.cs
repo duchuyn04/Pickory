@@ -13,6 +13,8 @@ public sealed class Category
     public JsonDocument Attributes { get; set; } = null!;
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    // Thời điểm xóa mềm. Dòng đã xóa không còn trong cây danh mục và không nhận sản phẩm mới.
+    public DateTime? DeletedAt { get; set; }
 
     public Category? Parent { get; set; }
     public ICollection<Category> Children { get; set; } = new List<Category>();

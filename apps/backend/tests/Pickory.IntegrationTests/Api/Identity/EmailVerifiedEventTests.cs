@@ -15,14 +15,14 @@ namespace Pickory.IntegrationTests.Api.Identity;
 
 // COM-21: identity phát `EmailVerifiedEvent` đúng lúc `EmailVerified` của tài khoản khách đổi từ sai sang đúng.
 // Test đi qua route thật và đọc lại sự kiện đã ghi, nên việc đăng ký handler cũng được kiểm.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class EmailVerifiedEventTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class EmailVerifiedEventTests : IClassFixture<IdentityWebApplicationFactory>
 {
     private readonly PickoryWebApplicationFactory _factory;
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public EmailVerifiedEventTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public EmailVerifiedEventTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

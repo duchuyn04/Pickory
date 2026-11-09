@@ -7,6 +7,7 @@ import { useTrackProductView } from '../../activity-tracking/use-track-product-v
 import { applyLiveProductStock, useLiveStock } from '../shared/stock-live';
 import type { ProductDetail } from './catalog-api';
 import { ProductView } from './product-view';
+import { getErrorMessage } from '../../../shared/error-message';
 import './category-page.css';
 import './product-page.css';
 
@@ -79,7 +80,10 @@ function ProductContent({ slug }: { slug: string }) {
   if (product.isError) {
     return (
       <main className="catalog-page">
-        <ErrorAlert message={product.error.message} className="catalog-alert" />
+        <ErrorAlert
+          message={getErrorMessage(product.error, 'Không tải được sản phẩm.')}
+          className="catalog-alert"
+        />
       </main>
     );
   }

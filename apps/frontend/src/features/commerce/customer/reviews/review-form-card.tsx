@@ -19,6 +19,7 @@ import {
   updateReview,
   type OwnReview,
 } from './reviews-api';
+import { getErrorMessage } from '../../../../shared/error-message';
 
 const BODY_FIELD_ID = 'review-body';
 const BODY_COUNTER_ID = 'review-body-count';
@@ -88,7 +89,7 @@ export function ReviewFormCard({ productId, editing, onDone, onCancel }: ReviewF
         return;
       }
       // Lỗi 403, 409 và lỗi mạng đã có thông báo tiếng Việt từ `apiRequest`, nên hiện nguyên văn.
-      setApiError(error instanceof Error ? error.message : 'Gửi đánh giá thất bại.');
+      setApiError(getErrorMessage(error, 'Gửi đánh giá thất bại.'));
     }
   }
 

@@ -29,6 +29,7 @@ Spec của module nằm ở `spec/SPEC-<module>.md`. Thứ tự build theo `spec
 | `ai-gateway-removal/` | Gỡ `ai-gateway` khỏi Pickory (mã `AIR`) | Chưa bắt đầu |
 | `support-desk/` | `support-desk` (mã `SD`) | Chưa bắt đầu. Ngày 2026-10-18 đổi thành chat CSKH độc lập, không qua bot |
 | `admin-console/` | `admin-console` (mã `ADM`) | Chưa bắt đầu. Ngày 2026-10-18 bỏ báo cáo hiệu quả AI |
+| `test-speed/` | Giảm thời gian chạy integration test của backend (mã `TS`) | Chưa bắt đầu. Thêm ngày 2026-11-04, làm sau SD-06 và trước SD-07 |
 
 Ngày 2026-10-14 người dùng bỏ ba module `smart-search`, `recommendations` và `personalized-content`. Phần AI cá nhân hóa chỉ còn chatbot tư vấn `shopping-assistant`. Chi tiết ở mục "Thay đổi phạm vi ngày 2026-10-14" của `spec/CAPABILITY-MAP.md`.
 

@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { ErrorAlert } from '../../../shared/error-alert';
 import type { ProductSkuInfo } from '../../catalog/customer/catalog-api';
 import { useAddCartItem } from './use-cart';
+import { getErrorMessage } from '../../../shared/error-message';
 
 interface BuyNowButtonProps {
   sku: ProductSkuInfo | null;
@@ -35,7 +36,9 @@ export function BuyNowButton({ sku, isDiscontinued, quantity = 1 }: BuyNowButton
       >
         Mua ngay
       </button>
-      {addItem.isError && <ErrorAlert message={addItem.error.message} />}
+      {addItem.isError && (
+        <ErrorAlert message={getErrorMessage(addItem.error, 'Không thêm được sản phẩm vào giỏ.')} />
+      )}
     </>
   );
 }

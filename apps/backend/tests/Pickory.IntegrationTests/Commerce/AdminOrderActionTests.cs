@@ -17,7 +17,7 @@ using Xunit;
 namespace Pickory.IntegrationTests.Commerce;
 
 // COM-15: nhân viên xác nhận, hủy và đánh dấu đã xuất hóa đơn. Mỗi thao tác ghi lịch sử, audit và sự kiện.
-[Collection(IntegrationDatabaseCollection.Name)]
+[Collection(CommerceCollection.Name)]
 public sealed class AdminOrderActionTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
 {
     private const string AdminOrdersPath = "/api/admin/orders";
@@ -34,7 +34,7 @@ public sealed class AdminOrderActionTests : IClassFixture<CheckoutWebApplication
     private readonly List<string> _keys = [];
     private readonly List<string> _codes = [];
 
-    public AdminOrderActionTests(CheckoutWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public AdminOrderActionTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

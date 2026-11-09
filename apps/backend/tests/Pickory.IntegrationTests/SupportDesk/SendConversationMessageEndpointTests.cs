@@ -1,34 +1,52 @@
 using System.Net;
+using System.Text.Json;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Time.Testing;
 using Pickory.IntegrationTests.Infrastructure;
+using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Entities;
 using Xunit;
 
 namespace Pickory.IntegrationTests.SupportDesk;
 
 // SD-15: `POST /api/support/conversations/{id}/messages`. Host riêng có đồng hồ giả, nên giới hạn tin kiểm được mà không chờ thật.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class SendConversationMessageEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(SupportDeskCollection.Name)]
+public sealed class SendConversationMessageEndpointTests(SupportDeskWebApplicationFactory factory, SupportDeskDatabaseFixture database)
+    : IClassFixture<SupportDeskWebApplicationFactory>, IAsyncLifetime
 {
     private const string RateLimitedCode = "SUPPORT_MESSAGE_RATE_LIMITED";
 
-    private readonly FakeTimeProvider _clock = new(SupportDeskTestKit.NowAtMillisecondPrecision());
+    // Đồng hồ cố định ở 10:00 sáng giờ Việt Nam, để kết quả không phụ thuộc giờ chạy test.
+    private readonly FakeTimeProvider _clock = new(SupportSessionTestKit.InHoursMoment);
     private WebApplicationFactory<Program> _host = null!;
     private HttpClient _client = null!;
 
-    public Task InitializeAsync()
+    public async Task InitializeAsync()
     {
-        _host = SupportDeskTestKit.CreateHostWithClock(factory, _clock);
+        // Bảng trực dùng chung cho cả bộ test. Không có dòng `available` thì phiên chờ đi nhánh ngoài giờ, như test mong đợi.
+        await SupportDeskTestKit.ClearPresenceAsync(database);
+        _host = SupportDeskTestKit.CreateHostWithClock(factory, _clock, services =>
+        {
+            // Đồng hồ giả nhảy 24 giờ để kiểm tra giới hạn tin.
+            // Gỡ worker bảo trì để không tự đóng hội thoại giữa lúc test đang kiểm tra.
+            var worker = services.SingleOrDefault(
+                descriptor => descriptor.ServiceType == typeof(IHostedService)
+                    && descriptor.ImplementationType == typeof(SupportConversationMaintenanceWorker));
+            if (worker is not null)
+            {
+                services.Remove(worker);
+            }
+        });
         _client = _host.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
-        return Task.CompletedTask;
     }
 
     public async Task DisposeAsync()
     {
         _client.Dispose();
         await _host.DisposeAsync();
+        await SupportDeskTestKit.ClearPresenceAsync(database);
         await SupportConversationTestKit.DeleteIssuedConversationsAsync(database);
     }
 
@@ -43,11 +61,14 @@ public sealed class SendConversationMessageEndpointTests(PickoryWebApplicationFa
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal("no-store", response.Headers.CacheControl?.ToString());
         var data = await SupportConversationTestKit.ReadDataAsync(response);
-        Assert.Equal(["id", "role", "body", "action", "createdAt"], data.EnumerateObject().Select(property => property.Name));
+        Assert.Equal(["id", "role", "body", "action", "staffDisplayName", "createdAt"], data.EnumerateObject().Select(property => property.Name));
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("staffDisplayName").ValueKind);
         Assert.Equal("customer", data.GetProperty("role").GetString());
         Assert.Equal("Cho mình hỏi về đơn hàng", data.GetProperty("body").GetString());
 
-        var stored = Assert.Single(await SupportConversationTestKit.ReadMessagesAsync(database, conversation.Id));
+        // Tin hệ thống của phiên chờ nằm cùng hội thoại, nên chỉ đọc tin của khách.
+        var stored = Assert.Single(await SupportConversationTestKit.ReadMessagesByRoleAsync(
+            database, conversation.Id, SupportMessageRole.Customer));
         Assert.Equal(data.GetProperty("id").GetString(), stored.Id);
         Assert.Equal(SupportMessageRole.Customer, stored.Role);
         Assert.Equal("Cho mình hỏi về đơn hàng", stored.Body);
@@ -184,7 +205,8 @@ public sealed class SendConversationMessageEndpointTests(PickoryWebApplicationFa
         var blocked = await SendAsync(conversation.Id, cookie, new { body = "Tin bị chặn" });
 
         await SupportConversationTestKit.AssertErrorAsync(blocked, HttpStatusCode.TooManyRequests, RateLimitedCode);
-        var storedBodies = (await SupportConversationTestKit.ReadMessagesAsync(database, conversation.Id)).Select(message => message.Body).ToList();
+        var storedBodies = (await SupportConversationTestKit.ReadMessagesByRoleAsync(
+            database, conversation.Id, SupportMessageRole.Customer)).Select(message => message.Body).ToList();
         Assert.Equal(10, storedBodies.Count);
         Assert.DoesNotContain("Tin bị chặn", storedBodies);
 
@@ -246,7 +268,10 @@ public sealed class SendConversationMessageEndpointTests(PickoryWebApplicationFa
         var blocked = await SendAsync(conversation.Id, cookie, new { body = "Tin thứ 201" });
 
         await SupportConversationTestKit.AssertErrorAsync(blocked, HttpStatusCode.TooManyRequests, RateLimitedCode);
-        Assert.Equal(200, (await SupportConversationTestKit.ReadMessagesAsync(database, conversation.Id)).Count);
+        Assert.Equal(
+            200,
+            (await SupportConversationTestKit.ReadMessagesByRoleAsync(
+                database, conversation.Id, SupportMessageRole.Customer)).Count);
 
         // Cửa sổ 24 giờ tính từ lượt đầu. Qua 24 giờ thì gửi lại được.
         _clock.Advance(TimeSpan.FromHours(24));
@@ -258,7 +283,11 @@ public sealed class SendConversationMessageEndpointTests(PickoryWebApplicationFa
     {
         var cookie = existingCookie ?? SupportConversationTestKit.NewGuestCookie();
         var conversation = await SupportConversationTestKit.SeedConversationAsync(
-            database, SupportConversationTestKit.ReadAnonymousId(cookie), status: status);
+            database,
+            SupportConversationTestKit.ReadAnonymousId(cookie),
+            status: status,
+            // Giờ seed tính từ đồng hồ của host, nên `lastMessageAt` sau khi gửi tin chắc chắn mới hơn.
+            lastMessageAt: _clock.GetUtcNow().UtcDateTime.AddHours(-1));
         return (cookie, conversation);
     }
 

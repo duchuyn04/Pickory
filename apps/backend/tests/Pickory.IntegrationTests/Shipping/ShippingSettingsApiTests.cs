@@ -17,8 +17,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-06: route cấu hình shipping của back-office, gồm quyền, đọc, ghi, kiểm danh mục và audit.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShippingSettingsApiTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShippingSettingsApiTests : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private const string SettingsPath = "/api/admin/shipping/settings";
     private const string AuditTargetType = "shipping_settings";
@@ -28,7 +28,7 @@ public sealed class ShippingSettingsApiTests : IClassFixture<PickoryWebApplicati
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public ShippingSettingsApiTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public ShippingSettingsApiTests(ShippingWebApplicationFactory factory, ShippingDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

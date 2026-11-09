@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Hosting;
+using System.Reflection;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Configuration;
@@ -16,6 +17,7 @@ using Pickory.Modules.Shipping.Contracts.Events;
 using Pickory.Modules.Shipping.Ghn;
 using Pickory.Modules.Shipping.Sync;
 using Pickory.Modules.SupportDesk.Presence;
+using Pickory.Modules.SupportDesk.Sessions;
 using Pickory.Modules.Identity.GoogleOAuth;
 using Pickory.Shared.Configuration;
 using Pickory.Shared.Events;
@@ -24,6 +26,7 @@ namespace Pickory.IntegrationTests.Infrastructure;
 
 public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) : WebApplicationFactory<Program>
 {
+    public IntegrationDatabaseFixture Database => database;
     public static string ResolveTestDatabaseUrl()
     {
         // Không dự phòng bằng `DATABASE_URL` vì collection sẽ reset DB được chọn.
@@ -75,7 +78,7 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
         var directory = new DirectoryInfo(AppContext.BaseDirectory);
         while (directory is not null)
         {
-            if (File.Exists(Path.Combine(directory.FullName, "CLAUDE.md")) &&
+            if ((File.Exists(Path.Combine(directory.FullName, "AGENTS.md")) || File.Exists(Path.Combine(directory.FullName, "CLAUDE.md"))) &&
                 Directory.Exists(Path.Combine(directory.FullName, "apps", "backend")))
             {
                 return directory.FullName;
@@ -95,12 +98,21 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
         builder.UseSetting("DATABASE_URL", database.DatabaseUrl);
         // Test không đọc `.env` dev. Giá trị như `TRUST_PROXY` của máy dev không làm đổi kết quả test.
         builder.UseSetting("PICKORY_SKIP_DOTENV", "true");
+        // Ghi đè biến môi trường để các collection song song không bị ảnh hưởng lẫn nhau.
+        builder.UseSetting("GHN_TOKEN", string.Empty);
+        builder.UseSetting("GHN_SHOP_ID", string.Empty);
+        builder.UseSetting("GHN_WEBHOOK_SECRET", string.Empty);
+        builder.UseSetting("SEPAY_WEBHOOK_API_KEY", string.Empty);
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             // URL đã được kiểm tra thuộc fixture duy nhất của toàn collection.
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {
-                ["DATABASE_URL"] = database.DatabaseUrl
+                ["DATABASE_URL"] = database.DatabaseUrl,
+                ["GHN_TOKEN"] = string.Empty,
+                ["GHN_SHOP_ID"] = string.Empty,
+                ["GHN_WEBHOOK_SECRET"] = string.Empty,
+                ["SEPAY_WEBHOOK_API_KEY"] = string.Empty,
             });
         });
         builder.ConfigureServices(services =>
@@ -207,6 +219,14 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
             {
                 services.Remove(presenceTimeoutWorkerRegistration);
             }
+
+            // Bỏ worker nhắc lại phiên chờ. Test gọi `WaitNudgeProcessor` trực tiếp, để job không nhắc trước giữa lúc test đang kiểm.
+            var waitNudgeWorkerRegistration = services.SingleOrDefault(descriptor =>
+                descriptor.ServiceType == typeof(IHostedService) && descriptor.ImplementationType == typeof(WaitNudgeWorker));
+            if (waitNudgeWorkerRegistration is not null)
+            {
+                services.Remove(waitNudgeWorkerRegistration);
+            }
         });
     }
 
@@ -228,3 +248,39 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
     // Cung cấp bộ tải ảnh giả cho test. Test đọc danh sách lần tải hoặc đặt URL nguồn bị từ chối.
     public FakeImageUploader ImageUploader => Services.GetRequiredService<FakeImageUploader>();
 }
+
+// Factory cho collection Identity. xUnit tự động truyền fixture chuyên biệt qua constructor.
+public sealed class IdentityWebApplicationFactory(IdentityDatabaseFixture database)
+    : PickoryWebApplicationFactory(database);
+
+// Factory cho collection Catalog. xUnit tự động truyền fixture chuyên biệt qua constructor.
+public sealed class CatalogWebApplicationFactory(CatalogDatabaseFixture database)
+    : PickoryWebApplicationFactory(database);
+
+// Factory cho collection Shipping. xUnit tự động truyền fixture chuyên biệt qua constructor.
+public sealed class ShippingWebApplicationFactory(ShippingDatabaseFixture database)
+    : PickoryWebApplicationFactory(database);
+
+// Factory cho collection Commerce. xUnit tự động truyền fixture chuyên biệt qua constructor.
+public sealed class CommerceWebApplicationFactory(CommerceDatabaseFixture database)
+    : PickoryWebApplicationFactory(database);
+
+// Factory cho collection ActivityTracking. xUnit tự động truyền fixture chuyên biệt qua constructor.
+public sealed class ActivityTrackingWebApplicationFactory(ActivityTrackingDatabaseFixture database)
+    : PickoryWebApplicationFactory(database);
+
+// Factory cho collection SupportDesk. xUnit tự động truyền fixture chuyên biệt qua constructor.
+public sealed class SupportDeskWebApplicationFactory(SupportDeskDatabaseFixture database)
+    : PickoryWebApplicationFactory(database);
+
+// Factory cho collection AdminConsole. xUnit tự động truyền fixture chuyên biệt qua constructor.
+public sealed class AdminConsoleWebApplicationFactory(AdminConsoleDatabaseFixture database)
+    : PickoryWebApplicationFactory(database);
+
+// Factory cho collection Api. xUnit tự động truyền fixture chuyên biệt qua constructor.
+public sealed class ApiWebApplicationFactory(ApiDatabaseFixture database)
+    : PickoryWebApplicationFactory(database);
+
+// Factory cho collection Database. xUnit tự động truyền fixture chuyên biệt qua constructor.
+public sealed class DatabaseWebApplicationFactory(DatabaseFixture database)
+    : PickoryWebApplicationFactory(database);

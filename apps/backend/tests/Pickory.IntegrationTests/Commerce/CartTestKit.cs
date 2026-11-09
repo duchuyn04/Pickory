@@ -53,7 +53,8 @@ internal sealed class CartTestKit
             .Where(cart => (cart.AnonymousId != null && _anonymousIds.Contains(cart.AnonymousId))
                 || (cart.UserId != null && _userIds.Contains(cart.UserId)))
             .ExecuteDeleteAsync();
-        await commerce.SavedAddresses.Where(address => _userIds.Contains(address.UserId)).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả địa chỉ đã xóa mềm trong test.
+        await commerce.SavedAddresses.IgnoreQueryFilters().Where(address => _userIds.Contains(address.UserId)).ExecuteDeleteAsync();
         await commerce.Settings.ExecuteDeleteAsync();
         await _catalog.CleanupAsync();
     }
@@ -233,14 +234,15 @@ internal sealed class CartTestKit
     public async Task<int> SavedAddressCountAsync(string userId)
     {
         await using var commerce = _database.CreateCommerceContext();
-        return await commerce.SavedAddresses.CountAsync(address => address.UserId == userId);
+        // Đếm cả dòng đã xóa mềm. Xóa tài khoản phải xóa hẳn dữ liệu cá nhân, không chỉ ẩn địa chỉ.
+        return await commerce.SavedAddresses.IgnoreQueryFilters().CountAsync(address => address.UserId == userId);
     }
 
     // Xóa địa chỉ do test tạo. Test xóa tài khoản kiểm cả trường hợp dòng còn lại của người khác.
     public async Task DeleteSavedAddressesAsync(params string[] userIds)
     {
         await using var commerce = _database.CreateCommerceContext();
-        await commerce.SavedAddresses.Where(address => userIds.Contains(address.UserId)).ExecuteDeleteAsync();
+        await commerce.SavedAddresses.IgnoreQueryFilters().Where(address => userIds.Contains(address.UserId)).ExecuteDeleteAsync();
     }
 
     public async Task<List<Cart>> CartsOfAnonymousAsync(string anonymousId)
@@ -293,7 +295,8 @@ internal sealed class CartTestKit
         await catalog.InventoryMovements
             .Where(movement => catalog.Skus.Any(sku => sku.Id == movement.SkuId && sku.ProductId == productId))
             .ExecuteDeleteAsync();
-        await catalog.Products.Where(product => product.Id == productId).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete vì helper dựng cả tình huống SKU đã bị xóa khỏi catalog.
+        await catalog.Products.IgnoreQueryFilters().Where(product => product.Id == productId).ExecuteDeleteAsync();
     }
 
     public IReadOnlyList<CartItemAddedEvent> AddedEventsOf(string anonymousId) =>

@@ -477,7 +477,7 @@ describe('ShippingSettingsPage: lưu', () => {
     expect((formPosition ?? 0) & Node.DOCUMENT_POSITION_PRECEDING).toBeTruthy();
   });
 
-  it('lỗi 400 không có details thì hiện nguyên câu message ở ErrorAlert, không gán vào ô nào', async () => {
+  it('lỗi 400 không có details thì hiện câu message đã bỏ tên trường ở ErrorAlert, không gán vào ô nào', async () => {
     stubServer({
       settings: storedSettings,
       putHandler: () =>
@@ -497,9 +497,10 @@ describe('ShippingSettingsPage: lưu', () => {
     await clickSave();
 
     expect(errorText('shipping-address-ward')).toBeNull();
-    expect(container.querySelector('[role="alert"]')?.textContent).toContain(
-      'Dữ liệu không hợp lệ (wardCode:',
-    );
+    const alertText = container.querySelector('[role="alert"]')?.textContent ?? '';
+    expect(alertText).toContain('Phường/xã không thuộc tỉnh/thành đã chọn.');
+    // Tên trường `wardCode` là chữ kỹ thuật. Người dùng không được thấy nó trên màn hình.
+    expect(alertText).not.toContain('wardCode');
   });
 
   it('lỗi 503 hiện ErrorAlert đầu form và giữ nguyên dữ liệu đã nhập', async () => {

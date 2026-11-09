@@ -7,4 +7,15 @@ internal static class SupportDeskErrorCodes
     public const string ConversationNotFound = "SUPPORT_CONVERSATION_NOT_FOUND";
     public const string ConversationClosed = "SUPPORT_CONVERSATION_CLOSED";
     public const string MessageRateLimited = "SUPPORT_MESSAGE_RATE_LIMITED";
+    public const string CallbackLimitReached = "CALLBACK_LIMIT_REACHED";
+    public const string CallbackRequestNotFound = "CALLBACK_REQUEST_NOT_FOUND";
+    // Các mã lỗi cho nghiệp vụ hàng chờ và nhận phiên hỗ trợ.
+    public const string SessionNotFound = "SUPPORT_SESSION_NOT_FOUND";
+    public const string SessionClosed = "SUPPORT_SESSION_CLOSED";
+    public const string SessionAlreadyClaimed = "SUPPORT_SESSION_ALREADY_CLAIMED";
+    public const string SessionNotAssigned = "SUPPORT_SESSION_NOT_ASSIGNED";
+    // Nhân viên nhận phiên chuyển không ở trạng thái sẵn sàng.
+    public const string StaffUnavailable = "SUPPORT_STAFF_UNAVAILABLE";
+    // Phiên hỗ trợ chưa kết thúc nên chưa thể chấm điểm.
+    public const string SessionOpen = "SUPPORT_SESSION_OPEN";
 }

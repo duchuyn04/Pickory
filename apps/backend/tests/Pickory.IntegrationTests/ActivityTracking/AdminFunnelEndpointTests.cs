@@ -9,9 +9,9 @@ using Xunit;
 namespace Pickory.IntegrationTests.ActivityTracking;
 
 // ACT-11: `GET /api/admin/analytics/funnel`. Test ghi bộ đếm vào năm 2031 và dùng năm 2035 làm khoảng không có dòng nào, nên kết quả không đổi theo ngày chạy.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class AdminFunnelEndpointTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ActivityTrackingCollection.Name)]
+public sealed class AdminFunnelEndpointTests(ActivityTrackingWebApplicationFactory factory, ActivityTrackingDatabaseFixture database)
+    : IClassFixture<ActivityTrackingWebApplicationFactory>, IAsyncLifetime
 {
     private const string FunnelPath = "/api/admin/analytics/funnel";
 

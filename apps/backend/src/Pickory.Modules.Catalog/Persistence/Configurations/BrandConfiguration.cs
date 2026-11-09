@@ -20,9 +20,15 @@ internal sealed class BrandConfiguration : IEntityTypeConfiguration<Brand>
         entity.Property(value => value.LogoPublicId).IsRequired(false);
         entity.Property(value => value.CreatedAt).HasDefaultValueSql("CURRENT_TIMESTAMP");
         entity.Property(value => value.UpdatedAt).IsRequired();
+        // Lưu thời điểm xóa mềm để truy vết. Dòng đã xóa vẫn giữ logo và tên cho nhật ký cũ.
+        entity.Property(value => value.DeletedAt).IsRequired(false);
+        // Ẩn thương hiệu đã xóa khỏi mọi truy vấn thường. Handler xóa đặt `DeletedAt` thay vì xóa dòng.
+        entity.HasQueryFilter(value => value.DeletedAt == null);
 
         entity.HasIndex(value => value.Slug)
             .IsUnique()
-            .HasDatabaseName("brands_slug_key");
+            .HasDatabaseName("brands_slug_key")
+            // Chỉ chặn trùng slug giữa các thương hiệu còn sống. Dòng đã xóa nhường slug cho bản mới.
+            .HasFilter("\"deletedAt\" IS NULL");
     }
 }

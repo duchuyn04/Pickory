@@ -9,6 +9,7 @@ import { formatOrderStatus, formatPaymentMethod, formatPaymentStatus } from '../
 import { formatDateTime } from './order-format';
 import { OrderItemsList, OrderPaymentRows, formatShippingAddress } from './order-sections';
 import { cancelOrder, fetchOrderDetail } from './orders-api';
+import { getErrorMessage } from '../../../../shared/error-message';
 import './orders.css';
 
 // Trang hiển thị thông tin chi tiết và tiến trình trạng thái của đơn hàng.
@@ -95,7 +96,7 @@ export function OrderDetailPage() {
   if (error || !order) {
     return (
       <main className="catalog-page order-detail-page">
-        <ErrorAlert message={error instanceof Error ? error.message : 'Lỗi tải đơn hàng.'} />
+        <ErrorAlert message={getErrorMessage(error, 'Lỗi tải đơn hàng.')} />
       </main>
     );
   }

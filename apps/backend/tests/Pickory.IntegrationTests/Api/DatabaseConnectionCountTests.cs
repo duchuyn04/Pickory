@@ -13,9 +13,9 @@ namespace Pickory.IntegrationTests.Api;
 
 // POOL-02: `DATABASE_POOL_MAX` giới hạn kết nối thật của cả tiến trình API, không chỉ giá trị trong chuỗi kết nối.
 // Mỗi module từng có pool riêng, nên API mở tới số module nhân với giới hạn.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class DatabaseConnectionCountTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
-    : IClassFixture<PickoryWebApplicationFactory>
+[Collection(ApiCollection.Name)]
+public sealed class DatabaseConnectionCountTests(ApiWebApplicationFactory factory, ApiDatabaseFixture database)
+    : IClassFixture<ApiWebApplicationFactory>
 {
     private const int PoolLimit = 3;
     private const int RequestsPerRoute = 12;

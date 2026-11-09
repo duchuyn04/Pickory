@@ -15,8 +15,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Identity;
 
 // Port từ test ID-07 và ID-17 của bản Node cho xác thực email, quên và đặt lại mật khẩu.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory>
+[Collection(IdentityCollection.Name)]
+public sealed class EmailTokenTests : IClassFixture<IdentityWebApplicationFactory>
 {
     // Thông điệp giữ nguyên bản Node vì frontend hiển thị trực tiếp.
     private const string ForgotPasswordMessage = "Nếu email tồn tại trong hệ thống, hướng dẫn đặt lại mật khẩu đã được gửi.";
@@ -26,7 +26,7 @@ public sealed class EmailTokenTests : IClassFixture<PickoryWebApplicationFactory
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
 
-    public EmailTokenTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public EmailTokenTests(IdentityWebApplicationFactory factory, IdentityDatabaseFixture database)
     {
         _factory = factory;
         _database = database;

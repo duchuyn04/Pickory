@@ -13,8 +13,8 @@ using Shipment = Pickory.Modules.Shipping.Contracts.Shipments.Shipment;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-07 lát 5: tra vận đơn theo mã, và log không chứa dữ liệu cá nhân của người nhận.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentLookupAndLogTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentLookupAndLogTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private const string CreatePath = "/shiip/public-api/v2/shipping-order/create";
     private const string CancelPath = "/shiip/public-api/v2/switch-status/cancel";

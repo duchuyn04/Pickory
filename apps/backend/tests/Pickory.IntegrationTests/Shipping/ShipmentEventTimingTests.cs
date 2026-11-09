@@ -11,8 +11,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-07: sự kiện chỉ được phát sau commit. Bên nhận đọc DB bằng kết nối khác phải thấy dữ liệu mới.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class ShipmentEventTimingTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class ShipmentEventTimingTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private readonly FakeGhnClient _ghn = new();
     private readonly RecordingEventDispatcher _events = new();

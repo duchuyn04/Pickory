@@ -10,8 +10,8 @@ namespace Pickory.IntegrationTests.Shipping;
 
 // SHIP-05 lát 3: bằng chứng cho tiêu chí "Retry đúng 1 lần", dùng `GhnHttpClient` thật với handler giả.
 // Adapter (SHIP-03) giữ việc thử lại, nên service không được nhân số lần đó.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class QuoteRetryTests(PickoryWebApplicationFactory factory) : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(ShippingCollection.Name)]
+public sealed class QuoteRetryTests(ShippingWebApplicationFactory factory) : IClassFixture<ShippingWebApplicationFactory>, IAsyncLifetime
 {
     private const string FeePath = "/shiip/public-api/v2/shipping-order/fee";
     private const string FeeJson = """{"code":200,"message":"Success","data":{"total":42000,"service_fee":42000,"insurance_fee":0,"cod_fee":0}}""";

@@ -11,6 +11,7 @@ import {
   validateReasonChoice,
   type ModerationAction,
 } from './review-moderation-logic';
+import { getErrorMessage } from '../../../../shared/error-message';
 
 const REASON_FIELD_ID = 'review-moderation-reason';
 const RADIO_GROUP_NAME = 'review-moderation-reason';
@@ -79,7 +80,7 @@ export function ReviewModerationDialog({
         }
       }
       // Thông báo của server là tiếng Việt và đã nói rõ nguyên nhân, nên hiện nguyên văn.
-      setApiError(error instanceof Error ? error.message : 'Cập nhật đánh giá thất bại.');
+      setApiError(getErrorMessage(error, 'Cập nhật đánh giá thất bại.'));
     }
   }
 

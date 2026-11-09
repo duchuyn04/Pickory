@@ -11,8 +11,8 @@ using Xunit;
 namespace Pickory.IntegrationTests.Api.Catalog;
 
 // CAT-09: `GET /api/products` có lọc, sắp xếp, phân trang và facets, trên bộ dữ liệu cố định.
-[Collection(IntegrationDatabaseCollection.Name)]
-public sealed class PublicProductListTests : IClassFixture<PickoryWebApplicationFactory>, IAsyncLifetime
+[Collection(CatalogCollection.Name)]
+public sealed class PublicProductListTests : IClassFixture<CatalogWebApplicationFactory>, IAsyncLifetime
 {
     private readonly IntegrationDatabaseFixture _database;
     private readonly HttpClient _client;
@@ -24,7 +24,7 @@ public sealed class PublicProductListTests : IClassFixture<PickoryWebApplication
     private string _childCategoryId = null!;
     private readonly List<string> _brandIds = new();
 
-    public PublicProductListTests(PickoryWebApplicationFactory factory, IntegrationDatabaseFixture database)
+    public PublicProductListTests(CatalogWebApplicationFactory factory, CatalogDatabaseFixture database)
     {
         _database = database;
         _client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
@@ -146,10 +146,11 @@ public sealed class PublicProductListTests : IClassFixture<PickoryWebApplication
     public async Task DisposeAsync()
     {
         await using var context = _database.CreateCatalogContext();
-        await context.Products.Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
-        await context.Categories.Where(category => category.Id == _childCategoryId).ExecuteDeleteAsync();
-        await context.Categories.Where(category => category.Id == _parentCategoryId).ExecuteDeleteAsync();
-        await context.Brands.Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
+        // Bỏ qua bộ lọc soft delete để dọn cả sản phẩm, danh mục và thương hiệu đã bị xóa mềm trong test.
+        await context.Products.IgnoreQueryFilters().Where(product => _productIds.Contains(product.Id)).ExecuteDeleteAsync();
+        await context.Categories.IgnoreQueryFilters().Where(category => category.Id == _childCategoryId).ExecuteDeleteAsync();
+        await context.Categories.IgnoreQueryFilters().Where(category => category.Id == _parentCategoryId).ExecuteDeleteAsync();
+        await context.Brands.IgnoreQueryFilters().Where(brand => _brandIds.Contains(brand.Id)).ExecuteDeleteAsync();
     }
 
     private Category NewCategory(string slugPrefix, string? parentId, IReadOnlyList<AttributeDefinition> attributes) => new()
