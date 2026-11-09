@@ -1,0 +1,44 @@
+/* Bố cục hộp thoại chuyển phiên CSKH */
+
+.support-transfer-fieldset {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  padding: var(--space-3);
+  margin: 0;
+}
+
+.support-transfer-legend {
+  font-size: var(--text-sm);
+  font-weight: 700;
+  padding: 0 var(--space-1);
+  color: var(--color-ink);
+}
+
+.support-transfer-staff-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.support-transfer-radio-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-ink);
+  cursor: pointer;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.support-transfer-radio-item span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.support-transfer-note {
+  width: 100%;
+  resize: vertical;
+}

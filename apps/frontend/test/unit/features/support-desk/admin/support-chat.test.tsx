@@ -13,6 +13,8 @@ import {
   textOf,
   type OpenedDesk,
 } from './support-desk-test-kit';
+import * as supportApi from '../../../../../src/features/support-desk/admin/support-desk-api';
+import type { SessionAssignment } from '../../../../../src/features/support-desk/admin/support-desk-schemas';
 
 let desk: OpenedDesk;
 
@@ -703,5 +705,118 @@ describe('khung chat: quyền', () => {
     expect(supportRequests(desk.harness).some((url) => url.includes('canned-responses'))).toBe(
       false,
     );
+  });
+
+  it('khi phiên bị đóng thì không hiện nhóm nút Chuyển và Kết thúc, ô soạn tin bị tắt', async () => {
+    desk = openDesk(READ_AND_REPLY, {
+      mine: [queueSession('1')],
+      messagePages: { 'conversation-1': HISTORY_PAGE },
+    });
+    await openDeskPage(desk);
+    await clickButton(desk.harness.container, 'Của tôi');
+    await selectQueueRow('Phiên của tôi');
+
+    await waitFor(
+      () => desk.harness.container.querySelector('.support-chat-actions') !== null,
+      'nút thao tác phiên',
+    );
+    expect(textOf(desk.harness.container)).toContain('Chuyển');
+    expect(textOf(desk.harness.container)).toContain('Kết thúc');
+    expect(composer()?.disabled).toBe(false);
+
+    // Phát sự kiện session.closed cho phiên đang mở.
+    await emitFromServer('session.closed', { sessionId: '1' });
+
+    // Khi phiên đã đóng, nhóm nút thao tác biến mất và ô soạn bị tắt.
+    await waitFor(
+      () => desk.harness.container.querySelector('.support-chat-actions') === null,
+      'nhóm nút thao tác biến mất',
+    );
+    expect(composer()?.disabled).toBe(true);
+    expect(textOf(desk.harness.container)).toContain('Phiên đã kết thúc.');
+  });
+
+  it('người chỉ có conversations:read mở phiên của mình không thấy nút Chuyển và Kết thúc, ô soạn bị tắt', async () => {
+    desk = openDesk(READ_ONLY, {
+      mine: [queueSession('1')],
+      messagePages: { 'conversation-1': HISTORY_PAGE },
+    });
+    await openDeskPage(desk);
+    await clickButton(desk.harness.container, 'Của tôi');
+    await selectQueueRow('Phiên của tôi');
+
+    await waitFor(
+      () => textOf(desk.harness.container).includes('Đơn của mình đâu?'),
+      'lịch sử tin',
+    );
+
+    // Không hiện nhóm nút Chuyển và Kết thúc vì người dùng không có quyền phản hồi.
+    expect(desk.harness.container.querySelector('.support-chat-actions')).toBeNull();
+    expect(textOf(desk.harness.container)).not.toContain('Chuyển');
+    expect(textOf(desk.harness.container)).not.toContain('Kết thúc');
+    expect(composer()?.disabled).toBe(true);
+    expect(textOf(desk.harness.container)).toContain('Bạn chỉ có quyền xem hội thoại.');
+  });
+
+  it('phiên đang chờ chỉ hiện nút Nhận, không hiện nhóm nút Chuyển và Kết thúc', async () => {
+    desk = openDesk(READ_AND_REPLY, {
+      waiting: [queueSession('1')],
+      messagePages: { 'conversation-1': HISTORY_PAGE },
+    });
+    await openDeskPage(desk);
+    await selectQueueRow('Phiên đang chờ');
+
+    await waitFor(
+      () => textOf(desk.harness.container).includes('Đơn của mình đâu?'),
+      'lịch sử tin',
+    );
+
+    // Phiên đang chờ chưa được nhận (isHeld=false): có nút Nhận nhưng không có nhóm Chuyển và Kết thúc.
+    expect(desk.harness.container.querySelector('.support-chat-claim button')).not.toBeNull();
+    expect(textOf(desk.harness.container)).toContain('Nhận');
+    expect(desk.harness.container.querySelector('.support-chat-actions')).toBeNull();
+    expect(textOf(desk.harness.container)).not.toContain('Chuyển');
+    expect(textOf(desk.harness.container)).not.toContain('Kết thúc');
+  });
+
+  it('không hiện nhóm nút Chuyển và Kết thúc khi API nhận trả về sau sự kiện session.closed', async () => {
+    let resolveClaim: (assignment: SessionAssignment) => void = () => {};
+    const claimPromise = new Promise<SessionAssignment>((resolve) => {
+      resolveClaim = resolve;
+    });
+    vi.spyOn(supportApi, 'claimSupportSession').mockReturnValueOnce(claimPromise);
+
+    desk = openDesk(READ_AND_REPLY, {
+      waiting: [queueSession('1')],
+      messagePages: { 'conversation-1': HISTORY_PAGE },
+    });
+    await openDeskPage(desk);
+    await selectQueueRow('Phiên đang chờ');
+    await waitFor(
+      () => desk.harness.container.querySelector('.support-chat-claim button') !== null,
+      'nút nhận phiên',
+    );
+
+    // Bấm nhận phiên: request nhận phiên bắt đầu và đang chờ máy chủ trả lời.
+    await clickButton(desk.harness.container, 'Nhận');
+
+    // Máy chủ gửi sự kiện phiên đã bị đóng trước khi request nhận phản hồi xong.
+    await emitFromServer('session.closed', { sessionId: '1' });
+
+    // Sau đó request nhận phiên hoàn tất (đặt isHeld=true lên phiên đã isClosed=true).
+    await act(async () => {
+      resolveClaim({
+        sessionId: '1',
+        staffId: 'staff-0001',
+        claimedAt: '2026-10-22T08:05:00Z',
+      });
+    });
+
+    // Nhóm nút Chuyển và Kết thúc không được xuất hiện vì phiên đã đóng.
+    expect(desk.harness.container.querySelector('.support-chat-actions')).toBeNull();
+    expect(textOf(desk.harness.container)).not.toContain('Chuyển');
+    expect(textOf(desk.harness.container)).not.toContain('Kết thúc');
+    expect(composer()?.disabled).toBe(true);
+    expect(textOf(desk.harness.container)).toContain('Phiên đã kết thúc.');
   });
 });

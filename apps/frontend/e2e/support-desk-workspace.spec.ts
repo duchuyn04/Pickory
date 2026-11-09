@@ -55,6 +55,11 @@ async function mockUnfinishedQueueRoutes(page: Page) {
   await routes.mockRoute('admin-sessions.json', 'nhân viên gửi tin');
   await routes.mockRoute('admin-sessions.json', 'lịch sử tin của hội thoại cho nhân viên');
   await routes.mockRoute('admin-canned-responses.json', 'danh sách mẫu');
+  // Ba route của SD-UI3: bảng thông tin khách, chuyển phiên và kết thúc phiên.
+  await routes.mockRoute('admin-customer-panel.json', 'khách đã đăng nhập');
+  await routes.mockRoute('admin-customer-panel.json', 'khách vãng lai');
+  await routes.mockRoute('admin-sessions.json', 'chuyển phiên cho đồng nghiệp');
+  await routes.mockRoute('admin-sessions.json', 'kết thúc phiên');
 }
 
 async function readOwnUserId(page: Page): Promise<string> {
@@ -128,6 +133,8 @@ test.describe('SD-UI1: màn CSKH', () => {
   let admin: StaffSession;
   let support: StaffSession;
   let sales: StaffSession;
+  let colleague: StaffSession;
+  const colleagueEmail = 'e2e-support-desk-colleague@pickory.local';
 
   test.beforeAll(async ({ browser }) => {
     // Mời hai nhân viên qua giao diện thật nên cần nhiều thời gian hơn mặc định.
@@ -135,7 +142,7 @@ test.describe('SD-UI1: màn CSKH', () => {
     admin = await openStaffSession(browser);
     support = await openStaffSession(browser);
     sales = await openStaffSession(browser);
-
+    colleague = await openStaffSession(browser);
     await loginAdmin(admin.page);
     await inviteStaff(admin.page, {
       email: e2eEnvironment.supportDeskSupportEmail,
@@ -147,21 +154,28 @@ test.describe('SD-UI1: màn CSKH', () => {
       fullName: 'Sales CSKH E2E',
       roleCode: 'sales',
     });
+    await inviteStaff(admin.page, {
+      email: colleagueEmail,
+      fullName: 'Colleague CSKH E2E',
+      roleCode: 'support',
+    });
+    await activateStaffAccount(colleague.page, colleagueEmail);
+    await dismissConsent(colleague.page);
     await activateStaffAccount(support.page, e2eEnvironment.supportDeskSupportEmail);
     await activateStaffAccount(sales.page, e2eEnvironment.supportDeskSalesEmail);
     await dismissConsent(support.page);
     await dismissConsent(sales.page);
     await mockUnfinishedQueueRoutes(support.page);
     // Console của các bước dựng dữ liệu không thuộc case nào. Mỗi case bắt đầu với danh sách sạch.
-    for (const session of [admin, support, sales]) session.consoleIssues.length = 0;
+    for (const session of [admin, support, sales, colleague]) session.consoleIssues.length = 0;
   });
 
   test.afterAll(async () => {
-    for (const session of [admin, support, sales]) await session?.context.close();
+    for (const session of [admin, support, sales, colleague]) await session?.context.close();
   });
 
   test.beforeEach(() => {
-    for (const session of [admin, support, sales]) session.consoleIssues.length = 0;
+    for (const session of [admin, support, sales, colleague]) session.consoleIssues.length = 0;
   });
 
   test.afterEach(() => {
@@ -169,6 +183,7 @@ test.describe('SD-UI1: màn CSKH', () => {
     expect(admin.consoleIssues, 'Console của admin phải sạch').toEqual([]);
     expect(support.consoleIssues, 'Console của support phải sạch').toEqual([]);
     expect(sales.consoleIssues, 'Console của sales phải sạch').toEqual([]);
+    expect(colleague.consoleIssues, 'Console của colleague phải sạch').toEqual([]);
   });
 
   test('support thấy menu CSKH, mở trang và bật Sẵn sàng thì backend ghi nhận', async () => {
@@ -460,6 +475,8 @@ test.describe('SD-UI1: màn CSKH', () => {
   }
 
   async function openWaitingSession(page: Page) {
+    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
+    await routes.mockRoute('admin-sessions.json', 'lịch sử tin của hội thoại cho nhân viên');
     await openDeskPage(page);
     await queueRow(page).click();
     // Lịch sử tin mẫu hiện ra nghĩa là khung chat đã nạp xong.
@@ -514,8 +531,8 @@ test.describe('SD-UI1: màn CSKH', () => {
       'true',
     );
     await page.keyboard.press('Enter');
-    // Biến mẫu chưa có giá trị thật (SD-UI3 nối sau), nên {ten_khach} giữ nguyên theo luật.
-    await expect(chatComposer(page)).toHaveValue('Mình kiểm đơn {ma_don} giúp bạn nhé.');
+    // SD-UI3 đã nối nguồn dữ liệu khách: đơn đầu tiên là PK123 nên {ma_don} được thay bằng PK123.
+    await expect(chatComposer(page)).toHaveValue('Mình kiểm đơn PK123 giúp bạn nhé.');
     await expect(listbox).toHaveCount(0);
   });
 
@@ -652,4 +669,353 @@ test.describe('SD-UI1: màn CSKH', () => {
       await page.setViewportSize({ width: 1280, height: 800 });
     });
   }
+
+  test('SD-UI3: cột thông tin khách hiển thị dữ liệu khách đã đăng nhập và link đơn hàng', async () => {
+    const { page } = support;
+    await openWaitingSession(page);
+
+    // Cột thông tin khách hiển thị hồ sơ khách hàng đã đăng nhập.
+    const customerPanel = page.locator('.support-customer-panel');
+    await expect(customerPanel.getByText('Nguyễn Minh Anh')).toBeVisible();
+    await expect(customerPanel.getByText('minhanh@example.com')).toBeVisible();
+    await expect(customerPanel.getByText('Khách vãng lai')).toHaveCount(0);
+
+    // Đơn hàng PK123 có link tới trang quản trị đơn, trạng thái, tổng tiền và số sản phẩm.
+    const orderLink = customerPanel.getByRole('link', { name: 'PK123' });
+    await expect(orderLink).toBeVisible();
+    await expect(orderLink).toHaveAttribute('href', '/admin/orders/PK123');
+    await expect(customerPanel.getByText('Đang giao hàng')).toBeVisible();
+    await expect(customerPanel.getByText('459.000 đ')).toBeVisible();
+    await expect(customerPanel.getByText('2 sản phẩm')).toBeVisible();
+  });
+
+  test('SD-UI3: mở phiên từ tab Của tôi hiện thông tin khách vãng lai Chưa có thông tin', async () => {
+    const { page } = support;
+    await page.goto('/admin/conversations');
+    await expect(
+      page.getByRole('heading', { level: 1, name: 'Chăm sóc khách hàng' }),
+    ).toBeVisible();
+
+    // Mở tab Của tôi và chọn phiên khách vãng lai.
+    await page.getByRole('tab', { name: 'Của tôi' }).click();
+    await page.getByText('Mình muốn đổi size áo.').click();
+
+    const customerPanel = page.locator('.support-customer-panel');
+    // Hiển thị nhãn Khách vãng lai, Chưa có thông tin và thông báo không có đơn hàng.
+    await expect(customerPanel.getByText('Khách vãng lai')).toBeVisible();
+    await expect(customerPanel.getByText('Chưa có thông tin')).toHaveCount(2);
+    await expect(customerPanel.getByText('Khách chưa có đơn hàng.')).toBeVisible();
+  });
+
+  test('SD-UI3: hộp thoại chuyển chỉ hiện đồng nghiệp sẵn sàng, gửi PUT với staffId và note', async () => {
+    const { page } = support;
+    const colleagueUserId = await readOwnUserId(colleague.page);
+    const putRes = await colleague.page.request.put(PRESENCE_PATH, {
+      headers: { Origin: e2eEnvironment.webOrigin },
+      data: { status: 'available' },
+    });
+    expect(putRes.status()).toBe(200);
+
+    await page.goto('/admin/conversations');
+    await page.getByRole('tab', { name: 'Của tôi' }).click();
+    await page.getByText('Mình muốn đổi size áo.').click();
+
+    // Vùng thông báo role=status luôn hiện diện trong DOM với display: block ngay cả khi chưa có nội dung.
+    const statusNotice = page.locator('.support-transfer-status');
+    await expect(statusNotice).toHaveCSS('display', 'block');
+
+    // Nút Chuyển và Kết thúc hiển thị trên thanh trên của khung chat.
+    const transferButton = page.getByRole('button', { name: 'Chuyển', exact: true });
+    await expect(transferButton).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Kết thúc', exact: true })).toBeVisible();
+
+    await transferButton.click();
+    const dialog = page.getByRole('dialog', { name: 'Chuyển hội thoại' });
+    await expect(dialog).toBeVisible();
+
+    // Backend thật chưa trả displayName nên nhãn hiển thị Nhân viên cộng 4 ký tự cuối của staffId.
+    const staffLabel = `Nhân viên ${colleagueUserId.slice(-4)}`;
+    const staffRadio = dialog.getByLabel(staffLabel);
+    await expect(staffRadio).toBeVisible();
+
+    // Chọn nhân viên và nhập ghi chú nội bộ.
+    await staffRadio.click();
+    const noteField = dialog.getByLabel('Ghi chú nội bộ');
+    await noteField.fill('  Khách cần đổi size giày sang 42  ');
+
+    // Bắt request PUT assignment khi bấm Chuyển.
+    const putRequestPromise = page.waitForRequest(
+      (req) => req.url().includes('/assignment') && req.method() === 'PUT',
+    );
+
+    await dialog.getByRole('button', { name: 'Chuyển', exact: true }).click();
+
+    const putRequest = await putRequestPromise;
+    const putBody = putRequest.postDataJSON() as { staffId: string; note: string | null };
+    expect(putBody).toEqual({
+      staffId: colleagueUserId,
+      note: 'Khách cần đổi size giày sang 42',
+    });
+    // Hộp thoại đóng và dòng status thông báo xuất hiện ở đầu trang.
+    await expect(dialog).toHaveCount(0);
+    await expect(statusNotice).toBeVisible();
+    await expect(statusNotice).toContainText(`Đã chuyển hội thoại cho ${staffLabel}.`);
+
+    // Khung chat quay về trạng thái chưa chọn phiên.
+    await expect(page.getByText('Tin nhắn của hội thoại đang mở sẽ hiện ở đây.')).toBeVisible();
+
+    // Dọn dẹp trạng thái của colleague về away.
+    await colleague.page.request.put(PRESENCE_PATH, {
+      headers: { Origin: e2eEnvironment.webOrigin },
+      data: { status: 'away' },
+    });
+  });
+
+  test('SD-UI3: bấm Kết thúc hỏi xác nhận trước, gửi PATCH closed và ô soạn tắt', async () => {
+    const { page } = support;
+    const patchRequests: string[] = [];
+    page.on('request', (req) => {
+      if (req.url().includes('/api/admin/support/sessions/') && req.method() === 'PATCH') {
+        patchRequests.push(req.url());
+      }
+    });
+
+    await page.goto('/admin/conversations');
+    await page.getByRole('tab', { name: 'Của tôi' }).click();
+    await page.getByText('Mình muốn đổi size áo.').click();
+
+    const endBtn = page.getByRole('button', { name: 'Kết thúc', exact: true });
+
+    // Bấm nút Kết thúc ở thanh trên mở hộp thoại xác nhận chứ chưa gọi API.
+    await endBtn.click();
+
+    const dialog = page.getByRole('dialog', { name: 'Kết thúc hội thoại này?' });
+    await expect(dialog).toBeVisible();
+    await expect(
+      dialog.getByText(
+        'Khách hàng sẽ nhận được biểu mẫu chấm điểm dịch vụ sau khi kết thúc hội thoại.',
+      ),
+    ).toBeVisible();
+    // Chưa có PATCH nào được gửi khi hộp thoại vừa mở.
+    expect(patchRequests).toHaveLength(0);
+
+    // Bấm nút Hủy trong hộp thoại: hộp thoại đóng lại và chưa có request PATCH nào được gửi.
+    await dialog.getByRole('button', { name: 'Hủy', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    expect(patchRequests).toHaveLength(0);
+    await expect(endBtn).toBeVisible();
+
+    // Bấm lại nút Kết thúc ở thanh trên khung chat.
+    await endBtn.click();
+    await expect(dialog).toBeVisible();
+
+    // Bắt request PATCH khi bấm xác nhận trong hộp thoại.
+    const patchRequestPromise = page.waitForRequest(
+      (req) => req.url().includes('/api/admin/support/sessions/') && req.method() === 'PATCH',
+    );
+
+    await dialog.getByRole('button', { name: 'Kết thúc', exact: true }).click();
+
+    const patchRequest = await patchRequestPromise;
+    const patchBody = patchRequest.postDataJSON() as { status: string };
+    expect(patchBody).toEqual({ status: 'closed' });
+    expect(patchRequests).toHaveLength(1);
+
+    // Hộp thoại đóng và tiêu điểm chuyển về tiêu đề khung chat.
+    await expect(dialog).toHaveCount(0);
+    await expect(page.locator('#support-chat-title')).toBeFocused();
+    await expect(chatComposer(page)).toBeDisabled();
+    await expect(page.getByText('Phiên đã kết thúc.')).toBeVisible();
+  });
+
+  test('SD-UI3: phím Esc đóng hộp thoại chuyển và kết thúc, trả focus về đúng nút mở', async () => {
+    const { page } = support;
+    await page.goto('/admin/conversations');
+    await page.getByRole('tab', { name: 'Của tôi' }).click();
+    await page.getByText('Mình muốn đổi size áo.').click();
+
+    const transferBtn = page.getByRole('button', { name: 'Chuyển', exact: true });
+    const endBtn = page.getByRole('button', { name: 'Kết thúc', exact: true });
+
+    // Mở hộp thoại chuyển rồi bấm Esc để kiểm tra trả tiêu điểm.
+    await transferBtn.click();
+    const transferDialog = page.getByRole('dialog', { name: 'Chuyển hội thoại' });
+    await expect(transferDialog).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(transferDialog).toHaveCount(0);
+    await expect(transferBtn).toBeFocused();
+
+    // Mở hộp thoại kết thúc rồi bấm Esc để kiểm tra trả tiêu điểm.
+    await endBtn.click();
+    const endDialog = page.getByRole('dialog', { name: 'Kết thúc hội thoại này?' });
+    await expect(endDialog).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(endDialog).toHaveCount(0);
+    await expect(endBtn).toBeFocused();
+  });
+
+  test('SD-UI3: ở 375px ngăn thông tin khách mở bằng nút, không tràn ngang và đo boundingBox', async () => {
+    const testInfo = test.info();
+    const { page } = support;
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    await openWaitingSession(page);
+
+    const toggleButton = page.getByRole('button', { name: 'Thông tin khách' });
+    await expect(toggleButton).toBeVisible();
+    await expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
+
+    const customerPanel = page.locator('.support-customer-panel');
+    const customerName = customerPanel.getByText('Nguyễn Minh Anh');
+    // Trước khi bấm mở ngăn, thông tin khách hàng phải ở trạng thái ẩn.
+    await expect(customerName).toBeHidden();
+
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'customer-panel-closed-375.png'),
+      fullPage: true,
+    });
+
+    const toggleBoxClosed = await readBox(toggleButton);
+    // Chiều cao nút đóng phải nhỏ hơn 64px và nhãn chữ nằm gọn trên một dòng.
+    expect(toggleBoxClosed.height).toBeLessThan(64);
+    const labelBox = await readBox(toggleButton.locator('span'));
+    expect(labelBox.height).toBeLessThan(28);
+
+    // Mở ngăn thông tin khách ở 375px.
+    await toggleButton.click();
+    await expect(toggleButton).toHaveAttribute('aria-expanded', 'true');
+
+    // Sau khi mở ngăn, thông tin khách hàng hiển thị rõ ràng.
+    await expect(customerName).toBeVisible();
+
+    await expectNoHorizontalOverflow(page);
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'customer-panel-open-375.png'),
+      fullPage: true,
+    });
+
+    const toggleBoxOpen = await readBox(toggleButton);
+    const panelBoxOpen = await readBox(customerPanel);
+
+    await testInfo.attach('measurements-customer-panel-375', {
+      body: JSON.stringify(
+        {
+          viewport: { width: 375, height: 812 },
+          toggleClosed: toggleBoxClosed,
+          toggleOpen: toggleBoxOpen,
+          panelOpen: panelBoxOpen,
+        },
+        null,
+        2,
+      ),
+      contentType: 'application/json',
+    });
+
+    // Ở màn hình rộng 1280px: nút ngăn ẩn đi và nội dung luôn hiển thị.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expect(toggleButton).toBeHidden();
+    await expect(customerName).toBeVisible();
+  });
+
+  test('SD-UI3: ảnh chụp 1280px và 375px của cột khách và các hộp thoại không tràn ngang', async () => {
+    const testInfo = test.info();
+    const { page } = support;
+    await colleague.page.request.put(PRESENCE_PATH, {
+      headers: { Origin: e2eEnvironment.webOrigin },
+      data: { status: 'available' },
+    });
+
+    // 1. Chụp cột thông tin khách ở 1280px.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await openWaitingSession(page);
+    await expectNoHorizontalOverflow(page);
+
+    const customerPanel1280 = page.locator('.support-customer-panel');
+    const panelBox1280 = await readBox(customerPanel1280);
+    // Đỉnh lưới của ba cột ở 1280px phải bắt đầu tại y=159 (lệch không quá 2px).
+    expect(Math.abs(panelBox1280.y - 159)).toBeLessThanOrEqual(2);
+
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'customer-panel-1280.png'),
+      fullPage: true,
+    });
+
+    // 2. Chụp hộp thoại chuyển ở 1280px và 375px.
+    await page.getByRole('tab', { name: 'Của tôi' }).click();
+    await page.getByText('Mình muốn đổi size áo.').click();
+
+    await page.getByRole('button', { name: 'Chuyển', exact: true }).click();
+    const transferDialog = page.getByRole('dialog', { name: 'Chuyển hội thoại' });
+    await expect(transferDialog).toBeVisible();
+
+    // Chọn đồng nghiệp và nhập ghi chú nội bộ trước khi chụp ảnh theo yêu cầu review.
+    const colleagueUserId = await readOwnUserId(colleague.page);
+    const staffLabel = `Nhân viên ${colleagueUserId.slice(-4)}`;
+    await transferDialog.getByLabel(staffLabel).click();
+    await transferDialog.getByLabel('Ghi chú nội bộ').fill('Khách cần đổi size giày sang 42');
+
+    await expectNoHorizontalOverflow(page);
+
+    const transferDialogBox1280 = await readBox(transferDialog);
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'transfer-dialog-1280.png'),
+      fullPage: true,
+    });
+
+    // Hộp thoại chuyển ở 375px.
+    await page.setViewportSize({ width: 375, height: 812 });
+    await expectNoHorizontalOverflow(page);
+    const transferDialogBox375 = await readBox(transferDialog);
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'transfer-dialog-375.png'),
+      fullPage: true,
+    });
+
+    // Đóng hộp thoại chuyển.
+    await page.keyboard.press('Escape');
+    await expect(transferDialog).toHaveCount(0);
+
+    // 3. Chụp hộp thoại kết thúc ở 375px và 1280px.
+    await page.getByRole('button', { name: 'Kết thúc', exact: true }).click();
+    const endDialog = page.getByRole('dialog', { name: 'Kết thúc hội thoại này?' });
+    await expect(endDialog).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    const endDialogBox375 = await readBox(endDialog);
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'end-dialog-375.png'),
+      fullPage: true,
+    });
+
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expectNoHorizontalOverflow(page);
+    const endDialogBox1280 = await readBox(endDialog);
+    await page.screenshot({
+      path: screenshotPath(testInfo, 'end-dialog-1280.png'),
+      fullPage: true,
+    });
+
+    // Đóng hộp thoại kết thúc.
+    await page.keyboard.press('Escape');
+    await expect(endDialog).toHaveCount(0);
+
+    const measurements = {
+      panel1280: panelBox1280,
+      transferDialog1280: transferDialogBox1280,
+      transferDialog375: transferDialogBox375,
+      endDialog1280: endDialogBox1280,
+      endDialog375: endDialogBox375,
+    };
+
+    await testInfo.attach('measurements-dialogs-and-panels', {
+      body: JSON.stringify(measurements, null, 2),
+      contentType: 'application/json',
+    });
+
+    await colleague.page.request.put(PRESENCE_PATH, {
+      headers: { Origin: e2eEnvironment.webOrigin },
+      data: { status: 'away' },
+    });
+  });
 });

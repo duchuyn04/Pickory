@@ -14,6 +14,22 @@
   gap: var(--space-4);
 }
 
+.support-transfer-status {
+  position: static;
+  margin-bottom: var(--space-3);
+}
+
+.support-transfer-status:empty {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
 .support-desk-grid > .card {
   margin-bottom: 0;
 }

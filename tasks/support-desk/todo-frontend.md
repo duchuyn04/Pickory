@@ -109,15 +109,15 @@ Người dùng chọn cách sửa này ngày 2026-11-04. Backend không đổi.
 ### SD-UI3: Thông tin khách và hộp thoại chuyển phiên
 **Mô tả:** Cột phải của màn CSKH hiện dữ liệu của SD-11. Thanh trên của khung chat có nút "Chuyển" và "Kết thúc".
 **Tiêu chí nghiệm thu:**
-- [ ] Schema `zod` đọc được mọi ví dụ của `admin-customer-panel.json`, và các ví dụ chuyển, kết thúc phiên của `admin-sessions.json`
-- [ ] Mỗi đơn có link `/admin/orders/{code}`. `name` và `email` bằng `null` thì cột hiện "Chưa có thông tin"
-- [ ] Hộp thoại chuyển chỉ liệt kê nhân viên đang sẵn sàng, trừ chính người dùng
-- [ ] Hộp thoại có ô ghi chú nội bộ với `label`. Esc đóng hộp thoại và trả focus về nút "Chuyển"
-- [ ] "Kết thúc" hỏi xác nhận trước khi gọi API
-- [ ] Lỗi 409 hiện bằng `ErrorAlert` với thông báo của API
-- [ ] Ở 375 px, cột thông tin khách thu thành ngăn mở bằng nút
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang
-- [ ] Playwright console có 0 lỗi và 0 cảnh báo
+- [x] Schema `zod` đọc được mọi ví dụ của `admin-customer-panel.json`, và các ví dụ chuyển, kết thúc phiên của `admin-sessions.json`
+- [x] Mỗi đơn có link `/admin/orders/{code}`. `name` và `email` bằng `null` thì cột hiện "Chưa có thông tin"
+- [x] Hộp thoại chuyển chỉ liệt kê nhân viên đang sẵn sàng, trừ chính người dùng
+- [x] Hộp thoại có ô ghi chú nội bộ với `label`. Esc đóng hộp thoại và trả focus về nút "Chuyển"
+- [x] "Kết thúc" hỏi xác nhận trước khi gọi API
+- [x] Lỗi 409 hiện bằng `ErrorAlert` với thông báo của API
+- [x] Ở 375 px, cột thông tin khách thu thành ngăn mở bằng nút
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang
+- [x] Playwright console có 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; ảnh chụp
 **Phụ thuộc:** SD-UI2, SD-C2 · **Quy mô:** M
 

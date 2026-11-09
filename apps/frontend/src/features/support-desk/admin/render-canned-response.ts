@@ -1,4 +1,4 @@
-// Giá trị thay cho hai biến của mẫu soạn sẵn. SD-UI3 nối giá trị thật sau.
+// Giá trị thay cho hai biến của mẫu soạn sẵn. SD-UI3 đã nối giá trị thật từ dữ liệu khách của phiên đang mở.
 export interface CannedResponseVariables {
   tenKhach: string | null;
   maDon: string | null;

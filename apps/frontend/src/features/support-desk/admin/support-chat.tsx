@@ -6,6 +6,8 @@ import { getErrorMessage } from '../../../shared/error-message';
 import { formatVietnamDateTime, formatVietnamTime } from '../../../shared/vietnam-time';
 import { QueueResult } from './queue-result';
 import { StaffMessageComposer } from './staff-message-composer';
+import { EndSessionDialog } from './end-session-dialog';
+import { TransferSessionDialog } from './transfer-session-dialog';
 import type { CannedResponseVariables } from './render-canned-response';
 import type { OpenSupportSession } from './support-desk-session';
 import {
@@ -35,21 +37,27 @@ function senderLabel(message: StaffViewMessage): string {
 interface SupportChatProps {
   session: OpenSupportSession | null;
   canReply: boolean;
-  // Giá trị thay cho biến của mẫu. SD-UI3 truyền giá trị thật của khách và đơn.
+  // Giá trị thay cho biến của mẫu. SD-UI3 truyền giá trị thật từ dữ liệu khách của phiên đang mở.
   variables: CannedResponseVariables;
   // Nhận thành công: trang đặt `isHeld` bằng `true` ngay, rồi danh sách phiên đọc lại.
   onClaimed(sessionId: string): void;
-  // Gửi tin bị 403: trang đặt lại `isHeld`, để ô soạn tắt với chú thích nhận hội thoại.
+  // Mất quyền gửi tin (403) thì đặt lại isHeld để ô soạn chuyển sang trạng thái nhắc nhận phiên.
   onLostHold(sessionId: string): void;
+  // Thông báo tên người nhận cho trang chính khi hoàn tất chuyển phiên.
+  onTransferSuccess(recipientName: string): void;
+  // Cập nhật trạng thái khi phiên kết thúc để vô hiệu hóa ô soạn tin và dọn nút thao tác.
+  onSessionClosed(sessionId: string): void;
 }
 
-// Cột giữa của màn CSKH: nút Nhận, lịch sử tin theo phiên và ô soạn của nhân viên.
+// Cột giữa của màn CSKH: nút Nhận, nút Chuyển, nút Kết thúc, lịch sử tin và ô soạn.
 export function SupportChat({
   session,
   canReply,
   variables,
   onClaimed,
   onLostHold,
+  onTransferSuccess,
+  onSessionClosed,
 }: SupportChatProps) {
   const queryClient = useQueryClient();
   const [isClaiming, setIsClaiming] = useState(false);
@@ -61,6 +69,64 @@ export function SupportChat({
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
   const lastMessageIdRef = useRef<string | null>(null);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isEndOpen, setIsEndOpen] = useState(false);
+  // Giữ ref nút mở để trả tiêu điểm dự phòng cho trình duyệt không tự focus khi đóng.
+  const transferButtonRef = useRef<HTMLButtonElement>(null);
+  const endButtonRef = useRef<HTMLButtonElement>(null);
+  const chatTitleRef = useRef<HTMLHeadingElement>(null);
+
+  // Trả tiêu điểm về nút mở để hỗ trợ trình duyệt không tự khôi phục vị trí bấm.
+  function handleCloseTransfer() {
+    setIsTransferOpen(false);
+    transferButtonRef.current?.focus();
+  }
+
+  // Đóng hộp thoại và gửi tên người nhận lên trang chính để hiển thị dòng thông báo.
+  function handleTransferSuccess(recipientName: string) {
+    setIsTransferOpen(false);
+    onTransferSuccess(recipientName);
+  }
+
+  // Trả tiêu điểm về nút mở để người dùng tiếp tục thao tác trên bàn phím.
+  function handleCloseEnd() {
+    setIsEndOpen(false);
+    endButtonRef.current?.focus();
+  }
+
+  // Đánh dấu phiên kết thúc và nạp lại lịch sử tin để hiển thị biểu mẫu csat_form.
+  function handleEndSuccess() {
+    setIsEndOpen(false);
+    if (session) {
+      onSessionClosed(session.sessionId);
+      void queryClient.invalidateQueries({ queryKey: SESSIONS_QUERY_KEY });
+      if (session.conversationId) {
+        void queryClient.invalidateQueries({
+          queryKey: staffMessagesQueryKey(session.conversationId),
+        });
+      }
+    }
+    // Chờ hộp thoại gỡ xong và useDialogFocus trả focus xong rồi mới đưa focus vào tiêu đề.
+    setTimeout(() => chatTitleRef.current?.focus(), 0);
+  }
+
+  // Đồng bộ cờ đã kết thúc khi máy chủ trả lỗi 409 do phiên đã đóng ở nơi khác.
+  function handleSessionAlreadyClosed() {
+    setIsEndOpen(false);
+    setIsTransferOpen(false);
+    if (session) {
+      onSessionClosed(session.sessionId);
+      void queryClient.invalidateQueries({ queryKey: SESSIONS_QUERY_KEY });
+    }
+  }
+
+  // Người gọi mất quyền giữ phiên (lỗi 403) thì đặt lại cờ để ô soạn hiển thị nút Nhận.
+  function handleTransferLostHold() {
+    setIsTransferOpen(false);
+    if (session) {
+      onLostHold(session.sessionId);
+    }
+  }
 
   const conversationId = session?.conversationId ?? null;
   const messagesQuery = useQuery({
@@ -190,9 +256,31 @@ export function SupportChat({
       className="card card-flush support-pane support-chat support-chat-open"
       aria-labelledby="support-chat-title"
     >
-      <h2 id="support-chat-title" className="support-pane-title">
-        Khung chat
-      </h2>
+      <div className="support-chat-header">
+        <h2 id="support-chat-title" ref={chatTitleRef} tabIndex={-1} className="support-pane-title">
+          Khung chat
+        </h2>
+        {session.isHeld && !session.isClosed && canReply && (
+          <div className="support-chat-actions">
+            <button
+              ref={transferButtonRef}
+              type="button"
+              className="btn btn-outline btn-sm"
+              onClick={() => setIsTransferOpen(true)}
+            >
+              Chuyển
+            </button>
+            <button
+              ref={endButtonRef}
+              type="button"
+              className="btn btn-danger btn-sm"
+              onClick={() => setIsEndOpen(true)}
+            >
+              Kết thúc
+            </button>
+          </div>
+        )}
+      </div>
       {!session.isHeld && !session.isClosed && canReply && (
         <div className="support-chat-claim">
           <button
@@ -274,13 +362,30 @@ export function SupportChat({
       </QueueResult>
       {sendError !== null && <ErrorAlert message={sendError} />}
       <StaffMessageComposer
-        isHeld={session.isHeld}
+        isHeld={session.isHeld && !session.isClosed}
         canReply={canReply}
         disabledNote={disabledNote}
         isSending={isSending}
         variables={variables}
         onSend={handleSend}
       />
+      {isTransferOpen && (
+        <TransferSessionDialog
+          sessionId={session.sessionId}
+          onSuccess={handleTransferSuccess}
+          onSessionClosed={handleSessionAlreadyClosed}
+          onLostHold={handleTransferLostHold}
+          onClose={handleCloseTransfer}
+        />
+      )}
+      {isEndOpen && (
+        <EndSessionDialog
+          sessionId={session.sessionId}
+          onSuccess={handleEndSuccess}
+          onSessionClosed={handleSessionAlreadyClosed}
+          onClose={handleCloseEnd}
+        />
+      )}
     </section>
   );
 }

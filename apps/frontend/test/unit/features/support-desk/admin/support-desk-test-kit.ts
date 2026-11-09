@@ -130,6 +130,8 @@ export interface DeskState {
   messagesFail: boolean;
   // POST gửi tin trả 403 SUPPORT_SESSION_NOT_ASSIGNED.
   sendForbidden: boolean;
+  // Dữ liệu bảng thông tin khách theo phiên.
+  customerInfo: unknown;
 }
 
 export function queueSession(id: string, preview = `Khách hỏi về đơn ${id}`) {
@@ -194,6 +196,18 @@ export function openDesk(
     claimNotFound: false,
     messagesFail: false,
     sendForbidden: false,
+    customerInfo: {
+      customer: { isGuest: false, name: 'Nguyễn Minh Anh', email: 'minhanh@example.com' },
+      orders: [
+        {
+          code: 'PK123',
+          status: 'shipping',
+          total: 459000,
+          itemCount: 2,
+          createdAt: '2026-11-01T09:12:00Z',
+        },
+      ],
+    },
     ...stateOverrides,
   };
 
@@ -236,6 +250,13 @@ export function openDesk(
       if (state.messagesFail) return notFound();
       return state.messagePages[conversationKey] ?? { items: [], nextCursor: null };
     }
+    // Bảng thông tin khách hàng: `GET /api/admin/support/sessions/{id}/customer`.
+    const sessionCustomerMatch = /^\/api\/admin\/support\/sessions\/([^/]+)\/customer$/.exec(
+      url.pathname,
+    );
+    if (sessionCustomerMatch !== null && method === 'GET') {
+      return state.customerInfo;
+    }
     // Nhận phiên: `POST /api/admin/support/sessions/{id}/assignment`, không có body.
     const assignmentMatch = /^\/api\/admin\/support\/sessions\/([^/]+)\/assignment$/.exec(
       url.pathname,
@@ -264,6 +285,26 @@ export function openDesk(
         sessionId: assignmentMatch[1],
         staffId: STAFF_ID,
         claimedAt: '2026-10-22T08:05:00Z',
+      };
+    }
+    if (assignmentMatch !== null && method === 'PUT') {
+      const { staffId } = JSON.parse(String(init?.body)) as {
+        staffId: string;
+        note: string | null;
+      };
+      return {
+        sessionId: assignmentMatch[1],
+        staffId,
+        claimedAt: '2026-10-22T08:05:00Z',
+      };
+    }
+    // Đóng phiên: `PATCH /api/admin/support/sessions/{id}` với status `closed`.
+    const sessionCloseMatch = /^\/api\/admin\/support\/sessions\/([^/]+)$/.exec(url.pathname);
+    if (sessionCloseMatch !== null && method === 'PATCH') {
+      return {
+        sessionId: sessionCloseMatch[1],
+        closedAt: '2026-10-22T08:30:00Z',
+        closedBy: STAFF_ID,
       };
     }
     // Gửi tin: `POST /api/admin/support/sessions/{id}/messages` với body `{ body }`.

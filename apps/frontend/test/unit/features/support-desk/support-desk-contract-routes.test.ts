@@ -174,6 +174,37 @@ describe('route giả theo ví dụ trong file mẫu', () => {
     });
   });
 
+  it('không nhầm lẫn giữa hai mã UUID cố định khác nhau của file mẫu', async () => {
+    const fakePage = createFakePage();
+    const routes = createSupportDeskRouteMocks({
+      page: fakePage.page,
+      apiOrigin: API_ORIGIN,
+      loadOpenApiDocument: createOpenApiLoader({ paths: {} }).load,
+    });
+
+    await routes.mockRoute('admin-customer-panel.json', 'khách đã đăng nhập');
+    await routes.mockRoute('admin-customer-panel.json', 'khách vãng lai');
+
+    const first = await dispatchRequest(
+      fakePage,
+      'GET',
+      `${API_ORIGIN}/api/admin/support/sessions/5e550000-0000-4000-8000-000000000001/customer`,
+    );
+    const second = await dispatchRequest(
+      fakePage,
+      'GET',
+      `${API_ORIGIN}/api/admin/support/sessions/5e550000-0000-4000-8000-000000000002/customer`,
+    );
+
+    // Xác nhận request 0001 nhận đúng ví dụ đăng nhập và request 0002 nhận đúng ví dụ vãng lai.
+    expect(readResponseBody(first)).toMatchObject({
+      data: { customer: { isGuest: false, name: 'Nguyễn Minh Anh' } },
+    });
+    expect(readResponseBody(second)).toMatchObject({
+      data: { customer: { isGuest: true, name: null } },
+    });
+  });
+
   it('báo lỗi khi tài liệu OpenAPI đã có route, kèm câu gỡ dữ liệu giả', async () => {
     const fakePage = createFakePage();
     const routes = createSupportDeskRouteMocks({

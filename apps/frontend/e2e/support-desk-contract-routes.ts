@@ -161,6 +161,12 @@ function normalizePathname(pathname: string): string {
   return pathname.length > 1 && pathname.endsWith('/') ? pathname.slice(0, -1) : pathname;
 }
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const FIXTURE_UUID_PATTERN =
+  /^(5e550000|c0a80000|cb000000|ca000000|a0000000)-0000-4000-8000-[0-9a-f]{12}$/i;
+
+function isFixtureUuid(uuid: string): boolean {
+  return FIXTURE_UUID_PATTERN.test(uuid);
+}
 
 function matchesExampleUrl(url: URL, example: ContractExample): boolean {
   const exampleUrl = parsePath(example.path);
@@ -173,6 +179,14 @@ function matchesExampleUrl(url: URL, example: ContractExample): boolean {
     const urlSegment = urlSegments[index];
     if (urlSegment === undefined) return false;
     if (segment === urlSegment) return true;
+    // Hai ví dụ của bảng thông tin khách dùng hai mã UUID khác nhau: 0001 là khách đăng nhập, 0002 là khách vãng lai.
+    if (
+      exampleUrl.pathname.endsWith('/customer') &&
+      isFixtureUuid(segment) &&
+      isFixtureUuid(urlSegment)
+    ) {
+      return false;
+    }
     return (
       (segment.startsWith('{') && segment.endsWith('}')) ||
       (UUID_PATTERN.test(segment) && UUID_PATTERN.test(urlSegment))

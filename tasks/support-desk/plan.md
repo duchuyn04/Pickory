@@ -243,7 +243,7 @@ Nhánh frontend (`todo-frontend.md`):
 - [ ] SD-UI8 một mã khách vãng lai cho mọi request đầu trang
 - [x] SD-UI6 form số điện thoại và form CSAT
 - [x] SD-UI2 khung chat và mẫu trả lời nhanh
-- [ ] SD-UI3 thông tin khách và hộp thoại chuyển phiên
+- [x] SD-UI3 thông tin khách và hộp thoại chuyển phiên
 - [ ] SD-UI4 tab Gọi lại
 
 ### Checkpoint SD2

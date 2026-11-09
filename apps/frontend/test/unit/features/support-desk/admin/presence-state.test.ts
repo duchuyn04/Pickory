@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   applyPresenceChange,
   isStaffAvailable,
+  staffRadioLabel,
 } from '../../../../../src/features/support-desk/admin/presence-state';
 
 const NOW = '2026-10-22T08:00:00.000Z';
@@ -59,5 +60,60 @@ describe('applyPresenceChange', () => {
     applyPresenceChange(list, { staffId: 'staff-1', status: 'away' }, NOW);
 
     expect(list).toHaveLength(1);
+  });
+
+  it('giữ displayName của dòng cũ khi nhận available lần hai', () => {
+    const list = [
+      {
+        staffId: 'staff-1',
+        status: 'available' as const,
+        lastSeenAt: '2026-10-22T07:00:00Z',
+        displayName: 'Minh',
+      },
+    ];
+
+    const result = applyPresenceChange(list, { staffId: 'staff-1', status: 'available' }, NOW);
+
+    // Xác nhận tên hiển thị không bị mất sau khi cập nhật thời điểm nhìn thấy.
+    expect(result).toEqual([
+      {
+        staffId: 'staff-1',
+        status: 'available',
+        lastSeenAt: NOW,
+        displayName: 'Minh',
+      },
+    ]);
+  });
+});
+
+describe('staffRadioLabel', () => {
+  it('ưu tiên hiển thị displayName khi có giá trị không rỗng', () => {
+    expect(
+      staffRadioLabel({
+        staffId: 'staff-0002',
+        status: 'available',
+        lastSeenAt: NOW,
+        displayName: 'Lan - CSKH',
+      }),
+    ).toBe('Lan - CSKH');
+  });
+
+  it('dùng tiền tố Nhân viên cộng 4 ký tự cuối khi thiếu displayName hoặc displayName là null', () => {
+    expect(
+      staffRadioLabel({
+        staffId: 'staff-0002',
+        status: 'available',
+        lastSeenAt: NOW,
+        displayName: null,
+      }),
+    ).toBe('Nhân viên 0002');
+
+    expect(
+      staffRadioLabel({
+        staffId: 'staff-0003',
+        status: 'available',
+        lastSeenAt: NOW,
+      }),
+    ).toBe('Nhân viên 0003');
   });
 });

@@ -7,6 +7,29 @@
   height: max(320px, min(720px, calc(100dvh - 240px)));
 }
 
+/* Thanh trên của khung chat chứa tiêu đề và các nút thao tác phiên. */
+.support-chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  padding: var(--space-3) 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.support-chat-header .support-pane-title {
+  padding: 0;
+  border-bottom: 0;
+}
+
+.support-chat-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
 @media (min-width: 1180px) {
   .support-chat-open {
     height: max(320px, min(760px, calc(100vh - 220px)));

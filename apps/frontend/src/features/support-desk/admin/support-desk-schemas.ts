@@ -9,6 +9,8 @@ const staffPresenceSchema = z.object({
   staffId: z.string(),
   status: presenceStatusSchema,
   lastSeenAt: z.string(),
+  // Bổ sung `displayName` theo quyết định ngày 2026-11-09. Trường này là chuỗi, `null` hoặc không có khi backend chưa hỗ trợ.
+  displayName: z.string().nullable().optional(),
 });
 
 const presenceChangeSchema = z.object({
@@ -71,6 +73,35 @@ const sessionAssignmentSchema = z.object({
   claimedAt: apiTimeSchema,
 });
 
+// Thông tin người dùng của phiên CSKH. Khách vãng lai có tên và email bằng `null`.
+const customerInfoSchema = z.object({
+  isGuest: z.boolean(),
+  name: z.string().nullable(),
+  email: z.string().nullable(),
+});
+
+// Đơn hàng gần nhất của khách hàng. Chuỗi giờ `createdAt` dùng `apiTimeSchema` để chặn định dạng sai.
+const sessionCustomerOrderSchema = z.object({
+  code: z.string(),
+  status: z.string(),
+  total: z.number(),
+  itemCount: z.number(),
+  createdAt: apiTimeSchema,
+});
+
+// Dữ liệu bảng thông tin khách. Cấu trúc gồm hồ sơ người dùng và danh sách tối đa 5 đơn hàng.
+const sessionCustomerSchema = z.object({
+  customer: customerInfoSchema,
+  orders: z.array(sessionCustomerOrderSchema),
+});
+
+// Kết quả kết thúc phiên hỗ trợ. Máy chủ phản hồi mã phiên, thời điểm đóng và định danh người đóng.
+const closedSessionSchema = z.object({
+  sessionId: z.string(),
+  closedAt: apiTimeSchema,
+  closedBy: z.string(),
+});
+
 const cannedResponseSchema = z.object({
   id: z.string(),
   shortcut: z.string(),
@@ -100,6 +131,10 @@ export type StaffMessagePage = z.infer<typeof staffMessagePageSchema>;
 export type SessionAssignment = z.infer<typeof sessionAssignmentSchema>;
 export type CannedResponse = z.infer<typeof cannedResponseSchema>;
 export type MessageCreatedEvent = z.infer<typeof messageCreatedSchema>;
+export type CustomerInfo = z.infer<typeof customerInfoSchema>;
+export type SessionCustomerOrder = z.infer<typeof sessionCustomerOrderSchema>;
+export type SessionCustomer = z.infer<typeof sessionCustomerSchema>;
+export type ClosedSession = z.infer<typeof closedSessionSchema>;
 
 // Dữ liệu sai hợp đồng thành `ApiError`, để cột hàng chờ hiện lỗi và nút "Thử lại" thay vì vỡ khi vẽ.
 function parseApiData<Schema extends z.ZodType>(schema: Schema, data: unknown): z.infer<Schema> {
@@ -138,6 +173,16 @@ export function parseSessionAssignment(data: unknown): SessionAssignment {
 
 export function parseCannedResponses(data: unknown): CannedResponse[] {
   return parseApiData(z.array(cannedResponseSchema), data);
+}
+
+// Đọc dữ liệu bảng thông tin khách. Hàm chuyển cấu trúc sai quy cách thành `ApiError`.
+export function parseSessionCustomer(data: unknown): SessionCustomer {
+  return parseApiData(sessionCustomerSchema, data);
+}
+
+// Đọc phản hồi kết thúc phiên. Hàm ném `ApiError` khi máy chủ trả dữ liệu sai quy cách.
+export function parseClosedSession(data: unknown): ClosedSession {
+  return parseApiData(closedSessionSchema, data);
 }
 
 // Dữ liệu sự kiện đến từ luồng SSE, không qua `apiRequest`. Sai dạng thì bỏ qua, không được làm vỡ trang.

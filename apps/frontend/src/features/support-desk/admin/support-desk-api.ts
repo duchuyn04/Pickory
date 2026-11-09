@@ -2,17 +2,21 @@ import { apiRequest } from '../../../shared/api';
 import {
   parseCallbackRequests,
   parseCannedResponses,
+  parseClosedSession,
   parseQueueSessions,
   parseSessionAssignment,
+  parseSessionCustomer,
   parseStaffMessagePage,
   parseStaffPresence,
   parseStaffPresenceList,
   parseStaffViewMessage,
   type CallbackRequest,
   type CannedResponse,
+  type ClosedSession,
   type PresenceStatus,
   type QueueSession,
   type SessionAssignment,
+  type SessionCustomer,
   type StaffMessagePage,
   type StaffPresence,
   type StaffViewMessage,
@@ -82,4 +86,32 @@ export async function sendStaffMessage(sessionId: string, body: string): Promise
 
 export async function fetchCannedResponses(): Promise<CannedResponse[]> {
   return parseCannedResponses(await apiRequest<unknown>('/api/admin/support/canned-responses'));
+}
+
+// Đọc dữ liệu bảng thông tin khách theo mã phiên.
+export async function fetchSessionCustomer(sessionId: string): Promise<SessionCustomer> {
+  const data = await apiRequest<unknown>(`/api/admin/support/sessions/${sessionId}/customer`);
+  return parseSessionCustomer(data);
+}
+
+// Chuyển phiên hỗ trợ cho nhân viên khác. Ghi chú nội bộ là chuỗi hoặc `null`.
+export async function transferSupportSession(
+  sessionId: string,
+  staffId: string,
+  note: string | null,
+): Promise<SessionAssignment> {
+  const data = await apiRequest<unknown>(`/api/admin/support/sessions/${sessionId}/assignment`, {
+    method: 'PUT',
+    body: JSON.stringify({ staffId, note }),
+  });
+  return parseSessionAssignment(data);
+}
+
+// Kết thúc phiên hỗ trợ đang mở. Thao tác gửi yêu cầu đóng phiên với trạng thái `closed`.
+export async function closeSupportSession(sessionId: string): Promise<ClosedSession> {
+  const data = await apiRequest<unknown>(`/api/admin/support/sessions/${sessionId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'closed' }),
+  });
+  return parseClosedSession(data);
 }
