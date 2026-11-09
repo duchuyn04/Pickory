@@ -116,6 +116,10 @@ export function CheckoutSummary({
         )}
       </div>
 
+      <Link to="/policy/giao-hang" className="checkout-summary-policy-link">
+        Cách tính phí giao hàng
+      </Link>
+
       {hasError && (
         <div className="checkout-summary-error">
           <ErrorAlert message={errorMessage} />

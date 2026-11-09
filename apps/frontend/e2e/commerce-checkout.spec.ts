@@ -635,8 +635,12 @@ test.describe('COM-UI2: trang đặt hàng của khách', () => {
     await expect(page.getByLabel('Địa chỉ công ty')).toBeFocused();
     await page.keyboard.type('1 Đường Công Ty');
 
-    // Nút đặt hàng dùng được khi preview đã về, rồi Tab tới nút và Enter để gửi.
+    // Nút đặt hàng dùng được khi preview đã về, rồi Tab qua các link tóm tắt tới nút và Enter để gửi.
     await expect(placeOrderButton(page)).toBeEnabled();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'Sửa giỏ hàng' })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('link', { name: 'Cách tính phí giao hàng' })).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(placeOrderButton(page)).toBeFocused();
     await page.keyboard.press('Enter');

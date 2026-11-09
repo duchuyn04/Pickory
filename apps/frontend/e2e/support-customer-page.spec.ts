@@ -49,10 +49,8 @@ function screenshotPath(testInfo: { outputPath: (name: string) => string }, file
 }
 
 async function openSupportPage(page: Page) {
-  // Nạp cookie `pk_anon` trước khi mở trang. Nhiều request đầu trang đua nhau khi thiếu cookie,
-  // và mỗi response lại set một anonymous id khác nhau, khiến chủ hội thoại lệch với tin nhắn.
-  // Case "mở thẳng trang" bên dưới cố tình bỏ qua bước này để kiểm đường khách thật đi từ `form_url`.
-  await page.request.get('/api/me');
+  // SD-UI8: apiRequest đã tự chờ request đầu tiên của tab để nhận cookie pk_anon.
+  // Mở thẳng trang mà không cần nạp trước cookie.
   await page.goto('/support');
   await dismissConsent(page);
   await expect(page.getByRole('heading', { name: 'Liên hệ CSKH', exact: true })).toBeVisible();
@@ -497,6 +495,85 @@ test.describe('SD-UI7: ảnh bố cục', () => {
     });
 
     expect(consoleIssues).toEqual([]);
+    await context.close();
+  });
+});
+
+test.describe('SD-UI8: một mã khách vãng lai cho mọi request đầu trang', () => {
+  test('mở thẳng /support bằng context mới nhận đúng 1 cookie pk_anon', async ({ browser }) => {
+    const { context, page, consoleIssues } = await openGuestPage(browser);
+    let anonSetCookieCount = 0;
+    const responsePromises: Promise<void>[] = [];
+
+    // Đếm số lần server phản hồi header Set-Cookie đặt pk_anon.
+    page.on('response', (response) => {
+      responsePromises.push(
+        (async () => {
+          const headers = await response.headersArray();
+          for (const header of headers) {
+            if (header.name.toLowerCase() === 'set-cookie' && header.value.includes('pk_anon=')) {
+              anonSetCookieCount += 1;
+            }
+          }
+        })(),
+      );
+    });
+
+    await page.goto('/support');
+    await dismissConsent(page);
+    await expect(page.getByRole('heading', { name: 'Liên hệ CSKH', exact: true })).toBeVisible();
+    await expect(composer(page)).toBeVisible();
+
+    // Chờ các request đầu trang và luồng sự kiện hoàn tất trước khi chốt số cookie.
+    await page.waitForLoadState('networkidle');
+    await Promise.all(responsePromises);
+
+    // Mọi response của lần tải đầu chỉ được đặt đúng một cookie pk_anon.
+    expect(anonSetCookieCount).toBe(1);
+
+    const cookies = await context.cookies();
+    const anonCookies = cookies.filter((candidate) => candidate.name === 'pk_anon');
+    expect(anonCookies).toHaveLength(1);
+    expect(consoleIssues).toEqual([]);
+
+    await context.close();
+  });
+
+  test('mở thẳng trang chủ bằng context mới nhận đúng 1 cookie pk_anon', async ({ browser }) => {
+    const { context, page, consoleIssues } = await openGuestPage(browser);
+    let anonSetCookieCount = 0;
+    const responsePromises: Promise<void>[] = [];
+
+    // Đếm số lần server phản hồi header Set-Cookie đặt pk_anon.
+    page.on('response', (response) => {
+      responsePromises.push(
+        (async () => {
+          const headers = await response.headersArray();
+          for (const header of headers) {
+            if (header.name.toLowerCase() === 'set-cookie' && header.value.includes('pk_anon=')) {
+              anonSetCookieCount += 1;
+            }
+          }
+        })(),
+      );
+    });
+
+    await page.goto('/');
+    await dismissConsent(page);
+
+    // Chờ danh sách sản phẩm hiển thị để các request đầu trang chạy đủ.
+    await expect(page.locator('.product-card').first()).toBeVisible();
+    await page.waitForLoadState('networkidle');
+    await Promise.all(responsePromises);
+
+    // Mọi response của lần tải đầu chỉ được đặt đúng một cookie pk_anon.
+    expect(anonSetCookieCount).toBe(1);
+
+    const cookies = await context.cookies();
+    const anonCookies = cookies.filter((candidate) => candidate.name === 'pk_anon');
+    expect(anonCookies).toHaveLength(1);
+    expect(consoleIssues).toEqual([]);
+
     await context.close();
   });
 });

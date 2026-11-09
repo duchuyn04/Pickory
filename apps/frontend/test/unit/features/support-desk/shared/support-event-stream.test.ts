@@ -1,8 +1,57 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { apiRequest } from '../../../../../src/shared/api';
 import {
   SupportEventStream,
   type StreamStatus,
 } from '../../../../../src/features/support-desk/shared/support-event-stream';
+// Tách deferred promise để điều khiển thời điểm phản hồi của request đầu.
+interface Deferred<T> {
+  promise: Promise<T>;
+  resolve: (value: T) => void;
+  reject: (reason?: unknown) => void;
+}
+
+function createDeferred<T>(): Deferred<T> {
+  let resolve!: (value: T) => void;
+  let reject!: (reason?: unknown) => void;
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res;
+    reject = rej;
+  });
+  return { promise, resolve, reject };
+}
+// Tải lại module qua vi.resetModules để kịch bản có trạng thái request đầu độc lập.
+async function loadFreshStreamContext() {
+  vi.resetModules();
+  const streamModule =
+    await import('../../../../../src/features/support-desk/shared/support-event-stream');
+  const apiModule = await import('../../../../../src/shared/api');
+  return {
+    SupportEventStream: streamModule.SupportEventStream,
+    apiRequest: apiModule.apiRequest,
+  };
+}
+
+function startStreamWith(StreamClass: typeof SupportEventStream) {
+  const recorder: Recorder = { statuses: [], openCount: 0, events: [] };
+  const stream = new StreamClass(
+    {
+      url: '/api/admin/support/events',
+      eventNames: ['presence.changed', 'session.waiting'],
+      createEventSource: (url) => new FakeEventSource(url),
+    },
+    {
+      onStatusChange: (status) => recorder.statuses.push(status),
+      onOpen: () => {
+        recorder.openCount += 1;
+      },
+      onEvent: (name, data) => recorder.events.push({ name, data }),
+    },
+  );
+  stream.start();
+  return { stream, recorder };
+}
+
 import { FakeEventSource } from './fake-event-source';
 
 interface Recorder {
@@ -37,13 +86,21 @@ function latestSource(): FakeEventSource {
   return source;
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   FakeEventSource.instances = [];
   vi.useFakeTimers();
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => new Response(JSON.stringify({ data: { ok: true } }), { status: 200 })),
+  );
+  // Giải phóng bước chờ request đầu để các test chức năng của luồng mở kết nối.
+  await apiRequest('/api/init');
+  FakeEventSource.instances = [];
 });
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe('SupportEventStream: trạng thái kết nối', () => {
@@ -244,5 +301,96 @@ describe('SupportEventStream: dừng', () => {
     source.emit('session.waiting', { sessionId: 'x' });
 
     expect(recorder.events).toEqual([]);
+  });
+});
+
+describe('SupportEventStream: chờ request API đầu tiên', () => {
+  it('chờ request API đầu tiên hoàn tất mới tạo kết nối EventSource', async () => {
+    const { SupportEventStream: FreshStream, apiRequest: freshApiRequest } =
+      await loadFreshStreamContext();
+    const firstDeferred = createDeferred<Response>();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => firstDeferred.promise),
+    );
+
+    const firstApiCall = freshApiRequest('/api/init');
+
+    const { stream } = startStreamWith(FreshStream);
+
+    // Chưa tạo kết nối EventSource trong lúc chờ request đầu.
+    expect(FakeEventSource.instances).toHaveLength(0);
+
+    // Giải phóng request đầu.
+    firstDeferred.resolve(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
+    await firstApiCall;
+
+    // Chờ microtask để stream tiến hành mở kết nối.
+    await Promise.resolve();
+
+    expect(FakeEventSource.instances).toHaveLength(1);
+    expect(latestSource().url).toBe('/api/admin/support/events');
+    expect(stream.status).toBe('connecting');
+  });
+
+  it('dừng luồng trong lúc chờ request đầu thì không tạo kết nối sau khi request xong', async () => {
+    const { SupportEventStream: FreshStream, apiRequest: freshApiRequest } =
+      await loadFreshStreamContext();
+    const firstDeferred = createDeferred<Response>();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => firstDeferred.promise),
+    );
+
+    const firstApiCall = freshApiRequest('/api/init');
+
+    const { stream } = startStreamWith(FreshStream);
+    expect(FakeEventSource.instances).toHaveLength(0);
+
+    // Dừng luồng ngay trong lúc chờ request đầu.
+    stream.stop();
+
+    // Giải phóng request đầu.
+    firstDeferred.resolve(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
+    await firstApiCall;
+    await Promise.resolve();
+
+    // Kết nối không được tạo sau khi luồng đã dừng.
+    expect(FakeEventSource.instances).toHaveLength(0);
+  });
+
+  it('luồng bắt đầu trước khi request API được gọi thì chờ request đó hoàn tất mới mở kết nối', async () => {
+    const { SupportEventStream: FreshStream, apiRequest: freshApiRequest } =
+      await loadFreshStreamContext();
+    const firstDeferred = createDeferred<Response>();
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => firstDeferred.promise),
+    );
+
+    // Bắt đầu luồng trước khi có bất kỳ request API nào được gọi.
+    const { stream } = startStreamWith(FreshStream);
+
+    // Chưa tạo kết nối EventSource khi chưa có request API nào chạy.
+    expect(FakeEventSource.instances).toHaveLength(0);
+
+    // Gọi request API đầu tiên với deferred promise chưa mở.
+    const firstApiCall = freshApiRequest('/api/init');
+    await Promise.resolve();
+
+    // Trong lúc request đầu đang chạy, luồng vẫn chưa được tạo.
+    expect(FakeEventSource.instances).toHaveLength(0);
+
+    // Giải phóng request đầu tiên.
+    firstDeferred.resolve(new Response(JSON.stringify({ data: { ok: true } }), { status: 200 }));
+    await firstApiCall;
+
+    // Chờ microtask để luồng tiến hành mở kết nối.
+    await Promise.resolve();
+
+    // Khi request đầu hoàn tất, kết nối EventSource được tạo.
+    expect(FakeEventSource.instances).toHaveLength(1);
+    expect(latestSource().url).toBe('/api/admin/support/events');
+    expect(stream.status).toBe('connecting');
   });
 });

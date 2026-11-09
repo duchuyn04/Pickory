@@ -1,3 +1,4 @@
+import { isInitialApiRequestPending, waitForInitialApiRequest } from '../../../shared/api';
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { z } from 'zod';
 import type { ProductDetail } from '../customer/catalog-api';
@@ -75,18 +76,40 @@ export function StockLiveProvider({ children }: { children: ReactNode }) {
     // Trình duyệt quá cũ không có `EventSource` thì không có luồng nào để nối.
     if (typeof EventSource === 'undefined') return;
 
-    const source = new EventSource(STOCK_EVENTS_URL, { withCredentials: true });
-    const handleStockChange = (event: MessageEvent) => {
-      const stockEvent = parseStockEvent(event.data);
-      if (stockEvent === null) return;
-      setState((current) => applyStockEvent(current, stockEvent));
-    };
+    let isDisposed = false;
+    let source: EventSource | null = null;
+    let handleStockChange: ((event: MessageEvent) => void) | null = null;
 
-    source.addEventListener(STOCK_CHANGED_EVENT, handleStockChange as EventListener);
+    function openSource() {
+      // Đã gỡ component trong lúc chờ thì không mở kết nối nữa.
+      if (isDisposed) return;
+
+      source = new EventSource(STOCK_EVENTS_URL, { withCredentials: true });
+      handleStockChange = (event: MessageEvent) => {
+        const stockEvent = parseStockEvent(event.data);
+        if (stockEvent === null) return;
+        setState((current) => applyStockEvent(current, stockEvent));
+      };
+
+      source.addEventListener(STOCK_CHANGED_EVENT, handleStockChange as EventListener);
+    }
+
+    // Chờ request API đầu tiên hoàn tất để dùng chung cookie pk_anon.
+    if (isInitialApiRequestPending()) {
+      void waitForInitialApiRequest().then(() => {
+        openSource();
+      });
+    } else {
+      openSource();
+    }
+
     return () => {
-      // Gỡ bộ nhận trước khi đóng, để sự kiện đang bay không cập nhật component đã gỡ.
-      source.removeEventListener(STOCK_CHANGED_EVENT, handleStockChange as EventListener);
-      source.close();
+      isDisposed = true;
+      if (source && handleStockChange) {
+        // Gỡ bộ nhận trước khi đóng, để sự kiện đang bay không cập nhật component đã gỡ.
+        source.removeEventListener(STOCK_CHANGED_EVENT, handleStockChange as EventListener);
+        source.close();
+      }
     };
   }, []);
 

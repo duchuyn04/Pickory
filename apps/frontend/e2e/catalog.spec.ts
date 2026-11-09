@@ -67,7 +67,17 @@ async function createSimpleProduct(
   await expect(page.locator('[data-image-id]')).toHaveCount(1);
   expect(imageProvider.uploadCount()).toBe(uploadsBefore + 1);
   await page.getByLabel('Mô tả ảnh 1 *').fill(`Mặt trước ${name}`);
+  // Chờ API lưu dữ liệu ảnh và form chuyển về trạng thái không còn thay đổi.
+  const savePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/admin/products/') &&
+      response.request().method() === 'PATCH' &&
+      response.status() === 200,
+  );
   await page.getByRole('button', { name: 'Lưu sản phẩm' }).click();
+  await savePromise;
+  await expect(page.locator('#product-status-unsaved-hint')).toBeHidden();
+  await expect(page.getByRole('button', { name: 'Đăng bán' })).toBeEnabled();
   await page.getByRole('button', { name: 'Đăng bán' }).click();
   await expect(page.locator('.status-current .badge')).toHaveText('Đang bán');
 }
@@ -132,8 +142,16 @@ test('Luồng catalog: admin tạo và đăng bán sản phẩm, khách lọc v�
   await page.keyboard.type(headingTwo);
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: 'Đậm', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Đậm', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'true',
+  );
   await page.keyboard.type(boldText);
   await page.getByRole('button', { name: 'Đậm', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Đậm', exact: true })).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  );
   await page.keyboard.type(' cho ảnh sắc nét.');
   await expect(editor.locator('h1')).toHaveText(headingOne);
   await expect(editor.locator('h2')).toHaveText(headingTwo);
@@ -152,7 +170,16 @@ test('Luồng catalog: admin tạo và đăng bán sản phẩm, khách lọc v�
   await expect(page.locator('[data-image-id]')).toHaveCount(1);
   expect(imageProvider.uploadCount()).toBe(1);
   await page.getByLabel('Mô tả ảnh 1 *').fill(`Mặt trước ${productName}`);
+  // Chờ API lưu dữ liệu ảnh và form chuyển về trạng thái không còn thay đổi.
+  const savePromise = page.waitForResponse(
+    (response) =>
+      response.url().includes('/api/admin/products/') &&
+      response.request().method() === 'PATCH' &&
+      response.status() === 200,
+  );
   await page.getByRole('button', { name: 'Lưu sản phẩm' }).click();
+  await savePromise;
+  await expect(page.locator('#product-status-unsaved-hint')).toBeHidden();
   await expect(page.getByRole('button', { name: 'Đăng bán' })).toBeEnabled();
   await page.getByRole('button', { name: 'Đăng bán' }).click();
   await expect(page.locator('.status-current .badge')).toHaveText('Đang bán');

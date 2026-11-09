@@ -61,16 +61,16 @@ Máy chủ không biết hai request cùng lúc có đến từ một trình duy
 Người dùng chọn cách sửa này ngày 2026-11-04. Backend không đổi.
 
 **Tiêu chí nghiệm thu:**
-- [ ] `apiRequest` trong `apps/frontend/src/shared/api.ts` giữ một promise cho request đầu tiên của tab. Request khác gửi sau khi promise đó xong, kể cả khi request đầu lỗi
-- [ ] Request đầu lỗi mạng hoặc lỗi HTTP không chặn mãi các request sau
-- [ ] `EventSource` của `stock-live.tsx` và `support-event-stream.ts` chỉ mở sau khi request đầu xong
-- [ ] Không còn lời gọi `fetch` hay `EventSource` tới `/api/` đi vòng qua bước chờ. Kiểm bằng `rg "fetch\(|new EventSource" apps/frontend/src`
-- [ ] Vitest: hai lời gọi `apiRequest` cùng lúc thì `fetch` thứ hai chỉ chạy sau khi `fetch` thứ nhất trả kết quả
-- [ ] Vitest: sau request đầu, các request chạy song song như trước, không chờ nhau
-- [ ] E2E: mở thẳng `/support` bằng context mới, không có cookie. Mọi response của lần tải đầu đặt tổng cộng 1 cookie `pk_anon`
-- [ ] E2E: mở thẳng trang chủ bằng context mới. Mọi response của lần tải đầu đặt tổng cộng 1 cookie `pk_anon`
-- [ ] Bỏ bước gọi `/api/me` trước khi mở trang trong `e2e/support-customer-page.spec.ts`. Mọi case vẫn xanh
-- [ ] Bộ `pnpm test:e2e` đầy đủ vẫn xanh
+- [x] `apiRequest` trong `apps/frontend/src/shared/api.ts` giữ một promise cho request đầu tiên của tab. Request khác gửi sau khi promise đó xong, kể cả khi request đầu lỗi
+- [x] Request đầu lỗi mạng hoặc lỗi HTTP không chặn mãi các request sau
+- [x] `EventSource` của `stock-live.tsx` và `support-event-stream.ts` chỉ mở sau khi request đầu xong
+- [x] Không còn lời gọi `fetch` hay `EventSource` tới `/api/` đi vòng qua bước chờ. Kiểm bằng `rg "fetch\(|new EventSource" apps/frontend/src`
+- [x] Vitest: hai lời gọi `apiRequest` cùng lúc thì `fetch` thứ hai chỉ chạy sau khi `fetch` thứ nhất trả kết quả
+- [x] Vitest: sau request đầu, các request chạy song song như trước, không chờ nhau
+- [x] E2E: mở thẳng `/support` bằng context mới, không có cookie. Mọi response của lần tải đầu đặt tổng cộng 1 cookie `pk_anon`
+- [x] E2E: mở thẳng trang chủ bằng context mới. Mọi response của lần tải đầu đặt tổng cộng 1 cookie `pk_anon`
+- [x] Bỏ bước gọi `/api/me` trước khi mở trang trong `e2e/support-customer-page.spec.ts`. Mọi case vẫn xanh
+- [x] Bộ `pnpm test:e2e` đầy đủ vẫn xanh
 **Kiểm tra:** `pnpm lint && pnpm typecheck && pnpm test`; `pnpm test:e2e`
 **Phụ thuộc:** SD-UI7 · **Quy mô:** S
 **File:** `apps/frontend/src/shared/api.ts`, `apps/frontend/src/features/catalog/shared/stock-live.tsx`, `apps/frontend/src/features/support-desk/shared/support-event-stream.ts`

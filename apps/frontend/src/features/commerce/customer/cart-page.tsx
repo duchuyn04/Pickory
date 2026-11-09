@@ -49,6 +49,10 @@ function CartSummary({ cart }: { cart: Cart }) {
         </p>
       </div>
 
+      <Link to="/policy/giao-hang" className="cart-summary-policy-link">
+        Cách tính phí giao hàng
+      </Link>
+
       <div className="cart-summary-actions">
         <Link
           to="/checkout"

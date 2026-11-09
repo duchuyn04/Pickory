@@ -1,3 +1,4 @@
+import { isInitialApiRequestPending, waitForInitialApiRequest } from '../../../shared/api';
 // Ba trạng thái hiển thị của luồng. `lost` chỉ có khi luồng không mở quá 5 giây.
 export type StreamStatus = 'connecting' | 'open' | 'lost';
 
@@ -53,6 +54,7 @@ export class SupportEventStream {
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private nextRetryDelayMs = INITIAL_RETRY_MS;
   private readonly createEventSource: (url: string) => EventSourceLike;
+  private connectGeneration = 0;
 
   constructor(
     private readonly options: SupportEventStreamOptions,
@@ -74,6 +76,8 @@ export class SupportEventStream {
   }
 
   stop(): void {
+    // Tăng thế hệ để hủy kết nối đang chờ request API đầu tiên.
+    this.connectGeneration += 1;
     // Hủy hẹn giờ trước khi đóng. Hẹn giờ còn sống sẽ báo `lost` hoặc mở kết nối sau khi đã dừng.
     this.clearTimers();
     const source = this.eventSource;
@@ -83,6 +87,23 @@ export class SupportEventStream {
   }
 
   private connect(): void {
+    // Tăng thế hệ kết nối mỗi lần bắt đầu mở luồng mới.
+    const generation = ++this.connectGeneration;
+
+    // Chờ request API đầu tiên hoàn tất để dùng chung cookie pk_anon.
+    if (isInitialApiRequestPending()) {
+      void waitForInitialApiRequest().then(() => {
+        // Luồng đã bị dừng trong lúc chờ thì không tạo kết nối nữa.
+        if (generation !== this.connectGeneration) return;
+        this.openEventSource();
+      });
+      return;
+    }
+
+    this.openEventSource();
+  }
+
+  private openEventSource(): void {
     const source = this.createEventSource(this.options.url);
     this.eventSource = source;
 
