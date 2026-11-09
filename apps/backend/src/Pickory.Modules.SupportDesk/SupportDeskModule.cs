@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Npgsql;
 using Pickory.Modules.Identity.Contracts.Events;
 using Pickory.Modules.SupportDesk.Callbacks;
+using Pickory.Modules.SupportDesk.CannedResponses;
 using Pickory.Modules.SupportDesk.Contracts.Events;
 using Pickory.Modules.SupportDesk.Conversations;
 using Pickory.Modules.SupportDesk.Persistence;
@@ -15,6 +16,7 @@ using Pickory.Modules.SupportDesk.Presence;
 using Pickory.Modules.SupportDesk.Realtime;
 using Pickory.Modules.SupportDesk.Scheduling;
 using Pickory.Modules.SupportDesk.Sessions;
+using Pickory.Modules.SupportDesk.Settings;
 using Pickory.Shared.Events;
 using Pickory.Shared.Persistence;
 
@@ -74,6 +76,10 @@ public static class SupportDeskModule
         services.AddScoped<SupportSessionCloseService>();
         // Dịch vụ tổng hợp bảng thông tin khách hàng dùng `DbContext` và reader theo từng request.
         services.AddScoped<SupportSessionCustomerService>();
+        // Dịch vụ lưu cấu hình CSKH cần `DbContext` để mở transaction chung với audit.
+        services.AddScoped<SupportSettingsService>();
+        // Dịch vụ mẫu trả lời nhanh cần `DbContext` để mở transaction chung với audit của mẫu dùng chung.
+        services.AddScoped<CannedResponseService>();
         // Opener đọc cấu hình từ DB và chạy trong transaction của tin khách, nên dùng chung scope với request.
         services.AddScoped<SupportSettingsReader>();
         services.AddScoped<SupportSessionOpener>();
@@ -126,6 +132,8 @@ public static class SupportDeskModule
         SupportConversationEndpoints.Map(moduleRoutes);
         CallbackRequestEndpoints.Map(moduleRoutes);
         SupportSessionEndpoints.Map(moduleRoutes);
+        SupportSettingsEndpoints.Map(moduleRoutes);
+        CannedResponseEndpoints.Map(moduleRoutes);
         return endpoints;
     }
 }

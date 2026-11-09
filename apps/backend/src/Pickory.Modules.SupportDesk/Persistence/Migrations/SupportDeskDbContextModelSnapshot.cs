@@ -120,6 +120,16 @@ namespace Pickory.Modules.SupportDesk.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("canned_responses_pkey");
 
+                    b.HasIndex("Shortcut")
+                        .IsUnique()
+                        .HasDatabaseName("canned_responses_shortcut_shared_key")
+                        .HasFilter("\"shared\" = true");
+
+                    b.HasIndex("OwnerId", "Shortcut")
+                        .IsUnique()
+                        .HasDatabaseName("canned_responses_ownerId_shortcut_personal_key")
+                        .HasFilter("\"shared\" = false");
+
                     b.ToTable("canned_responses", (string)null);
                 });
 

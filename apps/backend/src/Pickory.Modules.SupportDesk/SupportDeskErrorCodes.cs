@@ -18,4 +18,8 @@ internal static class SupportDeskErrorCodes
     public const string StaffUnavailable = "SUPPORT_STAFF_UNAVAILABLE";
     // Phiên hỗ trợ chưa kết thúc nên chưa thể chấm điểm.
     public const string SessionOpen = "SUPPORT_SESSION_OPEN";
+    // Mẫu trả lời nhanh không có, hoặc là mẫu cá nhân của người khác.
+    public const string CannedResponseNotFound = "CANNED_RESPONSE_NOT_FOUND";
+    // Phím tắt đã có trong cùng phạm vi: mẫu cá nhân của một người, hoặc tập mẫu dùng chung.
+    public const string CannedShortcutTaken = "CANNED_SHORTCUT_TAKEN";
 }

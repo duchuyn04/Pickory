@@ -70,6 +70,19 @@
           "message": "Bạn đã có mẫu dùng phím tắt này."
         }
       }
+    },
+    {
+      "name": "trùng phím tắt mẫu dùng chung",
+      "method": "POST",
+      "path": "/api/admin/support/canned-responses",
+      "request": { "shortcut": "camon", "body": "Cảm ơn bạn.", "shared": true },
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "CANNED_SHORTCUT_TAKEN",
+          "message": "Đã có mẫu dùng chung dùng phím tắt này."
+        }
+      }
     }
   ]
 }

@@ -26,7 +26,7 @@ public sealed class BaselineMigrationIntegrationTests(DatabaseWebApplicationFact
     [InlineData("shipping", "ef_shipping", "20261019123657_AddShippingQuoteCache")]
     [InlineData("commerce", "ef_commerce", "20261030050733_AddSavedAddressSoftDelete")]
     [InlineData("activity-tracking", "ef_activity_tracking", "20261020093013_InitialActivityTracking")]
-    [InlineData("support-desk", "ef_support_desk", "20261107081718_SupportMessageSessionId")]
+    [InlineData("support-desk", "ef_support_desk", "20261109043926_CannedResponseShortcutUniqueIndexes")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(
         string module, string historySchema, string migrationId)
     {

@@ -253,7 +253,7 @@ Nhánh frontend (`todo-frontend.md`):
 
 ### Phase 3: Cấu hình và số liệu
 Nhánh backend (`todo-backend.md`):
-- [ ] SD-10 cấu hình và mẫu trả lời nhanh
+- [x] SD-10 cấu hình và mẫu trả lời nhanh
 - [ ] SD-13 `ISupportMetrics`
 
 Nhánh frontend (`todo-frontend.md`):

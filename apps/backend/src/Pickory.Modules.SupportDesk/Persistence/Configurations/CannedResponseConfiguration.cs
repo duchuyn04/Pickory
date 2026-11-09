@@ -7,6 +7,10 @@ namespace Pickory.Modules.SupportDesk.Persistence.Configurations;
 
 internal sealed class CannedResponseConfiguration : IEntityTypeConfiguration<CannedResponse>
 {
+    // Tên hai chỉ mục phím tắt. `CannedResponseService` dùng lại để chỉ đổi đúng hai vi phạm này thành 409.
+    public const string PersonalShortcutIndexName = "canned_responses_ownerId_shortcut_personal_key";
+    public const string SharedShortcutIndexName = "canned_responses_shortcut_shared_key";
+
     public void Configure(EntityTypeBuilder<CannedResponse> entity)
     {
         entity.ToTable("canned_responses");
@@ -22,5 +26,17 @@ internal sealed class CannedResponseConfiguration : IEntityTypeConfiguration<Can
         entity.Property(value => value.Shared).IsRequired();
         entity.Property(value => value.CreatedAt).IsRequired();
         entity.Property(value => value.UpdatedAt).IsRequired();
+
+        // Mỗi nhân viên có tối đa một mẫu cá nhân cho mỗi phím tắt. Hai request cùng lúc không tạo được hai mẫu trùng.
+        entity.HasIndex(value => new { value.OwnerId, value.Shortcut })
+            .IsUnique()
+            .HasFilter("\"shared\" = false")
+            .HasDatabaseName(PersonalShortcutIndexName);
+
+        // Tập mẫu dùng chung có tối đa một mẫu cho mỗi phím tắt. Mẫu cá nhân được cùng phím tắt với mẫu dùng chung.
+        entity.HasIndex(value => value.Shortcut)
+            .IsUnique()
+            .HasFilter("\"shared\" = true")
+            .HasDatabaseName(SharedShortcutIndexName);
     }
 }

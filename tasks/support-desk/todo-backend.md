@@ -195,18 +195,18 @@ Hết task backend của Phase 2. Báo người dùng để chạy Checkpoint SD
 ### SD-10: Cấu hình và mẫu trả lời nhanh
 **Mô tả:** `GET` và `PUT /api/admin/support/settings` cho giờ làm việc, ngày nghỉ, mốc nhắc lại, mốc tự đóng. `/api/admin/support/canned-responses[/{id}]` cho mẫu cá nhân và mẫu dùng chung.
 **Tiêu chí nghiệm thu:**
-- [ ] `support` gọi `PUT /api/admin/support/settings` nhận 403. Admin nhận 200
-- [ ] Giờ mở cửa không trước giờ đóng cửa. Sai thì trả 400 `VALIDATION_ERROR`
-- [ ] `waitNudgeMinutes` không nhỏ hơn `autoCloseMinutes` trả 400 `VALIDATION_ERROR` với khóa `waitNudgeMinutes`
-- [ ] Mỗi lần sửa cấu hình ghi đúng 1 dòng audit `support.settings.update` trong cùng transaction
-- [ ] Mẫu cá nhân: người có `conversations:reply` tạo, sửa, xóa mẫu của chính mình. Sửa mẫu của người khác trả 404
-- [ ] Mẫu dùng chung: tạo, sửa, xóa cần `support-settings:manage`, nếu không trả 403
-- [ ] Thay đổi mẫu dùng chung ghi 1 dòng audit
-- [ ] `shortcut` trùng trong phạm vi của một người trả 409 `CANNED_SHORTCUT_TAKEN`
-- [ ] `GET` trả mẫu cá nhân của người gọi và mọi mẫu dùng chung. Mỗi mẫu có `editable` theo quyền của người gọi
-- [ ] Mẫu không có, hoặc mẫu cá nhân của người khác, trả 404 `CANNED_RESPONSE_NOT_FOUND`
-- [ ] Test hợp đồng: response khớp mọi ví dụ của `admin-canned-responses.json` và `admin-settings.json`
-- [ ] Endpoint mới có trong ma trận quyền
+- [x] `support` gọi `PUT /api/admin/support/settings` nhận 403. Admin nhận 200
+- [x] Giờ mở cửa không trước giờ đóng cửa. Sai thì trả 400 `VALIDATION_ERROR`
+- [x] `waitNudgeMinutes` không nhỏ hơn `autoCloseMinutes` trả 400 `VALIDATION_ERROR` với khóa `waitNudgeMinutes`
+- [x] Mỗi lần sửa cấu hình ghi đúng 1 dòng audit `support.settings.update` trong cùng transaction
+- [x] Mẫu cá nhân: người có `conversations:reply` tạo, sửa, xóa mẫu của chính mình. Sửa mẫu của người khác trả 404
+- [x] Mẫu dùng chung: tạo, sửa, xóa cần `support-settings:manage`, nếu không trả 403
+- [x] Thay đổi mẫu dùng chung ghi 1 dòng audit
+- [x] `shortcut` trùng trong phạm vi của một người trả 409 `CANNED_SHORTCUT_TAKEN`
+- [x] `GET` trả mẫu cá nhân của người gọi và mọi mẫu dùng chung. Mỗi mẫu có `editable` theo quyền của người gọi
+- [x] Mẫu không có, hoặc mẫu cá nhân của người khác, trả 404 `CANNED_RESPONSE_NOT_FOUND`
+- [x] Test hợp đồng: response khớp mọi ví dụ của `admin-canned-responses.json` và `admin-settings.json`
+- [x] Endpoint mới có trong ma trận quyền
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** SD-02, SD-C1 · **Quy mô:** M
 

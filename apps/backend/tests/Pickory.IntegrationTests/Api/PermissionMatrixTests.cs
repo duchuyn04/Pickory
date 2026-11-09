@@ -113,6 +113,13 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
         { "POST", "/api/admin/support/sessions/dummy-id/messages", [Permissions.ConversationsReply] },
         { "GET", "/api/admin/support/conversations/dummy-id/messages", [Permissions.ConversationsRead] },
         { "GET", "/api/admin/support/sessions/dummy-id/customer", [Permissions.ConversationsRead] },
+        { "GET", "/api/admin/support/settings", [Permissions.SupportSettingsManage] },
+        { "PUT", "/api/admin/support/settings", [Permissions.SupportSettingsManage] },
+        // Mẫu trả lời nhanh: dòng ghi quyền tối thiểu của mẫu cá nhân. Quyền mẫu dùng chung kiểm ở test riêng bên dưới.
+        { "GET", "/api/admin/support/canned-responses", [Permissions.ConversationsReply] },
+        { "POST", "/api/admin/support/canned-responses", [Permissions.ConversationsReply] },
+        { "PATCH", "/api/admin/support/canned-responses/dummy-id", [Permissions.ConversationsReply] },
+        { "DELETE", "/api/admin/support/canned-responses/dummy-id", [Permissions.ConversationsReply] },
     };
     [Theory]
     [MemberData(nameof(BackofficeEndpoints))]
@@ -290,7 +297,31 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
             "support-desk",
             typeof(SupportDeskModule).Assembly,
             "Pickory.Modules.SupportDesk",
-            [Permissions.ConversationsRead, Permissions.ConversationsReply]);
+            [Permissions.ConversationsRead, Permissions.ConversationsReply, Permissions.SupportSettingsManage]);
+    }
+
+    [Fact]
+    // Vai trò chỉ có `support-settings:manage` qua được cổng route của mẫu dùng chung (PATCH, DELETE trả 404 vì `id` giả).
+    // Cùng vai trò bị từ chối đọc danh sách và tạo mẫu cá nhân, vì thiếu `conversations:reply`.
+    public async Task SupportDesk_SettingsManageOnlyRole_ReachesSharedCannedRoutesButNotPersonalOnes()
+    {
+        var role = await IdentityTestData.CreateRoleAsync(_database, [Permissions.SupportSettingsManage]);
+        var (_, token) = await IdentityTestData.CreateStaffSessionAsync(_database, role.Code, "manage-only-staff");
+        var cookie = $"pk_session={token}";
+        const string cannedPath = "/api/admin/support/canned-responses";
+
+        var list = await _client.SendAsync(ActorHttp.CreateRequest(HttpMethod.Get, cannedPath, cookie));
+        var createPersonal = await _client.SendAsync(ActorHttp.CreateJsonRequest(
+            HttpMethod.Post, cannedPath, new { shortcut = "mine", body = "x", shared = false }, cookie));
+        var patch = await _client.SendAsync(ActorHttp.CreateJsonRequest(
+            HttpMethod.Patch, $"{cannedPath}/dummy-id", new { body = "x" }, cookie));
+        var delete = await _client.SendAsync(ActorHttp.CreateJsonRequest(
+            HttpMethod.Delete, $"{cannedPath}/dummy-id", body: null, cookie));
+
+        Assert.Equal(HttpStatusCode.Forbidden, list.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, createPersonal.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, patch.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, delete.StatusCode);
     }
 
     [Fact]
