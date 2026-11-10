@@ -1,0 +1,76 @@
+# Production trên VPS: PostgreSQL, API .NET và Caddy (web + HTTPS).
+# Chạy từ thư mục chứa file `.env` (mẫu: `docker/prod.env.example`):
+#   docker compose -f docker-compose.prod.yml up -d --build
+# Compose đọc `.env` cùng thư mục để điền các biến `${...}` bên dưới.
+
+name: pickory
+
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: pickory
+      # Mật khẩu lấy từ `.env`. Cổng 5432 không mở ra ngoài, nên chỉ container `api` kết nối được.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Thiếu POSTGRES_PASSWORD trong .env}
+      POSTGRES_DB: pickory
+    volumes:
+      # Volume giữ dữ liệu khi container bị tạo lại. Xóa volume này là mất toàn bộ DB.
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # API chỉ khởi động sau khi DB sẵn sàng nhận kết nối.
+      test: ['CMD-SHELL', 'pg_isready -U pickory -d pickory']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      # Dockerfile cần cả `apps/frontend` để lấy `index.html`, nên context là gốc repo.
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Cấu hình bí mật (Google, Cloudinary, GHN, SePay) nằm trong `.env`, không nằm trong repo.
+    env_file: .env
+    environment:
+      PORT: '3000'
+      # Chuỗi kết nối ghép từ mật khẩu DB, nên đổi mật khẩu chỉ sửa một chỗ.
+      DATABASE_URL: postgresql://pickory:${POSTGRES_PASSWORD}@db:5432/pickory
+      # Domain công khai. Cookie phiên và callback Google phải cùng origin với web.
+      WEB_ORIGIN: https://${SITE_DOMAIN}
+      API_BASE_URL: https://${SITE_DOMAIN}
+      # Chỉ có một proxy (Caddy) đứng trước API. Giá trị 1 đọc đúng IP của khách trong `X-Forwarded-For`.
+      TRUST_PROXY: '1'
+      # DB nằm cùng máy, nên pool mặc định của Npgsql không gây quá tải như Supabase gói free.
+      CATALOG_CACHE_SECONDS: '30'
+    # Cổng 3000 chỉ mở trong mạng compose. Người ngoài vào API qua Caddy.
+    expose:
+      - '3000'
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/web.Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - api
+    environment:
+      SITE_DOMAIN: ${SITE_DOMAIN:?Thiếu SITE_DOMAIN trong .env}
+    ports:
+      - '80:80'
+      - '443:443'
+      # HTTP/3 chạy trên UDP 443.
+      - '443:443/udp'
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Volume giữ chứng chỉ HTTPS. Mất volume thì Caddy xin lại và có thể chạm giới hạn của Let's Encrypt.
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
