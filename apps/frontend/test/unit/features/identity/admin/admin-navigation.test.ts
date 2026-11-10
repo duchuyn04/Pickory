@@ -139,3 +139,40 @@ describe('mục menu Đối soát', () => {
     expect(isNavItemActive(item, '/admin/orders')).toBe(false);
   });
 });
+
+describe('mục menu Cấu hình CSKH', () => {
+  it('chỉ hiện với người có quyền support-settings:manage', () => {
+    const manager = { ...baseActor, permissions: ['support-settings:manage'] };
+
+    expect(visibleItems(manager).map((item) => item.label)).toContain('Cấu hình CSKH');
+  });
+
+  it('ẩn với người chỉ có quyền CSKH khác hoặc quyền cấu hình khác', () => {
+    const support = {
+      ...baseActor,
+      roles: ['support'],
+      permissions: ['conversations:read', 'conversations:reply', 'commerce-settings:manage'],
+    };
+
+    expect(visibleItems(support).map((item) => item.label)).not.toContain('Cấu hình CSKH');
+  });
+
+  it('nằm trong nhóm Hệ thống và trỏ tới /admin/support/settings', () => {
+    const systemGroup = ADMIN_NAV_GROUPS.find((group) => group.label === 'Hệ thống');
+    const item = systemGroup?.items.find((entry) => entry.label === 'Cấu hình CSKH');
+
+    expect(item?.path).toBe('/admin/support/settings');
+    expect(item?.requiredPermission).toBe('support-settings:manage');
+  });
+
+  it('sáng ở trang cấu hình và không làm sáng mục CSKH ở /admin/conversations', () => {
+    const items = ADMIN_NAV_GROUPS.flatMap((group) => group.items);
+    const settingsItem = items.find((entry) => entry.label === 'Cấu hình CSKH');
+    const deskItem = items.find((entry) => entry.label === 'CSKH');
+    if (!settingsItem || !deskItem) throw new Error('Thiếu mục menu CSKH.');
+
+    expect(isNavItemActive(settingsItem, '/admin/support/settings')).toBe(true);
+    expect(isNavItemActive(settingsItem, '/admin/conversations')).toBe(false);
+    expect(isNavItemActive(deskItem, '/admin/support/settings')).toBe(false);
+  });
+});

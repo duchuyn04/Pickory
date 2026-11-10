@@ -1,0 +1,148 @@
+/* Màn cấu hình chăm sóc khách hàng, dùng lớp chung của `components.css` và chỉ dùng token. */
+
+/* Trang hẹp để dòng chữ và ô nhập không giãn quá dài ở màn rộng. */
+.support-settings-page {
+  max-width: 720px;
+}
+
+/* Form xếp các thẻ dọc. `.page` không phải cha trực tiếp của thẻ, nên form tự đặt khoảng cách. */
+.support-settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.support-settings-form > .card,
+.support-settings-page > .card {
+  margin-bottom: 0;
+}
+
+/* Ghi chú nhỏ dưới ô nhập. Trong `.field` ghi chú có lề trên 2px, ngoài `.field` thì không có lề. */
+.support-settings-note {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+}
+
+.support-settings-form .field .support-settings-note {
+  margin-top: 2px;
+}
+
+.support-settings-load-error {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+/* Ô ngày và nút thêm đứng cạnh nhau. Màn hẹp xếp dọc, mỗi phần chiếm cả chiều rộng. */
+.holiday-add {
+  display: flex;
+  gap: var(--space-2);
+  align-items: stretch;
+}
+
+.holiday-add input {
+  flex: 1;
+  min-width: 0;
+}
+
+.holiday-add .btn {
+  flex: none;
+}
+
+@media (max-width: 479px) {
+  .holiday-add {
+    flex-direction: column;
+  }
+
+  .holiday-add .btn {
+    width: 100%;
+  }
+}
+
+.holiday-empty {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+}
+
+/* Các ngày đã chọn xếp thành dải thẻ nhỏ, mỗi ngày kèm nút xóa. */
+.holiday-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.holiday-item {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  padding: 2px 2px 2px var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface-muted);
+}
+
+.holiday-date {
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Vùng bấm 28px, vượt mức tối thiểu 24px của WCAG 2.2. */
+.holiday-remove {
+  width: 28px;
+  height: 28px;
+}
+
+/* Hàng lưu: nút bên trái, thông báo bên phải. Thông báo có chiều cao cố định để hiện hay ẩn không đẩy bố cục. */
+.support-settings-save {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.support-settings-status {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 40px;
+  justify-content: center;
+  font-size: var(--text-label);
+}
+
+.support-settings-saved {
+  display: inline-flex;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.support-settings-saved-at {
+  color: var(--color-ink-muted);
+}
+
+@media (max-width: 479px) {
+  .support-settings-save .btn {
+    width: 100%;
+  }
+
+  /* Ở 375 px vùng trạng thái cao một dòng, nên chữ thành công không đẩy khối bên dưới. Dưới khoảng 340 px hai câu xuống dòng. */
+  .support-settings-status {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 0 var(--space-3);
+    min-height: 20px;
+  }
+
+  .support-settings-saved-at {
+    font-size: var(--text-xs);
+  }
+}

@@ -112,6 +112,7 @@ describe('AdminLayout', () => {
       'Vận chuyển',
       'Phí ship dự phòng',
       'Cấu hình bán hàng',
+      'Cấu hình CSKH',
       'Nhật ký thao tác',
     ]);
   });

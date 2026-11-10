@@ -144,14 +144,14 @@ Hết task frontend của Phase 2. Báo người dùng để chạy Checkpoint S
 ### SD-UI5: Màn cấu hình CSKH
 **Mô tả:** Màn `/admin/support/settings` cho giờ làm việc, ngày nghỉ và mẫu dùng chung. Màn quản lý mẫu cá nhân nằm trong màn CSKH. Menu cấu hình chỉ hiện với người có `support-settings:manage`.
 **Tiêu chí nghiệm thu:**
-- [ ] Schema `zod` đọc được mọi ví dụ của `admin-settings.json` và `admin-canned-responses.json`
-- [ ] Mẫu có `editable` bằng `false` không có nút sửa và nút xóa
-- [ ] Lưu thành công hiện thông báo. Lỗi hiện dưới đúng ô bằng `FieldError`
-- [ ] Mốc nhắc lại không nhỏ hơn mốc tự đóng: lỗi hiện dưới ô mốc nhắc lại, theo ví dụ lỗi của `admin-settings.json`
-- [ ] Ngày nghỉ chọn bằng ô ngày có `label`, xóa được từng ngày
-- [ ] Người thiếu quyền không thấy menu. Mở thẳng URL thấy trang không đủ quyền
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang
-- [ ] Playwright console có 0 lỗi và 0 cảnh báo
+- [x] Schema `zod` đọc được mọi ví dụ của `admin-settings.json` và `admin-canned-responses.json`
+- [x] Mẫu có `editable` bằng `false` không có nút sửa và nút xóa
+- [x] Lưu thành công hiện thông báo. Lỗi hiện dưới đúng ô bằng `FieldError`
+- [x] Mốc nhắc lại không nhỏ hơn mốc tự đóng: lỗi hiện dưới ô mốc nhắc lại, theo ví dụ lỗi của `admin-settings.json`
+- [x] Ngày nghỉ chọn bằng ô ngày có `label`, xóa được từng ngày
+- [x] Người thiếu quyền không thấy menu. Mở thẳng URL thấy trang không đủ quyền
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang
+- [x] Playwright console có 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; E2E `--headed`
 **Phụ thuộc:** SD-UI1, SD-C2 · **Quy mô:** M
 

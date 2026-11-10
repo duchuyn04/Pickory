@@ -2,6 +2,7 @@ import { apiRequest } from '../../../shared/api';
 import {
   parseCallbackRequests,
   parseCallbackRequest,
+  parseCannedResponse,
   parseCannedResponses,
   parseClosedSession,
   parseQueueSessions,
@@ -11,6 +12,7 @@ import {
   parseStaffPresence,
   parseStaffPresenceList,
   parseStaffViewMessage,
+  parseSupportSettings,
   type CallbackRequest,
   type CallbackStatus,
   type CannedResponse,
@@ -22,6 +24,7 @@ import {
   type StaffMessagePage,
   type StaffPresence,
   type StaffViewMessage,
+  type SupportSettings,
 } from './support-desk-schemas';
 
 export const SUPPORT_EVENTS_URL = '/api/admin/support/events';
@@ -32,6 +35,7 @@ export const PRESENCE_QUERY_KEY = [...SUPPORT_QUERY_KEY, 'presence'] as const;
 export const SESSIONS_QUERY_KEY = [...SUPPORT_QUERY_KEY, 'sessions'] as const;
 export const CALLBACKS_QUERY_KEY = [...SUPPORT_QUERY_KEY, 'callback-requests'] as const;
 export const CANNED_RESPONSES_QUERY_KEY = [...SUPPORT_QUERY_KEY, 'canned-responses'] as const;
+export const SUPPORT_SETTINGS_QUERY_KEY = [...SUPPORT_QUERY_KEY, 'settings'] as const;
 
 // Khóa query của lịch sử tin theo hội thoại. Sự kiện `message.created` chỉ đọc lại đúng khóa này.
 export function staffMessagesQueryKey(conversationId: string): readonly unknown[] {
@@ -131,4 +135,59 @@ export async function updateCallbackRequestStatus(
     body: JSON.stringify({ status }),
   });
   return parseCallbackRequest(data);
+}
+
+// Cấu hình chăm sóc khách hàng gửi lên: mọi trường của cấu hình trừ `updatedAt`, vì thời điểm cập nhật do máy chủ đặt.
+export type SupportSettingsInput = Omit<SupportSettings, 'updatedAt'>;
+
+export async function fetchSupportSettings(): Promise<SupportSettings> {
+  return parseSupportSettings(await apiRequest<unknown>('/api/admin/support/settings'));
+}
+
+// `PUT` thay toàn bộ cấu hình bằng một lần gửi. Chống bấm đôi nằm ở component gọi hàm này.
+export async function saveSupportSettings(input: SupportSettingsInput): Promise<SupportSettings> {
+  const data = await apiRequest<unknown>('/api/admin/support/settings', {
+    method: 'PUT',
+    body: JSON.stringify(input),
+  });
+  return parseSupportSettings(data);
+}
+
+export interface CreateCannedResponseInput {
+  shortcut: string;
+  body: string;
+  // `true` cho mẫu dùng chung, `false` cho mẫu cá nhân của người gọi.
+  shared: boolean;
+}
+
+export async function createCannedResponse(
+  input: CreateCannedResponseInput,
+): Promise<CannedResponse> {
+  const data = await apiRequest<unknown>('/api/admin/support/canned-responses', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+  return parseCannedResponse(data);
+}
+
+// `PATCH` chỉ nhận trường đã đổi. Hợp đồng cho phép gửi `shortcut`, `body` hoặc cả hai.
+export interface UpdateCannedResponseInput {
+  shortcut?: string;
+  body?: string;
+}
+
+export async function updateCannedResponse(
+  id: string,
+  changes: UpdateCannedResponseInput,
+): Promise<CannedResponse> {
+  const data = await apiRequest<unknown>(`/api/admin/support/canned-responses/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(changes),
+  });
+  return parseCannedResponse(data);
+}
+
+// Route trả 204 không có thân. `apiRequest` coi 204 là thành công.
+export async function deleteCannedResponse(id: string): Promise<void> {
+  await apiRequest<void>(`/api/admin/support/canned-responses/${id}`, { method: 'DELETE' });
 }

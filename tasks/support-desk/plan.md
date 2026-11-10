@@ -257,7 +257,7 @@ Nhánh backend (`todo-backend.md`):
 - [x] SD-13 `ISupportMetrics`
 
 Nhánh frontend (`todo-frontend.md`):
-- [ ] SD-UI5 màn cấu hình CSKH. Task này chỉ cần SD-C2, nên frontend làm được trước Phase 3.
+- [x] SD-UI5 màn cấu hình CSKH. Task này chỉ cần SD-C2, nên frontend làm được trước Phase 3.
 
 Đã bỏ ngày 2026-10-18: SD-12.
 

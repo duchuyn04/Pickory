@@ -38,6 +38,7 @@ import { CustomerOrdersPage } from './features/commerce/customer/orders/customer
 import { OrderLookupPage } from './features/commerce/customer/orders/order-lookup-page';
 import { HomePage } from './features/home/home-page';
 import { SupportDeskPage } from './features/support-desk/admin/support-desk-page';
+import { SupportSettingsPage } from './features/support-desk/admin/support-settings-page';
 import { Header } from './shared/header';
 import { Footer } from './shared/footer';
 import './shared/customer-layout.css';
@@ -188,6 +189,7 @@ export function App() {
           <Route path="brands" element={<BrandsPage />} />
           <Route path="conversations" element={<SupportDeskPage />} />
           <Route path="shipping/settings" element={<ShippingSettingsPage />} />
+          <Route path="support/settings" element={<SupportSettingsPage />} />
           <Route path="shipping/fallback-fee" element={<FallbackFeePage />} />
           <Route path="commerce/settings" element={<CommerceSettingsPage />} />
           <Route

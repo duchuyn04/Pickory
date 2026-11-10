@@ -39,6 +39,8 @@ export interface MockRouteOptions {
 
 export interface SupportDeskRouteMocks {
   mockRoute(fixtureFile: string, exampleName: string, options?: MockRouteOptions): Promise<void>;
+  // Cho route mà file mẫu chưa có ví dụ, ví dụ `DELETE` trả 204. Ví dụ truyền vào theo đúng dạng của file mẫu.
+  mockInlineRoute(example: ContractExample, options?: MockRouteOptions): Promise<void>;
   mockEventStream(options: EventStreamMockOptions): Promise<void>;
 }
 
@@ -57,23 +59,31 @@ export function createSupportDeskRouteMocks(
   const openApiUrl = `${options.apiOrigin.replace(/\/+$/, '')}${OPENAPI_DOCUMENT_PATH}`;
   const loadOpenApiDocument = options.loadOpenApiDocument ?? fetchOpenApiDocument;
 
+  // Dùng chung cho ví dụ đọc từ file mẫu và ví dụ test tự viết, nên hai đường cùng một bộ kiểm tra.
+  async function registerRoute(example: ContractExample, mockOptions?: MockRouteOptions) {
+    // Hai cách đặt phản hồi loại trừ nhau. Dùng cả hai thì test không rõ phản hồi nào được trả.
+    if (mockOptions?.respondWith !== undefined && mockOptions.responseOverride !== undefined) {
+      throw new Error('Không dùng `respondWith` cùng `responseOverride` cho một route.');
+    }
+    // Không gắn dữ liệu giả cho route backend đã có. Test đỏ để người sửa gỡ lời gọi helper.
+    await assertRouteIsMissing(openApiUrl, loadOpenApiDocument, example);
+    const effectiveExample =
+      mockOptions?.responseOverride !== undefined
+        ? { ...example, response: mockOptions.responseOverride }
+        : example;
+    await options.page.route(
+      (url) => matchesExampleUrl(url, effectiveExample),
+      (route) => fulfillExample(route, effectiveExample, mockOptions?.respondWith),
+    );
+  }
+
   return {
     async mockRoute(fixtureFile, exampleName, mockOptions) {
-      const example = findSupportDeskExample(fixtureFile, exampleName);
-      // Hai cách đặt phản hồi loại trừ nhau. Dùng cả hai thì test không rõ phản hồi nào được trả.
-      if (mockOptions?.respondWith !== undefined && mockOptions.responseOverride !== undefined) {
-        throw new Error('Không dùng `respondWith` cùng `responseOverride` cho một route.');
-      }
-      // Không gắn dữ liệu giả cho route backend đã có. Test đỏ để người sửa gỡ lời gọi helper.
-      await assertRouteIsMissing(openApiUrl, loadOpenApiDocument, example);
-      const effectiveExample =
-        mockOptions?.responseOverride !== undefined
-          ? { ...example, response: mockOptions.responseOverride }
-          : example;
-      await options.page.route(
-        (url) => matchesExampleUrl(url, effectiveExample),
-        (route) => fulfillExample(route, effectiveExample, mockOptions?.respondWith),
-      );
+      await registerRoute(findSupportDeskExample(fixtureFile, exampleName), mockOptions);
+    },
+
+    async mockInlineRoute(example, mockOptions) {
+      await registerRoute(example, mockOptions);
     },
 
     async mockEventStream(streamOptions) {
@@ -223,8 +233,14 @@ async function fulfillExample(
   if (customResponse !== undefined && customResponse.body === undefined) {
     throw new Error('`respondWith` phải trả `body` khác `undefined`.');
   }
+  const status = customResponse?.status ?? example.status;
+  // Mã 204 không có thân theo HTTP. Gửi thân kèm 204 làm trình duyệt báo lỗi đọc phản hồi.
+  if (status === 204) {
+    await route.fulfill({ status });
+    return;
+  }
   await route.fulfill({
-    status: customResponse?.status ?? example.status,
+    status,
     contentType: 'application/json',
     body: JSON.stringify(customResponse ? customResponse.body : example.response),
   });

@@ -3,6 +3,9 @@ import { useEffect, useRef } from 'react';
 const FOCUSABLE =
   'button:not([disabled]), a[href], input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+// Các hộp thoại đang mở theo thứ tự mở. Hộp cuối là hộp trên cùng.
+const openDialogs: HTMLElement[] = [];
+
 export function useDialogFocus({
   isOpen = true,
   onClose,
@@ -23,6 +26,8 @@ export function useDialogFocus({
     (input || dialog.querySelector<HTMLElement>(FOCUSABLE) || dialog).focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Hộp thoại bị hộp khác che thì bỏ qua phím, nếu không Esc đóng cả hai hộp cùng lúc.
+      if (openDialogs[openDialogs.length - 1] !== dialog) return;
       if (event.key === 'Escape') {
         event.preventDefault();
         event.stopPropagation();
@@ -45,9 +50,14 @@ export function useDialogFocus({
       }
     };
 
+    // Đăng ký vào chồng hộp thoại để hộp mở sau (ở trên cùng) là hộp duy nhất nhận phím.
+    openDialogs.push(dialog);
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      // Kiểm vị trí trước khi xóa. `indexOf` trả -1 làm `splice(-1, 1)` xóa nhầm hộp thoại cuối chồng.
+      const stackIndex = openDialogs.indexOf(dialog);
+      if (stackIndex >= 0) openDialogs.splice(stackIndex, 1);
       // Cleanup của StrictMode cũng trả focus trước khi effect tiếp theo mở lại dialog.
       if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
     };

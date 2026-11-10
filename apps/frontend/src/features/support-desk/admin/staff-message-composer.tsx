@@ -3,6 +3,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent
 import { FieldError, fieldErrorProps } from '../../../shared/field-error';
 import { Icon } from '../../../shared/icons';
 import { SUPPORT_MESSAGE_MAX_LENGTH } from '../customer/support-message-composer';
+import { MyCannedResponsesDialog } from './my-canned-responses-dialog';
 import { renderCannedResponse, type CannedResponseVariables } from './render-canned-response';
 import { CANNED_RESPONSES_QUERY_KEY, fetchCannedResponses } from './support-desk-api';
 
@@ -42,6 +43,14 @@ export function StaffMessageComposer({
   const [dismissed, setDismissed] = useState(false);
   const cursorToEndRef = useRef(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const manageButtonRef = useRef<HTMLButtonElement>(null);
+  const [isManagerOpen, setIsManagerOpen] = useState(false);
+
+  function closeManager() {
+    setIsManagerOpen(false);
+    // Hộp thoại đóng xong thì trả focus về nút đã mở nó, để bàn phím tiếp tục từ chỗ cũ.
+    manageButtonRef.current?.focus();
+  }
 
   const isEnabled = isHeld && canReply;
   // Chỉ đọc mẫu khi ô soạn đang bật, để người thiếu quyền không gọi route này.
@@ -237,12 +246,26 @@ export function StaffMessageComposer({
         ) : (
           <p className="hint support-chat-composer-hint">Enter để gửi, Shift+Enter để xuống dòng</p>
         )}
-        {showCounter && (
-          <span className="support-chat-composer-counter">
-            {trimmedBody.length.toLocaleString('vi-VN')}/{MESSAGE_LIMIT_LABEL}
-          </span>
-        )}
+        <div className="support-chat-composer-meta-actions">
+          {showCounter && (
+            <span className="support-chat-composer-counter">
+              {trimmedBody.length.toLocaleString('vi-VN')}/{MESSAGE_LIMIT_LABEL}
+            </span>
+          )}
+          {/* Người thiếu quyền trả lời không thấy nút, vì backend từ chối mọi thay đổi mẫu của họ. */}
+          {canReply && (
+            <button
+              ref={manageButtonRef}
+              type="button"
+              className="link-btn"
+              onClick={() => setIsManagerOpen(true)}
+            >
+              Quản lý mẫu
+            </button>
+          )}
+        </div>
       </div>
+      {isManagerOpen && <MyCannedResponsesDialog onClose={closeManager} />}
     </div>
   );
 }

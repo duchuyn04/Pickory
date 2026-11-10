@@ -138,6 +138,12 @@ export const ADMIN_NAV_GROUPS: AdminNavGroup[] = [
         requiredPermission: 'commerce-settings:manage',
       },
       {
+        label: 'Cấu hình CSKH',
+        path: '/admin/support/settings',
+        icon: 'clock',
+        requiredPermission: 'support-settings:manage',
+      },
+      {
         label: 'Nhật ký thao tác',
         path: '/admin/audit-logs',
         icon: 'history',

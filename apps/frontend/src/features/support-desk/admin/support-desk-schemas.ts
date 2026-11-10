@@ -114,6 +114,22 @@ const cannedResponseSchema = z.object({
   editable: z.boolean(),
 });
 
+// Giờ ghi dạng `HH:mm` theo giờ Việt Nam. Chuỗi như `24:00` hay `8:00` làm lỗi đọc, để form không hiện giờ sai.
+const clockTimeSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
+
+// Ngày nghỉ ghi dạng `yyyy-MM-dd`. Hợp đồng không gắn múi giờ cho ngày, nên giữ nguyên là chuỗi.
+const holidaySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+// Cấu hình chăm sóc khách hàng: giờ làm việc, ngày nghỉ và hai mốc thời gian của phiên chờ.
+const supportSettingsSchema = z.object({
+  opensAt: clockTimeSchema,
+  closesAt: clockTimeSchema,
+  holidays: z.array(holidaySchema),
+  waitNudgeMinutes: z.number().int(),
+  autoCloseMinutes: z.number().int(),
+  updatedAt: apiTimeSchema,
+});
+
 // Dữ liệu sự kiện `message.created` phía nhân viên. Client chỉ đọc lại lịch sử, không vẽ từ dữ liệu này.
 const messageCreatedSchema = z.object({
   sessionId: z.string(),
@@ -135,6 +151,7 @@ export type StaffViewMessage = z.infer<typeof staffViewMessageSchema>;
 export type StaffMessagePage = z.infer<typeof staffMessagePageSchema>;
 export type SessionAssignment = z.infer<typeof sessionAssignmentSchema>;
 export type CannedResponse = z.infer<typeof cannedResponseSchema>;
+export type SupportSettings = z.infer<typeof supportSettingsSchema>;
 export type MessageCreatedEvent = z.infer<typeof messageCreatedSchema>;
 export type CustomerInfo = z.infer<typeof customerInfoSchema>;
 export type SessionCustomerOrder = z.infer<typeof sessionCustomerOrderSchema>;
@@ -178,6 +195,16 @@ export function parseSessionAssignment(data: unknown): SessionAssignment {
 
 export function parseCannedResponses(data: unknown): CannedResponse[] {
   return parseApiData(z.array(cannedResponseSchema), data);
+}
+
+// Đọc một mẫu trả lời nhanh, là response của lệnh `POST` và `PATCH`.
+export function parseCannedResponse(data: unknown): CannedResponse {
+  return parseApiData(cannedResponseSchema, data);
+}
+
+// Đọc cấu hình chăm sóc khách hàng, là response của lệnh `GET` và `PUT`.
+export function parseSupportSettings(data: unknown): SupportSettings {
+  return parseApiData(supportSettingsSchema, data);
 }
 
 // Đọc dữ liệu bảng thông tin khách. Hàm chuyển cấu trúc sai quy cách thành `ApiError`.

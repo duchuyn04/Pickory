@@ -12,6 +12,19 @@ export function fieldErrorProps(inputId: string, message: string | null | undefi
   return { 'aria-invalid': true as const, 'aria-describedby': toErrorId(inputId) };
 }
 
+// Ô có câu giải thích riêng: câu lỗi (nếu có) và câu giải thích cùng nối với ô bằng `aria-describedby`.
+export function fieldPropsWithHint(
+  inputId: string,
+  hintId: string,
+  message: string | null | undefined,
+) {
+  const errorProps = fieldErrorProps(inputId, message);
+  const errorDescriptionId =
+    'aria-describedby' in errorProps ? errorProps['aria-describedby'] : undefined;
+  const describedBy = [errorDescriptionId, hintId].filter(Boolean).join(' ');
+  return { ...errorProps, 'aria-describedby': describedBy };
+}
+
 // Có ít nhất một ô sai thì form không được gửi.
 export function hasFieldErrors(errors: FieldErrors<string>): boolean {
   return Object.values(errors).some(Boolean);

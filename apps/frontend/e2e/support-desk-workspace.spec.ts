@@ -1321,4 +1321,115 @@ test.describe('SD-UI1: màn CSKH', () => {
       }
     });
   }
+
+  // SD-UI5: hộp thoại "Mẫu của tôi" mở từ khung soạn tin. Hai route `canned-responses` chưa có ở backend nên dùng helper SD-C2.
+  for (const viewport of [
+    { name: '1280', width: 1280, height: 800 },
+    { name: '375', width: 375, height: 812 },
+  ]) {
+    test(`SD-UI5: hộp thoại Mẫu của tôi ${viewport.name}px: tạo mẫu cá nhân, khung soạn tin thấy mẫu mới, không tràn ngang`, async () => {
+      const testInfo = test.info();
+      const { page } = support;
+      await page.setViewportSize({ width: viewport.width, height: viewport.height });
+
+      // Danh sách mẫu có trạng thái: lệnh tạo thêm vào danh sách, và lệnh đọc trả danh sách mới.
+      const listExample = findSupportDeskExample('admin-canned-responses.json', 'danh sách mẫu');
+      let cannedList = [...(listExample.response as { data: unknown[] }).data];
+      const createdBodies: unknown[] = [];
+      const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
+      await routes.mockRoute('admin-canned-responses.json', 'danh sách mẫu', {
+        respondWith: () => ({ body: { data: cannedList } }),
+      });
+      await routes.mockRoute('admin-canned-responses.json', 'tạo mẫu cá nhân', {
+        respondWith: (request) => {
+          const body = request.postDataJSON() as {
+            shortcut: string;
+            body: string;
+            shared: boolean;
+          };
+          createdBodies.push(body);
+          const created = {
+            id: 'ca000000-0000-4000-8000-000000000077',
+            ...body,
+            editable: true,
+          };
+          cannedList = [...cannedList, created];
+          return { status: 201, body: { data: created } };
+        },
+      });
+
+      await openWaitingSession(page);
+      await page.getByRole('button', { name: 'Nhận', exact: true }).click();
+      await expect(chatComposer(page)).toBeEnabled();
+
+      const manageButton = page.getByRole('button', { name: 'Quản lý mẫu', exact: true });
+      await manageButton.scrollIntoViewIfNeeded();
+      const manageButtonBox = await readBox(manageButton);
+      const composerBox = await readBox(page.locator('.support-chat-composer'));
+      expect(manageButtonBox.x).toBeGreaterThanOrEqual(0);
+      expect(manageButtonBox.x + manageButtonBox.width).toBeLessThanOrEqual(viewport.width);
+      // Nút nằm trong khung soạn tin, không làm khung rộng hơn khung nhìn.
+      expect(manageButtonBox.x + manageButtonBox.width).toBeLessThanOrEqual(
+        composerBox.x + composerBox.width + 0.5,
+      );
+      expect(composerBox.x + composerBox.width).toBeLessThanOrEqual(viewport.width);
+      await expectNoHorizontalOverflow(page);
+
+      await manageButton.click();
+      const dialog = page.getByRole('dialog', { name: 'Mẫu của tôi' });
+      await expect(dialog).toBeVisible();
+      // Hộp thoại chỉ hiện mẫu cá nhân. Mẫu dùng chung /camon không có trong hộp thoại.
+      await expect(dialog.locator('.canned-shortcut')).toHaveText(['/kiemdon']);
+      await expect(dialog.getByText('Chỉ xem')).toHaveCount(0);
+      await expectNoHorizontalOverflow(page);
+      await page.screenshot({ path: screenshotPath(testInfo, `my-canned-${viewport.name}.png`) });
+
+      await dialog.getByRole('button', { name: 'Thêm mẫu', exact: true }).click();
+      const formDialog = page.getByRole('dialog', { name: 'Thêm mẫu' });
+      await formDialog.getByLabel('Phím tắt').fill('baohanh');
+      await formDialog.getByLabel('Nội dung').fill('Sản phẩm được bảo hành 12 tháng.');
+      await page.screenshot({
+        path: screenshotPath(testInfo, `my-canned-form-${viewport.name}.png`),
+      });
+      await formDialog.getByRole('button', { name: 'Lưu mẫu' }).click();
+
+      await expect(formDialog).toHaveCount(0);
+      await expect(dialog.locator('.canned-shortcut')).toHaveText(['/kiemdon', '/baohanh']);
+      // Mẫu cá nhân gửi `shared: false`.
+      expect(createdBodies).toEqual([
+        { shortcut: 'baohanh', body: 'Sản phẩm được bảo hành 12 tháng.', shared: false },
+      ]);
+
+      const dialogBox = await readBox(dialog);
+      expect(dialogBox.x).toBeGreaterThanOrEqual(0);
+      expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(viewport.width);
+      expect(dialogBox.y).toBeGreaterThanOrEqual(0);
+      expect(dialogBox.y + dialogBox.height).toBeLessThanOrEqual(viewport.height);
+      // Mở hộp thoại thì trang nền không cuộn được.
+      const bodyOverflow = await page.evaluate(() => document.body.style.overflow);
+      expect(bodyOverflow).toBe('hidden');
+      await expectNoHorizontalOverflow(page);
+      await testInfo.attach(`measurements-my-canned-${viewport.name}`, {
+        body: JSON.stringify(
+          { viewport, manageButtonBox, composerBox, dialogBox, bodyOverflow },
+          null,
+          2,
+        ),
+        contentType: 'application/json',
+      });
+      await page.screenshot({
+        path: screenshotPath(testInfo, `my-canned-created-${viewport.name}.png`),
+      });
+
+      // Esc đóng hộp thoại và trả focus về nút Quản lý mẫu.
+      await page.keyboard.press('Escape');
+      await expect(dialog).toHaveCount(0);
+      await expect(manageButton).toBeFocused();
+
+      // Khung soạn tin dùng ngay danh sách mới: gõ `/bao` thấy mẫu vừa tạo.
+      await chatComposer(page).fill('/bao');
+      await expect(page.getByRole('option', { name: /\/baohanh/ })).toBeVisible();
+      await page.setViewportSize({ width: 1280, height: 800 });
+    });
+  }
 });

@@ -144,6 +144,54 @@ describe('route giả theo ví dụ trong file mẫu', () => {
     expect(response.fallbackCount()).toBe(1);
   });
 
+  it('mockInlineRoute trả 204 không có thân cho ví dụ DELETE tự viết', async () => {
+    const fakePage = createFakePage();
+    const routes = createSupportDeskRouteMocks({
+      page: fakePage.page,
+      apiOrigin: API_ORIGIN,
+      loadOpenApiDocument: createOpenApiLoader({ paths: {} }).load,
+    });
+
+    await routes.mockInlineRoute({
+      name: 'xóa mẫu',
+      method: 'DELETE',
+      path: '/api/admin/support/canned-responses/ca000000-0000-4000-8000-000000000003',
+      request: null,
+      status: 204,
+      response: null,
+    });
+
+    const response = await dispatchRequest(
+      fakePage,
+      'DELETE',
+      `${API_ORIGIN}/api/admin/support/canned-responses/ca000000-0000-4000-8000-000000000003`,
+    );
+
+    expect(response.fulfilled).toEqual([{ status: 204 }]);
+  });
+
+  it('mockInlineRoute vẫn báo lỗi khi backend đã có route', async () => {
+    const fakePage = createFakePage();
+    const routes = createSupportDeskRouteMocks({
+      page: fakePage.page,
+      apiOrigin: API_ORIGIN,
+      loadOpenApiDocument: createOpenApiLoader({
+        paths: { '/api/admin/support/canned-responses/{id}': { delete: {} } },
+      }).load,
+    });
+
+    await expect(
+      routes.mockInlineRoute({
+        name: 'xóa mẫu',
+        method: 'DELETE',
+        path: '/api/admin/support/canned-responses/ca000000-0000-4000-8000-000000000003',
+        request: null,
+        status: 204,
+        response: null,
+      }),
+    ).rejects.toThrow('Backend đã có `DELETE /api/admin/support/canned-responses/{id}`');
+  });
+
   it('chọn đúng ví dụ khi hai ví dụ cùng đường dẫn nhưng khác query', async () => {
     const fakePage = createFakePage();
     const routes = createSupportDeskRouteMocks({
