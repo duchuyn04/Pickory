@@ -9,9 +9,25 @@
   font-size: var(--text-sm);
 }
 
+/* Màn tài khoản chiếm hết bề ngang theo Figma TK-08, không giới hạn 720px như màn quyền riêng tư. */
+/* Cách chân trang 42.5px vì tổng chiều cao thẻ trong Figma lẻ nửa pixel. */
+.account-page-wide {
+  width: 100%;
+  padding-bottom: 42.5px;
+}
+
+/* Điện thoại: Figma đo khoảng cách tới chân trang là 43.45px. Chọn 43.5px cho khớp tổng chiều cao ảnh. */
+@media (max-width: 767px) {
+  .account-page-wide {
+    padding-bottom: 43.5px;
+  }
+}
+
+/* Figma đo tiêu đề trang cao 27px. Cao dòng mặc định 1.2 chỉ cho 26.4px và đẩy lệch các thẻ bên dưới. */
 .account-page h1 {
   margin: 0;
   font-size: var(--text-title);
+  line-height: 27px;
 }
 
 .account-section {
@@ -21,19 +37,35 @@
   margin: 0;
 }
 
+/* Tiêu đề thẻ cao 20px theo Figma TK-08. */
 .account-section h2 {
   margin: 0;
   font-size: var(--text-md);
+  line-height: 20px;
 }
 
 .account-section p {
   margin: 0;
 }
 
-/* Thẻ có chữ bên trái và một nút bên phải. Nút xuống dòng khi màn hẹp. */
+/* Figma đo nhãn của ô đứng một mình cao 20px. Các nhãn trong lưới hai cột cao 19.5px. */
+.account-section form.stack > .field:first-child > label {
+  line-height: 20px;
+}
+
+/* Giới hạn 654px đủ cho hai ô 320px cách nhau 14px, theo Figma TK-08. */
+.account-section form,
+.account-danger p {
+  max-width: 654px;
+}
+
+/* Thẻ chữ và nút xếp ngang, nút xuống dòng ở màn hẹp. Chiều cao tối thiểu khớp thẻ TK-08. */
 .account-row {
+  min-height: 74px;
   flex-direction: row;
   flex-wrap: wrap;
+  /* Figma đo 11.1875px. Chọn 11.5px vì cho tỉ lệ ảnh thấp hơn mà hộp vẫn trong 1px so với Figma. */
+  row-gap: 11.5px;
   align-items: center;
   justify-content: space-between;
 }

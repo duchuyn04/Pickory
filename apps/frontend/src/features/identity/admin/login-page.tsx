@@ -5,14 +5,13 @@ import { apiRequest } from '../../../shared/api';
 import { getEmailError, getPasswordError } from '../../../shared/identity-validation';
 import { useActor } from '../hooks/use-actor';
 import { ErrorAlert } from '../../../shared/error-alert';
-import './admin-login.css';
+import { AuthSplitPage } from '../components/auth-split-page';
+import { PasswordInput } from '../customer/auth-ui';
 
 // Trang đăng nhập nhân viên, tách khỏi trang đăng nhập khách và không có nút đăng nhập Google.
 export function StaffLoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // Cho người dùng bật xem mật khẩu để kiểm tra gõ đúng.
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -61,58 +60,38 @@ export function StaffLoginPage() {
   }
 
   return (
-    <main className="admin-login">
-      <form noValidate onSubmit={handleSubmit} className="card admin-login-card">
-        <div className="admin-login-brand">
-          {/* Màn đăng nhập rộng nên dùng logo đầy đủ: biểu tượng P và chữ Pickory xếp dọc. */}
-          <img
-            className="admin-login-logo"
-            src="/media/brand/pickory-logo.png"
-            alt=""
-            width={307}
-            height={240}
-          />
-          <span>
-            <h1>Pickory Back-Office</h1>
-            <small>Đăng nhập dành cho nhân viên quản trị</small>
-          </span>
-        </div>
+    <AuthSplitPage
+      variant="admin"
+      title="Đăng nhập quản trị"
+      subtitle="Đăng nhập dành cho nhân viên quản trị"
+    >
+      {/* `role="alert"` để trình đọc màn hình đọc ngay lỗi đăng nhập vừa xuất hiện. */}
+      {error && <ErrorAlert message={error} />}
 
-        {/* `role="alert"` để trình đọc màn hình đọc ngay lỗi đăng nhập vừa xuất hiện. */}
-        {error && <ErrorAlert message={error} />}
-
-        <div className="field">
-          <label htmlFor="email">Email nhân viên</label>
-          <input
-            id="email"
-            type="email"
-            required
-            autoComplete="username"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="nhanvien@pickory.local"
-          />
-        </div>
-
-        <div className="field">
-          <label htmlFor="password">Mật khẩu</label>
-          <div className="admin-login-password">
+      <form noValidate onSubmit={handleSubmit} className="auth-form">
+        <div className="auth-fields">
+          <div className="field">
+            <label htmlFor="email">Email nhân viên</label>
             <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
+              id="email"
+              type="email"
               required
-              autoComplete="current-password"
+              autoComplete="username"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="nhanvien@pickory.local"
+            />
+          </div>
+
+          <div className="field">
+            <label htmlFor="password">Mật khẩu</label>
+            <PasswordInput
+              id="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={setPassword}
+              autoComplete="current-password"
               placeholder="Nhập mật khẩu"
             />
-            <button
-              type="button"
-              className="btn btn-ghost btn-sm admin-login-toggle"
-              onClick={() => setShowPassword(!showPassword)}
-            >
-              {showPassword ? 'Ẩn' : 'Hiện'}
-            </button>
           </div>
         </div>
 
@@ -120,6 +99,10 @@ export function StaffLoginPage() {
           {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
       </form>
-    </main>
+
+      <p className="auth-note">
+        Tài khoản do quản trị viên cấp. Liên hệ quản trị viên nếu bạn quên mật khẩu.
+      </p>
+    </AuthSplitPage>
   );
 }

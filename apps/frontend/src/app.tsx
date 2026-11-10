@@ -121,8 +121,6 @@ export function App() {
       <Routes>
         <Route element={<CustomerLayout />}>
           <Route path="/" element={<HomePage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/login" element={<LoginPage />} />
           <Route path="/me" element={<AccountPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
@@ -139,6 +137,9 @@ export function App() {
           <Route path="/orders/:code" element={<OrderDetailPage />} />
           <Route path="/me/orders" element={<CustomerOrdersPage />} />
         </Route>
+        {/* Đăng nhập và đăng ký có bảng thương hiệu riêng, nên không dùng header và footer của khách. */}
+        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<LoginPage />} />
         <Route path="/admin/login" element={<StaffLoginPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />

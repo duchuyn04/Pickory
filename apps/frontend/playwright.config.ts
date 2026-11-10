@@ -3,6 +3,8 @@ import { e2eEnvironment } from './e2e/environment';
 
 export default defineConfig({
   testDir: './e2e',
+  // Ảnh chuẩn Figma nằm cạnh spec, không gắn hậu tố hệ điều hành vì Figma xuất ảnh, không phải Playwright.
+  snapshotPathTemplate: '{testDir}/{testFileDir}/baselines/{arg}{ext}',
   // Chạy tuần tự để tránh tranh chấp DB và hạn mức IP.
   fullyParallel: false,
   workers: 1,

@@ -1,0 +1,339 @@
+/*
+ * Màn xác thực chia đôi theo Figma `Support Desk - Giao diện` (TK-01 đến TK-04, QT-01, QT-02).
+ * Máy tính có bảng thương hiệu 560px và biểu mẫu 400px, còn dưới 1024px bảng thu thành thanh logo cao 74px.
+ */
+.auth-split {
+  display: grid;
+  grid-template-columns: 560px 1fr;
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+  line-height: 22px;
+}
+
+/* Bảng thương hiệu: logo ở trên, phần giới thiệu ở giữa, dòng bản quyền ở dưới. */
+.auth-split-brand {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--space-8) var(--space-7);
+  overflow: hidden;
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+}
+
+.auth-split-admin .auth-split-brand {
+  background: var(--color-dark);
+}
+
+/* Hai vòng trang trí bị mép bảng cắt. Vòng lớn neo góc dưới phải nên luôn chạm mép dưới khi màn cao hơn 800px. */
+.auth-split-brand::before,
+.auth-split-brand::after {
+  position: absolute;
+  border-radius: var(--radius-pill);
+  content: '';
+  pointer-events: none;
+}
+
+.auth-split-brand::before {
+  right: -120px;
+  bottom: -140px;
+  width: 420px;
+  height: 420px;
+  background: var(--color-decor-ring-large);
+}
+
+.auth-split-brand::after {
+  top: -60px;
+  left: -80px;
+  width: 240px;
+  height: 240px;
+  background: var(--color-decor-ring-small);
+}
+
+/* Các khối nội dung nằm trên vòng trang trí. */
+.auth-split-logo,
+.auth-split-intro,
+.auth-split-copyright {
+  position: relative;
+  z-index: 1;
+}
+
+.auth-split-logo {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  height: 42px;
+}
+
+/* Logo chữ P có phần đỏ và tối, nên cần ô trắng để không chìm vào nền bảng. */
+.auth-split-logo-box {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  height: 42px;
+  border-radius: 10px;
+  background: var(--color-surface);
+}
+
+.auth-split-logo-mark {
+  width: 40px;
+  height: 34px;
+}
+
+.auth-split-logo-name {
+  font-size: var(--text-lg);
+  font-weight: 800;
+  line-height: 28px;
+}
+
+.auth-split-intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.auth-split-headline {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  line-height: 48px;
+}
+
+.auth-split-description {
+  margin: 0;
+  font-size: var(--text-md);
+  line-height: 26px;
+  opacity: 0.9;
+}
+
+.auth-split-benefits {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-md);
+  line-height: 26px;
+}
+
+.auth-split-benefits li {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+}
+
+.auth-split-check {
+  flex: none;
+}
+
+.auth-split-copyright {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 18px;
+  opacity: 0.8;
+}
+
+/* Khu biểu mẫu căn trên với lề 48px. Biểu mẫu rộng 400px nằm giữa cột. */
+.auth-split-main {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: var(--space-7) var(--space-5);
+}
+
+/* Các khối của biểu mẫu cách nhau 24px theo Figma TK-01. */
+.auth-split-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  width: min(400px, 100%);
+  min-width: 0;
+}
+
+.auth-split-heading h1 {
+  margin: 0;
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 36px;
+}
+
+.auth-split-heading p {
+  margin: var(--space-2) 0 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  line-height: 22px;
+}
+
+/* Nút khớp hộp nút của Figma TK-01. */
+.auth-split .btn {
+  gap: var(--space-2);
+  min-height: 44px;
+  padding: 0 var(--space-4);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+/* Thông báo lỗi khớp khối lỗi của Figma TK-02. */
+.auth-split .alert {
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  line-height: 22px;
+}
+
+.auth-split .alert-list {
+  gap: var(--space-3);
+}
+
+.auth-split .alert-list-icon {
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+}
+
+/* Nhóm ô nhập và nút gửi cách nhau 24px, các ô cách nhau 16px, theo Figma TK-01. */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  min-width: 0;
+}
+
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* Hai ô đứng cạnh nhau ở màn rộng. Dưới 1024px chúng xếp dọc để không bị bóp. */
+.auth-fields-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* Ô nhập khớp hộp Figma TK-01: nhãn cách ô 8px, ô cao 44px. */
+.auth-split .field {
+  gap: var(--space-2);
+  min-width: 0;
+  margin-bottom: 0;
+}
+
+.auth-split .field > label,
+.auth-split .auth-label-row label {
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.auth-split .field input {
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  font-size: var(--text-sm);
+  line-height: 22px;
+}
+
+.auth-split .field input::placeholder {
+  color: var(--color-ink-muted);
+  opacity: 1;
+}
+
+/* Token Figma ghi chú thích 12px độ đậm 400. Độ đậm 400 cũng khớp chiều ngang câu lỗi TK-04 trong ảnh Figma. */
+.auth-split .form-error {
+  font-size: var(--text-xs);
+  font-weight: 400;
+  line-height: 18px;
+}
+
+/* Nhãn và liên kết "Quên mật khẩu?" nằm cùng hàng để khớp Figma TK-01. */
+.auth-split .auth-label-row {
+  align-items: center;
+  height: 20px;
+}
+
+.auth-split .auth-label-row .auth-link {
+  font-size: var(--text-label);
+  font-weight: 600;
+  line-height: 20px;
+}
+
+/* Nút "Hiện" nằm sát phải ô mật khẩu như Figma. Ô nhập chừa lề phải ở `customer-auth.css`. */
+.auth-split .password-input button {
+  right: var(--space-3);
+  min-height: 0;
+  padding: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  line-height: 22px;
+}
+
+/* Hộp nhìn thấy giữ nhỏ như Figma. Vùng bấm mở rộng khoảng 10px mỗi phía để đạt tối thiểu 24x24px theo tiêu chuẩn WCAG 2.5.8. */
+.auth-split .password-input button::after {
+  position: absolute;
+  inset: -11px;
+  content: '';
+}
+
+/* Chữ phụ và liên kết cách nhau 4px theo Figma TK-01. */
+.auth-split .auth-switch {
+  display: flex;
+  gap: var(--space-1);
+  justify-content: center;
+  margin: 0;
+  color: var(--color-ink-muted);
+}
+
+.auth-split .auth-switch a {
+  color: var(--color-link);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.auth-split .auth-switch a:hover {
+  text-decoration: underline;
+}
+
+/* Ghi chú dưới nút gửi dùng cỡ chữ của Figma TK-03 và QT-01. */
+.auth-split .auth-note {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+  line-height: 18px;
+  text-align: center;
+}
+
+/* Cột 560px cộng biểu mẫu 400px và hai lề 24px cần 1008px. Dưới 1024px bảng thu thành thanh logo để biểu mẫu không bị bóp. */
+@media (max-width: 1023px) {
+  .auth-split {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+
+  /* Thanh thương hiệu cao 74px: chỉ còn logo, bỏ phần giới thiệu và vòng trang trí. */
+  .auth-split-brand {
+    padding: var(--space-4) var(--space-5);
+  }
+
+  .auth-split-brand::before,
+  .auth-split-brand::after,
+  .auth-split-intro,
+  .auth-split-copyright {
+    display: none;
+  }
+
+  .auth-split-main {
+    padding: var(--space-5) var(--space-5) var(--space-6);
+  }
+
+  .auth-fields-pair {
+    grid-template-columns: 1fr;
+  }
+}

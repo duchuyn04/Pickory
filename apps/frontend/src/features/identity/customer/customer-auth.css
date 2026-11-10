@@ -26,6 +26,12 @@
 .auth-head h1 {
   margin: 0 0 var(--space-1);
   font-size: var(--text-title);
+  line-height: 27px;
+}
+
+/* Nhãn của ô đứng một mình trong biểu mẫu cao 20px theo Figma TK-05 và TK-06. */
+.auth-card .stack > .field > label {
+  line-height: 20px;
 }
 
 .auth-head p {
@@ -87,7 +93,8 @@
   align-items: center;
   color: var(--color-ink-muted);
   font-size: var(--text-xs);
-  font-weight: 600;
+  font-weight: 400;
+  line-height: 18px;
 }
 
 .auth-divider::before,
