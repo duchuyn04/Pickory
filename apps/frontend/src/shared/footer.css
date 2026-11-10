@@ -1,0 +1,54 @@
+/* Chân trang dùng chung của khách. */
+
+.site-footer {
+  border-top: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.site-footer-inner {
+  display: flex;
+  gap: var(--space-4);
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-4);
+}
+
+.site-footer-brand {
+  display: flex;
+  gap: var(--space-2);
+  align-items: baseline;
+}
+
+.site-footer-name {
+  font-weight: 700;
+}
+
+.site-footer-copy {
+  color: var(--color-ink-muted);
+  font-size: var(--text-xs);
+}
+
+.site-footer-links {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.site-footer a {
+  color: var(--color-link);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.site-footer a:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 767px) {
+  /* Hai cụm xếp dọc trên màn hẹp. */
+  .site-footer-inner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

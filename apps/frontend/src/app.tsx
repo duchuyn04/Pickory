@@ -20,6 +20,7 @@ import { ConsentBanner } from './features/identity/components/consent-banner';
 import { ForgotPasswordPage } from './features/identity/customer/forgot-password-page';
 import { LoginPage } from './features/identity/customer/login-page';
 import { PrivacySettingsPage } from './features/identity/customer/privacy-settings';
+import { ShippingFeePolicyPage } from './features/shipping/shipping-fee-policy-page';
 import { RegisterPage } from './features/identity/customer/register-page';
 import { ResetPasswordPage } from './features/identity/customer/reset-password-page';
 import { VerifyEmailPage } from './features/identity/customer/verify-email-page';
@@ -37,6 +38,8 @@ import { OrderLookupPage } from './features/commerce/customer/orders/order-looku
 import { HomePage } from './features/home/home-page';
 import { SupportDeskPage } from './features/support-desk/admin/support-desk-page';
 import { Header } from './shared/header';
+import { Footer } from './shared/footer';
+import './shared/customer-layout.css';
 // Tách trình soạn mô tả khỏi bundle trang khách, chỉ tải khi nhân viên mở trang sản phẩm.
 const ProductsPage = lazy(() =>
   import('./features/catalog/admin/products-page').then((module) => ({
@@ -106,12 +109,16 @@ function ReportRedirect({ to }: { to: string }) {
 }
 
 function CustomerLayout() {
-  // Header thuộc layout để trang chủ và mọi luồng tài khoản cùng phản ánh phiên hiện tại.
+  // Header và footer thuộc layout để mọi trang khách cùng phản ánh phiên hiện tại.
+  // Vỏ cột giữ chân trang ở đáy màn khi trang ngắn.
   return (
-    <>
+    <div className="customer-shell">
       <Header />
-      <Outlet />
-    </>
+      <div className="customer-body">
+        <Outlet />
+      </div>
+      <Footer />
+    </div>
   );
 }
 
@@ -126,6 +133,7 @@ export function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
           <Route path="/privacy" element={<PrivacySettingsPage />} />
+          <Route path="/policy/giao-hang" element={<ShippingFeePolicyPage />} />
           <Route path="/c/:slug" element={<CategoryPage />} />
           <Route path="/p/:slug" element={<ProductPage />} />
           <Route path="/compare" element={<ComparePage />} />

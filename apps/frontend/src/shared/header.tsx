@@ -105,6 +105,9 @@ export function Header() {
             <Link to="/order-lookup" onClick={() => setIsMenuOpen(false)}>
               Tra cứu đơn
             </Link>
+            <Link to="/policy/giao-hang" onClick={() => setIsMenuOpen(false)}>
+              Phí giao hàng
+            </Link>
             <Link to="/privacy" onClick={() => setIsMenuOpen(false)}>
               Quyền riêng tư
             </Link>
