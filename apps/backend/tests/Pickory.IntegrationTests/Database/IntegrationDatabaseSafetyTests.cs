@@ -202,7 +202,8 @@ public sealed class IntegrationDatabaseSafetyTests(DatabaseFixture database)
         // Tạo một DB tạm thời để thử nghiệm lỗi trong quá trình khởi tạo fixture.
         var baseBuilder = new NpgsqlConnectionStringBuilder(database.ConnectionString);
         var probeSuffix = $"fail_{Guid.NewGuid().ToString("N")[..6]}";
-        var probeDbName = $"pickory_test_{probeSuffix}";
+        // Kết nối `blocker` phải mở trên cùng tên DB mà `probeFixture` sẽ khóa.
+        var probeDbName = ResolveProbeDatabaseName(probeSuffix);
         var probeTarget = new NpgsqlConnectionStringBuilder(database.ConnectionString)
         {
             Database = probeDbName,
@@ -246,7 +247,8 @@ public sealed class IntegrationDatabaseSafetyTests(DatabaseFixture database)
     public async Task DisposeAsync_ClearsPooledConnectionsUsedByFactory()
     {
         var probeSuffix = $"pool_{Guid.NewGuid().ToString("N")[..6]}";
-        var probeDbName = $"pickory_test_{probeSuffix}";
+        // Bước dọn cuối phải xóa đúng tên DB mà `probeFixture` đã tạo.
+        var probeDbName = ResolveProbeDatabaseName(probeSuffix);
         var baseBuilder = new NpgsqlConnectionStringBuilder(database.ConnectionString);
         var probeFixture = new ProbeDatabaseFixture(probeSuffix);
         await probeFixture.InitializeAsync();
@@ -276,6 +278,15 @@ public sealed class IntegrationDatabaseSafetyTests(DatabaseFixture database)
             IntegrationDatabaseFixture.ClearSpecificPool(probePooledConnectionString);
             await IntegrationDatabaseFixture.DropDatabaseIfExistsAsync(baseBuilder, probeDbName);
         }
+    }
+
+    private static string ResolveProbeDatabaseName(string probeSuffix)
+    {
+        // Dùng `BuildDatabaseUrl` với `ResolveTestDatabaseUrl` để lấy đúng tên DB mà `IntegrationDatabaseFixture` tạo từ `probeSuffix`.
+        var probeUrl = IntegrationDatabaseFixture.BuildDatabaseUrl(
+            PickoryWebApplicationFactory.ResolveTestDatabaseUrl(),
+            probeSuffix);
+        return new NpgsqlConnectionStringBuilder(PostgresConnectionString.Convert(probeUrl)).Database!;
     }
 
     [Fact]
