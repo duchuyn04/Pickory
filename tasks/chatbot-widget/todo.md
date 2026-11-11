@@ -27,11 +27,11 @@ Quy ước:
 ### CBW-UI1: Tải widget trên trang khách
 **Mô tả:** `CustomerLayout` đọc `GET /api/chatbot-widget`. Route trả `enabled: true` thì layout chèn thẻ `<script async src="<scriptUrl>" data-api="<apiUrl>">` một lần.
 **Tiêu chí nghiệm thu:**
-- [ ] `enabled: false` hoặc route lỗi: trang không chèn script nào
-- [ ] Chuyển qua nhiều trang khách: trang chỉ có đúng một thẻ script của chatbot
-- [ ] Trang `/admin` không có thẻ script của chatbot
-- [ ] Script tải lỗi: trang khách vẫn hiện đủ nội dung, không có lỗi JavaScript chưa bắt
-- [ ] Gọi route sau khi trang hiện xong, để widget không làm chậm lần hiện đầu tiên
+- [x] `enabled: false` hoặc route lỗi: trang không chèn script nào
+- [x] Chuyển qua nhiều trang khách: trang chỉ có đúng một thẻ script của chatbot
+- [x] Trang `/admin` không có thẻ script của chatbot
+- [x] Script tải lỗi: trang khách vẫn hiện đủ nội dung, không có lỗi JavaScript chưa bắt
+- [x] Gọi route sau khi trang hiện xong, để widget không làm chậm lần hiện đầu tiên
 **Kiểm tra:** Vitest
 **Phụ thuộc:** CBW-01 · **Quy mô:** S
 

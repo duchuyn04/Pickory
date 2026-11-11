@@ -63,7 +63,7 @@ Các mục sau thuộc dự án `chatbot-rag`. Plan ghi lại để theo dõi kh
 ## Task List
 
 ### Phase 1: Cấu hình và widget
-- [x] CBW-01 · [ ] CBW-UI1 · [ ] CBW-02
+- [x] CBW-01 · [x] CBW-UI1 · [ ] CBW-02
 
 ### Checkpoint W1
 - [ ] Đặt hai biến môi trường trỏ tới `chatbot-rag` chạy ở máy dev. Khung chat hiện ở trang chủ, không hiện ở `/admin`

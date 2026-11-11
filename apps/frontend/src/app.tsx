@@ -39,6 +39,7 @@ import { OrderLookupPage } from './features/commerce/customer/orders/order-looku
 import { HomePage } from './features/home/home-page';
 import { SupportDeskPage } from './features/support-desk/admin/support-desk-page';
 import { SupportSettingsPage } from './features/support-desk/admin/support-settings-page';
+import { ChatbotWidgetLoader } from './shared/chatbot-widget-loader';
 import { Header } from './shared/header';
 import { Footer } from './shared/footer';
 import './shared/customer-layout.css';
@@ -120,6 +121,8 @@ function CustomerLayout() {
         <Outlet />
       </div>
       <Footer />
+      {/* Chỉ layout khách tải khung chat. Trang quản trị dùng AdminLayout nên không có. */}
+      <ChatbotWidgetLoader />
     </div>
   );
 }
