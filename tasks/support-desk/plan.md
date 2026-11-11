@@ -216,10 +216,10 @@ Chi tiết từng task:
 - [x] SD-01 · [x] SD-02 · [x] SD-03 · [x] SD-UI1
 
 ### Checkpoint SD1
-- [ ] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
-- [ ] Test kiến trúc chặn `SupportDesk` tham chiếu module khác ngoài Contracts
-- [ ] Nhân viên bật "Sẵn sàng" trên màn CSKH, mất kết nối 2 phút thì thành "Tạm vắng"
-- [ ] Review với người dùng
+- [x] `dotnet build` và `dotnet test` sạch, migration chạy trên DB sạch
+- [x] Test kiến trúc chặn `SupportDesk` tham chiếu module khác ngoài Contracts
+- [x] Nhân viên bật "Sẵn sàng" trên màn CSKH, mất kết nối 2 phút thì thành "Tạm vắng"
+- [x] Review với người dùng
 
 ### Phase 2: Hội thoại phía khách, tiếp nhận và trả lời
 Hai nhánh chạy song song theo quyết định 31.
@@ -249,7 +249,7 @@ Nhánh frontend (`todo-frontend.md`):
 ### Checkpoint SD2
 - [x] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`
 - [x] Ngoài giờ, khách để lại số điện thoại và tab Gọi lại hiện yêu cầu
-- [ ] Review với người dùng
+- [x] Review với người dùng
 
 ### Phase 3: Cấu hình và số liệu
 Nhánh backend (`todo-backend.md`):
@@ -263,7 +263,7 @@ Nhánh frontend (`todo-frontend.md`):
 
 ### Checkpoint SD3
 - [x] `ISupportMetrics` trả đúng số đã tính tay trên bộ dữ liệu test
-- [ ] Review với người dùng
+- [x] Review với người dùng
 
 ### Phase 4: E2E và nghiệm thu
 Hai nhánh gặp nhau ở phase này. Chi tiết ở `todo.md`.
@@ -275,7 +275,7 @@ Hai nhánh gặp nhau ở phase này. Chi tiết ở `todo.md`.
 - [x] Mọi dòng Traceability đạt
 - [x] Coverage dòng của `Pickory.Modules.SupportDesk` ít nhất 80%, bỏ `Persistence/Migrations/`
 - [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
-- [ ] Review với người dùng, rồi mới bắt đầu `admin-console`
+- [x] Review với người dùng, rồi mới bắt đầu `admin-console`
 
 ## Traceability: Success Criteria → Task
 

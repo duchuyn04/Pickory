@@ -238,4 +238,4 @@ Ghi chú cho route `POST /api/support/conversations`: route này không nhận m
 - [x] Mọi dòng Traceability đạt
 - [x] Coverage dòng của `Pickory.Modules.SupportDesk` ít nhất 80%, bỏ `Persistence/Migrations/`
 - [x] Bộ lệnh frontend (`pnpm lint && pnpm typecheck && pnpm test && pnpm build && pnpm test:e2e`) và `dotnet test` sạch
-- [ ] Review với người dùng, rồi mới bắt đầu `admin-console`
+- [x] Review với người dùng, rồi mới bắt đầu `admin-console`
