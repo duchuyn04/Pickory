@@ -18,11 +18,12 @@ fi
 # Gửi mã nguồn qua đường ống SSH, không cần file tạm. Các loại trừ giữ secret và file build ở lại máy dev.
 # Lệnh `rm -rf` xóa mã cũ trước khi giải nén, nên file đã xóa trong repo cũng biến mất trên VPS.
 # File `.env` và thư mục `backups` nằm ngoài `apps` và `docker`, nên không bị xóa.
+# Thư mục `apps/frontend/e2e` phải đi theo. Lệnh `pnpm build` chạy `tsc` trên cả `test`, và một unit test import file trong `e2e`.
 tar czf - \
   --exclude='node_modules' --exclude='bin' --exclude='obj' --exclude='dist' \
   --exclude='playwright-report' --exclude='test-results' --exclude='coverage' \
   --exclude='.dev-outbox' --exclude='.env' --exclude='.env.*' \
-  --exclude='apps/backend/tests' --exclude='apps/frontend/e2e' \
+  --exclude='apps/backend/tests' \
   .dockerignore docker docker-compose.prod.yml apps/backend apps/frontend \
   | ssh -i "$SSH_KEY" "$VPS_HOST" "cd $REMOTE_DIR && rm -rf apps docker && tar xzf -"
 
