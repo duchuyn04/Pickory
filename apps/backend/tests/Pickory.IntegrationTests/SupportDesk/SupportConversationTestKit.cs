@@ -165,13 +165,16 @@ internal static class SupportConversationTestKit
         return document!.RootElement.GetProperty("data").Clone();
     }
 
-    public static async Task AssertErrorAsync(HttpResponseMessage response, System.Net.HttpStatusCode status, string code)
+    // Đọc nội dung một lần, kiểm mã lỗi và trả chuỗi gốc đã đọc để test đối chiếu hai phản hồi.
+    public static async Task<string> AssertErrorAsync(HttpResponseMessage response, System.Net.HttpStatusCode status, string code)
     {
         Xunit.Assert.Equal(status, response.StatusCode);
-        var document = await response.Content.ReadFromJsonAsync<JsonDocument>();
-        var error = document!.RootElement.GetProperty("error");
+        var rawBody = await response.Content.ReadAsStringAsync();
+        using var document = JsonDocument.Parse(rawBody);
+        var error = document.RootElement.GetProperty("error");
         Xunit.Assert.Equal(code, error.GetProperty("code").GetString());
         // Thông báo luôn có và viết cho người dùng. Test không khóa nội dung chữ, chỉ khóa mã lỗi.
         Xunit.Assert.False(string.IsNullOrWhiteSpace(error.GetProperty("message").GetString()));
+        return rawBody;
     }
 }

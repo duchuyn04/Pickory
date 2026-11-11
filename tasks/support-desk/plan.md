@@ -269,7 +269,7 @@ Nhánh frontend (`todo-frontend.md`):
 Hai nhánh gặp nhau ở phase này. Chi tiết ở `todo.md`.
 - [x] SD-E2E1 luồng CSKH trong giờ
 - [x] SD-E2E2 luồng ngoài giờ và hai người nhận
-- [ ] SD-14 nghiệm thu support-desk
+- [x] SD-14 nghiệm thu support-desk
 
 ### Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt

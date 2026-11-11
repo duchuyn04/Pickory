@@ -86,17 +86,27 @@ public sealed class CustomerCsatEndpointTests(
     }
 
     [Fact]
-    // Mã hội thoại không tồn tại nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND`.
-    public async Task Put_NonExistentConversation_Returns404ConversationNotFound()
+    // Mã hội thoại không tồn tại nhận 404 `SUPPORT_CONVERSATION_NOT_FOUND` giống hệt hội thoại của người khác.
+    public async Task Put_NonExistentConversation_Returns404WithSameBodyAsForeignConversation()
     {
+        var ownerCookie = SupportConversationTestKit.NewGuestCookie();
+        var foreignConversation = await SupportConversationTestKit.SeedConversationAsync(
+            database, SupportConversationTestKit.ReadAnonymousId(ownerCookie));
+        await SupportSessionTestKit.SeedSessionAsync(
+            database, foreignConversation, BaseTime, closedAt: BaseTime.AddMinutes(10));
         var cookie = SupportConversationTestKit.NewGuestCookie();
         var nonExistentId = Guid.NewGuid().ToString();
 
-        // Gửi điểm cho mã hội thoại ngẫu nhiên.
+        // Gửi điểm cho mã hội thoại ngẫu nhiên và hội thoại của người khác.
         var response = await _client.SendAsync(PutJson(CsatPath(nonExistentId), cookie, new { score = 5 }));
+        var foreignResponse = await _client.SendAsync(PutJson(CsatPath(foreignConversation.Id), cookie, new { score = 5 }));
 
-        await SupportConversationTestKit.AssertErrorAsync(
+        var unknownBody = await SupportConversationTestKit.AssertErrorAsync(
             response, HttpStatusCode.NotFound, SupportDeskErrorCodes.ConversationNotFound);
+        var foreignBody = await SupportConversationTestKit.AssertErrorAsync(
+            foreignResponse, HttpStatusCode.NotFound, SupportDeskErrorCodes.ConversationNotFound);
+        // Nội dung lỗi phải trùng khớp để người ngoài không dò được hội thoại có tồn tại.
+        Assert.Equal(unknownBody, foreignBody);
     }
 
     [Fact]

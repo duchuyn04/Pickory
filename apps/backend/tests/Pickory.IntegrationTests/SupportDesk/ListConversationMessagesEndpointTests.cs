@@ -181,12 +181,23 @@ public sealed class ListConversationMessagesEndpointTests(SupportDeskWebApplicat
     }
 
     [Fact]
+    // Mã hội thoại không tồn tại và hội thoại của người khác trả cùng nội dung 404.
     public async Task Get_UnknownConversationId_Returns404WithSameCodeAsForeignConversation()
     {
-        var response = await _client.SendAsync(SupportConversationTestKit.Get(
-            SupportConversationTestKit.MessagesPath(Guid.NewGuid().ToString()), SupportConversationTestKit.NewGuestCookie()));
+        var ownerCookie = SupportConversationTestKit.NewGuestCookie();
+        var foreignConversation = await SupportConversationTestKit.SeedConversationAsync(
+            database, SupportConversationTestKit.ReadAnonymousId(ownerCookie));
+        var callerCookie = SupportConversationTestKit.NewGuestCookie();
 
-        await SupportConversationTestKit.AssertErrorAsync(response, HttpStatusCode.NotFound, NotFoundCode);
+        var unknownResponse = await _client.SendAsync(SupportConversationTestKit.Get(
+            SupportConversationTestKit.MessagesPath(Guid.NewGuid().ToString()), callerCookie));
+        var foreignResponse = await _client.SendAsync(SupportConversationTestKit.Get(
+            SupportConversationTestKit.MessagesPath(foreignConversation.Id), callerCookie));
+
+        var unknownBody = await SupportConversationTestKit.AssertErrorAsync(unknownResponse, HttpStatusCode.NotFound, NotFoundCode);
+        var foreignBody = await SupportConversationTestKit.AssertErrorAsync(foreignResponse, HttpStatusCode.NotFound, NotFoundCode);
+        // So sánh nguyên văn nội dung lỗi để người gọi không phân biệt được mã lạ với hội thoại của người khác.
+        Assert.Equal(unknownBody, foreignBody);
     }
 
     [Fact]

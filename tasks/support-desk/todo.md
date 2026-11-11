@@ -176,11 +176,63 @@ Task của phase này nằm ở `todo-backend.md` (SD-10, SD-13) và `todo-front
 ### SD-14: Nghiệm thu support-desk
 **Mô tả:** Kiểm toàn module trước khi sang `admin-console`. Ngày 2026-10-18 task bỏ hai tiêu chí đo p95 của bản nháp AI.
 **Tiêu chí nghiệm thu:**
-- [ ] Ma trận quyền có mọi endpoint back-office của `support-desk`
-- [ ] Coverage dòng của `Pickory.Modules.SupportDesk` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
-- [ ] Mọi route phía khách có test chủ hội thoại trả 404 với người khác
+- [x] Ma trận quyền có mọi endpoint back-office của `support-desk`
+- [x] Coverage dòng của `Pickory.Modules.SupportDesk` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`
+- [x] Mọi route phía khách có test chủ hội thoại trả 404 với người khác
 **Kiểm tra:** `dotnet test`, script gộp coverage
 **Phụ thuộc:** SD-E2E1, SD-E2E2, SD-13, SD-17 · **Quy mô:** S
+
+**Bằng chứng (2026-11-11):**
+
+#### 1. Bảng đối chiếu tiêu chí
+
+| Tiêu chí | Bằng chứng | Trạng thái |
+| --- | --- | --- |
+| Khách gửi tin đầu tiên ở `/support` trong giờ: nhân viên sẵn sàng nhận thông báo trong 3 giây | Test tích hợp `WaitingSessionEventTests.Stream_FirstMessageOpensSession_NotifiesTheAvailableStaffWithinThreeSeconds`, `WaitingSessionEndpointTests.Post_FirstMessageInHours_OpensWaitingSessionAndWritesTheEstimate`. E2E `support-desk-chat.spec.ts` | Đạt |
+| Ngoài giờ: khách thấy thông báo ngoài giờ và form số điện thoại; yêu cầu gọi lại hiện trong tab Gọi lại | Test tích hợp `WaitingSessionEndpointTests.Post_FirstMessageAtNinePmVietnam_WritesTheOutsideHoursMessageWithCallbackForm`, `WaitingSessionEventTests.Stream_FirstMessageOutsideHours_ReachesTheCustomerChannelWithTheCallbackForm`, `CallbackRequestEndpointTests.Post_InternationalPhone_StoresNormalizedPhoneAndReturns201`, `AdminCallbackRequestEndpointTests`. E2E `support-desk-callback.spec.ts` | Đạt |
+| 2 nhân viên bấm nhận cùng lúc: đúng 1 người nhận được | Test tích hợp `AdminSupportSessionClaimEndpointTests.Claim_ConcurrentRequests_OnlyOneSucceeds`. E2E `support-desk-callback.spec.ts` | Đạt |
+| Tin nhân viên đến khách trong 2 giây; sau khi kết thúc phiên, tin mới của khách mở phiên chờ mới | Test tích hợp `SupportMessageRealtimeEventsTests.CustomerSse_StaffMessage_ReceivedWithinTwoSecondsWithDisplayName`, `AdminSupportSessionCloseEndpointTests.Close_NewCustomerMessage_OpensNewWaitingSessionInSameConversation`. E2E `support-desk-chat.spec.ts` | Đạt |
+| Người không phải chủ hội thoại nhận 404 ở mọi route phía khách | Test tích hợp `ListConversationMessagesEndpointTests` (`Get_OtherGuestWithDifferentAnonymousId_Returns404`, `Get_OtherCustomerAccount_Returns404`, `Get_UnknownConversationId_Returns404WithSameCodeAsForeignConversation`), `SendConversationMessageEndpointTests` (`Post_ToConversationOfAnotherGuest_Returns404AndStoresNothing`, `Post_ToConversationOfAnotherCustomerAccount_Returns404AndStoresNothing`, `Post_UnknownConversationId_Returns404WithSameBodyAsForeignConversation`), `CustomerEventsEndpointTests` (`Get_AnotherGuest_Returns404AndDoesNotRegisterConnection`, `Get_LoggedInCustomerWhoDoesNotOwnTheConversation_Returns404`, `Get_UnknownConversationId_Returns404WithSameBodyAsForeignConversation`), `CustomerCsatEndpointTests` (`Put_NonOwnerGuest_Returns404ConversationNotFound`, `Put_NonOwnerCustomer_Returns404ConversationNotFound`, `Put_NonExistentConversation_Returns404WithSameBodyAsForeignConversation`), `CallbackRequestEndpointTests` (`Post_GuestWhoDoesNotOwnTheConversation_Returns404`, `Post_LoggedInCustomerWhoDoesNotOwnTheConversation_Returns404`), `SharedBrowserOwnershipTests` | Đạt |
+| Khách gửi tin vượt giới hạn nhận 429 | Test tích hợp `SendConversationMessageEndpointTests.Post_EleventhMessageWithinOneMinute_Returns429AndIsNotStored_ThenWorksAfterOneMinute`, `Post_201stMessageWithinOneDay_Returns429EvenWhenMinuteLimitIsNotHit` | Đạt |
+| Hội thoại cũ hơn 90 ngày bị xóa cùng tin và phiên | Test tích hợp `SupportConversationMaintenanceProcessorTests.Maintain_ConversationOlderThan90Days_IsDeletedWithMessagesAndSessions_And89Days_IsPreserved` | Đạt |
+| "Gợi ý trả lời" trả bản nháp có nguồn từ kho tri thức | Đã bỏ ngày 2026-10-18 | Không kiểm |
+| Không có bản nháp nào được gửi mà nhân viên không bấm gửi | Đã bỏ ngày 2026-10-18 | Không kiểm |
+| Báo cáo hiện đúng thời gian phản hồi đầu tiên `p50`, `p90` và điểm hài lòng (`CSAT`) trung bình với dữ liệu test | Test đơn vị `PercentileTests`. Test tích hợp `SupportMetricsTests`: `GetAsync_OnFixture_ComputesFirstResponsePercentilesFromHandoffAt`, `GetAsync_OnFixture_ComputesHandleMinutesFromClaimedAtAndSkipsUnclaimedSessions`, `GetAsync_OnFixture_AveragesCsatOverRatedSessionsOnly` | Đạt |
+| Ma trận quyền có mọi endpoint quản trị của `support-desk` | Test tích hợp `PermissionMatrixTests.BackofficeEndpoints_CoversAllSupportDeskAdminEndpoints` đối chiếu hai chiều 18 route `/api/admin/support/**` với `BackofficeEndpoints` (351 lượt test ma trận) | Đạt |
+| Coverage ít nhất 80% | Mục 2: coverage dòng gộp đạt 95.5% (2891/3027 dòng) | Đạt |
+
+Ghi chú cho route `POST /api/support/conversations`: route này không nhận mã hội thoại từ client. Route luôn mở hoặc trả hội thoại của chính người gọi.
+
+#### 2. Coverage
+
+- Cách đo giống `shipping`: coverage dòng của assembly `Pickory.Modules.SupportDesk`, gộp hai lệnh `dotnet test ... --collect:"XPlat Code Coverage"` cho `tests/Pickory.UnitTests` và `tests/Pickory.IntegrationTests`.
+- Phần test tích hợp chạy bộ lọc `FullyQualifiedName~.SupportDesk.|FullyQualifiedName~PermissionMatrixTests|FullyQualifiedName~RouteNamingTests|FullyQualifiedName~OpenApiDocumentationTests` (830 test).
+- Script Node gộp hai file `coverage.cobertura.xml`. Một dòng tính là đã chạy khi ít nhất một lượt chạm tới dòng đó.
+- Phép đo bỏ `Persistence/Migrations/`, vì đó là code sinh tự động.
+- Chung: 2891/3027 dòng = 95.5% (riêng test đơn vị 13.3%, riêng test tích hợp 92.2%).
+- Theo thư mục cấp 1:
+  - `Callbacks/`: 99.1% (233/235)
+  - `CannedResponses/`: 100.0% (230/230)
+  - `Conversations/`: 97.2% (522/537)
+  - `Entities/`: 100.0% (56/56)
+  - `Metrics/`: 100.0% (98/98)
+  - `Persistence/`: 96.4% (189/196)
+  - `Presence/`: 85.4% (134/157)
+  - `Realtime/`: 95.0% (326/343)
+  - `Scheduling/`: 96.1% (49/51)
+  - `Sessions/`: 96.0% (768/800)
+  - `Settings/`: 99.3% (139/140)
+  - gốc module (`SupportDeskModule.cs`, `SupportUserDeletedHandler.cs`...): 95.2% (79/83)
+  - `obj/`: 67.3% (68/101). Đây là code do trình biên dịch sinh ra cho biểu thức chính quy (`RegexGenerator.g.cs`). Bỏ `obj/` thì coverage dòng là 96.5% (2823/2926).
+- Ba file dưới 60%. Không thêm test, vì tổng đã vượt 80% và các file này là khung hạ tầng:
+  - `Persistence/SupportDeskDbContextFactory.cs` (0%, 0/7): chỉ dùng khi chạy lệnh tạo migration ở thời điểm thiết kế.
+  - `Presence/StaffPresenceTimeoutWorker.cs` (0%, 0/20) và `Sessions/WaitNudgeWorker.cs` (0%, 0/20): vỏ `BackgroundService` gọi bộ quét theo chu kỳ. Logic quét đã kiểm ở `StaffPresenceTimeoutProcessorTests` và `WaitNudgeProcessorTests`.
+
+#### 3. Lệnh kiểm tra (trong `apps/backend`)
+
+- `dotnet test tests/Pickory.UnitTests`: 1927 test đạt, 0 lỗi.
+- `dotnet test tests/Pickory.ArchitectureTests`: 28 test đạt, 0 lỗi.
+- `dotnet test tests/Pickory.IntegrationTests` với bộ lọc của `SupportDesk`, `PermissionMatrixTests`, `RouteNamingTests` và `OpenApiDocumentationTests`: 830 test đạt, 0 lỗi.
 
 ## Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt

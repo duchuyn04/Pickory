@@ -171,6 +171,24 @@ public sealed class SendConversationMessageEndpointTests(SupportDeskWebApplicati
     }
 
     [Fact]
+    // Hội thoại không tồn tại và hội thoại của người khác trả cùng nội dung 404 để tránh lộ mã hội thoại.
+    public async Task Post_UnknownConversationId_Returns404WithSameBodyAsForeignConversation()
+    {
+        var (_, foreignConversation) = await SeedGuestConversationAsync();
+        var callerCookie = SupportConversationTestKit.NewGuestCookie();
+
+        var unknownResponse = await SendAsync(Guid.NewGuid().ToString(), callerCookie, new { body = "Xin chào" });
+        var foreignResponse = await SendAsync(foreignConversation.Id, callerCookie, new { body = "Xin chào" });
+
+        var unknownBody = await SupportConversationTestKit.AssertErrorAsync(
+            unknownResponse, HttpStatusCode.NotFound, "SUPPORT_CONVERSATION_NOT_FOUND");
+        var foreignBody = await SupportConversationTestKit.AssertErrorAsync(
+            foreignResponse, HttpStatusCode.NotFound, "SUPPORT_CONVERSATION_NOT_FOUND");
+        // Hai phản hồi phải trùng khớp từng ký tự để người ngoài không dò được hội thoại có tồn tại.
+        Assert.Equal(unknownBody, foreignBody);
+    }
+
+    [Fact]
     public async Task Post_ToClosedConversation_Returns409AndStoresNothing()
     {
         var (cookie, conversation) = await SeedGuestConversationAsync(SupportConversationStatus.Closed);

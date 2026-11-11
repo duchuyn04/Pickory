@@ -99,14 +99,22 @@ public sealed class CustomerEventsEndpointTests(SupportDeskWebApplicationFactory
     }
 
     [Fact]
-    public async Task Get_UnknownConversationId_Returns404()
+    // Mã hội thoại không tồn tại và hội thoại của người khác trả cùng nội dung 404.
+    public async Task Get_UnknownConversationId_Returns404WithSameBodyAsForeignConversation()
     {
-        var cookie = SupportConversationTestKit.NewGuestCookie();
+        var ownerCookie = SupportConversationTestKit.NewGuestCookie();
+        var foreignConversation = await SeedConversationAsync(ownerCookie);
+        var callerCookie = SupportConversationTestKit.NewGuestCookie();
 
-        using var stream = await SseTestStream.OpenAsync(_client, EventsPath(Guid.NewGuid().ToString()), cookie);
+        using var unknownStream = await SseTestStream.OpenAsync(_client, EventsPath(Guid.NewGuid().ToString()), callerCookie);
+        using var foreignStream = await SseTestStream.OpenAsync(_client, EventsPath(foreignConversation.Id), callerCookie);
 
-        await SupportConversationTestKit.AssertErrorAsync(
-            stream.Response, HttpStatusCode.NotFound, "SUPPORT_CONVERSATION_NOT_FOUND");
+        var unknownBody = await SupportConversationTestKit.AssertErrorAsync(
+            unknownStream.Response, HttpStatusCode.NotFound, "SUPPORT_CONVERSATION_NOT_FOUND");
+        var foreignBody = await SupportConversationTestKit.AssertErrorAsync(
+            foreignStream.Response, HttpStatusCode.NotFound, "SUPPORT_CONVERSATION_NOT_FOUND");
+        // So sánh nguyên văn nội dung lỗi để người ngoài không phân biệt được hội thoại có tồn tại hay không.
+        Assert.Equal(unknownBody, foreignBody);
         Assert.Equal(0, _hub.ConnectionCount);
     }
 

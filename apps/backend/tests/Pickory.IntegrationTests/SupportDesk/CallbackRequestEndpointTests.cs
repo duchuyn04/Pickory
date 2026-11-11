@@ -118,9 +118,15 @@ public sealed class CallbackRequestEndpointTests(SupportDeskWebApplicationFactor
         var strangerCookie = SupportConversationTestKit.NewGuestCookie();
 
         var response = await PostAsync(strangerCookie, new { conversationId = conversation.Id, phone = "0901234567" });
+        var unknownResponse = await PostAsync(
+            strangerCookie, new { conversationId = Guid.NewGuid().ToString(), phone = "0901234567" });
 
-        await SupportConversationTestKit.AssertErrorAsync(
+        var foreignBody = await SupportConversationTestKit.AssertErrorAsync(
             response, HttpStatusCode.NotFound, "SUPPORT_CONVERSATION_NOT_FOUND");
+        var unknownBody = await SupportConversationTestKit.AssertErrorAsync(
+            unknownResponse, HttpStatusCode.NotFound, "SUPPORT_CONVERSATION_NOT_FOUND");
+        // Phản hồi của hội thoại người khác và mã không tồn tại phải trùng khớp từng ký tự.
+        Assert.Equal(unknownBody, foreignBody);
     }
 
     [Fact]
