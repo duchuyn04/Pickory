@@ -1214,7 +1214,7 @@ test.describe('SD-UI1: màn chăm sóc khách hàng', () => {
   interface CallbackDesk {
     page: Page;
     consoleIssues: string[];
-    // Body của mọi request PATCH mà giao diện đã gửi, theo bản gốc trước khi route sửa.
+    // Body của mọi request `PATCH` mà trang gửi tới backend.
     patchBodies: unknown[];
     pendingPhone: string;
     pendingId: string;
@@ -1242,9 +1242,9 @@ test.describe('SD-UI1: màn chăm sóc khách hàng', () => {
     const pendingId = pendingRecord!.id;
 
     const page = await support.context.newPage();
-    // Case lỗi chủ động gây lỗi 400 cho PATCH. Chỉ đúng lỗi tải đó được bỏ qua, mọi dòng console khác vẫn tính.
+    // Test lỗi chủ động tạo phản hồi 403 từ backend cho `PATCH`. Bộ thu lỗi bỏ qua đúng phản hồi này.
     const allowedFailures: AllowedLoadFailure[] = options.patchFails
-      ? [{ urlPattern: CALLBACKS_URL_PATTERN, status: 400 }]
+      ? [{ urlPattern: CALLBACKS_URL_PATTERN, status: 403 }]
       : [];
     const consoleIssues = collectConsoleIssues(page, allowedFailures);
     await page.setViewportSize({ width: options.width ?? 1280, height: options.height ?? 800 });
@@ -1263,26 +1263,25 @@ test.describe('SD-UI1: màn chăm sóc khách hàng', () => {
     await expect(page.getByRole('heading', { level: 3, name: /^Cần gọi lại/ })).toBeVisible();
   }
 
-  // Đổi body của `PATCH callback-requests` thành trạng thái không hợp lệ rồi chuyển tới backend thật. Giao diện chỉ gửi `done` hoặc `unreachable`, nên case phải sửa request để backend trả 400.
-  async function sendInvalidCallbackStatus(route: Route) {
-    if (route.request().method() !== 'PATCH') {
-      await route.fallback();
-      return;
-    }
-    await route.continue({ postData: JSON.stringify({ status: 'invalid-status' }) });
+  // Đổi vai trò của nhân viên `support` qua API thật để thu hồi hoặc cấp lại quyền `conversations:reply`.
+  async function setSupportStaffRoles(roleCodes: string[]): Promise<void> {
+    const supportUserId = await readOwnUserId(support.page);
+    const response = await admin.page.request.put(`/api/admin/staff/${supportUserId}/roles`, {
+      headers: SUPPORT_API_HEADERS,
+      data: { roleCodes },
+    });
+    expect(response.status(), await response.text()).toBe(200);
   }
 
-  // Câu lỗi mà backend trả cho đúng body không hợp lệ, lấy bằng lời gọi API trực tiếp để case không viết cứng câu này.
+  // Câu lỗi thật mà backend trả khi nhân viên thiếu quyền `conversations:reply` gọi `PATCH`.
   async function readBackendCallbackError(callbackId: string): Promise<string> {
-    const response = await support.page.request.patch(
+    const response = await sales.page.request.patch(
       `/api/admin/support/callback-requests/${callbackId}`,
-      { headers: SUPPORT_API_HEADERS, data: { status: 'invalid-status' } },
+      { headers: SUPPORT_API_HEADERS, data: { status: 'done' } },
     );
-    expect(response.status(), await response.text()).toBe(400);
-    const body: { error: { message: string; details?: { message: string }[] } } =
-      await response.json();
-    // Giao diện hiện câu của lỗi gắn với trường khi có, nếu không hiện câu chung của lỗi.
-    return body.error.details?.[0]?.message ?? body.error.message;
+    expect(response.status(), await response.text()).toBe(403);
+    const body: { error: { message: string } } = await response.json();
+    return body.error.message;
   }
 
   test('SD-UI4: Đã gọi gửi PATCH body done, dòng sang nhóm Đã xử lý và tiêu điểm về tiêu đề nhóm', async () => {
@@ -1407,9 +1406,8 @@ test.describe('SD-UI1: màn chăm sóc khách hàng', () => {
     try {
       const backendMessage = await readBackendCallbackError(desk.pendingId);
       await openCallbacksTab(page);
-      // Backend trả 400 cho `PATCH` bị sửa body. Nhánh lỗi 5xx do unit test `callback-list.test.tsx` kiểm ("lỗi hiện thông báo của API ngay dưới dòng...").
-      await page.route(CALLBACKS_URL_PATTERN, sendInvalidCallbackStatus);
-
+      // Thu hồi quyền `conversations:reply` sau khi trang đã nạp để lần bấm gửi `PATCH` nhận lỗi 403 thật.
+      await setSupportStaffRoles(['sales']);
       await page.getByRole('button', { name: `Đánh dấu đã gọi: ${pendingPhone}` }).click();
 
       const pendingGroup = page.getByRole('list', { name: /^Cần gọi lại/ });
@@ -1423,7 +1421,12 @@ test.describe('SD-UI1: màn chăm sóc khách hàng', () => {
       ).toBeEnabled();
       expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
     } finally {
-      await page.close();
+      try {
+        // Cấp lại quyền cho nhân viên `support` trước khi đóng trang để phát hiện ngay nếu lỗi.
+        await setSupportStaffRoles(['support']);
+      } finally {
+        await page.close();
+      }
     }
   });
 
@@ -1506,8 +1509,8 @@ test.describe('SD-UI1: màn chăm sóc khách hàng', () => {
       try {
         const backendMessage = await readBackendCallbackError(desk.pendingId);
         await openCallbacksTab(page);
-        // Backend trả 400 cho `PATCH` bị sửa body, vì giao diện chỉ gửi trạng thái hợp lệ.
-        await page.route(CALLBACKS_URL_PATTERN, sendInvalidCallbackStatus);
+        // Thu hồi quyền `conversations:reply` sau khi trang đã nạp để lần bấm gửi `PATCH` nhận lỗi 403 thật.
+        await setSupportStaffRoles(['sales']);
         await page.getByRole('button', { name: `Đánh dấu đã gọi: ${pendingPhone}` }).click();
         const pendingRow = page
           .getByRole('list', { name: /^Cần gọi lại/ })
@@ -1531,7 +1534,12 @@ test.describe('SD-UI1: màn chăm sóc khách hàng', () => {
         });
         expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
       } finally {
-        await page.close();
+        try {
+          // Cấp lại quyền cho nhân viên `support` trước khi đóng trang để phát hiện ngay nếu lỗi.
+          await setSupportStaffRoles(['support']);
+        } finally {
+          await page.close();
+        }
       }
     });
   }

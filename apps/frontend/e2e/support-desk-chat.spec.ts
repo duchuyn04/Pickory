@@ -16,6 +16,7 @@ import {
   readSupportSettingsByApi,
   saveSupportSettingsByApi,
   setPresenceByApi,
+  waitUntilInsideWorkingHours,
   type StaffSession,
   type SupportSettingsBody,
 } from './support-desk-live-fixtures';
@@ -26,10 +27,6 @@ import {
 // Hạn của SSE phía nhân viên và phía khách theo tiêu chí nghiệm thu. Spec đo bằng timeout của `expect`, không chờ cố định.
 const STAFF_SEES_NEW_SESSION_MS = 3000;
 const CUSTOMER_SEES_STAFF_MESSAGE_MS = 2000;
-
-// Hai phút cuối của ngày theo giờ Việt Nam. `HH:mm` lớn nhất là 23:59, nên phút 23:59 nằm ngoài khung giờ.
-// Phút 23:58 cũng bị tránh, vì poll có thể đọc 23:58 còn request tới backend lúc 23:59.
-const FIRST_RISKY_MINUTE_OF_DAY = 23 * 60 + 58;
 
 test.describe.configure({ mode: 'serial' });
 
@@ -122,28 +119,6 @@ test.describe('SD-E2E1: luồng CSKH trong giờ với backend thật', () => {
 
   function customerComposer(page: Page) {
     return page.getByLabel('Nội dung tin nhắn', { exact: true });
-  }
-
-  // Phút trong ngày theo giờ Việt Nam. Backend tính giờ làm việc theo múi giờ này.
-  function readVietnamMinuteOfDay(): number {
-    const parts = new Intl.DateTimeFormat('en-GB', {
-      timeZone: 'Asia/Ho_Chi_Minh',
-      hourCycle: 'h23',
-      hour: '2-digit',
-      minute: '2-digit',
-    }).formatToParts(new Date());
-    const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value);
-    return part('hour') * 60 + part('minute');
-  }
-
-  // Chờ qua hai phút cuối của ngày trước khi khách gửi tin. Request tới backend có thể rơi vào 23:59, là ngoài khung giờ.
-  async function waitUntilInsideWorkingHours() {
-    await expect
-      .poll(readVietnamMinuteOfDay, {
-        message: 'Hai phút cuối của ngày theo giờ Việt Nam có thể rơi ra ngoài khung giờ của spec',
-        timeout: 90000,
-      })
-      .toBeLessThan(FIRST_RISKY_MINUTE_OF_DAY);
   }
 
   // Khách gửi tin bằng ô soạn của trang `/support` và phím Enter, như người dùng thật.

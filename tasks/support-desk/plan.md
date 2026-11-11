@@ -268,7 +268,7 @@ Nhánh frontend (`todo-frontend.md`):
 ### Phase 4: E2E và nghiệm thu
 Hai nhánh gặp nhau ở phase này. Chi tiết ở `todo.md`.
 - [x] SD-E2E1 luồng CSKH trong giờ
-- [ ] SD-E2E2 luồng ngoài giờ và hai người nhận
+- [x] SD-E2E2 luồng ngoài giờ và hai người nhận
 - [ ] SD-14 nghiệm thu support-desk
 
 ### Checkpoint cuối

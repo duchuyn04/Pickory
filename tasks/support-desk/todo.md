@@ -162,14 +162,14 @@ Task của phase này nằm ở `todo-backend.md` (SD-10, SD-13) và `todo-front
 ### SD-E2E2: Luồng ngoài giờ và hai người nhận
 **Mô tả:** E2E file `apps/frontend/e2e/support-desk-callback.spec.ts`. Startup E2E đặt giờ làm việc để thời điểm chạy test nằm ngoài giờ.
 **Tiêu chí nghiệm thu:**
-- [ ] Khách gửi tin ở `/support` ngoài giờ và thấy thông báo ngoài giờ kèm form số điện thoại
-- [ ] Khách gửi số điện thoại. Tab Gọi lại của nhân viên hiện yêu cầu
-- [ ] Nhân viên đánh dấu "Đã gọi" và yêu cầu rời nhóm `pending`
-- [ ] Hai nhân viên bấm nhận cùng một phiên: một người thấy "Đã có người nhận"
-- [ ] Đăng nhập `sales` không thấy menu CSKH
-- [ ] Spec chạy với backend thật. File spec không có `page.route` cho route `/api/support/` hay `/api/admin/support/`
-- [ ] Các tiêu chí "Kiểm đầu cuối ở SD-E2E2" của task UI đều đạt
-- [ ] `support-desk-workspace.spec.ts` gỡ `page.route` của `sessions` và `callback-requests`, và vẫn xanh
+- [x] Khách gửi tin ở `/support` ngoài giờ và thấy thông báo ngoài giờ kèm form số điện thoại
+- [x] Khách gửi số điện thoại. Tab Gọi lại của nhân viên hiện yêu cầu
+- [x] Nhân viên đánh dấu "Đã gọi" và yêu cầu rời nhóm `pending`
+- [x] Hai nhân viên bấm nhận cùng một phiên: một người thấy "Đã có người nhận"
+- [x] Đăng nhập `sales` không thấy menu CSKH
+- [x] Spec chạy với backend thật. File spec không có `page.route` cho route `/api/support/` hay `/api/admin/support/`
+- [x] Các tiêu chí "Kiểm đầu cuối ở SD-E2E2" của task UI đều đạt
+- [x] `support-desk-workspace.spec.ts` gỡ `page.route` của `sessions` và `callback-requests`, và vẫn xanh
 **Kiểm tra:** `pnpm test:e2e`
 **Phụ thuộc:** nhánh backend SD-05, SD-06; nhánh frontend SD-UI4, SD-UI6, SD-UI7 · **Quy mô:** M
 

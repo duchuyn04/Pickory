@@ -320,3 +320,42 @@ export async function saveSupportSettingsByApi(
   });
   expect(response.status(), await response.text()).toBe(200);
 }
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+// Phút 23:59 nằm ngoài khung giờ tối đa `23:59`. Phút 23:58 cũng bị tránh vì request có thể tới backend lúc 23:59.
+const FIRST_RISKY_MINUTE_OF_DAY = 23 * 60 + 58;
+
+// Hai ngày liên tiếp theo giờ Việt Nam để lịch nghỉ không lệch nếu ca chạy bước qua nửa đêm.
+export function readVietnamHolidayDates(): string[] {
+  // Định dạng `en-CA` xuất chuỗi `yyyy-MM-dd` khớp mẫu ngày nghỉ của API cấu hình.
+  const formatter = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  });
+  const now = Date.now();
+  return [formatter.format(new Date(now)), formatter.format(new Date(now + DAY_MS))];
+}
+
+// Phút trong ngày theo giờ Việt Nam. Backend tính giờ làm việc theo múi giờ này.
+function readVietnamMinuteOfDay(): number {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hourCycle: 'h23',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).formatToParts(new Date());
+  const part = (type: string) => Number(parts.find((entry) => entry.type === type)?.value);
+  return part('hour') * 60 + part('minute');
+}
+
+// Chờ qua hai phút cuối của ngày trước khi khách gửi tin. Request tới backend có thể rơi vào 23:59, là ngoài khung giờ.
+export async function waitUntilInsideWorkingHours() {
+  await expect
+    .poll(readVietnamMinuteOfDay, {
+      message: 'Hai phút cuối của ngày theo giờ Việt Nam có thể rơi ra ngoài khung giờ của spec',
+      timeout: 90000,
+    })
+    .toBeLessThan(FIRST_RISKY_MINUTE_OF_DAY);
+}
