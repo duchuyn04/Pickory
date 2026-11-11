@@ -286,3 +286,37 @@ export async function resolveAllPendingCallbacks(staffPage: Page): Promise<void>
     if (callback.status === 'pending') await markCallbackByApi(staffPage, callback.id, 'done');
   }
 }
+
+// ---- Giờ làm việc ----
+
+const SETTINGS_PATH = '/api/admin/support/settings';
+
+// Dạng body của `PUT /api/admin/support/settings`. Trường `updatedAt` của phản hồi `GET` không nằm trong body.
+export interface SupportSettingsBody {
+  opensAt: string;
+  closesAt: string;
+  holidays: string[];
+  waitNudgeMinutes: number;
+  autoCloseMinutes: number;
+}
+
+// Đọc cấu hình hiện tại của backend để spec trả đúng giá trị cũ khi dọn dẹp.
+export async function readSupportSettingsByApi(page: Page): Promise<SupportSettingsBody> {
+  const response = await page.request.get(SETTINGS_PATH);
+  expect(response.status(), await response.text()).toBe(200);
+  const body: { data: SupportSettingsBody & { updatedAt: string } } = await response.json();
+  const { opensAt, closesAt, holidays, waitNudgeMinutes, autoCloseMinutes } = body.data;
+  return { opensAt, closesAt, holidays, waitNudgeMinutes, autoCloseMinutes };
+}
+
+// Lưu cấu hình bằng API. Backend trả 200 khi lưu thành công, nên mã khác là lỗi dựng dữ liệu.
+export async function saveSupportSettingsByApi(
+  page: Page,
+  settings: SupportSettingsBody,
+): Promise<void> {
+  const response = await page.request.put(SETTINGS_PATH, {
+    headers: SUPPORT_API_HEADERS,
+    data: settings,
+  });
+  expect(response.status(), await response.text()).toBe(200);
+}

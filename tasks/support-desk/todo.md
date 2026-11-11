@@ -147,15 +147,15 @@ Task của phase này nằm ở `todo-backend.md` (SD-10, SD-13) và `todo-front
 ### SD-E2E1: Luồng CSKH trong giờ
 **Mô tả:** E2E theo phạm vi mới, file `apps/frontend/e2e/support-desk-chat.spec.ts`. Test không cần AI. Ngày 2026-10-18 task bỏ bước chatbot và bước "Gợi ý trả lời".
 **Tiêu chí nghiệm thu:**
-- [ ] Khách vãng lai mở `/support` và gửi tin đầu tiên
-- [ ] Nhân viên `support` đang sẵn sàng thấy hội thoại mới trong 3 giây
-- [ ] Nhân viên nhận, chèn một mẫu bằng `/`, sửa, rồi bấm gửi
-- [ ] Khách thấy tin của nhân viên trong 2 giây
-- [ ] Nhân viên kết thúc phiên. Khách chấm điểm CSAT
-- [ ] Khách gửi tin tiếp theo và hàng chờ của nhân viên hiện phiên chờ mới
-- [ ] Console của cả hai trang có 0 lỗi và 0 cảnh báo
-- [ ] Spec chạy với backend thật. File spec không có `page.route` cho route `/api/support/` hay `/api/admin/support/`
-- [ ] Các tiêu chí "Kiểm đầu cuối ở SD-E2E1" của task UI đều đạt
+- [x] Khách vãng lai mở `/support` và gửi tin đầu tiên
+- [x] Nhân viên `support` đang sẵn sàng thấy hội thoại mới trong 3 giây
+- [x] Nhân viên nhận, chèn một mẫu bằng `/`, sửa, rồi bấm gửi
+- [x] Khách thấy tin của nhân viên trong 2 giây
+- [x] Nhân viên kết thúc phiên. Khách chấm điểm CSAT
+- [x] Khách gửi tin tiếp theo và hàng chờ của nhân viên hiện phiên chờ mới
+- [x] Console của cả hai trang có 0 lỗi và 0 cảnh báo
+- [x] Spec chạy với backend thật. File spec không có `page.route` cho route `/api/support/` hay `/api/admin/support/`
+- [x] Các tiêu chí "Kiểm đầu cuối ở SD-E2E1" của task UI đều đạt
 **Kiểm tra:** `pnpm test:e2e` ở chế độ ẩn và `--headed`
 **Phụ thuộc:** nhánh backend SD-04, SD-06, SD-07, SD-08, SD-09, SD-10; nhánh frontend SD-UI2, SD-UI3, SD-UI6, SD-UI7 · **Quy mô:** M
 
