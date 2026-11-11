@@ -20,6 +20,6 @@
 **/test-results
 **/coverage
 
-# Image không chạy test.
+# Image không chạy test của backend.
 apps/backend/tests
-apps/frontend/e2e
+# Thư mục `apps/frontend/e2e` phải ở lại. Lệnh `pnpm build` chạy `tsc` trên một unit test import file trong `e2e`.
