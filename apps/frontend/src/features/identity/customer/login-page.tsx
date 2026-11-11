@@ -10,7 +10,8 @@ import {
 } from '../../../shared/field-error';
 import { getEmailError, getPasswordError } from '../../../shared/identity-validation';
 import { useActor } from '../hooks/use-actor';
-import { AuthCard, AuthDivider, GoogleSignInLink, PasswordInput } from './auth-ui';
+import { AuthDivider, GoogleSignInLink, PasswordInput } from './auth-ui';
+import { AuthSplitPage } from '../components/auth-split-page';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { getErrorMessage } from '../../../shared/error-message';
 
@@ -66,55 +67,61 @@ export function LoginPage() {
   }
 
   return (
-    <AuthCard title="Đăng nhập" subtitle="Đăng nhập tài khoản khách hàng Pickory">
+    <AuthSplitPage
+      variant="customer"
+      title="Đăng nhập"
+      subtitle="Đăng nhập tài khoản khách hàng Pickory"
+    >
       {/* `role="alert"` để trình đọc màn hình đọc ngay lỗi đăng nhập vừa xuất hiện. */}
       {error && <ErrorAlert message={error} />}
 
-      <form noValidate onSubmit={handleSubmit} className="stack">
-        <div className="field">
-          <label htmlFor="login-email">Email</label>
-          <input
-            id="login-email"
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="ban@example.com"
-            {...fieldErrorProps('login-email', fieldErrors.email)}
-          />
-          <FieldError inputId="login-email" message={fieldErrors.email} />
-        </div>
+      <GoogleSignInLink label="Đăng nhập bằng Google" />
+      <AuthDivider label="hoặc đăng nhập bằng email" />
 
-        <div className="field">
-          <div className="auth-label-row">
-            <label htmlFor="login-password">Mật khẩu</label>
-            <Link to="/forgot-password" className="auth-link">
-              Quên mật khẩu?
-            </Link>
+      <form noValidate onSubmit={handleSubmit} className="auth-form">
+        <div className="auth-fields">
+          <div className="field">
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ban@example.com"
+              {...fieldErrorProps('login-email', fieldErrors.email)}
+            />
+            <FieldError inputId="login-email" message={fieldErrors.email} />
           </div>
-          <PasswordInput
-            id="login-password"
-            value={password}
-            onChange={setPassword}
-            autoComplete="current-password"
-            placeholder="Nhập mật khẩu"
-            errorMessage={fieldErrors.password}
-          />
-          <FieldError inputId="login-password" message={fieldErrors.password} />
+
+          <div className="field">
+            <div className="auth-label-row">
+              <label htmlFor="login-password">Mật khẩu</label>
+              <Link to="/forgot-password" className="auth-link">
+                Quên mật khẩu?
+              </Link>
+            </div>
+            <PasswordInput
+              id="login-password"
+              value={password}
+              onChange={setPassword}
+              autoComplete="current-password"
+              placeholder="Nhập mật khẩu"
+              errorMessage={fieldErrors.password}
+            />
+            <FieldError inputId="login-password" message={fieldErrors.password} />
+          </div>
         </div>
 
         <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
           {loading ? 'Đang đăng nhập...' : 'Đăng nhập'}
         </button>
-
-        <AuthDivider />
-        <GoogleSignInLink label="Đăng nhập bằng Google" />
       </form>
 
-      <p className="auth-footer">
-        Chưa có tài khoản? <Link to="/register">Đăng ký ngay</Link>
+      <p className="auth-switch">
+        <span>Chưa có tài khoản?</span> <Link to="/register">Đăng ký ngay</Link>
       </p>
-    </AuthCard>
+    </AuthSplitPage>
   );
 }

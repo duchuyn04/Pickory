@@ -1,0 +1,44 @@
+# Caddy thay cho Vercel và proxy của Render. Một domain phục vụ cả web lẫn API.
+# `SITE_DOMAIN` lấy từ file `.env` của compose, ví dụ `pickory.tech`.
+
+{$SITE_DOMAIN} {
+	# Nén phản hồi để trang tải nhanh hơn. Caddy tự bỏ qua file đã nén như ảnh.
+	encode zstd gzip
+
+	# Cookie phiên đặt `Secure`, nên mọi request phải đi qua HTTPS. Caddy tự chuyển HTTP sang HTTPS.
+
+	# Mọi route API, gồm callback Google và webhook GHN, SePay, đi tới container `api`.
+	handle /api/* {
+		reverse_proxy api:3000
+	}
+
+	# Trang sản phẩm và danh mục cần thẻ meta SEO do API chèn vào `index.html`.
+	handle /p/* {
+		reverse_proxy api:3000
+	}
+	handle /c/* {
+		reverse_proxy api:3000
+	}
+
+	# Các đường dẫn còn lại là file tĩnh hoặc route của SPA.
+	handle {
+		root * /srv
+		# Route SPA như `/cart` không có file thật. Trả `index.html` để React Router tự dựng trang.
+		try_files {path} /index.html
+
+		# File trong `/assets/` có hash trong tên. Trình duyệt giữ cache một năm vẫn an toàn.
+		@hashedAssets path /assets/*
+		header @hashedAssets Cache-Control "public, max-age=31536000, immutable"
+
+		# `index.html` trỏ tới asset mới sau mỗi lần deploy. Cấm cache để người dùng thấy bản mới ngay.
+		@indexHtml path / /index.html
+		header @indexHtml Cache-Control "no-cache"
+
+		file_server
+	}
+}
+
+# Địa chỉ có `www` chuyển về domain chính. Cookie và callback Google chỉ khớp một domain.
+www.{$SITE_DOMAIN} {
+	redir https://{$SITE_DOMAIN}{uri} permanent
+}

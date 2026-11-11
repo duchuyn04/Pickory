@@ -135,8 +135,9 @@ describe('lỗi nhập liệu ở màn tài khoản khách', () => {
     await submitFormOf('#login-email');
     expectFieldError('#login-email', 'Email không được để trống.');
     expectFieldError('#login-password', 'Mật khẩu không được để trống.');
-    // Lỗi nhập liệu không lặp lại ở thông báo chung đầu form.
-    expect(container.querySelector('.auth-card > [role="alert"]')).toBeNull();
+    // Lỗi nhập liệu không lặp lại ở thông báo chung đầu form. Khối nội dung phải có mặt, nếu không phép kiểm luôn đúng.
+    expect(container.querySelector('.auth-split-content')).not.toBeNull();
+    expect(container.querySelector('.auth-split-content > [role="alert"]')).toBeNull();
 
     await type('#login-email', 'khach@example.com');
     await submitFormOf('#login-email');

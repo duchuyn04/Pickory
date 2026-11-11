@@ -37,7 +37,7 @@ test('DS-04: màn admin identity không tràn trang ở 1280px và 375px', async
     await page.goto('/admin/login');
     const consent = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
     if (await consent.isVisible()) await consent.click();
-    await expect(page.getByRole('heading', { name: 'Pickory Back-Office' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Đăng nhập quản trị' })).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await page.screenshot({ path: testInfo.outputPath('admin-login-mobile.png'), fullPage: true });
 

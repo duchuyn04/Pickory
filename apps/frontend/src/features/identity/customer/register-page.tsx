@@ -15,7 +15,8 @@ import {
   getPhoneError,
 } from '../../../shared/identity-validation';
 import { useActor } from '../hooks/use-actor';
-import { AuthCard, AuthDivider, GoogleSignInLink, PasswordInput } from './auth-ui';
+import { AuthDivider, GoogleSignInLink, PasswordInput } from './auth-ui';
+import { AuthSplitPage } from '../components/auth-split-page';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { getErrorMessage } from '../../../shared/error-message';
 
@@ -87,91 +88,103 @@ export function RegisterPage() {
   }
 
   return (
-    <AuthCard title="Đăng ký tài khoản" subtitle="Tạo tài khoản để quản lý đơn hàng và nhận ưu đãi">
+    <AuthSplitPage
+      variant="customer"
+      title="Đăng ký tài khoản"
+      subtitle="Tạo tài khoản để quản lý đơn hàng và nhận ưu đãi"
+    >
       {error && <ErrorAlert message={error} />}
 
-      <form noValidate onSubmit={handleSubmit} className="stack">
-        <div className="field">
-          <label htmlFor="reg-email">Email *</label>
-          <input
-            id="reg-email"
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="ban@example.com"
-            {...fieldErrorProps('reg-email', fieldErrors.email)}
-          />
-          <FieldError inputId="reg-email" message={fieldErrors.email} />
-        </div>
+      <GoogleSignInLink label="Đăng ký bằng Google" />
+      <AuthDivider label="hoặc đăng ký bằng email" />
 
-        <div className="field">
-          <label htmlFor="reg-password">Mật khẩu * (tối thiểu 8 ký tự)</label>
-          <PasswordInput
-            id="reg-password"
-            value={password}
-            onChange={setPassword}
-            autoComplete="new-password"
-            placeholder="Nhập tối thiểu 8 ký tự"
-            errorMessage={fieldErrors.password}
-          />
-          <FieldError inputId="reg-password" message={fieldErrors.password} />
-        </div>
+      <form noValidate onSubmit={handleSubmit} className="auth-form">
+        <div className="auth-fields">
+          <div className="field">
+            <label htmlFor="reg-email">Email *</label>
+            <input
+              id="reg-email"
+              type="email"
+              required
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="ban@example.com"
+              {...fieldErrorProps('reg-email', fieldErrors.email)}
+            />
+            <FieldError inputId="reg-email" message={fieldErrors.email} />
+          </div>
 
-        <div className="field">
-          <label htmlFor="reg-name">Họ và tên (tùy chọn)</label>
-          <input
-            id="reg-name"
-            type="text"
-            autoComplete="name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="Nguyễn Văn A"
-            {...fieldErrorProps('reg-name', fieldErrors.name)}
-          />
-          <FieldError inputId="reg-name" message={fieldErrors.name} />
-        </div>
+          <div className="field">
+            <label htmlFor="reg-password">Mật khẩu * (tối thiểu 8 ký tự)</label>
+            <PasswordInput
+              id="reg-password"
+              value={password}
+              onChange={setPassword}
+              autoComplete="new-password"
+              placeholder="Nhập tối thiểu 8 ký tự"
+              errorMessage={fieldErrors.password}
+            />
+            <FieldError inputId="reg-password" message={fieldErrors.password} />
+          </div>
 
-        <div className="field">
-          <label htmlFor="reg-phone">Số điện thoại (tùy chọn)</label>
-          <input
-            id="reg-phone"
-            type="tel"
-            autoComplete="tel"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="0912 345 678"
-            {...fieldErrorProps('reg-phone', fieldErrors.phone)}
-          />
-          <FieldError inputId="reg-phone" message={fieldErrors.phone} />
-        </div>
+          <div className="auth-fields-pair">
+            <div className="field">
+              <label htmlFor="reg-name">Họ và tên (tùy chọn)</label>
+              <input
+                id="reg-name"
+                type="text"
+                autoComplete="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Nguyễn Văn A"
+                {...fieldErrorProps('reg-name', fieldErrors.name)}
+              />
+              <FieldError inputId="reg-name" message={fieldErrors.name} />
+            </div>
 
-        {/* Honeypot: ô ẩn để bẫy bot tự động điền form, ẩn hoàn toàn với người dùng và trình đọc */}
-        <div className="honeypot" aria-hidden="true">
-          <label htmlFor="reg-website">Website</label>
-          <input
-            id="reg-website"
-            type="text"
-            name="website"
-            value={website}
-            onChange={(e) => setWebsite(e.target.value)}
-            tabIndex={-1}
-            autoComplete="off"
-          />
+            <div className="field">
+              <label htmlFor="reg-phone">Số điện thoại (tùy chọn)</label>
+              <input
+                id="reg-phone"
+                type="tel"
+                autoComplete="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="0912 345 678"
+                {...fieldErrorProps('reg-phone', fieldErrors.phone)}
+              />
+              <FieldError inputId="reg-phone" message={fieldErrors.phone} />
+            </div>
+          </div>
+
+          {/* Honeypot: ô ẩn để bẫy bot tự động điền form, ẩn hoàn toàn với người dùng và trình đọc */}
+          <div className="honeypot" aria-hidden="true">
+            <label htmlFor="reg-website">Website</label>
+            <input
+              id="reg-website"
+              type="text"
+              name="website"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              tabIndex={-1}
+              autoComplete="off"
+            />
+          </div>
         </div>
 
         <button type="submit" className="btn btn-primary btn-block" disabled={loading}>
           {loading ? 'Đang đăng ký...' : 'Tạo tài khoản'}
         </button>
 
-        <AuthDivider />
-        <GoogleSignInLink label="Đăng ký bằng Google" />
+        <p className="auth-note">
+          Khi tạo tài khoản, bạn đồng ý với chính sách quyền riêng tư và cookie của Pickory.
+        </p>
       </form>
 
-      <p className="auth-footer">
-        Đã có tài khoản? <Link to="/login">Đăng nhập ngay</Link>
+      <p className="auth-switch">
+        <span>Đã có tài khoản?</span> <Link to="/login">Đăng nhập ngay</Link>
       </p>
-    </AuthCard>
+    </AuthSplitPage>
   );
 }

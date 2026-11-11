@@ -100,7 +100,7 @@ export function AccountPage() {
   }
 
   return (
-    <main className="account-page">
+    <main className="account-page account-page-wide">
       <h1>Tài khoản của tôi</h1>
 
       {/* Khu vực cập nhật thông tin định danh cá nhân */}

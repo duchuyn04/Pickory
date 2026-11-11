@@ -27,6 +27,9 @@
   --color-on-dark-soft: rgba(255, 255, 255, 0.16);
   /* Chữ phụ trên nền tối, ví dụ giá và tab của banner nền xanh đậm. Đạt AA trên `--color-dark`. */
   --color-on-dark-muted: #b4bac4;
+  /* Hai vòng trang trí của bảng thương hiệu ở màn đăng nhập. Chỉ là hình nền, không mang chữ. */
+  --color-decor-ring-large: rgba(255, 255, 255, 0.08);
+  --color-decor-ring-small: rgba(255, 255, 255, 0.06);
   /*
    * Banner sản phẩm ở đầu trang chủ. Mỗi máy có màu nền, màu nhấn và họa tiết lấy theo ảnh quảng cáo của hãng.
    * `-accent` là chữ nhãn và viền icon. `-muted` là chữ phụ. `-cta` là nền nút, `-cta-ink` là chữ trên nút.
