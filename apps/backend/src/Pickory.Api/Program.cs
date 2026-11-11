@@ -1,5 +1,6 @@
 using Microsoft.OpenApi;
 using Pickory.Api;
+using Pickory.Api.ChatbotWidget;
 using Pickory.Api.Benchmark;
 using Pickory.Api.Deployment;
 using Pickory.Api.E2e;
@@ -40,6 +41,9 @@ if (builder.Configuration["PICKORY_SKIP_DOTENV"] != "true")
 // Nạp cấu hình từ biến môi trường và dừng ứng dụng nếu thiếu cấu hình bắt buộc.
 var config = AppConfig.Load(builder.Configuration);
 builder.Services.AddSingleton(config);
+
+// Địa chỉ chatbot `http` chỉ hợp lệ ở Development. Môi trường khác dừng ngay, trước khi API nhận request.
+ChatbotWidgetConfigurationCheck.EnsureSecureOutsideDevelopment(config, builder.Environment.IsDevelopment());
 
 // Lệnh benchmark ghi 500 sản phẩm, nên kiểm tên DB trước mọi thao tác. Sai tên thì dừng mà chưa kết nối DB.
 var isBenchmarkCommand = CatalogModule.IsCatalogBenchmarkCommand(args);
@@ -185,6 +189,9 @@ app.UseIdentityActor();
 
 // Endpoint kiểm tra sức khỏe của dịch vụ phục vụ giám sát và kiểm thử.
 app.MapGet("/api/health", () => Results.Ok(new ApiResponse<object>(new { status = "ok" }))).WithTags("System");
+
+// Route công khai báo cho frontend địa chỉ widget chatbot. Nó cạnh `/api/health` vì không có DB.
+app.MapChatbotWidgetEndpoint();
 
 // Mỗi module tự gắn route của mình để `Program.cs` không cần biết danh sách endpoint.
 app.MapIdentityEndpoints();

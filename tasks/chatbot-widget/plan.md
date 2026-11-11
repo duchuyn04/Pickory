@@ -1,6 +1,6 @@
 # Implementation Plan: chatbot-widget
 
-## Tóm tắt dễ hiểu
+## Tóm tắt
 
 Chatbot của Pickory nằm ở một dự án riêng tên `chatbot-rag`. Dự án đó chạy như một dịch vụ độc lập, giống một cửa hàng khác bên cạnh. Pickory chỉ treo khung chat của dịch vụ đó lên trang của mình.
 
@@ -63,7 +63,7 @@ Các mục sau thuộc dự án `chatbot-rag`. Plan ghi lại để theo dõi kh
 ## Task List
 
 ### Phase 1: Cấu hình và widget
-- [ ] CBW-01 · [ ] CBW-UI1 · [ ] CBW-02
+- [x] CBW-01 · [ ] CBW-UI1 · [ ] CBW-02
 
 ### Checkpoint W1
 - [ ] Đặt hai biến môi trường trỏ tới `chatbot-rag` chạy ở máy dev. Khung chat hiện ở trang chủ, không hiện ở `/admin`

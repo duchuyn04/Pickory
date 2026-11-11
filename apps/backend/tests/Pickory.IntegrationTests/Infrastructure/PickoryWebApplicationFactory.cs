@@ -103,6 +103,9 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
         builder.UseSetting("GHN_SHOP_ID", string.Empty);
         builder.UseSetting("GHN_WEBHOOK_SECRET", string.Empty);
         builder.UseSetting("SEPAY_WEBHOOK_API_KEY", string.Empty);
+        // Máy chạy test có thể đặt biến chatbot để thử khung chat. Test mặc định phải chạy với widget tắt.
+        builder.UseSetting("CHATBOT_WIDGET_SCRIPT_URL", string.Empty);
+        builder.UseSetting("CHATBOT_API_URL", string.Empty);
         builder.ConfigureAppConfiguration((_, configuration) =>
         {
             // URL đã được kiểm tra thuộc fixture duy nhất của toàn collection.
@@ -113,6 +116,8 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
                 ["GHN_SHOP_ID"] = string.Empty,
                 ["GHN_WEBHOOK_SECRET"] = string.Empty,
                 ["SEPAY_WEBHOOK_API_KEY"] = string.Empty,
+                ["CHATBOT_WIDGET_SCRIPT_URL"] = string.Empty,
+                ["CHATBOT_API_URL"] = string.Empty,
             });
         });
         builder.ConfigureServices(services =>
@@ -159,6 +164,8 @@ public class PickoryWebApplicationFactory(IntegrationDatabaseFixture database) :
                 GhnShopId = string.Empty,
                 GhnWebhookSecret = string.Empty,
                 SepayWebhookApiKey = string.Empty,
+                ChatbotWidgetScriptUrl = string.Empty,
+                ChatbotApiUrl = string.Empty,
             });
 
             // `AddShippingModule` chọn client GHN theo `AppConfig` gốc, nên máy test có `GHN_TOKEN` vẫn dựng client thật. Factory thay `IGhnClient` bằng bản giả, giống `IImageStorage` bên dưới.

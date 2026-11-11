@@ -15,12 +15,12 @@ Quy ước:
 ### CBW-01: Cấu hình dịch vụ chatbot và route công khai
 **Mô tả:** `AppConfig` đọc `CHATBOT_WIDGET_SCRIPT_URL` và `CHATBOT_API_URL`. Route công khai `GET /api/chatbot-widget` trả `{ enabled, scriptUrl, apiUrl }`. Thiếu cả hai biến thì trả `enabled: false` và hai địa chỉ `null`.
 **Tiêu chí nghiệm thu:**
-- [ ] Thiếu cả hai biến: route trả 200 với `enabled: false`
-- [ ] Đủ hai biến: route trả đúng hai địa chỉ đã cấu hình
-- [ ] Chỉ đặt một trong hai biến: API dừng khi khởi động, thông báo nêu tên biến còn thiếu
-- [ ] Địa chỉ không phải URL tuyệt đối: API dừng khi khởi động
-- [ ] Ngoài `Development`, địa chỉ `http` làm API dừng khi khởi động
-- [ ] `.env.example` có hai biến, để trống, kèm comment tiếng Việt
+- [x] Thiếu cả hai biến: route trả 200 với `enabled: false`
+- [x] Đủ hai biến: route trả đúng hai địa chỉ đã cấu hình
+- [x] Chỉ đặt một trong hai biến: API dừng khi khởi động, thông báo nêu tên biến còn thiếu
+- [x] Địa chỉ không phải URL tuyệt đối: API dừng khi khởi động
+- [x] Ngoài `Development`, địa chỉ `http` làm API dừng khi khởi động
+- [x] `.env.example` có hai biến, để trống, kèm comment tiếng Việt
 **Kiểm tra:** unit test cho `AppConfig`; test tích hợp cho route
 **Phụ thuộc:** không · **Quy mô:** S
 

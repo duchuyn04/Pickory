@@ -64,8 +64,17 @@ public record AppConfig
     // Khóa SePay gửi kèm webhook tiền về. Chuỗi rỗng nghĩa là chưa cấu hình, và production thiếu khóa thì API dừng.
     public string SepayWebhookApiKey { get; init; } = string.Empty;
 
+    // Địa chỉ file `widget.js` của dịch vụ `chatbot-rag`. Chuỗi rỗng nghĩa là chưa cấu hình, và trang khách không hiện khung chat.
+    public string ChatbotWidgetScriptUrl { get; init; } = string.Empty;
+
+    // Địa chỉ gốc API của dịch vụ `chatbot-rag`. Widget gọi `POST /api/chat` tới địa chỉ này.
+    public string ChatbotApiUrl { get; init; } = string.Empty;
+
     // Có đủ bộ ba khóa thì dùng Cloudinary thật. `Load` đã chặn trường hợp chỉ có một phần.
     public bool HasCloudinary => CloudinaryCloudName.Length > 0;
+
+    // Có đủ hai địa chỉ thì Pickory hiện khung chat. `Load` đã chặn trường hợp chỉ có một địa chỉ.
+    public bool HasChatbotWidget => ChatbotWidgetScriptUrl.Length > 0;
 
     // Đọc và kiểm tra tính hợp lệ của toàn bộ biến môi trường khi khởi động.
     public static AppConfig Load(IConfiguration configuration)
@@ -173,6 +182,30 @@ public record AppConfig
             throw new InvalidOperationException("Biến môi trường GHN_API_BASE phải là một URL tuyệt đối hợp lệ.");
         }
 
+        var chatbotWidgetScriptUrl = (configuration["CHATBOT_WIDGET_SCRIPT_URL"] ?? string.Empty).Trim();
+        var chatbotApiUrl = (configuration["CHATBOT_API_URL"] ?? string.Empty).Trim();
+        // Widget cần cả hai địa chỉ. Thiếu một địa chỉ thì khung chat hiện ra nhưng không gọi được dịch vụ, nên dừng khi khởi động.
+        if (chatbotWidgetScriptUrl.Length == 0 && chatbotApiUrl.Length > 0)
+        {
+            throw new InvalidOperationException("Thiếu biến môi trường CHATBOT_WIDGET_SCRIPT_URL. Cần đặt cả hai biến CHATBOT_*, hoặc bỏ trống cả hai.");
+        }
+
+        if (chatbotApiUrl.Length == 0 && chatbotWidgetScriptUrl.Length > 0)
+        {
+            throw new InvalidOperationException("Thiếu biến môi trường CHATBOT_API_URL. Cần đặt cả hai biến CHATBOT_*, hoặc bỏ trống cả hai.");
+        }
+
+        // Frontend chèn địa chỉ này vào thẻ `script`. Chỉ nhận URL tuyệt đối http hoặc https, để giá trị như `javascript:` không lọt vào trang.
+        if (chatbotWidgetScriptUrl.Length > 0 && !IsValidAbsoluteUrl(chatbotWidgetScriptUrl))
+        {
+            throw new InvalidOperationException("Biến môi trường CHATBOT_WIDGET_SCRIPT_URL phải là một URL tuyệt đối hợp lệ.");
+        }
+
+        if (chatbotApiUrl.Length > 0 && !IsValidAbsoluteUrl(chatbotApiUrl))
+        {
+            throw new InvalidOperationException("Biến môi trường CHATBOT_API_URL phải là một URL tuyệt đối hợp lệ.");
+        }
+
         return new AppConfig
         {
             Port = port,
@@ -197,6 +230,8 @@ public record AppConfig
             ApiDocsEnabled = ReadZeroOrOneFlag(configuration, "API_DOCS_ENABLED"),
             ApiDocsInteractive = ReadZeroOrOneFlag(configuration, "API_DOCS_INTERACTIVE"),
             SepayWebhookApiKey = (configuration["SEPAY_WEBHOOK_API_KEY"] ?? string.Empty).Trim(),
+            ChatbotWidgetScriptUrl = chatbotWidgetScriptUrl,
+            ChatbotApiUrl = chatbotApiUrl,
         };
     }
 
