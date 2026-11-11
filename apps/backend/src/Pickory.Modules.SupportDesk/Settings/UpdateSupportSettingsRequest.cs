@@ -24,7 +24,8 @@ internal sealed record UpdateSupportSettingsRequest(
     public const string TimeFormat = "HH:mm";
     public const string DateFormat = "yyyy-MM-dd";
     public const int MinMinutes = 1;
-    public const int MaxMinutes = 1440;
+    // Giới hạn đã duyệt ngày 2026-11-04 trong mục "Giới hạn" của hợp đồng: mốc phút từ 1 đến 240.
+    public const int MaxMinutes = 240;
     public const int MaxHolidays = 366;
 
     // Chỉ chuỗi đúng dạng `HH:mm` mới là giờ hợp lệ. Thiếu trường, sai kiểu hay sai dạng đều cho `null`.

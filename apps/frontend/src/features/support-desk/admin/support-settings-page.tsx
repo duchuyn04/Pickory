@@ -23,7 +23,9 @@ import {
 } from './support-desk-api';
 import type { SupportSettings } from './support-desk-schemas';
 import {
+  MAX_MINUTES,
   mapSupportSettingsServerErrors,
+  MIN_MINUTES,
   SUPPORT_SETTINGS_FIELD_ORDER,
   validateSupportSettings,
   type SupportSettingsFieldErrors,
@@ -33,7 +35,6 @@ import {
 import './support-settings.css';
 
 const SUPPORT_SETTINGS_PERMISSION = 'support-settings:manage';
-const REPLY_PERMISSION = 'conversations:reply';
 
 // Id ổn định cho từng ô, để nhãn, lỗi và E2E nối với đúng ô.
 const FIELD_IDS: Record<SupportSettingsFieldName, string> = {
@@ -63,8 +64,6 @@ export function SupportSettingsPage() {
     enabled: canManage,
     refetchOnWindowFocus: false,
   });
-  // Route mẫu trả lời cần quyền `conversations:reply`, độc lập với quyền cấu hình.
-  const canUseTemplates = useCan(REPLY_PERMISSION);
 
   // Hiện thông báo thiếu quyền khi mở thẳng URL, vì menu chỉ ẩn mục chứ không chặn đường dẫn.
   if (!canManage) {
@@ -111,7 +110,7 @@ export function SupportSettingsPage() {
         <div className="card-head">
           <h2 id="support-shared-canned-title">Mẫu trả lời dùng chung</h2>
         </div>
-        <CannedResponsePanel scope="shared" canUse={canUseTemplates} />
+        <CannedResponsePanel scope="shared" />
       </section>
     </div>
   );
@@ -306,8 +305,8 @@ function SupportSettingsForm({ initialSettings }: SupportSettingsFormProps) {
               id={FIELD_IDS.waitNudgeMinutes}
               type="number"
               inputMode="numeric"
-              min={1}
-              max={240}
+              min={MIN_MINUTES}
+              max={MAX_MINUTES}
               step={1}
               disabled={isSubmitting}
               value={values.waitNudgeMinutes}
@@ -323,8 +322,8 @@ function SupportSettingsForm({ initialSettings }: SupportSettingsFormProps) {
               message={fieldErrors.waitNudgeMinutes}
             />
             <p id={WAIT_NUDGE_HINT_ID} className="support-settings-note">
-              Phiên chờ quá số phút này thì hệ thống nhắc nhân viên nhận phiên. Giá trị từ 1 đến
-              240.
+              Phiên chờ quá số phút này thì hệ thống nhắc nhân viên nhận phiên. Giá trị từ{' '}
+              {MIN_MINUTES} đến {MAX_MINUTES}.
             </p>
           </div>
           <div className="field">
@@ -333,8 +332,8 @@ function SupportSettingsForm({ initialSettings }: SupportSettingsFormProps) {
               id={FIELD_IDS.autoCloseMinutes}
               type="number"
               inputMode="numeric"
-              min={1}
-              max={240}
+              min={MIN_MINUTES}
+              max={MAX_MINUTES}
               step={1}
               disabled={isSubmitting}
               value={values.autoCloseMinutes}
@@ -350,7 +349,8 @@ function SupportSettingsForm({ initialSettings }: SupportSettingsFormProps) {
               message={fieldErrors.autoCloseMinutes}
             />
             <p id={AUTO_CLOSE_HINT_ID} className="support-settings-note">
-              Phiên không có tin mới quá số phút này thì hệ thống đóng phiên. Giá trị từ 1 đến 240.
+              Phiên không có tin mới quá số phút này thì hệ thống đóng phiên. Giá trị từ{' '}
+              {MIN_MINUTES} đến {MAX_MINUTES}.
             </p>
           </div>
         </div>

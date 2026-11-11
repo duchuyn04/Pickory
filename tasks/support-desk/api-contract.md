@@ -107,8 +107,8 @@ Cột "Có từ" ghi task đã làm route. Ô ghi "chưa có" nghĩa là fronten
 | `GET /api/admin/support/sessions/{id}/customer` | `admin-customer-panel.json` | SD-11 | SD-UI3 | SD-11 |
 | `GET /api/admin/support/callback-requests` | `admin-callbacks.json` | SD-05 | SD-UI4 | SD-05 |
 | `PATCH /api/admin/support/callback-requests/{id}` | `admin-callbacks.json` | SD-05 | SD-UI4 | SD-05 |
-| `GET · POST · PATCH · DELETE /api/admin/support/canned-responses[/{id}]` | `admin-canned-responses.json` | SD-10 | SD-UI2 (đọc), SD-UI5 (sửa) | chưa có |
-| `GET · PUT /api/admin/support/settings` | `admin-settings.json` | SD-10 | SD-UI5 | chưa có |
+| `GET · POST · PATCH · DELETE /api/admin/support/canned-responses[/{id}]` | `admin-canned-responses.json` | SD-10 | SD-UI2 (đọc), SD-UI5 (sửa) | SD-10 |
+| `GET · PUT /api/admin/support/settings` | `admin-settings.json` | SD-10 | SD-UI5 | SD-10 |
 | `GET /api/admin/support/events` | `admin-events.json` | SD-03, SD-04, SD-05, SD-06, SD-07, SD-08 | SD-UI1, SD-UI2, SD-UI4 | SD-03 |
 | `GET · PUT /api/admin/support/presence` | không có | SD-03 | SD-UI1, SD-UI3 | SD-03 |
 
@@ -349,12 +349,13 @@ Kiểu `StaffViewMessage` có mọi trường của `Message` phía khách, thê
 | Trường | Kiểu | Ghi chú |
 |---|---|---|
 | `id` | chuỗi | |
-| `shortcut` | chuỗi | 1 đến 32 ký tự trong tập `a-z`, `0-9`, `-`, `_`. Không có dấu `/`, chữ hoa hay khoảng trắng. Server không đổi chữ hoa thành chữ thường |
+| `shortcut` | chuỗi | 2 đến 30 ký tự trong tập `a-z`, `0-9`, `-`, `_`. Không có dấu `/`, chữ hoa hay khoảng trắng. Server không đổi chữ hoa thành chữ thường |
 | `body` | chuỗi | Sau khi cắt khoảng trắng hai đầu, dài 1 đến 2.000 ký tự. Có thể chứa `{ten_khach}` và `{ma_don}`. Server lưu thân thô, không điền biến |
 | `shared` | boolean | `true` với mẫu dùng chung |
 | `editable` | boolean | Người gọi sửa được mẫu này hay không. Mẫu cá nhân của người gọi luôn `true`. Mẫu dùng chung `true` khi người gọi có `support-settings:manage` |
 
-- `GET` trả mẫu cá nhân của người gọi và mọi mẫu dùng chung, sắp theo `shortcut` tăng dần. Quyền `conversations:reply`.
+- `GET` cần `conversations:reply` hoặc `support-settings:manage`. Danh sách sắp theo `shortcut` tăng dần.
+- Người có `conversations:reply` nhận mẫu cá nhân của mình và mọi mẫu dùng chung. Người chỉ có `support-settings:manage` chỉ nhận mẫu dùng chung, mọi mẫu có `editable` bằng `true`, và không nhận mẫu cá nhân.
 - `POST` với body `{ shortcut, body, shared }` trả 201. Thiếu `shared` nghĩa là `false`.
 - `PATCH` chỉ nhận `shortcut` và `body`. Cần ít nhất một trường, nếu không trả 400. Server bỏ qua `shared`, vì cờ này không đổi được sau khi tạo. Trả 200.
 - `DELETE` trả 204, không có body.
@@ -367,7 +368,7 @@ Kiểu `StaffViewMessage` có mọi trường của `Message` phía khách, thê
 | Lỗi | Khi nào |
 |---|---|
 | 400 `VALIDATION_ERROR` | `shortcut` sai luật, `body` rỗng hay quá dài, `shared` không phải boolean, hoặc `PATCH` không có `shortcut` lẫn `body` |
-| 403 `FORBIDDEN` | Tạo, sửa, xóa mẫu dùng chung khi thiếu `support-settings:manage`. Tạo mẫu cá nhân khi thiếu `conversations:reply` |
+| 403 `FORBIDDEN` | `GET` khi thiếu cả `conversations:reply` lẫn `support-settings:manage`. Tạo, sửa, xóa mẫu dùng chung khi thiếu `support-settings:manage`. Tạo mẫu cá nhân khi thiếu `conversations:reply` |
 | 404 `CANNED_RESPONSE_NOT_FOUND` | Không có mẫu, hoặc mẫu cá nhân của người khác. Server không lộ mẫu có tồn tại |
 | 409 `CANNED_SHORTCUT_TAKEN` | Mẫu cá nhân: "Bạn đã có mẫu dùng phím tắt này." Mẫu dùng chung: "Đã có mẫu dùng chung dùng phím tắt này." |
 
@@ -380,8 +381,8 @@ Kiểu `StaffViewMessage` có mọi trường của `Message` phía khách, thê
 | `opensAt` | chuỗi `HH:mm` | Giờ Việt Nam |
 | `closesAt` | chuỗi `HH:mm` | Phải sau `opensAt` |
 | `holidays` | mảng chuỗi `yyyy-MM-dd` | Ngày theo lịch Việt Nam. Không trùng nhau, tối đa 366 ngày. Server lưu và trả theo thứ tự tăng dần |
-| `waitNudgeMinutes` | số nguyên | Mốc nhắc lại phiên chờ, từ 1 đến 1440. Phải nhỏ hơn `autoCloseMinutes` |
-| `autoCloseMinutes` | số nguyên | Mốc tự đóng phiên im lặng, từ 1 đến 1440 |
+| `waitNudgeMinutes` | số nguyên | Mốc nhắc lại phiên chờ, từ 1 đến 240. Phải nhỏ hơn `autoCloseMinutes` |
+| `autoCloseMinutes` | số nguyên | Mốc tự đóng phiên im lặng, từ 1 đến 240 |
 | `updatedAt` | thời điểm | Chỉ có trong response |
 
 `PUT` nhận mọi trường trừ `updatedAt`, và trả cấu hình đã lưu. Mỗi `PUT` thành công ghi một dòng audit `support.settings.update`.
@@ -390,7 +391,7 @@ Kiểu `StaffViewMessage` có mọi trường của `Message` phía khách, thê
 |---|---|
 | 400 `VALIDATION_ERROR` | `opensAt` không trước `closesAt`. Lỗi gắn với khóa `opensAt` |
 | 400 `VALIDATION_ERROR` | Giờ sai dạng `HH:mm`, hoặc ngày nghỉ sai dạng `yyyy-MM-dd`, trùng nhau, quá 366 ngày. Lỗi gắn với khóa `opensAt`, `closesAt` hoặc `holidays` |
-| 400 `VALIDATION_ERROR` | Mốc phút không phải số nguyên từ 1 đến 1440. Lỗi gắn với khóa của trường sai |
+| 400 `VALIDATION_ERROR` | Mốc phút không phải số nguyên từ 1 đến 240. Lỗi gắn với khóa của trường sai |
 | 400 `VALIDATION_ERROR` | `waitNudgeMinutes` không nhỏ hơn `autoCloseMinutes`. Lỗi gắn với khóa `waitNudgeMinutes` |
 
 ## Sự kiện SSE

@@ -17,9 +17,9 @@ internal static class CannedResponseEndpoints
 
     public static void Map(IEndpointRouteBuilder endpoints)
     {
-        // Danh sách phục vụ ô gõ `/` của nhân viên trả lời, nên cần `conversations:reply`.
+        // Danh sách phục vụ ô gõ `/` và màn cấu hình, nên route nhận một trong hai quyền. Service lọc mẫu cá nhân theo quyền.
         endpoints.MapGet(CannedResponsesPath, ListAsync)
-            .RequirePermission(Permissions.ConversationsReply);
+            .RequireAnyOfPermissions(Permissions.ConversationsReply, Permissions.SupportSettingsManage);
         // Người chỉ có `support-settings:manage` vẫn được sửa mẫu dùng chung, nên route chỉ đòi một trong hai quyền.
         endpoints.MapPost(CannedResponsesPath, CreateAsync)
             .RequireAnyOfPermissions(Permissions.ConversationsReply, Permissions.SupportSettingsManage);

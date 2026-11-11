@@ -115,7 +115,7 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
         { "GET", "/api/admin/support/sessions/dummy-id/customer", [Permissions.ConversationsRead] },
         { "GET", "/api/admin/support/settings", [Permissions.SupportSettingsManage] },
         { "PUT", "/api/admin/support/settings", [Permissions.SupportSettingsManage] },
-        // Mẫu trả lời nhanh: dòng ghi quyền tối thiểu của mẫu cá nhân. Quyền mẫu dùng chung kiểm ở test riêng bên dưới.
+        // Mẫu trả lời nhanh: dòng ghi quyền tối thiểu của mẫu cá nhân. `GET` còn nhận `support-settings:manage` (xem test riêng bên dưới).
         { "GET", "/api/admin/support/canned-responses", [Permissions.ConversationsReply] },
         { "POST", "/api/admin/support/canned-responses", [Permissions.ConversationsReply] },
         { "PATCH", "/api/admin/support/canned-responses/dummy-id", [Permissions.ConversationsReply] },
@@ -301,9 +301,9 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
     }
 
     [Fact]
-    // Vai trò chỉ có `support-settings:manage` qua được cổng route của mẫu dùng chung (PATCH, DELETE trả 404 vì `id` giả).
-    // Cùng vai trò bị từ chối đọc danh sách và tạo mẫu cá nhân, vì thiếu `conversations:reply`.
-    public async Task SupportDesk_SettingsManageOnlyRole_ReachesSharedCannedRoutesButNotPersonalOnes()
+    // Vai trò chỉ có `support-settings:manage` qua được cổng route của mẫu dùng chung (GET trả 200, PATCH và DELETE trả 404 vì `id` giả).
+    // Cùng vai trò bị từ chối tạo mẫu cá nhân, vì thiếu `conversations:reply`.
+    public async Task SupportDesk_SettingsManageOnlyRole_ReadsSharedCannedListButCannotCreatePersonal()
     {
         var role = await IdentityTestData.CreateRoleAsync(_database, [Permissions.SupportSettingsManage]);
         var (_, token) = await IdentityTestData.CreateStaffSessionAsync(_database, role.Code, "manage-only-staff");
@@ -318,7 +318,7 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
         var delete = await _client.SendAsync(ActorHttp.CreateJsonRequest(
             HttpMethod.Delete, $"{cannedPath}/dummy-id", body: null, cookie));
 
-        Assert.Equal(HttpStatusCode.Forbidden, list.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, list.StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, createPersonal.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, patch.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, delete.StatusCode);

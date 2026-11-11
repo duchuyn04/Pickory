@@ -85,6 +85,6 @@ internal sealed class UpdateCannedResponseRequestValidator : AbstractValidator<U
 
 internal static class CannedValidationMessages
 {
-    public const string Shortcut = "Phím tắt gồm 1 đến 32 ký tự a-z, 0-9, dấu gạch ngang hoặc gạch dưới.";
+    public const string Shortcut = "Phím tắt gồm 2 đến 30 ký tự a-z, 0-9, dấu gạch ngang hoặc gạch dưới.";
     public const string Body = "Nội dung mẫu phải có từ 1 đến 2000 ký tự.";
 }

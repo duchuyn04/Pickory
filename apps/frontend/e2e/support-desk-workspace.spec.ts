@@ -1,113 +1,62 @@
-import path from 'node:path';
-import {
-  expect,
-  test,
-  type Browser,
-  type BrowserContext,
-  type Locator,
-  type Page,
-  type Route,
-} from '@playwright/test';
-import { expectNoHorizontalOverflow } from './admin-order-fixtures';
+import { expect, test, type Page, type Route } from '@playwright/test';
+import { expectNoHorizontalOverflow, prepareShipping, seedProduct } from './admin-order-fixtures';
 import {
   collectConsoleIssues,
   dismissConsent,
   loginAdmin,
   type AllowedLoadFailure,
 } from './catalog-admin-flow';
-import { stubWebFonts } from './commerce-order-fixtures';
+import {
+  confirmAndShipOrderByApi,
+  loginSeededCustomer,
+  openIsolatedSession,
+  placeCodOrderByApi,
+  type IsolatedSession,
+} from './commerce-order-fixtures';
 import { e2eEnvironment } from './environment';
 import { activateStaffAccount, inviteStaff } from './staff-fixtures';
-import { createSupportDeskRouteMocks } from './support-desk-contract-routes';
-import { findSupportDeskExample } from '../test/unit/features/support-desk/contract-fixtures';
+import {
+  createCannedResponseByApi,
+  deleteCannedResponseByApi,
+  deleteCannedResponsesWithSuffix,
+  makeRunSuffix,
+  SUPPORT_API_HEADERS,
+} from './support-desk-canned-api';
+import {
+  claimSessionByApi,
+  closeSessionBestEffort,
+  countQueueSessions,
+  createCallbackByApi,
+  findQueueSession,
+  listCallbacksByApi,
+  makeUniquePhone,
+  markCallbackByApi,
+  openAnonymousCustomerChat,
+  openLoggedInCustomerChat,
+  openStaffSession,
+  PRESENCE_PATH,
+  readAvailableStaffIds,
+  readBox,
+  readOwnUserId,
+  resolveAllPendingCallbacks,
+  screenshotPath,
+  sendStaffMessageByApi,
+  setPresenceByApi,
+  type CustomerChat,
+  type StaffSession,
+} from './support-desk-live-fixtures';
 
-// SD-UI1: màn CSKH, hai công tắc (sẵn sàng, âm báo) và trạng thái kết nối.
-// Hai route `sessions` và `callback-requests` chưa có nên spec trả dữ liệu mẫu bằng helper SD-C2, còn `events` và `presence` dùng backend thật.
+// SD-UI1 đến SD-UI4: màn chăm sóc khách hàng chạy với backend thật cho mọi route của `support-desk`.
+// Dữ liệu dựng bằng API thật: khách gửi tin, nhân viên nhận, yêu cầu gọi lại và đơn hàng.
 
-const PRESENCE_PATH = '/api/admin/support/presence';
 const EVENTS_PATH_PATTERN = /\/api\/admin\/support\/events/;
+const CALLBACKS_URL_PATTERN = /\/api\/admin\/support\/callback-requests\//;
+const PRESENCE_URL_PATTERN = /\/api\/admin\/support\/presence/;
+// Danh sách "Đã xử lý" của tab Gọi lại chỉ hiện 20 dòng đầu tiên.
+const MAX_HANDLED_ROWS = 20;
 
-interface StaffSession {
-  context: BrowserContext;
-  page: Page;
-  consoleIssues: string[];
-  // Lỗi tải mà một case chủ động gây ra. Case thêm vào rồi gỡ ra, nên mọi case khác vẫn đòi console sạch.
-  allowedFailures: AllowedLoadFailure[];
-}
-
-async function openStaffSession(browser: Browser): Promise<StaffSession> {
-  const context = await browser.newContext({ baseURL: e2eEnvironment.webOrigin });
-  const page = await context.newPage();
-  const allowedFailures: AllowedLoadFailure[] = [];
-  const consoleIssues = collectConsoleIssues(page, allowedFailures);
-  // Chặn phông chữ ngoài để lỗi mạng ngoài không làm console có lỗi oan.
-  await stubWebFonts(page);
-  return { context, page, consoleIssues, allowedFailures };
-}
-
-// Trả dữ liệu mẫu cho các route backend chưa có. Helper đọc tài liệu OpenAPI trước khi gắn route.
-async function mockUnfinishedQueueRoutes(page: Page) {
-  const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-  await routes.mockRoute('admin-sessions.json', 'hàng chờ');
-  await routes.mockRoute('admin-sessions.json', 'phiên của tôi sau khi đồng nghiệp chuyển');
-  await routes.mockRoute('admin-callbacks.json', 'danh sách yêu cầu gọi lại');
-  // Bốn route của khung chat SD-UI2: nhận phiên, gửi tin, lịch sử tin và danh sách mẫu.
-  await routes.mockRoute('admin-sessions.json', 'nhận phiên');
-  await routes.mockRoute('admin-sessions.json', 'nhân viên gửi tin');
-  await routes.mockRoute('admin-sessions.json', 'lịch sử tin của hội thoại cho nhân viên');
-  await routes.mockRoute('admin-canned-responses.json', 'danh sách mẫu');
-  // Ba route của SD-UI3: bảng thông tin khách, chuyển phiên và kết thúc phiên.
-  await routes.mockRoute('admin-customer-panel.json', 'khách đã đăng nhập');
-  await routes.mockRoute('admin-customer-panel.json', 'khách vãng lai');
-  await routes.mockRoute('admin-sessions.json', 'chuyển phiên cho đồng nghiệp');
-  await routes.mockRoute('admin-sessions.json', 'kết thúc phiên');
-}
-
-async function readOwnUserId(page: Page): Promise<string> {
-  const response = await page.request.get('/api/me');
-  expect(response.status(), await response.text()).toBe(200);
-  const body = (await response.json()) as { data: { userId: string } };
-  return body.data.userId;
-}
-
-// Danh sách nhân viên đang sẵn sàng theo backend thật. Đây là bằng chứng trạng thái đã được ghi vào DB.
-async function readAvailableStaffIds(page: Page): Promise<string[]> {
-  const response = await page.request.get(PRESENCE_PATH);
-  expect(response.status(), await response.text()).toBe(200);
-  const body = (await response.json()) as { data: { staffId: string }[] };
-  return body.data.map((entry) => entry.staffId);
-}
-
-// Ảnh chụp vào thư mục ngoài repo khi có biến môi trường. Không có biến thì Playwright giữ ảnh trong thư mục kết quả.
-function screenshotPath(testInfo: { outputPath: (name: string) => string }, fileName: string) {
-  const directory = process.env.SUPPORT_DESK_SHOTS_DIR;
-  return directory ? path.join(directory, fileName) : testInfo.outputPath(fileName);
-}
-
-// Trả 503 cho luồng sự kiện. Hàm có tên riêng để `unroute` gỡ đúng route đã đăng ký.
-function blockEvents(route: Route) {
-  return route.fulfill({ status: 503, contentType: 'application/json', body: '{}' });
-}
-
-function isPresenceUrl(url: URL): boolean {
-  return url.pathname === PRESENCE_PATH;
-}
-
-// Chỉ lệnh `PUT` bị trả 500. Lệnh đọc danh sách vẫn đi tới backend thật.
-function failPresenceUpdate(route: Route) {
-  if (route.request().method() !== 'PUT') return route.continue();
-  return route.fulfill({
-    status: 500,
-    json: { error: { code: 'INTERNAL', message: 'Máy chủ gặp lỗi.' } },
-  });
-}
-
-// Khung bao của phần tử. Phần tử không có khung thì case đỏ ngay, thay vì so với 0 cho qua.
-async function readBox(locator: Locator) {
-  const box = await locator.boundingBox();
-  expect(box).not.toBeNull();
-  return box!;
-}
+// Hậu tố riêng của lần chạy. Mọi tin nhắn và số điện thoại spec tạo đều đi cùng hậu tố hoặc số riêng, nên dòng của case tìm được chính xác.
+const runSuffix = makeRunSuffix();
 
 function presenceSwitch(page: Page) {
   return page.getByRole('switch', { name: 'Sẵn sàng', exact: true });
@@ -121,37 +70,67 @@ function waitingTab(page: Page) {
   return page.getByRole('tab', { name: /^Đang chờ/ });
 }
 
+function chatComposer(page: Page) {
+  return page.getByRole('combobox', { name: 'Nội dung tin nhắn' });
+}
+
+// Dòng phiên là một nút với tên truy cập gồm tin đầu và thời gian chờ. Tin đầu chứa dấu riêng của case.
+function queueRow(page: Page, marker: string) {
+  return page.getByRole('button', { name: marker });
+}
+
+// Mở màn chăm sóc khách hàng và chờ cột hàng chờ nạp xong, để các khẳng định sau không gặp trạng thái đang nạp.
 async function openDeskPage(page: Page) {
   await page.goto('/admin/conversations');
   await expect(page.getByRole('heading', { level: 1, name: 'Chăm sóc khách hàng' })).toBeVisible();
-  // Danh sách mẫu hiện ra nghĩa là cột hàng chờ đã nạp xong.
-  await expect(page.getByText('Đơn PK123 của mình giao tới đâu rồi?')).toBeVisible();
+  await expect(waitingTab(page)).toBeVisible();
+  await expect(page.getByText('Đang nạp hàng chờ...')).toHaveCount(0);
 }
 
-test.describe.configure({ mode: 'serial' });
+// Chuẩn bị chuỗi hiển thị theo cùng quy tắc của màn: `formatVnd` dùng `Intl.NumberFormat('vi-VN')`.
+function formatVnd(amount: number): string {
+  return `${new Intl.NumberFormat('vi-VN').format(Math.round(amount))} đ`;
+}
 
-test.describe('SD-UI1: màn CSKH', () => {
+test.describe('SD-UI1: màn chăm sóc khách hàng', () => {
   let admin: StaffSession;
   let support: StaffSession;
   let sales: StaffSession;
   let colleague: StaffSession;
-  const colleagueEmail = 'e2e-support-desk-colleague@pickory.local';
+  let customer: IsolatedSession;
+  // Email nhân viên có hậu tố của lần chạy. Nếu `beforeAll` chạy lại sau một case đỏ (Playwright khởi động worker mới), lời mời không đụng lỗi trùng email.
+  const supportEmail = `e2e-sd-support-${runSuffix}@pickory.local`;
+  const salesEmail = `e2e-sd-sales-${runSuffix}@pickory.local`;
+  const colleagueEmail = `e2e-sd-colleague-${runSuffix}@pickory.local`;
+  // Mã đơn `shipping` của khách đã đăng nhập, dựng một lần ở `beforeAll`.
+  let customerOrderCode = '';
+  // Cờ bật khi `beforeAll` chạy xong. `afterAll` chỉ dọn khi cờ này bật, vì trước đó các phiên chưa đăng nhập.
+  let isSetupDone = false;
+  // Phiên và khách do case đang chạy tạo. `afterEach` đóng phiên và hủy khách để hàng chờ không đầy dần.
+  let createdSessionIds: string[] = [];
+  let openCustomerChats: CustomerChat[] = [];
+  // Mẫu do case tạo. `afterEach` xóa các mẫu này để danh sách mẫu của case sau không đổi.
+  let createdCannedIds: string[] = [];
+  // Tên đầy đủ của nhân viên `support` khi mời. Backend phải trả đúng tên này ở nhãn người gửi.
+  const supportStaffFullName = 'Support CSKH E2E';
+  let sessionCounter = 0;
 
   test.beforeAll(async ({ browser }) => {
-    // Mời hai nhân viên qua giao diện thật nên cần nhiều thời gian hơn mặc định.
-    test.setTimeout(240000);
+    // Mời bốn nhân viên, dựng đơn hàng và vận đơn qua API thật nên cần nhiều thời gian hơn mặc định.
+    test.setTimeout(300000);
     admin = await openStaffSession(browser);
     support = await openStaffSession(browser);
     sales = await openStaffSession(browser);
     colleague = await openStaffSession(browser);
+    customer = await openIsolatedSession(browser);
     await loginAdmin(admin.page);
     await inviteStaff(admin.page, {
-      email: e2eEnvironment.supportDeskSupportEmail,
-      fullName: 'Support CSKH E2E',
+      email: supportEmail,
+      fullName: supportStaffFullName,
       roleCode: 'support',
     });
     await inviteStaff(admin.page, {
-      email: e2eEnvironment.supportDeskSalesEmail,
+      email: salesEmail,
       fullName: 'Sales CSKH E2E',
       roleCode: 'sales',
     });
@@ -162,30 +141,117 @@ test.describe('SD-UI1: màn CSKH', () => {
     });
     await activateStaffAccount(colleague.page, colleagueEmail);
     await dismissConsent(colleague.page);
-    await activateStaffAccount(support.page, e2eEnvironment.supportDeskSupportEmail);
-    await activateStaffAccount(sales.page, e2eEnvironment.supportDeskSalesEmail);
+    await activateStaffAccount(support.page, supportEmail);
+    await activateStaffAccount(sales.page, salesEmail);
     await dismissConsent(support.page);
     await dismissConsent(sales.page);
-    await mockUnfinishedQueueRoutes(support.page);
+
+    // Khách đã seed đặt một đơn COD, rồi admin xác nhận và tạo vận đơn. Đơn sang `shipping` như thật.
+    await loginSeededCustomer(customer.page, e2eEnvironment.screensCustomerEmail);
+    // Admin cấu hình kho gửi trước, nếu không backend từ chối đơn vì cửa hàng chưa sẵn sàng giao hàng.
+    await prepareShipping(admin.page);
+    const product = await seedProduct(admin.page);
+    customerOrderCode = await placeCodOrderByApi(customer.page, product);
+    await confirmAndShipOrderByApi(admin.page, customerOrderCode);
+
     // Console của các bước dựng dữ liệu không thuộc case nào. Mỗi case bắt đầu với danh sách sạch.
     for (const session of [admin, support, sales, colleague]) session.consoleIssues.length = 0;
+    isSetupDone = true;
   });
 
   test.afterAll(async () => {
-    for (const session of [admin, support, sales, colleague]) await session?.context.close();
+    try {
+      if (isSetupDone) {
+        // Lưới an toàn: xóa mọi mẫu có hậu tố của lần chạy, kể cả mẫu mà `afterEach` chưa kịp xóa.
+        await deleteCannedResponsesWithSuffix(admin.page, runSuffix);
+        await setPresenceByApi(support.page, 'away');
+        await setPresenceByApi(colleague.page, 'away');
+      }
+    } finally {
+      // Đóng context cả khi dọn dữ liệu lỗi, để trình duyệt không bị treo.
+      for (const session of [admin, support, sales, colleague]) await session?.context.close();
+      await customer?.context.close();
+    }
   });
 
-  test.beforeEach(() => {
-    for (const session of [admin, support, sales, colleague]) session.consoleIssues.length = 0;
+  test.beforeEach(async () => {
+    // Case ảnh chụp đổi viewport sang 375px. Mỗi case bắt đầu từ 1280px để cột thông tin khách luôn hiện, không phụ thuộc case chạy trước.
+    await support.page.setViewportSize({ width: 1280, height: 800 });
+    createdSessionIds = [];
+    openCustomerChats = [];
+    createdCannedIds = [];
+    for (const session of [admin, support, sales, colleague]) {
+      session.consoleIssues.length = 0;
+      session.allowedFailures.length = 0;
+    }
   });
 
-  test.afterEach(() => {
+  test.afterEach(async () => {
+    // Dọn phiên và khách của case trước khi kiểm console, để lỗi dọn dẹp không che lỗi của case.
+    for (const sessionId of createdSessionIds) {
+      await closeSessionBestEffort(support.page, sessionId);
+      await closeSessionBestEffort(colleague.page, sessionId);
+    }
+    for (const chat of openCustomerChats) await chat.dispose();
+    for (const cannedId of createdCannedIds) {
+      // Một lần xóa hỏng không được chặn các lần xóa còn lại và các dòng kiểm console bên dưới.
+      try {
+        await deleteCannedResponseByApi(admin.page, cannedId);
+      } catch {
+        // Mẫu còn lại bị `afterAll` xóa theo hậu tố.
+      }
+    }
     // Mỗi case phải kết thúc với 0 lỗi và 0 cảnh báo trong console của mọi phiên.
     expect(admin.consoleIssues, 'Console của admin phải sạch').toEqual([]);
     expect(support.consoleIssues, 'Console của support phải sạch').toEqual([]);
     expect(sales.consoleIssues, 'Console của sales phải sạch').toEqual([]);
     expect(colleague.consoleIssues, 'Console của colleague phải sạch').toEqual([]);
   });
+
+  interface WaitingSession {
+    marker: string;
+    sessionId: string;
+    conversationId: string;
+    customerChat: CustomerChat;
+  }
+
+  // Khách gửi tin đầu tiên, backend mở phiên chờ, rồi hàm chờ phiên xuất hiện trong hàng chờ thật của nhân viên.
+  async function createWaitingSession(
+    options: { loggedIn?: boolean; firstMessage?: (marker: string) => string } = {},
+  ): Promise<WaitingSession> {
+    sessionCounter += 1;
+    const marker = `Hỏi đơn giao tới đâu ${runSuffix} số ${sessionCounter}`;
+    const customerChat = options.loggedIn
+      ? await openLoggedInCustomerChat(customer.page)
+      : await openAnonymousCustomerChat();
+    openCustomerChats.push(customerChat);
+    await customerChat.send(options.firstMessage ? options.firstMessage(marker) : marker);
+    const queued = await findQueueSession(support.page, 'waiting', marker);
+    createdSessionIds.push(queued.id);
+    return {
+      marker,
+      sessionId: queued.id,
+      conversationId: queued.conversationId,
+      customerChat,
+    };
+  }
+
+  // Phiên do `support` giữ, tức nằm trong tab Của tôi.
+  async function createHeldSession(): Promise<WaitingSession> {
+    const session = await createWaitingSession();
+    await claimSessionByApi(support.page, session.sessionId);
+    return session;
+  }
+
+  // Mở phiên từ hàng chờ hoặc từ tab Của tôi. Tin đầu của khách hiện trong khung chat nghĩa là khung đã nạp xong.
+  async function openSession(page: Page, session: WaitingSession, tab: 'waiting' | 'mine') {
+    await openDeskPage(page);
+    if (tab === 'mine') await page.getByRole('tab', { name: 'Của tôi', exact: true }).click();
+    await queueRow(page, session.marker).click();
+    await expect(
+      page.locator('.support-chat-message').filter({ hasText: session.marker }),
+    ).toBeVisible();
+  }
 
   test('support thấy menu CSKH, mở trang và bật Sẵn sàng thì backend ghi nhận', async () => {
     const { page } = support;
@@ -225,29 +291,58 @@ test.describe('SD-UI1: màn CSKH', () => {
     await expect.poll(() => readAvailableStaffIds(page)).not.toContain(staffId);
   });
 
-  test('hàng chờ hiện dữ liệu mẫu, badge khớp số phiên, tab Gọi lại có hai nhóm với yêu cầu cần gọi đứng trước', async () => {
+  test('hàng chờ hiện dữ liệu backend, badge khớp số phiên, tab Gọi lại có hai nhóm với yêu cầu cần gọi đứng trước', async () => {
     const { page } = support;
+    // Chỉ để lại một yêu cầu đang chờ và một yêu cầu đã xử lý. Nhờ vậy hai nhóm của tab Gọi lại đều có dòng.
+    await resolveAllPendingCallbacks(page);
+    const waiting = await createWaitingSession();
+    const held = await createHeldSession();
+    const handledPhone = makeUniquePhone();
+    await createCallbackByApi(handledPhone, null);
+    const handledRecord = (await listCallbacksByApi(page)).find(
+      (record) => record.phone === handledPhone,
+    );
+    expect(handledRecord, 'Yêu cầu vừa tạo phải có trong danh sách của backend').toBeDefined();
+    await markCallbackByApi(page, handledRecord!.id, 'done');
+    const pendingPhone = makeUniquePhone();
+    await createCallbackByApi(pendingPhone, 'Khách cần gọi lại sau 18h.');
+
     await openDeskPage(page);
 
-    // File mẫu có một phiên đang chờ thì badge là 1.
-    await expect(waitingTab(page).locator('.tab-list-count')).toHaveText('1');
-    await expect(
-      page.getByRole('list', { name: 'Phiên đang chờ' }).getByRole('listitem'),
-    ).toHaveCount(1);
-    // Cột hàng chờ hiện nội dung của ví dụ "hàng chờ", không phải dữ liệu viết tay.
-    await expect(page.getByText('Đơn PK123 của mình giao tới đâu rồi?')).toBeVisible();
+    // Badge và số dòng của tab Đang chờ khớp số phiên mà backend trả cho view `waiting`.
+    // Đọc API và giao diện trong cùng một vòng, vì phiên có thể đổi giữa hai lần đọc.
+    await expect
+      .poll(
+        async () => {
+          const apiCount = await countQueueSessions(page, 'waiting');
+          const badgeText = await waitingTab(page).locator('.tab-list-count').textContent();
+          const itemCount = await page
+            .getByRole('list', { name: 'Phiên đang chờ' })
+            .getByRole('listitem')
+            .count();
+          return badgeText === String(apiCount) && itemCount === apiCount;
+        },
+        { message: 'Badge và số dòng của tab Đang chờ phải khớp số phiên của backend' },
+      )
+      .toBe(true);
+    await expect(queueRow(page, waiting.marker)).toBeVisible();
 
     await page.getByRole('tab', { name: 'Gọi lại', exact: true }).click();
     const callbackRegion = page.getByRole('group', { name: 'Yêu cầu gọi lại' });
-    // File mẫu có hai yêu cầu: một dòng cần gọi lại và một dòng đã xử lý.
     const pendingGroup = callbackRegion.getByRole('list', { name: /^Cần gọi lại/ });
     const handledGroup = callbackRegion.getByRole('list', { name: 'Đã xử lý' });
+    // Một dòng cần gọi lại. Số dòng đã xử lý khớp danh sách của backend, tối đa 20 dòng.
+    const handledCount = (await listCallbacksByApi(page)).filter(
+      (record) => record.status !== 'pending',
+    ).length;
     await expect(pendingGroup.getByRole('listitem')).toHaveCount(1);
-    await expect(handledGroup.getByRole('listitem')).toHaveCount(1);
-    // Số `0901234567` là link `tel:`, và dòng cần gọi lại đứng trước dòng đã xử lý.
-    await expect(pendingGroup.getByRole('link', { name: '0901234567' })).toHaveAttribute(
+    await expect(handledGroup.getByRole('listitem')).toHaveCount(
+      Math.min(handledCount, MAX_HANDLED_ROWS),
+    );
+    // Số điện thoại là link `tel:`, và dòng cần gọi lại đứng trước nhóm đã xử lý.
+    await expect(pendingGroup.getByRole('link', { name: pendingPhone })).toHaveAttribute(
       'href',
-      'tel:0901234567',
+      `tel:${pendingPhone}`,
     );
     const pendingGroupBox = await readBox(pendingGroup);
     const handledGroupBox = await readBox(handledGroup);
@@ -255,8 +350,10 @@ test.describe('SD-UI1: màn CSKH', () => {
 
     await page.getByRole('tab', { name: 'Của tôi', exact: true }).click();
     const mineList = page.getByRole('list', { name: 'Phiên của tôi' });
-    await expect(mineList.getByRole('listitem')).toHaveCount(1);
-    await expect(mineList.getByText('Mình muốn đổi size áo.')).toBeVisible();
+    await expect(mineList.getByRole('listitem')).toHaveCount(
+      await countQueueSessions(page, 'mine'),
+    );
+    await expect(mineList.getByText(held.marker)).toBeVisible();
   });
 
   test('bàn phím: mũi tên đổi tab và phím Tab tới được công tắc Sẵn sàng', async () => {
@@ -309,7 +406,7 @@ test.describe('SD-UI1: màn CSKH', () => {
     await expect(toggle).toHaveAttribute('aria-checked', 'false');
 
     await page.reload();
-    await expect(page.getByText('Đơn PK123 của mình giao tới đâu rồi?')).toBeVisible();
+    await expect(waitingTab(page)).toBeVisible();
     await expect(soundSwitch(page)).toHaveAttribute('aria-checked', 'false');
 
     // Bật lại để các case sau bắt đầu từ mặc định.
@@ -317,22 +414,28 @@ test.describe('SD-UI1: màn CSKH', () => {
     await expect(soundSwitch(page)).toHaveAttribute('aria-checked', 'true');
   });
 
+  // Hủy request `events` bằng lỗi mạng, không dựng phản hồi nào. Backend không tự làm đứt luồng này.
+  function abortEvents(route: Route) {
+    return route.abort('failed');
+  }
+
   test('mất kết nối: hiện chữ Mất kết nối khi luồng sự kiện lỗi, và mất chữ khi luồng nối lại được', async () => {
     test.setTimeout(120000);
     const testInfo = test.info();
     const { page } = support;
-    // Chặn route `events` làm trình duyệt ghi lỗi tải 503 mỗi lần thử nối.
-    // Case chỉ bỏ qua đúng lỗi này (URL của luồng, mã 503), mọi lỗi khác vẫn làm case đỏ.
-    support.allowedFailures.push({ urlPattern: EVENTS_PATH_PATTERN, status: 503 });
+    // Request `events` bị hủy làm trình duyệt ghi lỗi mạng mỗi lần thử nối.
+    // Case chỉ bỏ qua đúng lỗi này (URL của luồng, lỗi mạng), mọi lỗi khác vẫn làm case đỏ.
+    support.allowedFailures.push({ urlPattern: EVENTS_PATH_PATTERN, status: 'network-failed' });
     try {
       await openDeskPage(page);
       const lostNotice = page.locator('header.admin-top').getByText('Mất kết nối', { exact: true });
       await expect(lostNotice).toBeHidden();
 
-      await page.route(EVENTS_PATH_PATTERN, blockEvents);
+      // Luồng `events` chỉ đứt khi trình duyệt mất mạng, nên route hủy request để gây lỗi này.
+      await page.route(EVENTS_PATH_PATTERN, abortEvents);
       // Tải lại để trang mở luồng mới. Luồng cũ đang mở nên route chặn chưa tác động tới nó.
       await page.reload();
-      await expect(page.getByText('Đơn PK123 của mình giao tới đâu rồi?')).toBeVisible();
+      await expect(waitingTab(page)).toBeVisible();
 
       await expect(lostNotice).toBeVisible({ timeout: 20000 });
       await page.screenshot({ path: screenshotPath(testInfo, 'lost-connection-1280.png') });
@@ -350,26 +453,36 @@ test.describe('SD-UI1: màn CSKH', () => {
       await page.setViewportSize({ width: 1280, height: 800 });
 
       // Gỡ route chặn. Client tự nối lại sau tối đa 30 giây, rồi chữ báo mất kết nối biến mất.
-      await page.unroute(EVENTS_PATH_PATTERN, blockEvents);
+      await page.unroute(EVENTS_PATH_PATTERN, abortEvents);
       await expect(lostNotice).toBeHidden({ timeout: 60000 });
     } finally {
-      // Gỡ route cả khi case đỏ giữa chừng, để route 503 không sót sang case sau. Gỡ hai lần không gây lỗi.
-      await page.unroute(EVENTS_PATH_PATTERN, blockEvents);
+      // Gỡ route cả khi case đỏ giữa chừng, để route hủy không sót sang case sau. Gỡ hai lần không gây lỗi.
+      await page.unroute(EVENTS_PATH_PATTERN, abortEvents);
       support.allowedFailures.length = 0;
     }
   });
 
+  // Đổi body của `PUT presence` thành trạng thái không hợp lệ rồi chuyển tới backend thật.
+  async function sendInvalidPresence(route: Route) {
+    if (route.request().method() !== 'PUT') {
+      await route.fallback();
+      return;
+    }
+    await route.continue({ postData: JSON.stringify({ status: 'invalid-status' }) });
+  }
+
   test('PUT trạng thái lỗi: công tắc giữ trạng thái cũ, báo lỗi ngắn và thanh trên cùng không tràn ngang ở 375px', async () => {
     const testInfo = test.info();
     const { page } = support;
-    // Route chặn làm trình duyệt ghi lỗi tải 500 của `PUT`. Case chỉ bỏ qua đúng lỗi này, mọi lỗi khác vẫn làm case đỏ.
-    support.allowedFailures.push({ urlPattern: /\/api\/admin\/support\/presence/, status: 500 });
+    // Backend trả 400 cho `PUT` bị sửa body. Case chỉ bỏ qua đúng lỗi này, mọi lỗi khác vẫn làm case đỏ.
+    support.allowedFailures.push({ urlPattern: PRESENCE_URL_PATTERN, status: 400 });
     try {
       await page.setViewportSize({ width: 375, height: 812 });
       await openDeskPage(page);
       await expect(presenceSwitch(page)).toHaveAttribute('aria-checked', 'false');
 
-      await page.route(isPresenceUrl, failPresenceUpdate);
+      // Giao diện không gửi được trạng thái sai, nên route sửa body để backend trả 400.
+      await page.route(PRESENCE_URL_PATTERN, sendInvalidPresence);
       await presenceSwitch(page).click();
 
       const topBar = page.locator('header.admin-top');
@@ -403,12 +516,12 @@ test.describe('SD-UI1: màn CSKH', () => {
       );
       expect(desktopErrorBox.x).toBeGreaterThanOrEqual(desktopSwitchBox.x + desktopSwitchBox.width);
       await page.screenshot({ path: screenshotPath(testInfo, 'presence-error-1280.png') });
-      // Backend không nhận lệnh nào, nên nhân viên vẫn Tạm vắng.
+      // Backend từ chối lệnh, nên nhân viên vẫn Tạm vắng.
       const staffId = await readOwnUserId(page);
       expect(await readAvailableStaffIds(page)).not.toContain(staffId);
     } finally {
-      // `unroute` so khớp theo tham chiếu hàm, nên phải truyền đúng hai hàm đã đăng ký.
-      await page.unroute(isPresenceUrl, failPresenceUpdate);
+      // `unroute` so khớp theo tham chiếu hàm, nên phải truyền đúng hàm đã đăng ký.
+      await page.unroute(PRESENCE_URL_PATTERN, sendInvalidPresence);
       await page.setViewportSize({ width: 1280, height: 800 });
       support.allowedFailures.length = 0;
     }
@@ -442,9 +555,22 @@ test.describe('SD-UI1: màn CSKH', () => {
     test(`ảnh chụp ${viewport.name}px: không tràn ngang`, async () => {
       const testInfo = test.info();
       const { page } = support;
+      await createWaitingSession();
+      await resolveAllPendingCallbacks(page);
+      const callbackPhone = makeUniquePhone();
+      await createCallbackByApi(callbackPhone, null);
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
       await openDeskPage(page);
-      await expect(waitingTab(page).locator('.tab-list-count')).toHaveText('1');
+      await expect
+        .poll(
+          async () => {
+            const apiCount = await countQueueSessions(page, 'waiting');
+            const badgeText = await waitingTab(page).locator('.tab-list-count').textContent();
+            return badgeText === String(apiCount);
+          },
+          { message: 'Badge của tab Đang chờ phải khớp số phiên của backend' },
+        )
+        .toBe(true);
       await expect(presenceSwitch(page)).toBeVisible();
       await expectNoHorizontalOverflow(page);
       // Khi không có lỗi, thanh trên cùng cao 48px ở màn rộng và 56px ở màn hẹp.
@@ -466,7 +592,7 @@ test.describe('SD-UI1: màn CSKH', () => {
       await expect(presenceSwitch(page)).toHaveAttribute('aria-checked', 'false');
 
       await page.getByRole('tab', { name: 'Gọi lại', exact: true }).click();
-      await expect(page.getByText('0901234567')).toBeVisible();
+      await expect(page.getByText(callbackPhone)).toBeVisible();
       await expectNoHorizontalOverflow(page);
       await page.screenshot({
         path: screenshotPath(testInfo, `workspace-${viewport.name}-callbacks.png`),
@@ -475,38 +601,19 @@ test.describe('SD-UI1: màn CSKH', () => {
     });
   }
 
-  // SD-UI2: khung chat và mẫu trả lời nhanh. Bốn route của khung chat trả dữ liệu mẫu qua helper SD-C2.
-  function queueRow(page: Page) {
-    // Dòng phiên là một nút với tên truy cập gồm tin đầu và thời gian chờ.
-    return page.getByRole('button', { name: /Đơn PK123/ });
-  }
-
-  function chatComposer(page: Page) {
-    return page.getByRole('combobox', { name: 'Nội dung tin nhắn' });
-  }
-
-  async function openWaitingSession(page: Page) {
-    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-    await routes.mockRoute('admin-sessions.json', 'lịch sử tin của hội thoại cho nhân viên');
-    await openDeskPage(page);
-    await queueRow(page).click();
-    // Lịch sử tin mẫu hiện ra nghĩa là khung chat đã nạp xong.
-    // Dùng tin của nhân viên để tránh trùng chữ với tin đầu ở dòng hàng chờ (strict mode).
-    await expect(page.getByText('Chào bạn, mình kiểm đơn PK123 ngay nhé.')).toBeVisible();
-  }
-
+  // SD-UI2: khung chat có phiên, tin và nhận phiên đều đi qua backend thật.
+  // Case mẫu trả lời nhanh nằm ở file `support-desk-canned-chat.spec.ts`.
   test('SD-UI2: mở phiên từ hàng chờ hiện lịch sử tin, nút Nhận và ô soạn tắt kèm chú thích', async () => {
     const { page } = support;
-    await openWaitingSession(page);
+    const session = await createWaitingSession();
+    await openSession(page, session, 'waiting');
 
-    // Nhãn người gửi theo vai trò: khách và nhân viên.
-    // Lịch sử mẫu không có tin hệ thống; nhãn hệ thống được unit test kiểm riêng.
+    // Nhãn người gửi theo vai trò. Phiên chờ chỉ có tin của khách, nên nhãn nhân viên được kiểm ở case gửi tin bên dưới.
     const chatRegion = page.locator('section', {
       has: page.getByRole('heading', { name: 'Khung chat' }),
     });
     await expect(chatRegion.getByText('Khách', { exact: true })).toBeVisible();
-    await expect(chatRegion.getByText('Lan - CSKH', { exact: true })).toBeVisible();
-    // Nút Nhận hiện ở đầu khung chat; ô soạn tắt với chú thích nêu rõ lý do.
+    // Nút Nhận hiện ở đầu khung chat. Ô soạn tắt với chú thích nêu rõ lý do.
     await expect(page.getByRole('button', { name: 'Nhận', exact: true })).toBeVisible();
     await expect(chatComposer(page)).toBeDisabled();
     await expect(page.getByText('Nhận hội thoại để trả lời.')).toBeVisible();
@@ -514,69 +621,90 @@ test.describe('SD-UI1: màn CSKH', () => {
 
   test('SD-UI2: bấm Nhận gọi POST assignment và ô soạn bật ngay', async () => {
     const { page } = support;
-    await openWaitingSession(page);
+    const session = await createWaitingSession();
+    await openSession(page, session, 'waiting');
 
     await page.getByRole('button', { name: 'Nhận', exact: true }).click();
     await expect(chatComposer(page)).toBeEnabled();
     // Nhận xong thì nút Nhận biến mất khỏi khung chat.
     await expect(page.getByRole('button', { name: 'Nhận', exact: true })).toHaveCount(0);
-  });
-
-  test('SD-UI2: gõ / mở danh sách mẫu, mũi tên chọn mục, Enter chèn mẫu đã thay biến', async () => {
-    const { page } = support;
-    await openWaitingSession(page);
-    // Nhận phiên để ô soạn bật, rồi mở danh sách mẫu.
-    await page.getByRole('button', { name: 'Nhận', exact: true }).click();
-    await expect(chatComposer(page)).toBeEnabled();
-
-    await chatComposer(page).fill('/');
-    const listbox = page.getByRole('listbox');
-    await expect(listbox).toBeVisible();
-    // Dữ liệu mẫu có hai dòng: /camon dùng chung và /kiemdon cá nhân.
-    await expect(page.getByRole('option', { name: /\/camon/ })).toHaveCount(1);
-    await expect(page.getByRole('option', { name: /\/kiemdon/ })).toHaveCount(1);
-
-    await page.keyboard.press('ArrowDown');
-    await expect(page.getByRole('option', { name: /\/kiemdon/ })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    await page.keyboard.press('Enter');
-    // SD-UI3 đã nối nguồn dữ liệu khách: đơn đầu tiên là PK123 nên {ma_don} được thay bằng PK123.
-    await expect(chatComposer(page)).toHaveValue('Mình kiểm đơn PK123 giúp bạn nhé.');
-    await expect(listbox).toHaveCount(0);
+    // Backend đã ghi nhận: phiên nằm trong view `mine` của người nhận.
+    await findQueueSession(page, 'mine', session.marker);
   });
 
   test('SD-UI2: Enter gửi tin qua POST messages và dọn ô soạn', async () => {
     const { page } = support;
-    await openWaitingSession(page);
+    const session = await createWaitingSession();
+    await openSession(page, session, 'waiting');
     await page.getByRole('button', { name: 'Nhận', exact: true }).click();
     await expect(chatComposer(page)).toBeEnabled();
 
-    await chatComposer(page).fill('Chào bạn, mình kiểm đơn PK123 ngay nhé.');
+    const staffText = `Chào bạn, mình kiểm đơn ngay nhé ${runSuffix}.`;
+    await chatComposer(page).fill(staffText);
     await page.keyboard.press('Enter');
-    // Gửi thành công thì ô sạch. Lịch sử mẫu cố định nên tin gửi không hiện thêm ở E2E.
+    // Gửi thành công thì ô sạch và tin hiện trong lịch sử với nhãn nhân viên mà backend trả.
     await expect(chatComposer(page)).toHaveValue('');
+    const sentMessage = page.locator('.support-chat-message').filter({ hasText: staffText });
+    await expect(sentMessage).toBeVisible();
+    const history = await page.request.get(
+      `/api/admin/support/conversations/${session.conversationId}/messages`,
+    );
+    expect(history.status(), await history.text()).toBe(200);
+    const historyBody: {
+      data: { items: { role: string; body: string; staffDisplayName: string | null }[] };
+    } = await history.json();
+    const stored = historyBody.data.items.find((item) => item.body === staffText);
+    expect(stored?.role).toBe('staff');
+    // Nhân viên được mời với `fullName` này, nên backend phải trả đúng tên đó.
+    expect(stored?.staffDisplayName).toBe(supportStaffFullName);
+    await expect(sentMessage.getByText(supportStaffFullName, { exact: true })).toBeVisible();
   });
 
-  // Sinh 50 tin nhắn để kiểm tra vùng tin cuộn và ô soạn bám đáy khi lịch sử dài (R1-02).
-  function createFiftyMessages() {
-    const items = [];
-    for (let index = 1; index <= 50; index++) {
-      const isStaff = index % 2 === 0;
-      items.push({
-        id: `m-scroll-${index.toString().padStart(3, '0')}`,
-        sessionId: '5e550000-0000-4000-8000-000000000001',
-        role: isStaff ? 'staff' : 'customer',
-        body: `Tin nhắn thứ ${index} trong hội thoại dài để kiểm tra vùng cuộn của khung chat.`,
-        action: null,
-        staffDisplayName: isStaff ? 'Lan - CSKH' : null,
-        createdAt: new Date(
-          Date.UTC(2026, 10, 3, 2, Math.floor(index / 2), (index % 2) * 30),
-        ).toISOString(),
-      });
+  test('SD-UI2: gõ / chọn mẫu có {ma_don}, Enter chèn mẫu với mã đơn đầu tiên của khách', async () => {
+    const { page } = support;
+    // Mẫu dùng chung do admin tạo qua API, có biến `{ma_don}`. Phím tắt có hậu tố để không đụng mẫu khác.
+    const shortcut = `kiemdon-${runSuffix}`;
+    await createCannedResponseByApi(admin.page, {
+      shortcut,
+      body: 'Mình kiểm đơn {ma_don} giúp bạn nhé.',
+      shared: true,
+    });
+    try {
+      // Khách đã đăng nhập có đơn `shipping`, nên màn thay `{ma_don}` bằng mã đơn của khách. Nhân viên giữ phiên trước, rồi mở từ tab Của tôi.
+      const session = await createWaitingSession({ loggedIn: true });
+      await claimSessionByApi(page, session.sessionId);
+      await openSession(page, session, 'mine');
+      await expect(chatComposer(page)).toBeEnabled();
+      // Chờ bảng thông tin khách nạp xong, vì biến lấy từ dữ liệu của bảng này.
+      await expect(
+        page.locator('.support-customer-panel').getByRole('link', { name: customerOrderCode }),
+      ).toBeVisible();
+      // Biến `{ma_don}` lấy đơn đầu tiên của danh sách, nên đơn đó phải là đơn dựng ở `beforeAll`.
+      const panelOrders = await readCustomerPanelOrders(session.sessionId);
+      expect(
+        panelOrders[0]?.code,
+        'Đơn đầu của bảng khách phải là đơn dựng ở beforeAll, vì biến lấy đơn đầu',
+      ).toBe(customerOrderCode);
+
+      await chatComposer(page).fill(`/${shortcut}`);
+      await expect(page.getByRole('option', { name: `/${shortcut}` })).toBeVisible();
+      await page.keyboard.press('Enter');
+
+      await expect(chatComposer(page)).toHaveValue(
+        `Mình kiểm đơn ${customerOrderCode} giúp bạn nhé.`,
+      );
+    } finally {
+      await deleteCannedResponsesWithSuffix(admin.page, runSuffix);
     }
-    return { data: { items, nextCursor: null } };
+  });
+  // Lịch sử dài 50 tin: 18 tin đầu xen kẽ khách và nhân viên (9 tin khách), các tin sau do nhân viên gửi.
+  // Backend giới hạn khách 10 tin mỗi phút.
+  const LONG_HISTORY_MESSAGE_COUNT = 50;
+  const CUSTOMER_MESSAGE_COUNT = 9;
+
+  function longHistoryText(index: number, marker: string): string {
+    const base = `Tin nhắn thứ ${index} trong hội thoại dài để kiểm tra vùng cuộn của khung chat.`;
+    return index === 1 ? `${base} ${marker}` : base;
   }
 
   for (const viewport of [
@@ -584,18 +712,40 @@ test.describe('SD-UI1: màn CSKH', () => {
     { name: '375', width: 375, height: 812 },
   ]) {
     test(`SD-UI2: ảnh chụp khung chat ${viewport.name}px không tràn ngang và cuộn được với 50 tin`, async () => {
+      test.setTimeout(90000);
       const testInfo = test.info();
       const { page } = support;
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
 
-      // Ghi đè lịch sử với 50 tin nhắn để kiểm tra vùng cuộn thật và chụp ảnh có thanh cuộn (R1-02).
-      const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-      await routes.mockRoute('admin-sessions.json', 'lịch sử tin của hội thoại cho nhân viên', {
-        responseOverride: createFiftyMessages(),
-      });
+      // Dựng lịch sử 50 tin trong phiên thật. Tin 1 của khách mở phiên, rồi nhân viên nhận để gửi tin xen kẽ.
+      sessionCounter += 1;
+      const marker = `Lịch sử dài ${runSuffix} số ${sessionCounter}`;
+      const customerChat = await openAnonymousCustomerChat();
+      openCustomerChats.push(customerChat);
+      await customerChat.send(longHistoryText(1, marker));
+      const queued = await findQueueSession(page, 'waiting', marker);
+      createdSessionIds.push(queued.id);
+      await claimSessionByApi(page, queued.id);
+      for (let index = 2; index <= LONG_HISTORY_MESSAGE_COUNT; index++) {
+        const isCustomerTurn = index % 2 === 1 && (index + 1) / 2 <= CUSTOMER_MESSAGE_COUNT;
+        if (isCustomerTurn) await customerChat.send(longHistoryText(index, marker));
+        else await sendStaffMessageByApi(page, queued.id, longHistoryText(index, marker));
+      }
+
+      // Năm mẫu dùng chung làm danh sách mẫu có nhiều dòng, như khi nhân viên dùng thật.
+      // Tạo trước khi mở trang, vì khung soạn tin đọc danh sách mẫu một lần khi trang nạp.
+      for (let index = 1; index <= 5; index++) {
+        const record = await createCannedResponseByApi(admin.page, {
+          shortcut: `dai-${index}-${runSuffix}`,
+          body: `Mẫu số ${index} cho danh sách dài.`,
+          shared: true,
+        });
+        createdCannedIds.push(record.id);
+      }
 
       await openDeskPage(page);
-      await queueRow(page).click();
+      await page.getByRole('tab', { name: 'Của tôi', exact: true }).click();
+      await queueRow(page, marker).click();
 
       const lastMessageLocator = page
         .locator('.support-chat-message')
@@ -603,26 +753,33 @@ test.describe('SD-UI1: màn CSKH', () => {
       await expect(lastMessageLocator).toBeVisible();
 
       const scrollRegion = page.locator('.support-chat-scroll');
-      // Đọc scrollTop bằng expect.poll để đảm bảo useEffect cuộn đáy đã chạy xong (R2-02).
+      // Đọc scrollTop bằng expect.poll để đảm bảo useEffect cuộn đáy đã chạy xong.
       await expect
         .poll(async () => scrollRegion.evaluate((el) => el.scrollTop), {
           message: 'Vùng tin phải cuộn xuống đáy khi có 50 tin',
         })
         .toBeGreaterThan(0);
 
-      await page.getByRole('button', { name: 'Nhận', exact: true }).click();
+      // Phiên đã do nhân viên giữ, nên ô soạn bật ngay.
       await expect(chatComposer(page)).toBeEnabled();
 
-      // Mở danh sách mẫu: ô soạn cao thêm, kiểm tra tin 50 không bị cắt nhờ ResizeObserver (R2-02).
+      // Mở danh sách mẫu: ô soạn cao thêm, kiểm tra tin 50 không bị cắt nhờ ResizeObserver.
       await chatComposer(page).fill('/');
-      await expect(page.getByRole('listbox')).toBeVisible();
+      const cannedListbox = page.getByRole('listbox');
+      await expect(cannedListbox).toBeVisible();
+      // Danh sách phải có ít nhất 5 dòng, nếu không số đo bên dưới đo một danh sách rỗng.
+      await expect
+        .poll(() => cannedListbox.getByRole('option').count(), {
+          message: 'Danh sách mẫu phải có ít nhất 5 dòng',
+        })
+        .toBeGreaterThanOrEqual(5);
       await expectNoHorizontalOverflow(page);
 
       // Ở 375px (xếp dọc): cuộn khung chat vào tầm nhìn trước khi đo.
       const chatCard = page.locator('.support-chat-open');
       await chatCard.scrollIntoViewIfNeeded();
 
-      // Tin 50 phải nằm trọn trong vùng cuộn: cạnh dưới tin không vượt quá cạnh dưới vùng (R2-02).
+      // Tin 50 phải nằm trọn trong vùng cuộn: cạnh dưới tin không vượt quá cạnh dưới vùng.
       await expect
         .poll(
           async () => {
@@ -640,7 +797,7 @@ test.describe('SD-UI1: màn CSKH', () => {
       const composerBox = await readBox(chatComposer(page));
       expect(composerBox.x).toBeGreaterThanOrEqual(0);
       expect(composerBox.x + composerBox.width).toBeLessThanOrEqual(viewport.width);
-      // Kiểm tra ô soạn nằm trong khung nhìn theo chiều dọc sau scrollIntoViewIfNeeded (R2-02 mục 2).
+      // Kiểm tra ô soạn nằm trong khung nhìn theo chiều dọc sau scrollIntoViewIfNeeded.
       expect(composerBox.y).toBeGreaterThanOrEqual(0);
       expect(composerBox.y + composerBox.height).toBeLessThanOrEqual(viewport.height);
 
@@ -681,35 +838,57 @@ test.describe('SD-UI1: màn CSKH', () => {
     });
   }
 
+  // SD-UI3: thông tin khách đọc từ `GET sessions/{id}/customer` thật. Khách đã đăng nhập có đơn `shipping` dựng ở `beforeAll`.
+  async function readCustomerPanelOrders(sessionId: string) {
+    const response = await support.page.request.get(
+      `/api/admin/support/sessions/${sessionId}/customer`,
+    );
+    expect(response.status(), await response.text()).toBe(200);
+    const body: {
+      data: { orders: { code: string; total: number; itemCount: number }[] };
+    } = await response.json();
+    return body.data.orders;
+  }
+
+  async function readCustomerProfile() {
+    const response = await customer.page.request.get('/api/me');
+    expect(response.status(), await response.text()).toBe(200);
+    const body: { data: { name: string; email: string } } = await response.json();
+    return body.data;
+  }
+
   test('SD-UI3: cột thông tin khách hiển thị dữ liệu khách đã đăng nhập và link đơn hàng', async () => {
     const { page } = support;
-    await openWaitingSession(page);
+    const session = await createWaitingSession({ loggedIn: true });
+    await openSession(page, session, 'waiting');
 
-    // Cột thông tin khách hiển thị hồ sơ khách hàng đã đăng nhập.
+    // Cột thông tin khách hiển thị hồ sơ của khách đã đăng nhập.
+    const profile = await readCustomerProfile();
     const customerPanel = page.locator('.support-customer-panel');
-    await expect(customerPanel.getByText('Nguyễn Minh Anh')).toBeVisible();
-    await expect(customerPanel.getByText('minhanh@example.com')).toBeVisible();
+    await expect(customerPanel.getByText(profile.name, { exact: true })).toBeVisible();
+    await expect(customerPanel.getByText(profile.email, { exact: true })).toBeVisible();
     await expect(customerPanel.getByText('Khách vãng lai')).toHaveCount(0);
 
-    // Đơn hàng PK123 có link tới trang quản trị đơn, trạng thái, tổng tiền và số sản phẩm.
-    const orderLink = customerPanel.getByRole('link', { name: 'PK123' });
+    // Đơn hàng có link tới trang quản trị đơn, trạng thái, tổng tiền và số sản phẩm của backend.
+    const orders = await readCustomerPanelOrders(session.sessionId);
+    const order = orders.find((candidate) => candidate.code === customerOrderCode);
+    expect(order, 'Bảng khách phải có đơn vừa đặt').toBeDefined();
+    const orderLink = customerPanel.getByRole('link', { name: customerOrderCode });
     await expect(orderLink).toBeVisible();
-    await expect(orderLink).toHaveAttribute('href', '/admin/orders/PK123');
-    await expect(customerPanel.getByText('Đang giao hàng')).toBeVisible();
-    await expect(customerPanel.getByText('459.000 đ')).toBeVisible();
-    await expect(customerPanel.getByText('2 sản phẩm')).toBeVisible();
+    await expect(orderLink).toHaveAttribute('href', `/admin/orders/${customerOrderCode}`);
+    // Khách có thể có nhiều đơn `shipping` do spec khác đặt, nên các giá trị được tìm trong dòng của đơn vừa đặt.
+    const orderRow = customerPanel
+      .locator('.support-customer-order-item')
+      .filter({ hasText: customerOrderCode });
+    await expect(orderRow.getByText('Đang giao hàng')).toBeVisible();
+    await expect(orderRow.getByText(formatVnd(order!.total))).toBeVisible();
+    await expect(orderRow.getByText(`${order!.itemCount} sản phẩm`)).toBeVisible();
   });
 
   test('SD-UI3: mở phiên từ tab Của tôi hiện thông tin khách vãng lai Chưa có thông tin', async () => {
     const { page } = support;
-    await page.goto('/admin/conversations');
-    await expect(
-      page.getByRole('heading', { level: 1, name: 'Chăm sóc khách hàng' }),
-    ).toBeVisible();
-
-    // Mở tab Của tôi và chọn phiên khách vãng lai.
-    await page.getByRole('tab', { name: 'Của tôi' }).click();
-    await page.getByText('Mình muốn đổi size áo.').click();
+    const session = await createHeldSession();
+    await openSession(page, session, 'mine');
 
     const customerPanel = page.locator('.support-customer-panel');
     // Hiển thị nhãn Khách vãng lai, Chưa có thông tin và thông báo không có đơn hàng.
@@ -718,72 +897,77 @@ test.describe('SD-UI1: màn CSKH', () => {
     await expect(customerPanel.getByText('Khách chưa có đơn hàng.')).toBeVisible();
   });
 
+  // Nhãn đồng nghiệp trong hộp thoại chuyển, theo cùng quy tắc của màn: tên hiển thị, hoặc 4 ký tự cuối của mã.
+  async function readColleagueLabel(colleagueUserId: string): Promise<string> {
+    const response = await support.page.request.get(PRESENCE_PATH);
+    expect(response.status(), await response.text()).toBe(200);
+    const body: { data: { staffId: string; displayName: string | null }[] } = await response.json();
+    const entry = body.data.find((candidate) => candidate.staffId === colleagueUserId);
+    expect(entry, 'Đồng nghiệp phải đang sẵn sàng').toBeDefined();
+    return entry!.displayName?.trim() || `Nhân viên ${colleagueUserId.slice(-4)}`;
+  }
+
   test('SD-UI3: hộp thoại chuyển chỉ hiện đồng nghiệp sẵn sàng, gửi PUT với staffId và note', async () => {
     const { page } = support;
+    const session = await createHeldSession();
     const colleagueUserId = await readOwnUserId(colleague.page);
-    const putRes = await colleague.page.request.put(PRESENCE_PATH, {
-      headers: { Origin: e2eEnvironment.webOrigin },
-      data: { status: 'available' },
-    });
-    expect(putRes.status()).toBe(200);
+    await setPresenceByApi(colleague.page, 'available');
+    try {
+      await openSession(page, session, 'mine');
 
-    await page.goto('/admin/conversations');
-    await page.getByRole('tab', { name: 'Của tôi' }).click();
-    await page.getByText('Mình muốn đổi size áo.').click();
+      // Vùng thông báo role=status luôn hiện diện trong DOM với display: block ngay cả khi chưa có nội dung.
+      const statusNotice = page.locator('.support-transfer-status');
+      await expect(statusNotice).toHaveCSS('display', 'block');
 
-    // Vùng thông báo role=status luôn hiện diện trong DOM với display: block ngay cả khi chưa có nội dung.
-    const statusNotice = page.locator('.support-transfer-status');
-    await expect(statusNotice).toHaveCSS('display', 'block');
+      // Nút Chuyển và Kết thúc hiển thị trên thanh trên của khung chat.
+      const transferButton = page.getByRole('button', { name: 'Chuyển', exact: true });
+      await expect(transferButton).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Kết thúc', exact: true })).toBeVisible();
 
-    // Nút Chuyển và Kết thúc hiển thị trên thanh trên của khung chat.
-    const transferButton = page.getByRole('button', { name: 'Chuyển', exact: true });
-    await expect(transferButton).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Kết thúc', exact: true })).toBeVisible();
+      await transferButton.click();
+      const dialog = page.getByRole('dialog', { name: 'Chuyển hội thoại' });
+      await expect(dialog).toBeVisible();
 
-    await transferButton.click();
-    const dialog = page.getByRole('dialog', { name: 'Chuyển hội thoại' });
-    await expect(dialog).toBeVisible();
+      const staffLabel = await readColleagueLabel(colleagueUserId);
+      const staffRadio = dialog.getByLabel(staffLabel);
+      await expect(staffRadio).toBeVisible();
 
-    // Backend thật chưa trả displayName nên nhãn hiển thị Nhân viên cộng 4 ký tự cuối của staffId.
-    const staffLabel = `Nhân viên ${colleagueUserId.slice(-4)}`;
-    const staffRadio = dialog.getByLabel(staffLabel);
-    await expect(staffRadio).toBeVisible();
+      // Chọn nhân viên và nhập ghi chú nội bộ.
+      await staffRadio.click();
+      const noteField = dialog.getByLabel('Ghi chú nội bộ');
+      await noteField.fill('  Khách cần đổi size giày sang 42  ');
 
-    // Chọn nhân viên và nhập ghi chú nội bộ.
-    await staffRadio.click();
-    const noteField = dialog.getByLabel('Ghi chú nội bộ');
-    await noteField.fill('  Khách cần đổi size giày sang 42  ');
+      // Bắt request PUT assignment khi bấm Chuyển.
+      const putRequestPromise = page.waitForRequest(
+        (req) => req.url().includes('/assignment') && req.method() === 'PUT',
+      );
 
-    // Bắt request PUT assignment khi bấm Chuyển.
-    const putRequestPromise = page.waitForRequest(
-      (req) => req.url().includes('/assignment') && req.method() === 'PUT',
-    );
+      await dialog.getByRole('button', { name: 'Chuyển', exact: true }).click();
 
-    await dialog.getByRole('button', { name: 'Chuyển', exact: true }).click();
+      const putRequest = await putRequestPromise;
+      const putBody: { staffId: string; note: string | null } = putRequest.postDataJSON();
+      expect(putBody).toEqual({
+        staffId: colleagueUserId,
+        note: 'Khách cần đổi size giày sang 42',
+      });
+      // Hộp thoại đóng và dòng status thông báo xuất hiện ở đầu trang.
+      await expect(dialog).toHaveCount(0);
+      await expect(statusNotice).toBeVisible();
+      await expect(statusNotice).toContainText(`Đã chuyển hội thoại cho ${staffLabel}.`);
 
-    const putRequest = await putRequestPromise;
-    const putBody = putRequest.postDataJSON() as { staffId: string; note: string | null };
-    expect(putBody).toEqual({
-      staffId: colleagueUserId,
-      note: 'Khách cần đổi size giày sang 42',
-    });
-    // Hộp thoại đóng và dòng status thông báo xuất hiện ở đầu trang.
-    await expect(dialog).toHaveCount(0);
-    await expect(statusNotice).toBeVisible();
-    await expect(statusNotice).toContainText(`Đã chuyển hội thoại cho ${staffLabel}.`);
-
-    // Khung chat quay về trạng thái chưa chọn phiên.
-    await expect(page.getByText('Tin nhắn của hội thoại đang mở sẽ hiện ở đây.')).toBeVisible();
-
-    // Dọn dẹp trạng thái của colleague về away.
-    await colleague.page.request.put(PRESENCE_PATH, {
-      headers: { Origin: e2eEnvironment.webOrigin },
-      data: { status: 'away' },
-    });
+      // Khung chat quay về trạng thái chưa chọn phiên.
+      await expect(page.getByText('Tin nhắn của hội thoại đang mở sẽ hiện ở đây.')).toBeVisible();
+      // Backend đã chuyển phiên: phiên nằm trong view `mine` của đồng nghiệp.
+      await findQueueSession(colleague.page, 'mine', session.marker);
+    } finally {
+      // Dọn trạng thái của colleague về away.
+      await setPresenceByApi(colleague.page, 'away');
+    }
   });
 
   test('SD-UI3: bấm Kết thúc hỏi xác nhận trước, gửi PATCH closed và ô soạn tắt', async () => {
     const { page } = support;
+    const session = await createHeldSession();
     const patchRequests: string[] = [];
     page.on('request', (req) => {
       if (req.url().includes('/api/admin/support/sessions/') && req.method() === 'PATCH') {
@@ -791,9 +975,7 @@ test.describe('SD-UI1: màn CSKH', () => {
       }
     });
 
-    await page.goto('/admin/conversations');
-    await page.getByRole('tab', { name: 'Của tôi' }).click();
-    await page.getByText('Mình muốn đổi size áo.').click();
+    await openSession(page, session, 'mine');
 
     const endBtn = page.getByRole('button', { name: 'Kết thúc', exact: true });
 
@@ -828,7 +1010,7 @@ test.describe('SD-UI1: màn CSKH', () => {
     await dialog.getByRole('button', { name: 'Kết thúc', exact: true }).click();
 
     const patchRequest = await patchRequestPromise;
-    const patchBody = patchRequest.postDataJSON() as { status: string };
+    const patchBody: { status: string } = patchRequest.postDataJSON();
     expect(patchBody).toEqual({ status: 'closed' });
     expect(patchRequests).toHaveLength(1);
 
@@ -841,9 +1023,8 @@ test.describe('SD-UI1: màn CSKH', () => {
 
   test('SD-UI3: phím Esc đóng hộp thoại chuyển và kết thúc, trả focus về đúng nút mở', async () => {
     const { page } = support;
-    await page.goto('/admin/conversations');
-    await page.getByRole('tab', { name: 'Của tôi' }).click();
-    await page.getByText('Mình muốn đổi size áo.').click();
+    const session = await createHeldSession();
+    await openSession(page, session, 'mine');
 
     const transferBtn = page.getByRole('button', { name: 'Chuyển', exact: true });
     const endBtn = page.getByRole('button', { name: 'Kết thúc', exact: true });
@@ -870,14 +1051,16 @@ test.describe('SD-UI1: màn CSKH', () => {
     const { page } = support;
     await page.setViewportSize({ width: 375, height: 812 });
 
-    await openWaitingSession(page);
+    const session = await createWaitingSession({ loggedIn: true });
+    await openSession(page, session, 'waiting');
 
     const toggleButton = page.getByRole('button', { name: 'Thông tin khách' });
     await expect(toggleButton).toBeVisible();
     await expect(toggleButton).toHaveAttribute('aria-expanded', 'false');
 
+    const profile = await readCustomerProfile();
     const customerPanel = page.locator('.support-customer-panel');
-    const customerName = customerPanel.getByText('Nguyễn Minh Anh');
+    const customerName = customerPanel.getByText(profile.name, { exact: true });
     // Trước khi bấm mở ngăn, thông tin khách hàng phải ở trạng thái ẩn.
     await expect(customerName).toBeHidden();
 
@@ -932,158 +1115,146 @@ test.describe('SD-UI1: màn CSKH', () => {
   test('SD-UI3: ảnh chụp 1280px và 375px của cột khách và các hộp thoại không tràn ngang', async () => {
     const testInfo = test.info();
     const { page } = support;
-    await colleague.page.request.put(PRESENCE_PATH, {
-      headers: { Origin: e2eEnvironment.webOrigin },
-      data: { status: 'available' },
-    });
+    await setPresenceByApi(colleague.page, 'available');
+    try {
+      // 1. Chụp cột thông tin khách ở 1280px.
+      await page.setViewportSize({ width: 1280, height: 800 });
+      const waiting = await createWaitingSession({ loggedIn: true });
+      await openSession(page, waiting, 'waiting');
+      await expectNoHorizontalOverflow(page);
 
-    // 1. Chụp cột thông tin khách ở 1280px.
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await openWaitingSession(page);
-    await expectNoHorizontalOverflow(page);
+      const customerPanel1280 = page.locator('.support-customer-panel');
+      const panelBox1280 = await readBox(customerPanel1280);
+      // Đỉnh lưới của ba cột ở 1280px phải bắt đầu tại y=159 (lệch không quá 2px).
+      expect(Math.abs(panelBox1280.y - 159)).toBeLessThanOrEqual(2);
 
-    const customerPanel1280 = page.locator('.support-customer-panel');
-    const panelBox1280 = await readBox(customerPanel1280);
-    // Đỉnh lưới của ba cột ở 1280px phải bắt đầu tại y=159 (lệch không quá 2px).
-    expect(Math.abs(panelBox1280.y - 159)).toBeLessThanOrEqual(2);
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'customer-panel-1280.png'),
+        fullPage: true,
+      });
 
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'customer-panel-1280.png'),
-      fullPage: true,
-    });
+      // 2. Chụp hộp thoại chuyển ở 1280px và 375px, trên một phiên do nhân viên giữ.
+      const held = await createHeldSession();
+      await openSession(page, held, 'mine');
 
-    // 2. Chụp hộp thoại chuyển ở 1280px và 375px.
-    await page.getByRole('tab', { name: 'Của tôi' }).click();
-    await page.getByText('Mình muốn đổi size áo.').click();
+      await page.getByRole('button', { name: 'Chuyển', exact: true }).click();
+      const transferDialog = page.getByRole('dialog', { name: 'Chuyển hội thoại' });
+      await expect(transferDialog).toBeVisible();
 
-    await page.getByRole('button', { name: 'Chuyển', exact: true }).click();
-    const transferDialog = page.getByRole('dialog', { name: 'Chuyển hội thoại' });
-    await expect(transferDialog).toBeVisible();
+      // Chọn đồng nghiệp và nhập ghi chú nội bộ trước khi chụp ảnh theo yêu cầu review.
+      const colleagueUserId = await readOwnUserId(colleague.page);
+      const staffLabel = await readColleagueLabel(colleagueUserId);
+      await transferDialog.getByLabel(staffLabel).click();
+      await transferDialog.getByLabel('Ghi chú nội bộ').fill('Khách cần đổi size giày sang 42');
 
-    // Chọn đồng nghiệp và nhập ghi chú nội bộ trước khi chụp ảnh theo yêu cầu review.
-    const colleagueUserId = await readOwnUserId(colleague.page);
-    const staffLabel = `Nhân viên ${colleagueUserId.slice(-4)}`;
-    await transferDialog.getByLabel(staffLabel).click();
-    await transferDialog.getByLabel('Ghi chú nội bộ').fill('Khách cần đổi size giày sang 42');
+      await expectNoHorizontalOverflow(page);
 
-    await expectNoHorizontalOverflow(page);
+      const transferDialogBox1280 = await readBox(transferDialog);
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'transfer-dialog-1280.png'),
+        fullPage: true,
+      });
 
-    const transferDialogBox1280 = await readBox(transferDialog);
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'transfer-dialog-1280.png'),
-      fullPage: true,
-    });
+      // Hộp thoại chuyển ở 375px.
+      await page.setViewportSize({ width: 375, height: 812 });
+      await expectNoHorizontalOverflow(page);
+      const transferDialogBox375 = await readBox(transferDialog);
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'transfer-dialog-375.png'),
+        fullPage: true,
+      });
 
-    // Hộp thoại chuyển ở 375px.
-    await page.setViewportSize({ width: 375, height: 812 });
-    await expectNoHorizontalOverflow(page);
-    const transferDialogBox375 = await readBox(transferDialog);
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'transfer-dialog-375.png'),
-      fullPage: true,
-    });
+      // Đóng hộp thoại chuyển.
+      await page.keyboard.press('Escape');
+      await expect(transferDialog).toHaveCount(0);
 
-    // Đóng hộp thoại chuyển.
-    await page.keyboard.press('Escape');
-    await expect(transferDialog).toHaveCount(0);
+      // 3. Chụp hộp thoại kết thúc ở 375px và 1280px.
+      await page.getByRole('button', { name: 'Kết thúc', exact: true }).click();
+      const endDialog = page.getByRole('dialog', { name: 'Kết thúc hội thoại này?' });
+      await expect(endDialog).toBeVisible();
+      await expectNoHorizontalOverflow(page);
 
-    // 3. Chụp hộp thoại kết thúc ở 375px và 1280px.
-    await page.getByRole('button', { name: 'Kết thúc', exact: true }).click();
-    const endDialog = page.getByRole('dialog', { name: 'Kết thúc hội thoại này?' });
-    await expect(endDialog).toBeVisible();
-    await expectNoHorizontalOverflow(page);
+      const endDialogBox375 = await readBox(endDialog);
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'end-dialog-375.png'),
+        fullPage: true,
+      });
 
-    const endDialogBox375 = await readBox(endDialog);
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'end-dialog-375.png'),
-      fullPage: true,
-    });
+      await page.setViewportSize({ width: 1280, height: 800 });
+      await expectNoHorizontalOverflow(page);
+      const endDialogBox1280 = await readBox(endDialog);
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'end-dialog-1280.png'),
+        fullPage: true,
+      });
 
-    await page.setViewportSize({ width: 1280, height: 800 });
-    await expectNoHorizontalOverflow(page);
-    const endDialogBox1280 = await readBox(endDialog);
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'end-dialog-1280.png'),
-      fullPage: true,
-    });
+      // Đóng hộp thoại kết thúc.
+      await page.keyboard.press('Escape');
+      await expect(endDialog).toHaveCount(0);
 
-    // Đóng hộp thoại kết thúc.
-    await page.keyboard.press('Escape');
-    await expect(endDialog).toHaveCount(0);
+      const measurements = {
+        panel1280: panelBox1280,
+        transferDialog1280: transferDialogBox1280,
+        transferDialog375: transferDialogBox375,
+        endDialog1280: endDialogBox1280,
+        endDialog375: endDialogBox375,
+      };
 
-    const measurements = {
-      panel1280: panelBox1280,
-      transferDialog1280: transferDialogBox1280,
-      transferDialog375: transferDialogBox375,
-      endDialog1280: endDialogBox1280,
-      endDialog375: endDialogBox375,
-    };
-
-    await testInfo.attach('measurements-dialogs-and-panels', {
-      body: JSON.stringify(measurements, null, 2),
-      contentType: 'application/json',
-    });
-
-    await colleague.page.request.put(PRESENCE_PATH, {
-      headers: { Origin: e2eEnvironment.webOrigin },
-      data: { status: 'away' },
-    });
+      await testInfo.attach('measurements-dialogs-and-panels', {
+        body: JSON.stringify(measurements, null, 2),
+        contentType: 'application/json',
+      });
+    } finally {
+      await setPresenceByApi(colleague.page, 'away');
+    }
   });
 
-  // SD-UI4: tab Gọi lại dùng route giả có trạng thái trên trang riêng, vì backend chưa có hai route callback.
-  // `callback.created` và `session.reminded` chỉ có unit test, vì backend chưa phát hai sự kiện này.
-  type CallbackRow = Record<string, unknown>;
-
+  // SD-UI4: tab Gọi lại đọc yêu cầu thật do khách ẩn danh để lại qua API.
+  // Dòng "Đã xóa số" (E2E không chạy được bước xóa số sau 30 ngày), sự kiện `session.reminded` và `callback.created` chỉ có unit test.
   interface CallbackDesk {
     page: Page;
     consoleIssues: string[];
-    // Body của mọi request PATCH mà giao diện đã gửi.
+    // Body của mọi request PATCH mà giao diện đã gửi, theo bản gốc trước khi route sửa.
     patchBodies: unknown[];
-    rows: CallbackRow[];
+    pendingPhone: string;
+    pendingId: string;
   }
-
-  const PATCH_ERROR_MESSAGE = 'Máy chủ đang bận. Hãy thử lại sau.';
 
   async function openCallbackDesk(
     options: { patchFails?: boolean; width?: number; height?: number; longNote?: boolean } = {},
   ): Promise<CallbackDesk> {
+    // Chỉ để lại yêu cầu của case ở nhóm Cần gọi lại, và một yêu cầu đã xử lý ở nhóm Đã xử lý.
+    await resolveAllPendingCallbacks(support.page);
+    const handledPhone = makeUniquePhone();
+    await createCallbackByApi(handledPhone, null);
+    const pendingPhone = makeUniquePhone();
+    // Ghi chú một chuỗi dài không dấu cách, để đo việc ngắt dòng trong cột hẹp.
+    await createCallbackByApi(
+      pendingPhone,
+      options.longNote ? 'GoiLaiSauMuoiTam'.repeat(12) : 'Khách cần gọi lại sau 18h.',
+    );
+    const records = await listCallbacksByApi(support.page);
+    const handledRecord = records.find((record) => record.phone === handledPhone);
+    expect(handledRecord, 'Yêu cầu đã xử lý vừa tạo phải có trong danh sách').toBeDefined();
+    await markCallbackByApi(support.page, handledRecord!.id, 'done');
+    const pendingRecord = records.find((record) => record.phone === pendingPhone);
+    expect(pendingRecord, 'Yêu cầu đang chờ vừa tạo phải có trong danh sách').toBeDefined();
+    const pendingId = pendingRecord!.id;
+
     const page = await support.context.newPage();
-    // Case lỗi chủ động trả 500 cho PATCH. Chỉ đúng lỗi tải đó được bỏ qua, mọi dòng console khác vẫn tính.
+    // Case lỗi chủ động gây lỗi 400 cho PATCH. Chỉ đúng lỗi tải đó được bỏ qua, mọi dòng console khác vẫn tính.
     const allowedFailures: AllowedLoadFailure[] = options.patchFails
-      ? [{ urlPattern: /\/api\/admin\/support\/callback-requests\//, status: 500 }]
+      ? [{ urlPattern: CALLBACKS_URL_PATTERN, status: 400 }]
       : [];
     const consoleIssues = collectConsoleIssues(page, allowedFailures);
     await page.setViewportSize({ width: options.width ?? 1280, height: options.height ?? 800 });
-    await stubWebFonts(page);
-    await mockUnfinishedQueueRoutes(page);
-
-    const listExample = findSupportDeskExample('admin-callbacks.json', 'danh sách yêu cầu gọi lại');
-    const rows = structuredClone((listExample.response as { data: CallbackRow[] }).data);
-    // Ghi chú một chuỗi dài không dấu cách, để đo việc ngắt dòng trong cột hẹp.
-    if (options.longNote) rows[0] = { ...rows[0], note: 'GoiLaiSauMuoiTam'.repeat(12) };
     const patchBodies: unknown[] = [];
-    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-    // Danh sách đọc từ `rows`, nên PATCH thành công làm lần đọc lại kế tiếp trả đúng trạng thái mới.
-    await routes.mockRoute('admin-callbacks.json', 'danh sách yêu cầu gọi lại', {
-      respondWith: () => ({ body: { data: rows } }),
+    page.on('request', (request) => {
+      if (request.method() === 'PATCH' && CALLBACKS_URL_PATTERN.test(request.url())) {
+        patchBodies.push(request.postDataJSON());
+      }
     });
-    await routes.mockRoute('admin-callbacks.json', 'đánh dấu đã gọi', {
-      respondWith: (request) => {
-        const body = request.postDataJSON() as { status: string };
-        patchBodies.push(body);
-        if (options.patchFails) {
-          return {
-            status: 500,
-            body: { error: { code: 'INTERNAL', message: PATCH_ERROR_MESSAGE } },
-          };
-        }
-        const row = rows[0] as CallbackRow;
-        row.status = body.status;
-        row.handledAt = '2026-11-04T01:30:00Z';
-        return { body: { data: row } };
-      },
-    });
-    return { page, consoleIssues, patchBodies, rows };
+    return { page, consoleIssues, patchBodies, pendingPhone, pendingId };
   }
 
   async function openCallbacksTab(page: Page) {
@@ -1092,24 +1263,47 @@ test.describe('SD-UI1: màn CSKH', () => {
     await expect(page.getByRole('heading', { level: 3, name: /^Cần gọi lại/ })).toBeVisible();
   }
 
-  const PENDING_PHONE = '0901234567';
+  // Đổi body của `PATCH callback-requests` thành trạng thái không hợp lệ rồi chuyển tới backend thật. Giao diện chỉ gửi `done` hoặc `unreachable`, nên case phải sửa request để backend trả 400.
+  async function sendInvalidCallbackStatus(route: Route) {
+    if (route.request().method() !== 'PATCH') {
+      await route.fallback();
+      return;
+    }
+    await route.continue({ postData: JSON.stringify({ status: 'invalid-status' }) });
+  }
+
+  // Câu lỗi mà backend trả cho đúng body không hợp lệ, lấy bằng lời gọi API trực tiếp để case không viết cứng câu này.
+  async function readBackendCallbackError(callbackId: string): Promise<string> {
+    const response = await support.page.request.patch(
+      `/api/admin/support/callback-requests/${callbackId}`,
+      { headers: SUPPORT_API_HEADERS, data: { status: 'invalid-status' } },
+    );
+    expect(response.status(), await response.text()).toBe(400);
+    const body: { error: { message: string; details?: { message: string }[] } } =
+      await response.json();
+    // Giao diện hiện câu của lỗi gắn với trường khi có, nếu không hiện câu chung của lỗi.
+    return body.error.details?.[0]?.message ?? body.error.message;
+  }
 
   test('SD-UI4: Đã gọi gửi PATCH body done, dòng sang nhóm Đã xử lý và tiêu điểm về tiêu đề nhóm', async () => {
     const desk = await openCallbackDesk();
-    const { page } = desk;
+    const { page, pendingPhone } = desk;
     try {
       await openCallbacksTab(page);
       const pendingGroup = page.getByRole('list', { name: /^Cần gọi lại/ });
       const handledGroup = page.getByRole('list', { name: 'Đã xử lý' });
+      const handledBefore = (await listCallbacksByApi(support.page)).filter(
+        (record) => record.status !== 'pending',
+      ).length;
       await expect(pendingGroup.getByRole('listitem')).toHaveCount(1);
-      await expect(handledGroup.getByRole('listitem')).toHaveCount(1);
-      // Số điện thoại là link `tel:`. Dòng đã xóa số hiện chữ thường.
-      await expect(pendingGroup.getByRole('link', { name: PENDING_PHONE })).toHaveAttribute(
-        'href',
-        `tel:${PENDING_PHONE}`,
+      await expect(handledGroup.getByRole('listitem')).toHaveCount(
+        Math.min(handledBefore, MAX_HANDLED_ROWS),
       );
-      await expect(handledGroup.getByText('Đã xóa số')).toBeVisible();
-      await expect(handledGroup.getByRole('link')).toHaveCount(0);
+      // Số điện thoại là link `tel:`.
+      await expect(pendingGroup.getByRole('link', { name: pendingPhone })).toHaveAttribute(
+        'href',
+        `tel:${pendingPhone}`,
+      );
       // Dòng cần gọi lại đứng trước dòng đã xử lý trong cột.
       const pendingBox = await readBox(pendingGroup);
       const handledBox = await readBox(handledGroup);
@@ -1120,25 +1314,31 @@ test.describe('SD-UI1: màn CSKH', () => {
           request.method() === 'PATCH' &&
           request.url().includes('/api/admin/support/callback-requests/'),
       );
-      await page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }).click();
+      await page.getByRole('button', { name: `Đánh dấu đã gọi: ${pendingPhone}` }).click();
       expect((await patchRequest).postDataJSON()).toEqual({ status: 'done' });
 
-      // Nhóm Cần gọi lại biến mất, cả hai dòng nằm ở nhóm Đã xử lý và dòng vừa đánh dấu có nhãn Đã gọi.
+      // Nhóm Cần gọi lại biến mất, dòng vừa đánh dấu nằm ở nhóm Đã xử lý và có nhãn Đã gọi.
       await expect(page.getByRole('heading', { level: 3, name: /^Cần gọi lại/ })).toHaveCount(0);
-      await expect(handledGroup.getByRole('listitem')).toHaveCount(2);
-      // Dòng mẫu đã xử lý cũng có nhãn Đã gọi, nên chỉ tìm nhãn trong dòng vừa đánh dấu.
+      await expect(handledGroup.getByRole('listitem')).toHaveCount(
+        Math.min(handledBefore + 1, MAX_HANDLED_ROWS),
+      );
       await expect(
         handledGroup
           .getByRole('listitem')
-          .filter({ hasText: PENDING_PHONE })
+          .filter({ hasText: pendingPhone })
           .getByText('Đã gọi', { exact: true }),
       ).toBeVisible();
       await expect(page.getByText('Không có yêu cầu nào cần gọi lại.')).toBeVisible();
       await expect(page.getByRole('status').filter({ hasText: 'Đã đánh dấu' })).toHaveText(
-        `Đã đánh dấu yêu cầu ${PENDING_PHONE} là Đã gọi.`,
+        `Đã đánh dấu yêu cầu ${pendingPhone} là Đã gọi.`,
       );
       await expect(page.getByRole('heading', { level: 3, name: 'Đã xử lý' })).toBeFocused();
       expect(desk.patchBodies).toEqual([{ status: 'done' }]);
+      // Backend đã ghi trạng thái.
+      const stored = (await listCallbacksByApi(support.page)).find(
+        (record) => record.id === desk.pendingId,
+      );
+      expect(stored?.status).toBe('done');
       expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
     } finally {
       await page.close();
@@ -1147,18 +1347,26 @@ test.describe('SD-UI1: màn CSKH', () => {
 
   test('SD-UI4: Không liên lạc được gửi PATCH body unreachable và hiện nhãn tương ứng', async () => {
     const desk = await openCallbackDesk();
-    const { page } = desk;
+    const { page, pendingPhone } = desk;
     try {
       await openCallbacksTab(page);
 
       await page
-        .getByRole('button', { name: `Đánh dấu không liên lạc được: ${PENDING_PHONE}` })
+        .getByRole('button', { name: `Đánh dấu không liên lạc được: ${pendingPhone}` })
         .click();
 
       const handledGroup = page.getByRole('list', { name: 'Đã xử lý' });
-      await expect(handledGroup.getByText('Không liên lạc được', { exact: true })).toBeVisible();
+      await expect(
+        handledGroup
+          .getByRole('listitem')
+          .filter({ hasText: pendingPhone })
+          .getByText('Không liên lạc được', { exact: true }),
+      ).toBeVisible();
       expect(desk.patchBodies).toEqual([{ status: 'unreachable' }]);
-      expect(desk.rows[0]?.status).toBe('unreachable');
+      const stored = (await listCallbacksByApi(support.page)).find(
+        (record) => record.id === desk.pendingId,
+      );
+      expect(stored?.status).toBe('unreachable');
       expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
     } finally {
       await page.close();
@@ -1167,20 +1375,20 @@ test.describe('SD-UI1: màn CSKH', () => {
 
   test('SD-UI4: bàn phím tới link và hai nút theo thứ tự, Enter trên nút Đã gọi lưu và trả tiêu điểm về tiêu đề', async () => {
     const desk = await openCallbackDesk();
-    const { page } = desk;
+    const { page, pendingPhone } = desk;
     try {
       await openCallbacksTab(page);
       await page.getByRole('tab', { name: 'Gọi lại', exact: true }).focus();
 
       await page.keyboard.press('Tab');
-      await expect(page.getByRole('link', { name: PENDING_PHONE })).toBeFocused();
+      await expect(page.getByRole('link', { name: pendingPhone })).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(
-        page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }),
+        page.getByRole('button', { name: `Đánh dấu đã gọi: ${pendingPhone}` }),
       ).toBeFocused();
       await page.keyboard.press('Tab');
       await expect(
-        page.getByRole('button', { name: `Đánh dấu không liên lạc được: ${PENDING_PHONE}` }),
+        page.getByRole('button', { name: `Đánh dấu không liên lạc được: ${pendingPhone}` }),
       ).toBeFocused();
       await page.keyboard.press('Shift+Tab');
       await page.keyboard.press('Enter');
@@ -1195,20 +1403,23 @@ test.describe('SD-UI1: màn CSKH', () => {
 
   test('SD-UI4: PATCH lỗi hiện thông báo của API dưới dòng, dòng giữ ở nhóm Cần gọi lại và nút bật lại', async () => {
     const desk = await openCallbackDesk({ patchFails: true });
-    const { page } = desk;
+    const { page, pendingPhone } = desk;
     try {
+      const backendMessage = await readBackendCallbackError(desk.pendingId);
       await openCallbacksTab(page);
+      // Backend trả 400 cho `PATCH` bị sửa body. Nhánh lỗi 5xx do unit test `callback-list.test.tsx` kiểm ("lỗi hiện thông báo của API ngay dưới dòng...").
+      await page.route(CALLBACKS_URL_PATTERN, sendInvalidCallbackStatus);
 
-      await page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }).click();
+      await page.getByRole('button', { name: `Đánh dấu đã gọi: ${pendingPhone}` }).click();
 
       const pendingGroup = page.getByRole('list', { name: /^Cần gọi lại/ });
-      await expect(pendingGroup.getByRole('alert')).toContainText(PATCH_ERROR_MESSAGE);
+      await expect(pendingGroup.getByRole('alert')).toContainText(backendMessage);
       await expect(pendingGroup.getByRole('listitem')).toHaveCount(1);
       await expect(
-        page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }),
+        page.getByRole('button', { name: `Đánh dấu đã gọi: ${pendingPhone}` }),
       ).toBeEnabled();
       await expect(
-        page.getByRole('button', { name: `Đánh dấu không liên lạc được: ${PENDING_PHONE}` }),
+        page.getByRole('button', { name: `Đánh dấu không liên lạc được: ${pendingPhone}` }),
       ).toBeEnabled();
       expect(desk.consoleIssues, 'Console của trang Gọi lại phải sạch').toEqual([]);
     } finally {
@@ -1291,16 +1502,19 @@ test.describe('SD-UI1: màn CSKH', () => {
         height: viewport.height,
         patchFails: true,
       });
-      const { page } = desk;
+      const { page, pendingPhone } = desk;
       try {
+        const backendMessage = await readBackendCallbackError(desk.pendingId);
         await openCallbacksTab(page);
-        await page.getByRole('button', { name: `Đánh dấu đã gọi: ${PENDING_PHONE}` }).click();
+        // Backend trả 400 cho `PATCH` bị sửa body, vì giao diện chỉ gửi trạng thái hợp lệ.
+        await page.route(CALLBACKS_URL_PATTERN, sendInvalidCallbackStatus);
+        await page.getByRole('button', { name: `Đánh dấu đã gọi: ${pendingPhone}` }).click();
         const pendingRow = page
           .getByRole('list', { name: /^Cần gọi lại/ })
           .getByRole('listitem')
           .first();
         const alert = pendingRow.getByRole('alert');
-        await expect(alert).toContainText(PATCH_ERROR_MESSAGE);
+        await expect(alert).toContainText(backendMessage);
         await expectNoHorizontalOverflow(page);
 
         const rowBox = await readBox(pendingRow);
@@ -1319,117 +1533,6 @@ test.describe('SD-UI1: màn CSKH', () => {
       } finally {
         await page.close();
       }
-    });
-  }
-
-  // SD-UI5: hộp thoại "Mẫu của tôi" mở từ khung soạn tin. Hai route `canned-responses` chưa có ở backend nên dùng helper SD-C2.
-  for (const viewport of [
-    { name: '1280', width: 1280, height: 800 },
-    { name: '375', width: 375, height: 812 },
-  ]) {
-    test(`SD-UI5: hộp thoại Mẫu của tôi ${viewport.name}px: tạo mẫu cá nhân, khung soạn tin thấy mẫu mới, không tràn ngang`, async () => {
-      const testInfo = test.info();
-      const { page } = support;
-      await page.setViewportSize({ width: viewport.width, height: viewport.height });
-
-      // Danh sách mẫu có trạng thái: lệnh tạo thêm vào danh sách, và lệnh đọc trả danh sách mới.
-      const listExample = findSupportDeskExample('admin-canned-responses.json', 'danh sách mẫu');
-      let cannedList = [...(listExample.response as { data: unknown[] }).data];
-      const createdBodies: unknown[] = [];
-      const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-      await routes.mockRoute('admin-canned-responses.json', 'danh sách mẫu', {
-        respondWith: () => ({ body: { data: cannedList } }),
-      });
-      await routes.mockRoute('admin-canned-responses.json', 'tạo mẫu cá nhân', {
-        respondWith: (request) => {
-          const body = request.postDataJSON() as {
-            shortcut: string;
-            body: string;
-            shared: boolean;
-          };
-          createdBodies.push(body);
-          const created = {
-            id: 'ca000000-0000-4000-8000-000000000077',
-            ...body,
-            editable: true,
-          };
-          cannedList = [...cannedList, created];
-          return { status: 201, body: { data: created } };
-        },
-      });
-
-      await openWaitingSession(page);
-      await page.getByRole('button', { name: 'Nhận', exact: true }).click();
-      await expect(chatComposer(page)).toBeEnabled();
-
-      const manageButton = page.getByRole('button', { name: 'Quản lý mẫu', exact: true });
-      await manageButton.scrollIntoViewIfNeeded();
-      const manageButtonBox = await readBox(manageButton);
-      const composerBox = await readBox(page.locator('.support-chat-composer'));
-      expect(manageButtonBox.x).toBeGreaterThanOrEqual(0);
-      expect(manageButtonBox.x + manageButtonBox.width).toBeLessThanOrEqual(viewport.width);
-      // Nút nằm trong khung soạn tin, không làm khung rộng hơn khung nhìn.
-      expect(manageButtonBox.x + manageButtonBox.width).toBeLessThanOrEqual(
-        composerBox.x + composerBox.width + 0.5,
-      );
-      expect(composerBox.x + composerBox.width).toBeLessThanOrEqual(viewport.width);
-      await expectNoHorizontalOverflow(page);
-
-      await manageButton.click();
-      const dialog = page.getByRole('dialog', { name: 'Mẫu của tôi' });
-      await expect(dialog).toBeVisible();
-      // Hộp thoại chỉ hiện mẫu cá nhân. Mẫu dùng chung /camon không có trong hộp thoại.
-      await expect(dialog.locator('.canned-shortcut')).toHaveText(['/kiemdon']);
-      await expect(dialog.getByText('Chỉ xem')).toHaveCount(0);
-      await expectNoHorizontalOverflow(page);
-      await page.screenshot({ path: screenshotPath(testInfo, `my-canned-${viewport.name}.png`) });
-
-      await dialog.getByRole('button', { name: 'Thêm mẫu', exact: true }).click();
-      const formDialog = page.getByRole('dialog', { name: 'Thêm mẫu' });
-      await formDialog.getByLabel('Phím tắt').fill('baohanh');
-      await formDialog.getByLabel('Nội dung').fill('Sản phẩm được bảo hành 12 tháng.');
-      await page.screenshot({
-        path: screenshotPath(testInfo, `my-canned-form-${viewport.name}.png`),
-      });
-      await formDialog.getByRole('button', { name: 'Lưu mẫu' }).click();
-
-      await expect(formDialog).toHaveCount(0);
-      await expect(dialog.locator('.canned-shortcut')).toHaveText(['/kiemdon', '/baohanh']);
-      // Mẫu cá nhân gửi `shared: false`.
-      expect(createdBodies).toEqual([
-        { shortcut: 'baohanh', body: 'Sản phẩm được bảo hành 12 tháng.', shared: false },
-      ]);
-
-      const dialogBox = await readBox(dialog);
-      expect(dialogBox.x).toBeGreaterThanOrEqual(0);
-      expect(dialogBox.x + dialogBox.width).toBeLessThanOrEqual(viewport.width);
-      expect(dialogBox.y).toBeGreaterThanOrEqual(0);
-      expect(dialogBox.y + dialogBox.height).toBeLessThanOrEqual(viewport.height);
-      // Mở hộp thoại thì trang nền không cuộn được.
-      const bodyOverflow = await page.evaluate(() => document.body.style.overflow);
-      expect(bodyOverflow).toBe('hidden');
-      await expectNoHorizontalOverflow(page);
-      await testInfo.attach(`measurements-my-canned-${viewport.name}`, {
-        body: JSON.stringify(
-          { viewport, manageButtonBox, composerBox, dialogBox, bodyOverflow },
-          null,
-          2,
-        ),
-        contentType: 'application/json',
-      });
-      await page.screenshot({
-        path: screenshotPath(testInfo, `my-canned-created-${viewport.name}.png`),
-      });
-
-      // Esc đóng hộp thoại và trả focus về nút Quản lý mẫu.
-      await page.keyboard.press('Escape');
-      await expect(dialog).toHaveCount(0);
-      await expect(manageButton).toBeFocused();
-
-      // Khung soạn tin dùng ngay danh sách mới: gõ `/bao` thấy mẫu vừa tạo.
-      await chatComposer(page).fill('/bao');
-      await expect(page.getByRole('option', { name: /\/baohanh/ })).toBeVisible();
-      await page.setViewportSize({ width: 1280, height: 800 });
     });
   }
 });

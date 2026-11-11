@@ -30,7 +30,7 @@ export function MyCannedResponsesDialog({ onClose }: MyCannedResponsesDialogProp
         </div>
         <div className="dialog-body">
           {/* Hộp này chỉ mở từ nút "Quản lý mẫu", và nút đó chỉ hiện khi có `conversations:reply`. */}
-          <CannedResponsePanel scope="personal" canUse />
+          <CannedResponsePanel scope="personal" />
         </div>
         <div className="dialog-foot">
           <button type="button" className="btn btn-outline" onClick={onClose}>

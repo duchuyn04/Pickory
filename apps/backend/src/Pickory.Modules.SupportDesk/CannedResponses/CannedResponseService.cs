@@ -30,9 +30,11 @@ internal sealed class CannedResponseService(
     public async Task<IReadOnlyList<CannedResponseItem>> ListAsync(Actor actor, CancellationToken cancellationToken)
     {
         var ownerId = RequireUserId(actor);
-        // Trả mẫu cá nhân của người gọi và mọi mẫu dùng chung. Mẫu cá nhân của người khác không bao giờ vào kết quả.
+        // Người có `conversations:reply` đọc được mẫu cá nhân của mình. Người chỉ có `support-settings:manage` không thấy mẫu cá nhân, kể cả mẫu cũ của chính mình.
+        var canReadPersonal = actor.HasPermission(Permissions.ConversationsReply);
+        // Trả mọi mẫu dùng chung, cộng mẫu cá nhân của người gọi khi được phép. Mẫu cá nhân của người khác không bao giờ vào kết quả.
         var rows = await database.CannedResponses.AsNoTracking()
-            .Where(row => row.Shared || row.OwnerId == ownerId)
+            .Where(row => row.Shared || (canReadPersonal && row.OwnerId == ownerId))
             .ToListAsync(cancellationToken);
 
         // Sắp theo `shortcut` bằng so sánh thứ tự ký tự. Collation của DB xếp `-` và `_` không ổn định giữa môi trường.

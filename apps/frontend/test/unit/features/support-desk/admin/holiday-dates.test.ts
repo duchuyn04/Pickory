@@ -4,6 +4,7 @@ import {
   DUPLICATE_DAY_ERROR,
   EMPTY_DAY_ERROR,
   formatIsoDay,
+  TOO_MANY_DAYS_ERROR,
   INVALID_DAY_ERROR,
   isValidIsoDay,
   removeHoliday,
@@ -40,6 +41,21 @@ describe('addHoliday', () => {
     addHoliday(current, '2027-02-06');
 
     expect(current).toEqual(['2027-02-07']);
+  });
+
+  it('danh sách 365 ngày nhận thêm ngày thứ 366, danh sách 366 ngày từ chối ngày thứ 367', () => {
+    // Dùng số 366 của hợp đồng thay cho hằng của mã nguồn, để đổi hằng làm test đỏ.
+    const days = Array.from({ length: 366 }, (_, index) => {
+      const date = new Date(Date.UTC(2027, 0, 1 + index));
+      return date.toISOString().slice(0, 10);
+    });
+
+    const accepted = addHoliday(days.slice(0, 365), days[365]!);
+    const rejected = addHoliday(days, '2030-01-01');
+
+    expect(accepted.ok).toBe(true);
+    expect(rejected).toEqual({ ok: false, error: TOO_MANY_DAYS_ERROR });
+    expect(TOO_MANY_DAYS_ERROR).toBe('Danh sách ngày nghỉ tối đa 366 ngày.');
   });
 });
 

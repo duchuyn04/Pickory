@@ -1,4 +1,6 @@
 using System.Net;
+using System.Net.Http.Json;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -179,7 +181,8 @@ public sealed class AdminSupportSettingsEndpointTests(SupportDeskWebApplicationF
     [InlineData("waitNudgeMinutes", 30, "autoCloseMinutes", 30, "waitNudgeMinutes")]
     [InlineData("waitNudgeMinutes", 31, "autoCloseMinutes", 30, "waitNudgeMinutes")]
     [InlineData("waitNudgeMinutes", 0, "autoCloseMinutes", 30, "waitNudgeMinutes")]
-    [InlineData("autoCloseMinutes", 1441, "waitNudgeMinutes", 10, "autoCloseMinutes")]
+    [InlineData("autoCloseMinutes", 241, "waitNudgeMinutes", 10, "autoCloseMinutes")]
+    [InlineData("waitNudgeMinutes", 241, "autoCloseMinutes", 240, "waitNudgeMinutes")]
     [InlineData("autoCloseMinutes", 0, "waitNudgeMinutes", 10, "autoCloseMinutes")]
     [InlineData("waitNudgeMinutes", 1.5, "autoCloseMinutes", 30, "waitNudgeMinutes")]
     [InlineData("waitNudgeMinutes", "10", "autoCloseMinutes", 30, "waitNudgeMinutes")]
@@ -202,11 +205,29 @@ public sealed class AdminSupportSettingsEndpointTests(SupportDeskWebApplicationF
         await AssertNothingChangedAsync(auditCountBefore);
     }
 
+    [Fact]
+    // Mốc nhắc lại 241 với mốc tự đóng 240 phải nhận câu lỗi khoảng phút, không phải câu lỗi thứ tự hai mốc.
+    public async Task Put_WaitNudgeAboveMaximum_ReportsMinutesRangeMessage()
+    {
+        var (_, cookie) = await CreateSessionAsync(DefaultRoles.AdminCode);
+        var body = ValidBodyAsDictionary();
+        body["waitNudgeMinutes"] = 241;
+        body["autoCloseMinutes"] = 240;
+
+        var response = await SendAsync(HttpMethod.Put, cookie, body);
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var document = await response.Content.ReadFromJsonAsync<JsonDocument>();
+        var details = document!.RootElement.GetProperty("error").GetProperty("details").EnumerateArray().ToList();
+        var nudgeDetail = Assert.Single(details, detail => detail.GetProperty("key").GetString() == "waitNudgeMinutes");
+        Assert.Equal("Mốc nhắc lại phải là số nguyên từ 1 đến 240 phút.", nudgeDetail.GetProperty("message").GetString());
+    }
+
     [Theory]
-    [InlineData(1, 1440)]
+    [InlineData(1, 240)]
     [InlineData(1, 2)]
-    [InlineData(1439, 1440)]
-    // Biên hợp lệ: mốc nhỏ nhất 1, mốc lớn nhất 1440, và mốc nhắc lại nhỏ hơn mốc tự đóng đúng 1 phút.
+    [InlineData(239, 240)]
+    // Biên hợp lệ: mốc nhỏ nhất 1, mốc lớn nhất 240, và mốc nhắc lại nhỏ hơn mốc tự đóng đúng 1 phút.
     public async Task Put_MinuteBoundaries_Returns200(int waitNudgeMinutes, int autoCloseMinutes)
     {
         var (_, cookie) = await CreateSessionAsync(DefaultRoles.AdminCode);

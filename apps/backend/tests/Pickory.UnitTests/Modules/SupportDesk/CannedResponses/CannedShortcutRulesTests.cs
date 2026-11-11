@@ -7,11 +7,11 @@ namespace Pickory.UnitTests.Modules.SupportDesk.CannedResponses;
 public sealed class CannedShortcutRulesTests
 {
     [Theory]
-    [InlineData("a")]
+    [InlineData("ab")]
     [InlineData("camon")]
     [InlineData("ma-don_2")]
     [InlineData("0123456789")]
-    [InlineData("abcdefghijklmnopqrstuvwxyz012345")]
+    [InlineData("abcdefghijklmnopqrstuvwxyz0123")]
     public void IsValidShortcut_AllowedCharactersWithinLength_ReturnsTrue(string shortcut)
     {
         Assert.True(CannedShortcutRules.IsValidShortcut(shortcut));
@@ -20,14 +20,15 @@ public sealed class CannedShortcutRulesTests
     [Theory]
     [InlineData(null)]
     [InlineData("")]
+    [InlineData("a")]
     [InlineData("Camon")]
     [InlineData("ca mon")]
     [InlineData("/camon")]
     [InlineData("ca.mon")]
     [InlineData("camơn")]
     [InlineData("abc\n")]
-    [InlineData("abcdefghijklmnopqrstuvwxyz0123456")]
-    public void IsValidShortcut_EmptyUppercaseSymbolsOrTooLong_ReturnsFalse(string? shortcut)
+    [InlineData("abcdefghijklmnopqrstuvwxyz01234")]
+    public void IsValidShortcut_EmptyTooShortUppercaseSymbolsOrTooLong_ReturnsFalse(string? shortcut)
     {
         Assert.False(CannedShortcutRules.IsValidShortcut(shortcut));
     }

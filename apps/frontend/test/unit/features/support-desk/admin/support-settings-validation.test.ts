@@ -69,6 +69,12 @@ describe('validateSupportSettings', () => {
   it('chấp nhận hai đầu khoảng 1 và 240', () => {
     expect(validate({ waitNudgeMinutes: '1', autoCloseMinutes: '240' })).toEqual({});
   });
+
+  it('mốc nhắc lại 240 là lỗi vì không nhỏ hơn mốc tự đóng tối đa', () => {
+    expect(validate({ waitNudgeMinutes: '240', autoCloseMinutes: '240' }).waitNudgeMinutes).toBe(
+      'Mốc nhắc lại phải nhỏ hơn mốc tự đóng.',
+    );
+  });
 });
 
 describe('parseMinutes', () => {

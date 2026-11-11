@@ -262,7 +262,7 @@ Nhánh frontend (`todo-frontend.md`):
 Đã bỏ ngày 2026-10-18: SD-12.
 
 ### Checkpoint SD3
-- [ ] `ISupportMetrics` trả đúng số đã tính tay trên bộ dữ liệu test
+- [x] `ISupportMetrics` trả đúng số đã tính tay trên bộ dữ liệu test
 - [ ] Review với người dùng
 
 ### Phase 4: E2E và nghiệm thu

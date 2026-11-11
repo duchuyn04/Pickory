@@ -3,13 +3,15 @@ namespace Pickory.Modules.SupportDesk.CannedResponses;
 // Luật của `shortcut` và `body` mẫu trả lời nhanh. Hàm thuần, nên unit test không cần DB.
 internal static class CannedShortcutRules
 {
-    public const int MaxShortcutLength = 32;
+    // Giới hạn đã duyệt ngày 2026-11-04 trong mục "Giới hạn" của hợp đồng: phím tắt dài 2 đến 30 ký tự.
+    public const int MinShortcutLength = 2;
+    public const int MaxShortcutLength = 30;
     public const int MaxBodyLength = 2000;
 
     // Chỉ nhận `a-z`, `0-9`, `-`, `_`. Server không đổi chữ hoa thành chữ thường, nên chữ hoa là sai.
     public static bool IsValidShortcut(string? shortcut)
     {
-        if (string.IsNullOrEmpty(shortcut) || shortcut.Length > MaxShortcutLength)
+        if (string.IsNullOrEmpty(shortcut) || shortcut.Length < MinShortcutLength || shortcut.Length > MaxShortcutLength)
         {
             return false;
         }

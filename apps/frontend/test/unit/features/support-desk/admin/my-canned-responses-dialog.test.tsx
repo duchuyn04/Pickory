@@ -7,6 +7,8 @@ import {
   CANNED_PATH,
   clickButton,
   createFakeServer,
+  errorResponse,
+  errorTextOf,
   findButtonByName,
   PERSONAL,
   renderView,
@@ -120,6 +122,22 @@ describe('hộp thoại Mẫu của tôi', () => {
       (option) => option.textContent ?? '',
     );
     expect(options.some((option) => option.includes('/baohanh'))).toBe(true);
+  });
+
+  it('409 của mẫu cá nhân hiện đúng câu của máy chủ dưới ô phím tắt', async () => {
+    server.postCanned = () =>
+      errorResponse(409, 'CANNED_SHORTCUT_TAKEN', 'Bạn đã có mẫu dùng phím tắt này.');
+    const root = await openComposer(['conversations:reply']);
+    await clickButton(root, 'Quản lý mẫu');
+    await clickButton(document.body, 'Thêm mẫu');
+    await typeInto(document.body, '#canned-response-shortcut', 'kiemdon');
+    await typeInto(document.body, '#canned-response-body', 'Nội dung giữ lại.');
+
+    await clickButton(document.body, 'Lưu mẫu');
+
+    expect(errorTextOf(document.body, '#canned-response-shortcut')).toBe(
+      'Bạn đã có mẫu dùng phím tắt này.',
+    );
   });
 
   it('Esc khi hộp thêm mẫu đang mở chỉ đóng hộp thêm mẫu, hộp Mẫu của tôi còn mở', async () => {

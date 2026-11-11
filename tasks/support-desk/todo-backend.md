@@ -204,6 +204,7 @@ Hết task backend của Phase 2. Báo người dùng để chạy Checkpoint SD
 - [x] Thay đổi mẫu dùng chung ghi 1 dòng audit
 - [x] `shortcut` trùng trong phạm vi của một người trả 409 `CANNED_SHORTCUT_TAKEN`
 - [x] `GET` trả mẫu cá nhân của người gọi và mọi mẫu dùng chung. Mỗi mẫu có `editable` theo quyền của người gọi
+  - Ngày 2026-11-10, người dùng đổi quyền đọc: người chỉ có `support-settings:manage` cũng gọi được `GET`. Người đó chỉ nhận mẫu dùng chung, `editable` bằng `true`, không nhận mẫu cá nhân.
 - [x] Mẫu không có, hoặc mẫu cá nhân của người khác, trả 404 `CANNED_RESPONSE_NOT_FOUND`
 - [x] Test hợp đồng: response khớp mọi ví dụ của `admin-canned-responses.json` và `admin-settings.json`
 - [x] Endpoint mới có trong ma trận quyền

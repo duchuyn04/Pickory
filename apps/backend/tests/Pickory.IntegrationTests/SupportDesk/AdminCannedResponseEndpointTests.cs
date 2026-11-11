@@ -83,24 +83,65 @@ public sealed class AdminCannedResponseEndpointTests(SupportDeskWebApplicationFa
     }
 
     [Fact]
-    // Người có cả hai quyền thấy mẫu dùng chung với `editable = true`.
-    public async Task Get_AdminWithManage_SharedIsEditable()
+    // Người có cả hai quyền thấy mẫu dùng chung với `editable = true` và vẫn thấy mẫu cá nhân của mình.
+    public async Task Get_AdminWithManage_SharedIsEditableAndOwnPersonalIsKept()
     {
-        var (_, cookie) = await CreateSessionAsync(DefaultRoles.AdminCode);
+        var (admin, cookie) = await CreateSessionAsync(DefaultRoles.AdminCode);
         await SeedAsync("shared-one", ownerId: null, shared: true);
+        await SeedAsync("personal-one", ownerId: admin.Id, shared: false);
 
         var response = await SendAsync(HttpMethod.Get, Path, cookie, null);
 
         var items = (await SupportConversationTestKit.ReadDataAsync(response)).EnumerateArray().ToList();
         var shared = Assert.Single(items, item => item.GetProperty("shortcut").GetString() == "shared-one");
         Assert.True(shared.GetProperty("editable").GetBoolean());
+        // Quyền cấu hình không được làm mất mẫu cá nhân của người có cả hai quyền.
+        var personal = Assert.Single(items, item => item.GetProperty("shortcut").GetString() == "personal-one");
+        Assert.False(personal.GetProperty("shared").GetBoolean());
+        Assert.True(personal.GetProperty("editable").GetBoolean());
     }
 
     [Fact]
-    // Người chỉ có `support-settings:manage` thiếu `conversations:reply`, nên `GET` trả 403.
-    public async Task Get_StaffWithOnlySettingsManage_Returns403()
+    // Người chỉ có `support-settings:manage` đọc được danh sách. Danh sách chỉ có mẫu dùng chung và mọi mẫu `editable = true`.
+    public async Task Get_StaffWithOnlySettingsManage_ReturnsSharedTemplatesAllEditable()
     {
         var (_, cookie) = await CreateManageOnlySessionAsync();
+        var (other, _) = await CreateSessionAsync(DefaultRoles.SupportCode);
+        await SeedAsync("chung-b", ownerId: null, shared: true);
+        await SeedAsync("chung-a", ownerId: null, shared: true);
+        // Mẫu cá nhân của nhân viên khác làm khẳng định `shared` có thể đỏ.
+        await SeedAsync("rieng-khac", ownerId: other.Id, shared: false);
+
+        var response = await SendAsync(HttpMethod.Get, Path, cookie, null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var items = (await SupportConversationTestKit.ReadDataAsync(response)).EnumerateArray().ToList();
+        Assert.Equal(["chung-a", "chung-b"], items.Select(item => item.GetProperty("shortcut").GetString()));
+        Assert.All(items, item => Assert.True(item.GetProperty("shared").GetBoolean()));
+        Assert.All(items, item => Assert.True(item.GetProperty("editable").GetBoolean()));
+    }
+
+    [Fact]
+    // Mẫu cá nhân cũ của chính người chỉ có `support-settings:manage` không xuất hiện trong danh sách.
+    public async Task Get_StaffWithOnlySettingsManage_DoesNotSeeOwnPersonalTemplate()
+    {
+        var (manager, cookie) = await CreateManageOnlySessionAsync();
+        await SeedAsync("rieng-cu", ownerId: manager.Id, shared: false);
+        await SeedAsync("chung-mot", ownerId: null, shared: true);
+
+        var response = await SendAsync(HttpMethod.Get, Path, cookie, null);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var items = (await SupportConversationTestKit.ReadDataAsync(response)).EnumerateArray().ToList();
+        Assert.Equal(["chung-mot"], items.Select(item => item.GetProperty("shortcut").GetString()));
+    }
+
+    [Fact]
+    // Vai trò chỉ có `conversations:read` thiếu cả hai quyền của mẫu, nên `GET` trả 403.
+    public async Task Get_StaffWithoutCannedPermissions_Returns403()
+    {
+        var role = await IdentityTestData.CreateRoleAsync(database, [Permissions.ConversationsRead]);
+        var (_, cookie) = await CreateSessionAsync(role.Code);
 
         var response = await SendAsync(HttpMethod.Get, Path, cookie, null);
 
@@ -149,7 +190,8 @@ public sealed class AdminCannedResponseEndpointTests(SupportDeskWebApplicationFa
     [InlineData("ca.mon")]
     [InlineData("camơn")]
     [InlineData("abc\n")]
-    [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
+    [InlineData("a")]
+    [InlineData("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")]
     // `shortcut` sai luật trả 400 với khóa `shortcut`. Chữ hoa bị từ chối, server không tự đổi.
     public async Task Post_InvalidShortcut_Returns400(string shortcut)
     {
@@ -162,14 +204,16 @@ public sealed class AdminCannedResponseEndpointTests(SupportDeskWebApplicationFa
     }
 
     [Fact]
-    // Biên hợp lệ: 32 ký tự, và đủ bốn nhóm ký tự `a-z`, `0-9`, `-`, `_`.
+    // Biên hợp lệ: 2 và 30 ký tự, và đủ bốn nhóm ký tự `a-z`, `0-9`, `-`, `_`.
     public async Task Post_ShortcutBoundaries_Returns201()
     {
         var (_, cookie) = await CreateSessionAsync(DefaultRoles.SupportCode);
 
-        var longest = await SendAsync(HttpMethod.Post, Path, cookie, new { shortcut = new string('a', 32), body = "x", shared = false });
+        var shortest = await SendAsync(HttpMethod.Post, Path, cookie, new { shortcut = "ab", body = "x", shared = false });
+        var longest = await SendAsync(HttpMethod.Post, Path, cookie, new { shortcut = new string('a', 30), body = "x", shared = false });
         var mixed = await SendAsync(HttpMethod.Post, Path, cookie, new { shortcut = "a-b_9", body = "x", shared = false });
 
+        Assert.Equal(HttpStatusCode.Created, shortest.StatusCode);
         Assert.Equal(HttpStatusCode.Created, longest.StatusCode);
         Assert.Equal(HttpStatusCode.Created, mixed.StatusCode);
     }
@@ -219,8 +263,8 @@ public sealed class AdminCannedResponseEndpointTests(SupportDeskWebApplicationFa
     {
         var (_, cookie) = await CreateSessionAsync(DefaultRoles.SupportCode);
 
-        var bodyNumber = await SendAsync(HttpMethod.Post, Path, cookie, new { shortcut = "a", body = 12, shared = false });
-        var sharedText = await SendAsync(HttpMethod.Post, Path, cookie, new { shortcut = "a", body = "x", shared = "yes" });
+        var bodyNumber = await SendAsync(HttpMethod.Post, Path, cookie, new { shortcut = "ab", body = 12, shared = false });
+        var sharedText = await SendAsync(HttpMethod.Post, Path, cookie, new { shortcut = "ab", body = "x", shared = "yes" });
 
         await SupportDeskHttpAssertions.AssertValidationErrorAsync(bodyNumber, "body");
         await SupportDeskHttpAssertions.AssertValidationErrorAsync(sharedText, "shared");

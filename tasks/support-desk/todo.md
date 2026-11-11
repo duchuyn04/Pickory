@@ -128,7 +128,7 @@ Task của phase này nằm ở `todo-backend.md` và `todo-frontend.md`. Hai nh
 - [x] Khách gửi tin ở `/support`, nhân viên nhận, trả lời, kết thúc, khách chấm điểm trên `pnpm dev`
   Ghi chú ngày 2026-11-09: route `GET /api/admin/support/canned-responses` trả 404 vì SD-10 chưa làm. Phím `/` chưa chọn được mẫu, và console của nhân viên có 1 lỗi 404 khi mở khung chat. Kiểm lại ở Checkpoint SD3 và SD-E2E1.
 - [x] Ngoài giờ, khách để lại số điện thoại và tab Gọi lại hiện yêu cầu
-- [ ] Review với người dùng
+- [x] Review với người dùng
 
 ---
 
@@ -137,8 +137,8 @@ Task của phase này nằm ở `todo-backend.md` và `todo-frontend.md`. Hai nh
 Task của phase này nằm ở `todo-backend.md` (SD-10, SD-13) và `todo-frontend.md` (SD-UI5).
 
 ### Checkpoint SD3
-- [ ] `ISupportMetrics` trả đúng số đã tính tay trên bộ dữ liệu test
-- [ ] Review với người dùng
+- [x] `ISupportMetrics` trả đúng số đã tính tay trên bộ dữ liệu test
+- [x] Review với người dùng
 
 ---
 

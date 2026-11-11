@@ -7,18 +7,21 @@ export const tinyPng = Buffer.from(
   'base64',
 );
 
-// Một lỗi tải mà test chủ động gây ra. Trình duyệt ghi dòng "Failed to load resource" kèm mã trạng thái cho phản hồi đó.
+// Một lỗi tải mà test chủ động gây ra, kèm dòng "Failed to load resource" của trình duyệt.
+// Dòng đó ghi mã trạng thái, hoặc `net::ERR_FAILED` khi request bị hủy bằng `route.abort()` (giá trị `'network-failed'`).
 export interface AllowedLoadFailure {
   urlPattern: RegExp;
-  status: number;
+  status: number | 'network-failed';
 }
 
 // Dòng console có đúng là dòng "Failed to load resource" của lỗi tải đã cho hay không.
 export function isAllowedLoadFailure(message: ConsoleMessage, failure: AllowedLoadFailure) {
+  const expectedText =
+    failure.status === 'network-failed' ? 'net::ERR_FAILED' : `status of ${failure.status}`;
   return (
     message.type() === 'error' &&
     failure.urlPattern.test(message.location().url) &&
-    message.text().includes(`status of ${failure.status}`)
+    message.text().includes(expectedText)
   );
 }
 

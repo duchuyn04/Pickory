@@ -5,6 +5,9 @@ const ISO_DAY_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 export const EMPTY_DAY_ERROR = 'Hãy chọn một ngày.';
 export const INVALID_DAY_ERROR = 'Ngày không hợp lệ.';
 export const DUPLICATE_DAY_ERROR = 'Ngày này đã có trong danh sách.';
+// Hợp đồng giới hạn danh sách ngày nghỉ tối đa 366 ngày.
+export const MAX_HOLIDAYS = 366;
+export const TOO_MANY_DAYS_ERROR = `Danh sách ngày nghỉ tối đa ${MAX_HOLIDAYS} ngày.`;
 
 function isLeapYear(year: number): boolean {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
@@ -45,6 +48,8 @@ export function addHoliday(current: readonly string[], isoDay: string): AddHolid
   if (isoDay === '') return { ok: false, error: EMPTY_DAY_ERROR };
   if (!isValidIsoDay(isoDay)) return { ok: false, error: INVALID_DAY_ERROR };
   if (current.includes(isoDay)) return { ok: false, error: DUPLICATE_DAY_ERROR };
+  // Đủ số ngày tối đa thì từ chối ngày mới. Backend trả 400 cho danh sách dài hơn.
+  if (current.length >= MAX_HOLIDAYS) return { ok: false, error: TOO_MANY_DAYS_ERROR };
   return { ok: true, holidays: sortHolidays([...current, isoDay]) };
 }
 

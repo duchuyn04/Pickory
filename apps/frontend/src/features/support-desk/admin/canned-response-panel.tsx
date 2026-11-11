@@ -36,8 +36,6 @@ const SCOPE_TEXT: Record<CannedResponseScope, ScopeText> = {
 
 interface CannedResponsePanelProps {
   scope: CannedResponseScope;
-  // `false` khi người dùng thiếu quyền `conversations:reply`. Khối không gọi API và không cho thêm mẫu.
-  canUse: boolean;
 }
 
 // Thông báo kết quả của lần thêm, sửa hoặc xóa gần nhất. Lỗi hiện bằng `ErrorAlert`, thành công hiện bằng chữ trạng thái.
@@ -47,7 +45,7 @@ interface PanelNotice {
 }
 
 // Danh sách, nút thêm, hộp thoại sửa và hộp thoại xóa của một loại mẫu. Hai màn dùng chung bộ này.
-export function CannedResponsePanel({ scope, canUse }: CannedResponsePanelProps) {
+export function CannedResponsePanel({ scope }: CannedResponsePanelProps) {
   const queryClient = useQueryClient();
   const text = SCOPE_TEXT[scope];
   const [formTarget, setFormTarget] = useState<CannedResponseFormTarget | null>(null);
@@ -60,8 +58,6 @@ export function CannedResponsePanel({ scope, canUse }: CannedResponsePanelProps)
   const cannedQuery = useQuery({
     queryKey: CANNED_RESPONSES_QUERY_KEY,
     queryFn: fetchCannedResponses,
-    // Thiếu quyền thì route chắc chắn trả 403, nên không gọi.
-    enabled: canUse,
     // Tắt tải lại khi focus cửa sổ để danh sách không nhảy lúc nhân viên đang sửa.
     refetchOnWindowFocus: false,
   });
@@ -119,15 +115,6 @@ export function CannedResponsePanel({ scope, canUse }: CannedResponsePanelProps)
   function openDeleteDialog(response: CannedResponse) {
     setNotice(null);
     setDeleteTarget(response);
-  }
-
-  // Thiếu quyền thì không có gì để hiện hay sửa. Câu giải thích thay cho danh sách và nút thêm.
-  if (!canUse) {
-    return (
-      <p className="canned-empty">
-        Bạn cần quyền <code>conversations:reply</code> để xem và sửa mẫu trả lời.
-      </p>
-    );
   }
 
   return (

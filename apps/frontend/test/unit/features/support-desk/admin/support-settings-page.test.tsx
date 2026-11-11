@@ -509,6 +509,21 @@ describe('SupportSettingsPage: mẫu dùng chung', () => {
     expect(document.body.querySelector('[role="dialog"]')).not.toBeNull();
   });
 
+  it('409 của mẫu dùng chung hiện đúng câu của máy chủ dưới ô phím tắt', async () => {
+    server.postCanned = () =>
+      errorResponse(409, 'CANNED_SHORTCUT_TAKEN', 'Đã có mẫu dùng chung dùng phím tắt này.');
+    const root = await openPage();
+    await clickButton(root, 'Thêm mẫu');
+    await typeInto(document.body, '#canned-response-shortcut', 'camon');
+    await typeInto(document.body, '#canned-response-body', 'Nội dung giữ lại.');
+
+    await clickButton(document.body, 'Lưu mẫu');
+
+    expect(errorTextOf(document.body, '#canned-response-shortcut')).toBe(
+      'Đã có mẫu dùng chung dùng phím tắt này.',
+    );
+  });
+
   it('400 VALIDATION_ERROR gắn lỗi theo key body, và lỗi khác hiện ErrorAlert trong hộp thoại', async () => {
     server.postCanned = () =>
       errorResponse(400, 'VALIDATION_ERROR', 'Nội dung quá dài.', [
@@ -592,17 +607,16 @@ describe('SupportSettingsPage: mẫu dùng chung', () => {
   });
 });
 
-describe('SupportSettingsPage: thiếu quyền conversations:reply', () => {
-  it('vai trò chỉ có support-settings:manage: form hiện, khối mẫu hiện câu giải thích và không gọi GET mẫu', async () => {
+describe('SupportSettingsPage: quyền đọc danh sách mẫu', () => {
+  it('vai trò chỉ có support-settings:manage: khối mẫu gọi GET, hiện mẫu dùng chung và nút Thêm mẫu', async () => {
     const root = await openPage(actorWith(['support-settings:manage']));
 
     expect(valueOf(root, OPENS_AT)).toBe('08:00');
-    expect(root.querySelector('.canned-panel')).toBeNull();
-    expect(root.textContent).toContain(
-      'Bạn cần quyền conversations:reply để xem và sửa mẫu trả lời.',
-    );
-    expect(findButtonByName(root, 'Thêm mẫu')).toBeNull();
-    expect(requestsOf(server, 'GET', CANNED_PATH)).toHaveLength(0);
+    expect(requestsOf(server, 'GET', CANNED_PATH).length).toBeGreaterThan(0);
+    expect(root.querySelector('.canned-panel')).not.toBeNull();
+    expect(root.textContent).toContain(`/${SHARED_EDITABLE.shortcut}`);
+    expect(root.textContent).not.toContain('conversations:reply');
+    expect(findButtonByName(root, 'Thêm mẫu')).not.toBeNull();
   });
 
   it('đủ hai quyền thì khối mẫu gọi GET và có nút Thêm mẫu', async () => {

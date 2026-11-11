@@ -11,7 +11,22 @@ import {
 } from './catalog-product-seed';
 import { stubWebFonts } from './commerce-order-fixtures';
 import { e2eEnvironment } from './environment';
-import { createSupportDeskRouteMocks } from './support-desk-contract-routes';
+import { SUPPORT_API_HEADERS, makeRunSuffix } from './support-desk-canned-api';
+import { mockEventStream } from './support-desk-contract-routes';
+import {
+  claimSessionByApi,
+  closeSessionByApi,
+  closeSessionsByMarkerBestEffort,
+  findQueueSession,
+  listCallbacksByApi,
+  makeUniquePhone,
+  openLoggedInCustomerChat,
+  openStaffSession,
+  readAvailableStaffIds,
+  resolveAllPendingCallbacks,
+  type CustomerChat,
+  type StaffSession,
+} from './support-desk-live-fixtures';
 
 // SD-UI7: trang /support của khách. Ba route hội thoại và tin đã có backend thật (SD-15, SD-16).
 // Chỉ luồng sự kiện SSE được giả bằng helper `mockEventStream` của SD-C2, vì helper sự kiện không kiểm OpenAPI.
@@ -88,8 +103,7 @@ function countEventStreamRequests(page: Page, conversationId: string): { count: 
 
 // Gắn luồng sự kiện giả với tin nhân viên có tên, tin hệ thống và sự kiện chờ cho ảnh bố cục.
 async function mockChatEvents(page: Page, conversationId: string) {
-  const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-  await routes.mockEventStream({
+  await mockEventStream(page, {
     path: eventsPath(conversationId),
     fixtureFile: 'customer-events.json',
     eventNames: ['message.created', 'session.waiting'],
@@ -578,7 +592,35 @@ test.describe('SD-UI8: một mã khách vãng lai cho mọi request đầu trang
   });
 });
 
+// Khách mở hội thoại thật bằng cookie của `page` rồi gửi tin đầu. Không có nhân viên sẵn sàng nên backend mở phiên chờ kèm tin hệ thống chứa form số điện thoại.
+async function startWaitingChat(
+  page: Page,
+  staffPage: Page,
+  firstMessage: string,
+): Promise<CustomerChat> {
+  // Có nhân viên sẵn sàng thì backend không gắn form số điện thoại. Kiểm trước để lỗi nêu đúng nguyên nhân.
+  expect(
+    await readAvailableStaffIds(staffPage),
+    'Không được có nhân viên sẵn sàng khi case bắt đầu',
+  ).toEqual([]);
+  const chat = await openLoggedInCustomerChat(page);
+  await chat.send(firstMessage);
+  return chat;
+}
+
 test.describe('SD-UI6: form số điện thoại và form CSAT phía khách', () => {
+  // Phiên của admin để kiểm nhân viên sẵn sàng, nhận và đóng phiên bằng API thật của nhân viên.
+  let admin: StaffSession;
+
+  test.beforeAll(async ({ browser }) => {
+    admin = await openStaffSession(browser);
+    await loginAdmin(admin.page);
+  });
+
+  test.afterAll(async () => {
+    await admin?.context.close();
+  });
+
   test('ảnh bố cục hai form trong khung chat ở 1280 px và 375 px không tràn ngang', async ({
     browser,
   }, testInfo) => {
@@ -624,183 +666,208 @@ test.describe('SD-UI6: form số điện thoại và form CSAT phía khách', ()
     browser,
   }, testInfo) => {
     const { context, page, consoleIssues } = await openGuestPage(browser);
-    const conversationId = await createConversationId(page);
+    const marker = `Gọi lại ${makeRunSuffix()}`;
+    const phoneNote = `Gọi sau 18 giờ giúp mình. ${makeRunSuffix()}`;
+    try {
+      await startWaitingChat(page, admin.page, marker);
+      await openSupportPage(page);
 
-    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-    // Dùng route giả từ ví dụ hợp đồng theo quy định SD-C2.
-    await routes.mockRoute('customer-api.json', 'khách để lại số điện thoại');
-    await routes.mockEventStream({
-      path: eventsPath(conversationId),
-      fixtureFile: 'customer-events.json',
-      eventNames: ['message.created'],
-    });
+      const callbackForm = page.locator('[data-action="callback_form"]');
+      await expect(callbackForm).toBeVisible();
 
-    await openSupportPage(page);
+      const phoneField = callbackForm.locator('input[name="phone"]');
+      const submitBtn = callbackForm.locator('button[type="submit"]');
 
-    const callbackForm = page.locator('[data-action="callback_form"]');
-    await expect(callbackForm).toBeVisible();
+      // Bấm gửi khi số trống để kích hoạt validation Zod.
+      await submitBtn.click();
 
-    const phoneField = callbackForm.locator('input[name="phone"]');
-    const submitBtn = callbackForm.locator('button[type="submit"]');
+      // Lỗi bắt buộc phải hiển thị dưới ô bằng FieldError.
+      const errorId = await phoneField.getAttribute('aria-describedby');
+      expect(errorId).not.toBeNull();
+      const phoneError = callbackForm.locator(`[id="${errorId}"]`);
+      await expect(phoneError).toHaveText('Số điện thoại không được để trống.');
+      await expect(phoneField).toHaveAttribute('aria-invalid', 'true');
+      // Nhập đầu số sai định dạng của di động Việt Nam.
+      await phoneField.fill('0123456789');
+      await submitBtn.click();
+      await expect(phoneError).toHaveText('Số điện thoại không đúng định dạng.');
 
-    // Bấm gửi khi số trống để kích hoạt validation Zod.
-    await submitBtn.click();
+      // Nhập số điện thoại hợp lệ và ghi chú, rồi gửi tới backend thật.
+      await phoneField.fill('0901234567');
+      await callbackForm.locator('textarea[name="note"]').fill(phoneNote);
+      await submitBtn.click();
 
-    // Lỗi bắt buộc phải hiển thị dưới ô bằng FieldError.
-    const errorId = await phoneField.getAttribute('aria-describedby');
-    expect(errorId).not.toBeNull();
-    const phoneError = callbackForm.locator(`[id="${errorId}"]`);
-    await expect(phoneError).toHaveText('Số điện thoại không được để trống.');
-    await expect(phoneField).toHaveAttribute('aria-invalid', 'true');
-    // Nhập đầu số sai định dạng của di động Việt Nam.
-    await phoneField.fill('0123456789');
-    await submitBtn.click();
-    await expect(phoneError).toHaveText('Số điện thoại không đúng định dạng.');
+      // Gửi thành công thì form đổi thành thông báo xác nhận.
+      const successAlert = callbackForm.locator('.alert-ok');
+      await expect(successAlert).toBeVisible();
+      await expect(successAlert).toContainText('Yêu cầu gọi lại đã được ghi nhận');
 
-    // Nhập số điện thoại hợp lệ và ghi chú theo ví dụ mẫu.
-    await phoneField.fill('0901234567');
-    await callbackForm.locator('textarea[name="note"]').fill('Gọi sau 18 giờ giúp mình.');
-    await submitBtn.click();
+      // Backend phải lưu đúng ghi chú đã gửi, để lời xác nhận không đến từ giao diện tự quyết.
+      const callbacks = await listCallbacksByApi(admin.page);
+      expect(
+        callbacks.some((callback) => callback.note === phoneNote),
+        'Backend phải có yêu cầu gọi lại mang ghi chú của case',
+      ).toBe(true);
 
-    // Gửi thành công thì form đổi thành thông báo xác nhận.
-    const successAlert = callbackForm.locator('.alert-ok');
-    await expect(successAlert).toBeVisible();
-    await expect(successAlert).toContainText('Yêu cầu gọi lại đã được ghi nhận');
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'support-sdui6-callback-success-1280.png'),
+        fullPage: true,
+      });
 
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'support-sdui6-callback-success-1280.png'),
-      fullPage: true,
-    });
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'support-sdui6-callback-success-375.png'),
+        fullPage: true,
+      });
+      await expectNoHorizontalOverflow(page);
 
-    await page.setViewportSize({ width: 375, height: 800 });
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'support-sdui6-callback-success-375.png'),
-      fullPage: true,
-    });
-    await expectNoHorizontalOverflow(page);
-
-    expect(consoleIssues).toEqual([]);
-    await context.close();
+      expect(consoleIssues).toEqual([]);
+    } finally {
+      // Dọn cả khi case đỏ, vì yêu cầu gọi lại đang chờ làm sai số đếm của case sau. Lỗi dọn dẹp không được che lỗi gốc của case.
+      await resolveAllPendingCallbacks(admin.page).catch(() => undefined);
+      await closeSessionsByMarkerBestEffort(admin.page, marker);
+      await context.close();
+    }
   });
 
   test('lỗi 429 CALLBACK_LIMIT_REACHED hiện thông báo tiếng Việt và form không gửi lại', async ({
     browser,
   }, testInfo) => {
-    // Cho phép mã lỗi 429 có chủ đích từ API route giả.
+    // Cho phép mã lỗi 429 có chủ đích từ backend thật.
     const allowedFailures: AllowedLoadFailure[] = [
       { urlPattern: /\/api\/support\/callback-requests/, status: 429 },
     ];
     const { context, page, consoleIssues } = await openGuestPage(browser, allowedFailures);
-    const conversationId = await createConversationId(page);
+    const marker = `Giới hạn ${makeRunSuffix()}`;
+    try {
+      const chat = await startWaitingChat(page, admin.page, marker);
 
-    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-    await routes.mockRoute('customer-api.json', 'yêu cầu gọi lại thứ 4 trong ngày');
-    await routes.mockEventStream({
-      path: eventsPath(conversationId),
-      fixtureFile: 'customer-events.json',
-      eventNames: ['message.created'],
-    });
+      // Khách mới nên giới hạn ngày chỉ tính yêu cầu của case này. Số 3 khớp `DailyLimit` của `CallbackRequestService`, nên backend đổi giới hạn thì case đỏ ở đây.
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        const created = await page.request.post('/api/support/callback-requests', {
+          headers: SUPPORT_API_HEADERS,
+          data: { conversationId: chat.conversationId, phone: makeUniquePhone(), note: null },
+        });
+        expect(created.status(), await created.text()).toBe(201);
+      }
 
-    await openSupportPage(page);
+      // Yêu cầu thứ 4 nhận 429 thật. Backend không lưu yêu cầu bị chặn, nên lần thử này không đổi trạng thái.
+      const blocked = await page.request.post('/api/support/callback-requests', {
+        headers: SUPPORT_API_HEADERS,
+        data: { conversationId: chat.conversationId, phone: makeUniquePhone(), note: null },
+      });
+      expect(blocked.status()).toBe(429);
+      const blockedBody: { error: { code: string; message: string } } = await blocked.json();
+      expect(blockedBody.error.code).toBe('CALLBACK_LIMIT_REACHED');
+      // Câu lỗi lấy từ phản hồi thật, nên giao diện phải hiện đúng câu backend trả.
+      const limitMessage = blockedBody.error.message;
 
-    const callbackForm = page.locator('[data-action="callback_form"]');
-    await expect(callbackForm).toBeVisible();
+      await openSupportPage(page);
 
-    await callbackForm.locator('input[name="phone"]').fill('0901234567');
-    const submitBtn = callbackForm.locator('button[type="submit"]');
-    await submitBtn.click();
+      const callbackForm = page.locator('[data-action="callback_form"]');
+      await expect(callbackForm).toBeVisible();
 
-    // Thông báo lỗi tiếng Việt hiển thị từ response của API.
-    const alertBody = callbackForm.locator('.alert-list');
-    await expect(alertBody).toContainText(
-      'Bạn đã gửi 3 yêu cầu gọi lại hôm nay. CSKH sẽ liên hệ sớm.',
-    );
+      await callbackForm.locator('input[name="phone"]').fill('0901234567');
+      const submitBtn = callbackForm.locator('button[type="submit"]');
+      await submitBtn.click();
 
-    // Nút gửi bị khóa sau khi nhận lỗi 429.
-    await expect(submitBtn).toBeDisabled();
+      // Thông báo lỗi tiếng Việt hiển thị từ response của backend.
+      const alertBody = callbackForm.locator('.alert-list');
+      await expect(alertBody).toContainText(limitMessage);
 
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'support-sdui6-callback-429-1280.png'),
-      fullPage: true,
-    });
+      // Nút gửi bị khóa sau khi nhận lỗi 429.
+      await expect(submitBtn).toBeDisabled();
 
-    await page.setViewportSize({ width: 375, height: 800 });
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'support-sdui6-callback-429-375.png'),
-      fullPage: true,
-    });
-    await expectNoHorizontalOverflow(page);
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'support-sdui6-callback-429-1280.png'),
+        fullPage: true,
+      });
 
-    expect(consoleIssues).toEqual([]);
-    await context.close();
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'support-sdui6-callback-429-375.png'),
+        fullPage: true,
+      });
+      await expectNoHorizontalOverflow(page);
+
+      expect(consoleIssues).toEqual([]);
+    } finally {
+      // Dọn cả khi case đỏ, vì ba yêu cầu đang chờ làm sai số đếm của case sau. Lỗi dọn dẹp không được che lỗi gốc của case.
+      await resolveAllPendingCallbacks(admin.page).catch(() => undefined);
+      await closeSessionsByMarkerBestEffort(admin.page, marker);
+      await context.close();
+    }
   });
 
   test('form CSAT có 5 nút chọn điểm dùng được bằng bàn phím, mỗi nút có tên truy cập', async ({
     browser,
   }, testInfo) => {
     const { context, page, consoleIssues } = await openGuestPage(browser);
-    const conversationId = await createConversationId(page);
+    const marker = `Chấm điểm ${makeRunSuffix()}`;
+    try {
+      await startWaitingChat(page, admin.page, marker);
 
-    const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-    await routes.mockRoute('customer-api.json', 'khách chấm điểm phiên vừa kết thúc');
-    await routes.mockEventStream({
-      path: eventsPath(conversationId),
-      fixtureFile: 'customer-events.json',
-      eventNames: ['message.created'],
-    });
+      // Nhân viên nhận rồi đóng phiên bằng API thật. Khi đó backend mới thêm tin hệ thống mời khách chấm điểm.
+      const session = await findQueueSession(admin.page, 'waiting', marker);
+      await claimSessionByApi(admin.page, session.id);
+      await closeSessionByApi(admin.page, session.id);
 
-    await openSupportPage(page);
+      await openSupportPage(page);
 
-    const csatForm = page.locator('[data-action="csat_form"]');
-    await expect(csatForm).toBeVisible();
+      const csatForm = page.locator('[data-action="csat_form"]');
+      await expect(csatForm).toBeVisible();
 
-    const scoreButtons = csatForm.locator('.csat-score-btn');
-    await expect(scoreButtons).toHaveCount(5);
+      const scoreButtons = csatForm.locator('.csat-score-btn');
+      await expect(scoreButtons).toHaveCount(5);
 
-    // Kiểm tra tên truy cập đầy đủ của từng nút điểm.
-    const expectedLabels = [
-      '1 điểm - Rất không hài lòng',
-      '2 điểm - Không hài lòng',
-      '3 điểm - Bình thường',
-      '4 điểm - Hài lòng',
-      '5 điểm - Rất hài lòng',
-    ];
-    for (let i = 0; i < expectedLabels.length; i++) {
-      const label = expectedLabels[i]!;
-      await expect(scoreButtons.nth(i)).toHaveAttribute('aria-label', label);
+      // Kiểm tra tên truy cập đầy đủ của từng nút điểm.
+      const expectedLabels = [
+        '1 điểm - Rất không hài lòng',
+        '2 điểm - Không hài lòng',
+        '3 điểm - Bình thường',
+        '4 điểm - Hài lòng',
+        '5 điểm - Rất hài lòng',
+      ];
+      for (let i = 0; i < expectedLabels.length; i++) {
+        const label = expectedLabels[i]!;
+        await expect(scoreButtons.nth(i)).toHaveAttribute('aria-label', label);
+      }
+
+      // Dùng bàn phím để chọn điểm 5 rất hài lòng.
+      await scoreButtons.nth(4).focus();
+      await page.keyboard.press('Enter');
+      await expect(scoreButtons.nth(4)).toHaveAttribute('aria-pressed', 'true');
+
+      // Nhấn gửi đánh giá sau khi đã chọn điểm.
+      const submitBtn = csatForm.locator('button[type="submit"]');
+      await submitBtn.click();
+
+      // Form đổi thành thông báo xác nhận có chứa điểm đã chọn.
+      const successAlert = csatForm.locator('.alert-ok');
+      await expect(successAlert).toBeVisible();
+      await expect(successAlert).toContainText('5/5');
+      await expect(successAlert).toContainText('Rất hài lòng');
+
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'support-sdui6-csat-success-1280.png'),
+        fullPage: true,
+      });
+
+      await page.setViewportSize({ width: 375, height: 800 });
+      await page.screenshot({
+        path: screenshotPath(testInfo, 'support-sdui6-csat-success-375.png'),
+        fullPage: true,
+      });
+      await expectNoHorizontalOverflow(page);
+
+      expect(consoleIssues).toEqual([]);
+    } finally {
+      // Dọn cả khi case đỏ: phiên chưa đóng ở bước dựng dữ liệu vẫn nằm trong hàng chờ.
+      await closeSessionsByMarkerBestEffort(admin.page, marker);
+      await context.close();
     }
-
-    // Dùng bàn phím để chọn điểm 5 rất hài lòng.
-    await scoreButtons.nth(4).focus();
-    await page.keyboard.press('Enter');
-    await expect(scoreButtons.nth(4)).toHaveAttribute('aria-pressed', 'true');
-
-    // Nhấn gửi đánh giá sau khi đã chọn điểm.
-    const submitBtn = csatForm.locator('button[type="submit"]');
-    await submitBtn.click();
-
-    // Form đổi thành thông báo xác nhận có chứa điểm đã chọn.
-    const successAlert = csatForm.locator('.alert-ok');
-    await expect(successAlert).toBeVisible();
-    await expect(successAlert).toContainText('5/5');
-    await expect(successAlert).toContainText('Rất hài lòng');
-
-    await page.setViewportSize({ width: 1280, height: 900 });
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'support-sdui6-csat-success-1280.png'),
-      fullPage: true,
-    });
-
-    await page.setViewportSize({ width: 375, height: 800 });
-    await page.screenshot({
-      path: screenshotPath(testInfo, 'support-sdui6-csat-success-375.png'),
-      fullPage: true,
-    });
-    await expectNoHorizontalOverflow(page);
-
-    expect(consoleIssues).toEqual([]);
-    await context.close();
   });
 });

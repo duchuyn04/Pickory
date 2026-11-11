@@ -1,5 +1,12 @@
 import path from 'node:path';
-import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import {
+  expect,
+  test,
+  type BrowserContext,
+  type Locator,
+  type Page,
+  type Route,
+} from '@playwright/test';
 import { expectNoHorizontalOverflow } from './admin-order-fixtures';
 import {
   collectConsoleIssues,
@@ -9,14 +16,21 @@ import {
 } from './catalog-admin-flow';
 import { stubWebFonts } from './commerce-order-fixtures';
 import { e2eEnvironment } from './environment';
-import { createSupportDeskRouteMocks } from './support-desk-contract-routes';
-import { findSupportDeskExample } from '../test/unit/features/support-desk/contract-fixtures';
+import { activateStaffAccount } from './staff-fixtures';
+import {
+  createCannedResponseByApi,
+  deleteCannedResponseByApi,
+  deleteCannedResponsesWithSuffix,
+  makeRunSuffix,
+  SUPPORT_API_HEADERS,
+} from './support-desk-canned-api';
 
-// SD-UI5: màn cấu hình chăm sóc khách hàng, với route `settings` và `canned-responses` chưa có ở backend nên spec dùng helper SD-C2.
-// Tài khoản admin có mọi quyền, nên trường hợp thiếu quyền do unit test kiểm.
+// SD-UI5: màn cấu hình chăm sóc khách hàng chạy với route `settings` và `canned-responses` thật của backend (SD-10).
+// Admin có mọi quyền, còn nhân viên chỉ có `support-settings:manage` có describe riêng ở cuối file.
 
-const SETTINGS_FILE = 'admin-settings.json';
-const CANNED_FILE = 'admin-canned-responses.json';
+const SETTINGS_PATH = '/api/admin/support/settings';
+const CANNED_PATH = '/api/admin/support/canned-responses';
+const SETTINGS_URL_PATTERN = /\/api\/admin\/support\/settings$/;
 
 interface SettingsBody {
   opensAt: string;
@@ -26,117 +40,74 @@ interface SettingsBody {
   autoCloseMinutes: number;
 }
 
-interface CannedBody {
-  id: string;
-  shortcut: string;
-  body: string;
-  shared: boolean;
-  editable: boolean;
-}
+// Cấu hình là một bản ghi dùng chung cho cả DB E2E. Mỗi case bắt đầu từ giá trị này, nên case xanh khi chạy riêng và khi chạy cả spec.
+const BASELINE_SETTINGS: SettingsBody = {
+  opensAt: '08:00',
+  closesAt: '21:00',
+  holidays: ['2027-02-06', '2027-02-07'],
+  waitNudgeMinutes: 10,
+  autoCloseMinutes: 30,
+};
 
-// Dữ liệu của máy chủ giả. Test đọc và ghi qua các route giả bên dưới, nên bước lưu có hiệu lực thật.
-let settingsState: SettingsBody & { updatedAt: string };
-let cannedState: CannedBody[];
+// Hậu tố riêng của lần chạy. Mọi phím tắt spec tạo đều chứa hậu tố này, nên lần chạy sau không gặp lỗi 409 và `afterAll` dọn đúng mẫu của spec.
+const runSuffix = makeRunSuffix();
+// Email của nhân viên chỉ có `support-settings:manage`. Hậu tố của lần chạy giúp lời mời không đụng lỗi trùng email khi `beforeAll` chạy lại.
+const managerEmail = `e2e-sd-settings-manage-${runSuffix}@pickory.local`;
+
+// Các request ghi mà trang gửi đi. Spec ghi lại từ sự kiện `request` của trang, nên lời gọi API dựng dữ liệu không lẫn vào.
 let putBodies: unknown[];
 let postBodies: unknown[];
+let patchBodies: unknown[];
 let deleteIds: string[];
-// Khi bật, lệnh `PUT` trả lỗi 400 của ví dụ mẫu dù dữ liệu gửi lên hợp lệ. Dùng để kiểm đường lỗi từ API.
-let forcedSettingsError: string | null;
-let nextCannedNumber: number;
 
-function resetServerState() {
-  settingsState = (
-    findSupportDeskExample(SETTINGS_FILE, 'đọc cấu hình').response as { data: typeof settingsState }
-  ).data;
-  cannedState = (
-    findSupportDeskExample(CANNED_FILE, 'danh sách mẫu').response as { data: CannedBody[] }
-  ).data;
-  putBodies = [];
-  postBodies = [];
-  deleteIds = [];
-  forcedSettingsError = null;
-  nextCannedNumber = 100;
+// Đổi thời điểm ISO sang chuỗi `HH:mm dd/MM/yyyy` theo giờ Việt Nam, đúng dạng màn cấu hình hiện.
+function formatVietnamTimestamp(isoTimestamp: string): string {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Ho_Chi_Minh',
+    hourCycle: 'h23',
+    hour: '2-digit',
+    minute: '2-digit',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  }).formatToParts(new Date(isoTimestamp));
+  const part = (type: string) => parts.find((entry) => entry.type === type)?.value ?? '';
+  return `${part('hour')}:${part('minute')} ${part('day')}/${part('month')}/${part('year')}`;
 }
 
-function cannedIdFrom(url: string): string {
-  return url.slice(url.lastIndexOf('/') + 1);
-}
-
-async function mockSupportSettingsRoutes(page: Page) {
-  const routes = createSupportDeskRouteMocks({ page, apiOrigin: e2eEnvironment.apiOrigin });
-  await routes.mockRoute(SETTINGS_FILE, 'đọc cấu hình', {
-    respondWith: () => ({ body: { data: settingsState } }),
-  });
-  await routes.mockRoute(SETTINGS_FILE, 'lưu cấu hình', {
-    respondWith: (request) => {
+function recordPageWrites(page: Page) {
+  page.on('request', (request) => {
+    const { pathname } = new URL(request.url());
+    if (pathname === SETTINGS_PATH && request.method() === 'PUT') {
       putBodies.push(request.postDataJSON());
-      if (forcedSettingsError !== null) {
-        const errorExample = findSupportDeskExample(SETTINGS_FILE, forcedSettingsError);
-        return { status: errorExample.status, body: errorExample.response };
-      }
-      settingsState = {
-        ...(request.postDataJSON() as SettingsBody),
-        updatedAt: '2026-11-03T03:00:00Z',
-      };
-      return { body: { data: settingsState } };
-    },
+    }
+    if (pathname === CANNED_PATH && request.method() === 'POST') {
+      postBodies.push(request.postDataJSON());
+    }
+    if (pathname.startsWith(`${CANNED_PATH}/`) && request.method() === 'PATCH') {
+      patchBodies.push(request.postDataJSON());
+    }
+    if (pathname.startsWith(`${CANNED_PATH}/`) && request.method() === 'DELETE') {
+      deleteIds.push(pathname.slice(CANNED_PATH.length + 1));
+    }
   });
-  await routes.mockRoute(CANNED_FILE, 'danh sách mẫu', {
-    respondWith: () => ({ body: { data: cannedState } }),
+}
+
+async function readSettingsByApi(page: Page): Promise<SettingsBody> {
+  const response = await page.request.get(SETTINGS_PATH);
+  expect(response.status(), await response.text()).toBe(200);
+  const body = (await response.json()) as { data: SettingsBody & { updatedAt: string } };
+  // Bỏ `updatedAt` vì `PUT` không nhận trường này.
+  const { opensAt, closesAt, holidays, waitNudgeMinutes, autoCloseMinutes } = body.data;
+  return { opensAt, closesAt, holidays, waitNudgeMinutes, autoCloseMinutes };
+}
+
+async function saveSettingsByApi(page: Page, settings: SettingsBody): Promise<void> {
+  const response = await page.request.put(SETTINGS_PATH, {
+    headers: SUPPORT_API_HEADERS,
+    data: settings,
   });
-  await routes.mockRoute(CANNED_FILE, 'tạo mẫu cá nhân', {
-    respondWith: (request) => {
-      const body = request.postDataJSON() as Omit<CannedBody, 'id' | 'editable'>;
-      postBodies.push(body);
-      // Phím tắt `kiemdon` đã có trong dữ liệu mẫu. Trả đúng lỗi 409 của ví dụ "trùng phím tắt".
-      if (
-        cannedState.some(
-          (entry) => entry.shortcut === body.shortcut && entry.shared === body.shared,
-        )
-      ) {
-        const conflict = findSupportDeskExample(CANNED_FILE, 'trùng phím tắt');
-        return { status: conflict.status, body: conflict.response };
-      }
-      const created: CannedBody = {
-        id: `ca000000-0000-4000-8000-${String(nextCannedNumber++).padStart(12, '0')}`,
-        shortcut: body.shortcut,
-        body: body.body,
-        shared: body.shared,
-        editable: true,
-      };
-      cannedState = [...cannedState, created];
-      return { status: 201, body: { data: created } };
-    },
-  });
-  await routes.mockRoute(CANNED_FILE, 'sửa mẫu', {
-    respondWith: (request) => {
-      const id = cannedIdFrom(request.url());
-      const changes = request.postDataJSON() as Partial<CannedBody>;
-      cannedState = cannedState.map((entry) =>
-        entry.id === id ? { ...entry, ...changes } : entry,
-      );
-      return { body: { data: cannedState.find((entry) => entry.id === id) } };
-    },
-  });
-  // File mẫu chưa có ví dụ cho `DELETE`. Hợp đồng ghi 204 và không có thân.
-  await routes.mockInlineRoute(
-    {
-      name: 'xóa mẫu',
-      method: 'DELETE',
-      path: '/api/admin/support/canned-responses/ca000000-0000-4000-8000-000000000003',
-      request: null,
-      status: 204,
-      response: null,
-    },
-    {
-      respondWith: (request) => {
-        const id = cannedIdFrom(request.url());
-        deleteIds.push(id);
-        cannedState = cannedState.filter((entry) => entry.id !== id);
-        return { status: 204, body: null };
-      },
-    },
-  );
+  expect(response.status(), await response.text()).toBe(200);
 }
 
 // Ảnh chụp vào thư mục ngoài repo khi có biến môi trường. Không có biến thì Playwright giữ ảnh trong thư mục kết quả.
@@ -198,6 +169,9 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
   // Lỗi tải mà một case chủ động gây ra. Case thêm vào, và `beforeEach` dọn đi, nên mọi case khác vẫn đòi console sạch.
   const allowedFailures: AllowedLoadFailure[] = [];
 
+  // Cấu hình ban đầu của DB E2E. `afterAll` trả lại để spec khác không thấy giá trị của spec này.
+  let originalSettings: SettingsBody | null = null;
+
   test.beforeAll(async ({ browser }) => {
     test.setTimeout(120000);
     context = await browser.newContext({ baseURL: e2eEnvironment.webOrigin });
@@ -207,17 +181,32 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
     await stubWebFonts(page);
     await loginAdmin(page);
     await dismissConsent(page);
-    await mockSupportSettingsRoutes(page);
+    recordPageWrites(page);
+    originalSettings = await readSettingsByApi(page);
     consoleIssues.length = 0;
   });
 
   test.afterAll(async () => {
-    await context?.close();
+    try {
+      // Chỉ dọn khi `beforeAll` đã chạy xong, vì lúc đó `page` mới có phiên đăng nhập admin.
+      if (originalSettings !== null) {
+        await saveSettingsByApi(page, originalSettings);
+        await deleteCannedResponsesWithSuffix(page, runSuffix);
+      }
+    } finally {
+      // Đóng context cả khi dọn dữ liệu lỗi, để trình duyệt không bị treo.
+      await context?.close();
+    }
   });
 
   test.beforeEach(async () => {
-    resetServerState();
+    putBodies = [];
+    postBodies = [];
+    patchBodies = [];
+    deleteIds = [];
     allowedFailures.length = 0;
+    // Mỗi case tự đặt cấu hình nền trước khi kiểm, vì cấu hình là một bản ghi dùng chung.
+    await saveSettingsByApi(page, BASELINE_SETTINGS);
     await page.setViewportSize({ width: 1280, height: 800 });
     consoleIssues.length = 0;
   });
@@ -230,8 +219,8 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
   async function openSettingsPage() {
     await page.goto('/admin/support/settings');
     await expect(page.getByRole('heading', { level: 1, name: 'Cấu hình CSKH' })).toBeVisible();
-    // Giá trị của máy chủ giả hiện ra nghĩa là cấu hình đã nạp xong.
-    await expect(opensAtField(page)).toHaveValue('08:00');
+    // Giá trị nền đã đặt bằng API hiện ra nghĩa là cấu hình đã nạp xong.
+    await expect(opensAtField(page)).toHaveValue(BASELINE_SETTINGS.opensAt);
   }
 
   test('admin thấy mục Cấu hình CSKH trong menu, mở trang và thấy dữ liệu mẫu', async () => {
@@ -257,10 +246,19 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
     await opensAtField(page).fill('08:30');
     await waitNudgeField(page).fill('15');
 
+    // Bắt phản hồi của `PUT` để lấy `updatedAt` thật của backend.
+    const saveResponse = page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === SETTINGS_PATH && response.request().method() === 'PUT',
+    );
     await saveButton(page).click();
+    const savedBody: { data: { updatedAt: string } } = await (await saveResponse).json();
 
     await expect(saveStatus(page)).toContainText('Đã lưu cấu hình.');
-    await expect(saveStatus(page)).toContainText('Cập nhật lần cuối 10:00 03/11/2026');
+    // Giao diện hiện giờ Việt Nam, nên chuỗi mong đợi đổi `updatedAt` sang múi giờ này.
+    await expect(saveStatus(page)).toContainText(
+      `Cập nhật lần cuối ${formatVietnamTimestamp(savedBody.data.updatedAt)}`,
+    );
     expect(putBodies).toEqual([
       {
         opensAt: '08:30',
@@ -304,27 +302,43 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
     await expect(errorOf(page, 'support-settings-wait-nudge')).toHaveCount(1);
   });
 
-  test('lỗi 400 của API theo ví dụ mẫu hiện dưới ô mốc nhắc lại, không dưới ô khác', async () => {
+  test('lỗi 400 của backend hiện dưới ô mốc nhắc lại, không dưới ô khác', async () => {
     // Trình duyệt ghi một dòng lỗi console cho mỗi phản hồi 400 mà case này chủ động gây ra.
-    allowedFailures.push({ urlPattern: /\/api\/admin\/support\/settings$/, status: 400 });
-    forcedSettingsError = 'mốc nhắc lại không trước mốc tự đóng';
+    allowedFailures.push({ urlPattern: SETTINGS_URL_PATTERN, status: 400 });
     await openSettingsPage();
 
-    await saveButton(page).click();
+    // Client chặn dữ liệu sai trước khi gửi. Route chỉ sửa body của request rồi chuyển tới backend thật, nên phản hồi 400 vẫn do backend dựng.
+    let bodyOverride: Partial<SettingsBody> = { waitNudgeMinutes: 30 };
+    async function forwardWithOverride(route: Route) {
+      const request = route.request();
+      if (request.method() !== 'PUT') {
+        await route.fallback();
+        return;
+      }
+      const forwardedBody = { ...(request.postDataJSON() as SettingsBody), ...bodyOverride };
+      await route.continue({ postData: JSON.stringify(forwardedBody) });
+    }
+    await page.route(SETTINGS_URL_PATTERN, forwardWithOverride);
 
-    await expect(errorOf(page, 'support-settings-wait-nudge')).toHaveText(
-      'Mốc nhắc lại phải nhỏ hơn mốc tự đóng.',
-    );
-    await expect(waitNudgeField(page)).toBeFocused();
-    await expect(page.locator('.form-error')).toHaveCount(1);
-    expect(putBodies).toHaveLength(1);
+    try {
+      await saveButton(page).click();
 
-    forcedSettingsError = 'giờ mở cửa sau giờ đóng cửa';
-    await saveButton(page).click();
-    await expect(errorOf(page, 'support-settings-opens-at')).toHaveText(
-      'Giờ mở cửa phải trước giờ đóng cửa.',
-    );
-    await expect(page.locator('.form-error')).toHaveCount(1);
+      await expect(errorOf(page, 'support-settings-wait-nudge')).toHaveText(
+        'Mốc nhắc lại phải nhỏ hơn mốc tự đóng.',
+      );
+      await expect(waitNudgeField(page)).toBeFocused();
+      await expect(page.locator('.form-error')).toHaveCount(1);
+      expect(putBodies).toHaveLength(1);
+
+      bodyOverride = { opensAt: '22:00' };
+      await saveButton(page).click();
+      await expect(errorOf(page, 'support-settings-opens-at')).toHaveText(
+        'Giờ mở cửa phải trước giờ đóng cửa.',
+      );
+      await expect(page.locator('.form-error')).toHaveCount(1);
+    } finally {
+      await page.unroute(SETTINGS_URL_PATTERN, forwardWithOverride);
+    }
   });
 
   test('ngày nghỉ: chọn bằng ô ngày có nhãn, báo trùng, xóa từng ngày rồi lưu', async () => {
@@ -363,58 +377,79 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
     expect((putBodies[0] as SettingsBody).holidays).toEqual(['2027-01-01', '2027-02-07']);
   });
 
-  test('mẫu dùng chung: mẫu editable false chỉ xem, mẫu sửa được có nút sửa và xóa', async () => {
+  test('mẫu dùng chung: chỉ hiện mẫu dùng chung, mẫu sửa được có nút sửa và xóa', async () => {
+    const sharedShortcut = `camon-${runSuffix}`;
+    const personalShortcut = `kiemdon-${runSuffix}`;
+    const createdShortcut = `baohanh-${runSuffix}`;
+    await createCannedResponseByApi(page, {
+      shortcut: sharedShortcut,
+      body: 'Cảm ơn bạn đã liên hệ Pickory.',
+      shared: true,
+    });
+    await createCannedResponseByApi(page, {
+      shortcut: personalShortcut,
+      body: 'Mình kiểm đơn giúp bạn nhé.',
+      shared: false,
+    });
     await openSettingsPage();
 
-    const readOnlyRow = cannedRow(page, 'camon');
-    await expect(readOnlyRow).toContainText('Chỉ xem');
-    await expect(readOnlyRow.getByRole('button')).toHaveCount(0);
-    // Mẫu cá nhân `kiemdon` không thuộc khối dùng chung.
-    await expect(cannedRow(page, 'kiemdon')).toHaveCount(0);
+    // Admin có `support-settings:manage`, nên mẫu dùng chung sửa được: có hai nút và không có nhãn Chỉ xem.
+    const sharedRow = cannedRow(page, sharedShortcut);
+    await expect(sharedRow).toContainText('Cảm ơn bạn đã liên hệ Pickory.');
+    await expect(sharedRow).not.toContainText('Chỉ xem');
+    await expect(
+      sharedRow.getByRole('button', { name: `Sửa mẫu /${sharedShortcut}` }),
+    ).toBeVisible();
+    await expect(
+      sharedRow.getByRole('button', { name: `Xóa mẫu /${sharedShortcut}` }),
+    ).toBeVisible();
+    // Mẫu cá nhân của chính admin không thuộc khối dùng chung.
+    await expect(cannedRow(page, personalShortcut)).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Thêm mẫu', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Phím tắt').fill('/baohanh');
+    await dialog.getByLabel('Phím tắt').fill(`/${createdShortcut}`);
     // Dấu `/` người dùng gõ vào đầu ô tự bị bỏ.
-    await expect(dialog.getByLabel('Phím tắt')).toHaveValue('baohanh');
+    await expect(dialog.getByLabel('Phím tắt')).toHaveValue(createdShortcut);
     await dialog.getByLabel('Nội dung').fill('Sản phẩm được bảo hành 12 tháng.');
     await expect(dialog.getByText('32/2000')).toBeVisible();
     await dialog.getByRole('button', { name: 'Lưu mẫu' }).click();
 
     await expect(dialog).toHaveCount(0);
-    const createdRow = cannedRow(page, 'baohanh');
+    const createdRow = cannedRow(page, createdShortcut);
     await expect(createdRow).toContainText('Sản phẩm được bảo hành 12 tháng.');
-    await expect(page.locator('.canned-status')).toHaveText('Đã lưu mẫu /baohanh.');
+    await expect(page.locator('.canned-status')).toHaveText(`Đã lưu mẫu /${createdShortcut}.`);
     expect(postBodies).toEqual([
-      { shortcut: 'baohanh', body: 'Sản phẩm được bảo hành 12 tháng.', shared: true },
+      { shortcut: createdShortcut, body: 'Sản phẩm được bảo hành 12 tháng.', shared: true },
     ]);
-    await expect(createdRow.getByRole('button', { name: 'Sửa mẫu /baohanh' })).toBeVisible();
-    await expect(createdRow.getByRole('button', { name: 'Xóa mẫu /baohanh' })).toBeVisible();
+    await expect(
+      createdRow.getByRole('button', { name: `Sửa mẫu /${createdShortcut}` }),
+    ).toBeVisible();
+    await expect(
+      createdRow.getByRole('button', { name: `Xóa mẫu /${createdShortcut}` }),
+    ).toBeVisible();
   });
 
   test('mẫu dùng chung: trùng phím tắt hiện lỗi dưới ô phím tắt và giữ dữ liệu đã nhập', async () => {
     // Trình duyệt ghi một dòng lỗi console cho phản hồi 409 mà case này chủ động gây ra.
     allowedFailures.push({ urlPattern: /\/api\/admin\/support\/canned-responses$/, status: 409 });
-    cannedState = [
-      ...cannedState,
-      {
-        id: 'ca000000-0000-4000-8000-000000000009',
-        shortcut: 'giaohang',
-        body: 'Đơn giao trong 3 ngày.',
-        shared: true,
-        editable: true,
-      },
-    ];
+    const takenShortcut = `giaohang-${runSuffix}`;
+    await createCannedResponseByApi(page, {
+      shortcut: takenShortcut,
+      body: 'Đơn giao trong 3 ngày.',
+      shared: true,
+    });
     await openSettingsPage();
 
     await page.getByRole('button', { name: 'Thêm mẫu', exact: true }).click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Phím tắt').fill('giaohang');
+    await dialog.getByLabel('Phím tắt').fill(takenShortcut);
     await dialog.getByLabel('Nội dung').fill('Nội dung giữ lại.');
     await dialog.getByRole('button', { name: 'Lưu mẫu' }).click();
 
+    // Backend trả câu riêng cho mẫu dùng chung. Frontend hiện nguyên câu đó.
     await expect(errorOf(page, 'canned-response-shortcut')).toHaveText(
-      'Bạn đã có mẫu dùng phím tắt này.',
+      'Đã có mẫu dùng chung dùng phím tắt này.',
     );
     await expect(dialog.getByLabel('Phím tắt')).toBeFocused();
     await expect(dialog.getByLabel('Nội dung')).toHaveValue('Nội dung giữ lại.');
@@ -432,39 +467,64 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
   });
 
   test('mẫu dùng chung: sửa chỉ gửi trường đã đổi, xóa phải qua hộp thoại xác nhận', async () => {
-    cannedState = [
-      ...cannedState,
-      {
-        id: 'ca000000-0000-4000-8000-000000000009',
-        shortcut: 'giaohang',
-        body: 'Đơn giao trong 3 ngày.',
-        shared: true,
-        editable: true,
-      },
-    ];
+    const editedShortcut = `suaxoa-${runSuffix}`;
+    const created = await createCannedResponseByApi(page, {
+      shortcut: editedShortcut,
+      body: 'Đơn giao trong 3 ngày.',
+      shared: true,
+    });
     await openSettingsPage();
 
-    await page.getByRole('button', { name: 'Sửa mẫu /giaohang' }).click();
+    await page.getByRole('button', { name: `Sửa mẫu /${editedShortcut}` }).click();
     const editDialog = page.getByRole('dialog');
     await editDialog.getByLabel('Nội dung').fill('Đơn giao trong 2 ngày.');
     await editDialog.getByRole('button', { name: 'Lưu mẫu' }).click();
     await expect(editDialog).toHaveCount(0);
-    await expect(cannedRow(page, 'giaohang')).toContainText('Đơn giao trong 2 ngày.');
+    await expect(cannedRow(page, editedShortcut)).toContainText('Đơn giao trong 2 ngày.');
+    expect(patchBodies).toEqual([{ body: 'Đơn giao trong 2 ngày.' }]);
 
-    await page.getByRole('button', { name: 'Xóa mẫu /giaohang' }).click();
+    await page.getByRole('button', { name: `Xóa mẫu /${editedShortcut}` }).click();
     const confirmDialog = page.getByRole('dialog');
-    await expect(confirmDialog.getByRole('heading', { name: 'Xóa mẫu /giaohang?' })).toBeVisible();
+    await expect(
+      confirmDialog.getByRole('heading', { name: `Xóa mẫu /${editedShortcut}?` }),
+    ).toBeVisible();
     // Chưa bấm xác nhận thì chưa có lệnh xóa nào.
     expect(deleteIds).toEqual([]);
 
     await confirmDialog.getByRole('button', { name: 'Xóa mẫu', exact: true }).click();
 
     await expect(confirmDialog).toHaveCount(0);
-    await expect(cannedRow(page, 'giaohang')).toHaveCount(0);
-    expect(deleteIds).toEqual(['ca000000-0000-4000-8000-000000000009']);
-    await expect(page.locator('.canned-status')).toHaveText('Đã xóa mẫu /giaohang.');
+    await expect(cannedRow(page, editedShortcut)).toHaveCount(0);
+    expect(deleteIds).toEqual([created.id]);
+    await expect(page.locator('.canned-status')).toHaveText(`Đã xóa mẫu /${editedShortcut}.`);
     // Xóa xong, focus về nút Thêm mẫu thay vì rơi về đầu trang.
     await expect(page.getByRole('button', { name: 'Thêm mẫu', exact: true })).toBeFocused();
+  });
+
+  test('mẫu dùng chung: sửa mẫu đã bị xóa ở nơi khác hiện lỗi 404 của backend và bỏ dòng cũ', async () => {
+    // Trình duyệt ghi một dòng lỗi console cho phản hồi 404 mà case này chủ động gây ra.
+    allowedFailures.push({ urlPattern: /\/api\/admin\/support\/canned-responses\//, status: 404 });
+    const vanishedShortcut = `matroi-${runSuffix}`;
+    const created = await createCannedResponseByApi(page, {
+      shortcut: vanishedShortcut,
+      body: 'Mẫu sắp bị xóa.',
+      shared: true,
+    });
+    await openSettingsPage();
+    await expect(cannedRow(page, vanishedShortcut)).toBeVisible();
+    // Xóa bằng API khi trang còn hiện dòng cũ. Backend trả 404 thật cho lần sửa kế tiếp.
+    await deleteCannedResponseByApi(page, created.id);
+
+    await page.getByRole('button', { name: `Sửa mẫu /${vanishedShortcut}` }).click();
+    const editDialog = page.getByRole('dialog');
+    await editDialog.getByLabel('Nội dung').fill('Nội dung sửa sau khi mẫu mất.');
+    await editDialog.getByRole('button', { name: 'Lưu mẫu' }).click();
+
+    await expect(editDialog).toHaveCount(0);
+    await expect(
+      page.getByRole('alert').filter({ hasText: 'Không tìm thấy mẫu trả lời nhanh.' }),
+    ).toBeVisible();
+    await expect(cannedRow(page, vanishedShortcut)).toHaveCount(0);
   });
 
   test('bàn phím: Tab đi từ ô số sang nút lưu, hộp thoại giữ focus bên trong, Esc trả focus về nút đã mở', async () => {
@@ -501,8 +561,14 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
     test(`ảnh chụp ${viewport.name}px: trang cấu hình, lỗi dưới ô và hộp thoại thêm mẫu không tràn ngang`, async () => {
       const testInfo = test.info();
       await page.setViewportSize({ width: viewport.width, height: viewport.height });
+      const screenshotShortcut = `camon-${runSuffix}-${viewport.name}`;
+      await createCannedResponseByApi(page, {
+        shortcut: screenshotShortcut,
+        body: 'Cảm ơn bạn đã liên hệ Pickory.',
+        shared: true,
+      });
       await openSettingsPage();
-      await expect(cannedRow(page, 'camon')).toBeVisible();
+      await expect(cannedRow(page, screenshotShortcut)).toBeVisible();
       await expectNoHorizontalOverflow(page);
 
       // Số đo của trang đầy đủ: mọi thẻ, ô và nút nằm trong khung nhìn theo chiều ngang.
@@ -618,4 +684,88 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
       await page.setViewportSize({ width: 1280, height: 800 });
     });
   }
+});
+
+test.describe('SD-UI5: nhân viên chỉ có support-settings:manage', () => {
+  let adminContext: BrowserContext;
+  let adminPage: Page;
+  let managerContext: BrowserContext;
+  let managerPage: Page;
+  let managerConsoleIssues: string[];
+  const sharedShortcut = `chung-quanly-${runSuffix}`;
+
+  test.beforeAll(async ({ browser }) => {
+    // Tạo vai trò, mời và kích hoạt nhân viên qua giao diện thật nên cần nhiều thời gian hơn mặc định.
+    test.setTimeout(180000);
+    adminContext = await browser.newContext({ baseURL: e2eEnvironment.webOrigin });
+    adminPage = await adminContext.newPage();
+    await stubWebFonts(adminPage);
+    await loginAdmin(adminPage);
+    await dismissConsent(adminPage);
+
+    // Vai trò chỉ có quyền cấu hình, không có `conversations:reply`. Đây là người dùng của quyết định Q1.
+    const roleCode = `settings-only-${runSuffix}`;
+    const role = await adminPage.request.post('/api/admin/roles', {
+      headers: SUPPORT_API_HEADERS,
+      data: {
+        code: roleCode,
+        name: `Chỉ cấu hình CSKH ${runSuffix}`,
+        permissions: ['support-settings:manage'],
+      },
+    });
+    expect(role.status(), await role.text()).toBe(201);
+    const invitation = await adminPage.request.post('/api/admin/staff/invitations', {
+      headers: SUPPORT_API_HEADERS,
+      data: {
+        email: managerEmail,
+        name: 'Quản lý cấu hình CSKH E2E',
+        roleCodes: [roleCode],
+      },
+    });
+    expect(invitation.status(), await invitation.text()).toBeLessThan(300);
+    await createCannedResponseByApi(adminPage, {
+      shortcut: sharedShortcut,
+      body: 'Mẫu dùng chung do admin tạo qua API.',
+      shared: true,
+    });
+
+    managerContext = await browser.newContext({ baseURL: e2eEnvironment.webOrigin });
+    managerPage = await managerContext.newPage();
+    managerConsoleIssues = collectConsoleIssues(managerPage);
+    await stubWebFonts(managerPage);
+    await activateStaffAccount(managerPage, managerEmail);
+    await dismissConsent(managerPage);
+    managerConsoleIssues.length = 0;
+  });
+
+  test.afterAll(async () => {
+    try {
+      if (adminPage !== undefined) await deleteCannedResponsesWithSuffix(adminPage, runSuffix);
+    } finally {
+      // Đóng cả hai context dù dọn dữ liệu lỗi, để trình duyệt không bị treo.
+      await managerContext?.close();
+      await adminContext?.close();
+    }
+  });
+
+  test.afterEach(async () => {
+    // Chờ request còn chạy dở xong, để lỗi muộn của trang vẫn nằm trong danh sách console trước khi kiểm.
+    await managerPage.waitForLoadState('networkidle');
+    expect(managerConsoleIssues, 'Console phải sạch').toEqual([]);
+  });
+
+  test('mở /admin/support/settings thấy danh sách mẫu dùng chung và nút Thêm mẫu, console sạch', async () => {
+    await managerPage.goto('/admin/support/settings');
+    await expect(
+      managerPage.getByRole('heading', { level: 1, name: 'Cấu hình CSKH' }),
+    ).toBeVisible();
+
+    // Backend cho `GET` mẫu với quyền cấu hình, nên khối mẫu hiện danh sách thay cho câu thiếu quyền.
+    const row = cannedRow(managerPage, sharedShortcut);
+    await expect(row).toContainText('Mẫu dùng chung do admin tạo qua API.');
+    await expect(row).not.toContainText('Chỉ xem');
+    await expect(row.getByRole('button', { name: `Sửa mẫu /${sharedShortcut}` })).toBeVisible();
+    await expect(managerPage.getByRole('button', { name: 'Thêm mẫu', exact: true })).toBeVisible();
+    await expect(managerPage.getByText('conversations:reply')).toHaveCount(0);
+  });
 });
