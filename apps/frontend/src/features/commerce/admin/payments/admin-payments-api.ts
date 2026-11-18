@@ -43,10 +43,11 @@ export interface PaymentTransactionList {
   limit: number;
 }
 
-// Dựng đường dẫn danh sách giao dịch. Chỉ gửi tham số có giá trị, bỏ `page` khi là trang 1.
-export function buildTransactionsPath(
+// Dựng đường dẫn từ bộ lọc giao dịch. Chỉ gửi tham số có giá trị, bỏ `page` khi là trang 1.
+function buildTransactionsPathFor(
+  basePath: string,
   filters: { matchStatus: string; orderFlag: string },
-  page: number,
+  page = 1,
 ): string {
   const params = new URLSearchParams();
   // "Tất cả" nghĩa là không lọc theo trạng thái khớp, nên không gửi tham số.
@@ -54,9 +55,23 @@ export function buildTransactionsPath(
   if (filters.orderFlag !== '') params.set('orderFlag', filters.orderFlag);
   if (page > 1) params.set('page', String(page));
   const queryString = params.toString();
-  return queryString
-    ? `/api/admin/payments/transactions?${queryString}`
-    : '/api/admin/payments/transactions';
+  return queryString ? `${basePath}?${queryString}` : basePath;
+}
+
+// Đường dẫn của danh sách giao dịch theo bộ lọc và trang.
+export function buildTransactionsPath(
+  filters: { matchStatus: string; orderFlag: string },
+  page: number,
+): string {
+  return buildTransactionsPathFor('/api/admin/payments/transactions', filters, page);
+}
+
+// Đường dẫn tải file Excel. Dùng chung bộ lọc với danh sách, nhưng không có `page` vì file chứa mọi dòng khớp.
+export function buildTransactionsExportPath(filters: {
+  matchStatus: string;
+  orderFlag: string;
+}): string {
+  return buildTransactionsPathFor('/api/admin/exports/payment-transactions', filters);
 }
 
 export function fetchPaymentTransactions(

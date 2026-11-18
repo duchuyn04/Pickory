@@ -11,6 +11,7 @@ import { useListFilters } from '../../../../shared/use-list-filters';
 import { formatVietnamDateTime } from '../../../../shared/vietnam-time';
 import { formatProductPrice } from '../../../catalog/customer/product-display';
 import { useCan } from '../../../identity/hooks/use-actor';
+import { ExportButton } from '../../../../shared/export-button';
 import {
   formatOrderFlag,
   formatOrderStatus,
@@ -21,7 +22,12 @@ import {
   PAYMENT_METHOD_CODES,
   PAYMENT_STATUS_CODES,
 } from '../../order-labels';
-import { fetchAdminOrders, ORDER_FILTER_NAMES, type AdminOrderList } from './admin-orders-api';
+import {
+  buildAdminOrdersExportPath,
+  fetchAdminOrders,
+  ORDER_FILTER_NAMES,
+  type AdminOrderList,
+} from './admin-orders-api';
 import {
   orderFlagBadgeClass,
   orderStatusBadgeClass,
@@ -69,6 +75,11 @@ export function AdminOrdersPage() {
           <h1>Quản lý đơn hàng</h1>
           <p>Theo dõi đơn theo trạng thái, thanh toán và các cờ cần chú ý.</p>
         </div>
+        {/* Nút chỉ hiện khi actor đọc được đơn và có quyền xuất báo cáo. Tab trạng thái cũng là bộ lọc `status`. */}
+        <ExportButton
+          path={buildAdminOrdersExportPath(values)}
+          requiredPermissions={['orders:read', 'reports:export']}
+        />
       </div>
 
       <section className="card card-flush">

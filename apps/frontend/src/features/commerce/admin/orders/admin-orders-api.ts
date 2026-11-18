@@ -116,8 +116,8 @@ export interface AdminOrderDetail {
   refundTransactionRef: string | null;
 }
 
-// Dựng đường dẫn API từ bộ lọc trên URL. Chỉ gửi tham số có giá trị, và bỏ `page` khi là trang 1.
-export function buildAdminOrdersPath(values: Record<string, string>, page: number): string {
+// Dựng đường dẫn từ bộ lọc trên URL. Chỉ gửi tham số có giá trị, và chỉ gửi `page` khi lớn hơn 1.
+function buildOrdersPath(basePath: string, values: Record<string, string>, page = 1): string {
   // `URLSearchParams` mã hóa ký tự đặc biệt trong từ khóa để URL không sai.
   const params = new URLSearchParams();
   for (const name of ORDER_FILTER_NAMES) {
@@ -126,7 +126,17 @@ export function buildAdminOrdersPath(values: Record<string, string>, page: numbe
   }
   if (page > 1) params.set('page', String(page));
   const queryString = params.toString();
-  return queryString ? `/api/admin/orders?${queryString}` : '/api/admin/orders';
+  return queryString ? `${basePath}?${queryString}` : basePath;
+}
+
+// Đường dẫn của danh sách đơn theo bộ lọc và trang.
+export function buildAdminOrdersPath(values: Record<string, string>, page: number): string {
+  return buildOrdersPath('/api/admin/orders', values, page);
+}
+
+// Đường dẫn tải file Excel. Dùng chung bộ lọc với danh sách, nhưng không có `page` vì file chứa mọi dòng khớp.
+export function buildAdminOrdersExportPath(values: Record<string, string>): string {
+  return buildOrdersPath('/api/admin/exports/orders', values);
 }
 
 export function fetchAdminOrders(values: Record<string, string>, page: number) {

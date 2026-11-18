@@ -9,6 +9,7 @@ import { rowNumber } from '../../../shared/row-number';
 import { SearchInput } from '../../../shared/search-input';
 import { useListFilters } from '../../../shared/use-list-filters';
 import { LOW_STOCK_THRESHOLD } from '../../../shared/catalog/inventory';
+import { ExportButton } from '../../../shared/export-button';
 import { useCan } from '../../identity/hooks/use-actor';
 import { toCatalogErrorMessage } from './catalog-errors';
 import type { ProductCategory, ProductDetail } from './product-form';
@@ -20,6 +21,11 @@ import {
 import { ErrorAlert } from '../../../shared/error-alert';
 import { ProductThumbnail } from './product-thumbnail';
 import { useLiveStock } from '../shared/stock-live';
+import {
+  buildAdminProductsExportPath,
+  buildAdminProductsPath,
+  PRODUCT_FILTER_NAMES,
+} from './products-path';
 import './products.css';
 
 interface PagedProducts {
@@ -28,9 +34,6 @@ interface PagedProducts {
   page: number;
   limit: number;
 }
-
-// Tên tham số bộ lọc trên URL. Trùng tên tham số của `GET /api/admin/products`.
-const FILTER_NAMES = ['search', 'status', 'categoryId', 'lowStock'] as const;
 
 // Mã SKU của mọi biến thể, nối bằng dấu phẩy. Biến thể chưa có mã thì bỏ qua.
 function skuCodesOf(product: ProductDetail): string {
@@ -63,8 +66,8 @@ interface ActiveFilterSource {
 // Nhãn cho từng bộ lọc đang bật, theo thứ tự các ô trên hàng lọc.
 function buildActiveFilters(
   source: ActiveFilterSource,
-): ActiveFilter<(typeof FILTER_NAMES)[number]>[] {
-  const filters: ActiveFilter<(typeof FILTER_NAMES)[number]>[] = [];
+): ActiveFilter<(typeof PRODUCT_FILTER_NAMES)[number]>[] {
+  const filters: ActiveFilter<(typeof PRODUCT_FILTER_NAMES)[number]>[] = [];
   if (source.keyword) filters.push({ name: 'search', label: `Từ khóa: ${source.keyword}` });
   if (source.status) {
     // Trạng thái đến từ URL nên có thể là giá trị lạ. Hiện nguyên giá trị đó, và chỉ tra bảng tên bằng khóa riêng của bảng.
@@ -87,10 +90,12 @@ function buildActiveFilters(
 export function ProductsPage() {
   const canWrite = useCan('products:write');
   // Bộ lọc và trang nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
-  const { values, page, setFilter, clearFilters, setPage } = useListFilters(FILTER_NAMES);
+  const { values, page, setFilter, clearFilters, setPage } = useListFilters(PRODUCT_FILTER_NAMES);
   const { search, status, categoryId } = values;
   const lowStock = values.lowStock === 'true';
-  const hasFilters = FILTER_NAMES.some((name) => values[name] !== '');
+  const hasFilters = PRODUCT_FILTER_NAMES.some((name) => values[name] !== '');
+  // Danh sách và nút xuất dùng cùng một bộ lọc, nên hai bên không lệch nhau.
+  const filters = { search, status, categoryId, lowStock };
   const categoriesQuery = useQuery<ProductCategory[]>({
     queryKey: ['admin-categories'],
     queryFn: () => apiRequest('/api/admin/categories'),
@@ -98,15 +103,7 @@ export function ProductsPage() {
   // Mỗi bộ lọc và số trang thuộc khóa cache để không hiển thị danh sách từ truy vấn khác.
   const productsQuery = useQuery<PagedProducts>({
     queryKey: ['admin-products', values, page],
-    queryFn: () => {
-      // Mã hóa từng bộ lọc để tên hoặc mã SKU có ký tự đặc biệt không đổi ý nghĩa URL.
-      const params = new URLSearchParams({ page: String(page), limit: '20' });
-      if (search.trim()) params.set('search', search.trim());
-      if (status) params.set('status', status);
-      if (categoryId) params.set('categoryId', categoryId);
-      if (lowStock) params.set('lowStock', 'true');
-      return apiRequest<PagedProducts>(`/api/admin/products?${params}`);
-    },
+    queryFn: () => apiRequest<PagedProducts>(buildAdminProductsPath(filters, page)),
     // Giữ bảng cũ trong lúc tải kết quả mới, để bảng không biến mất rồi hiện lại mỗi lần gõ.
     placeholderData: keepPreviousData,
   });
@@ -151,12 +148,19 @@ export function ProductsPage() {
           <h1>Sản phẩm</h1>
           <p>Tra cứu và cập nhật danh mục bán hàng.</p>
         </div>
-        {/* Chỉ quyền products:write được mở trang tạo sản phẩm. */}
-        {canWrite && (
-          <Link className="btn btn-primary" to="/admin/products/new">
-            Tạo sản phẩm
-          </Link>
-        )}
+        {/* Hai nút cùng hàng. Nút Xuất Excel chỉ hiện khi actor đọc được sản phẩm và có quyền xuất báo cáo. */}
+        <div className="head-actions">
+          <ExportButton
+            path={buildAdminProductsExportPath(filters)}
+            requiredPermissions={['products:read', 'reports:export']}
+          />
+          {/* Chỉ quyền products:write được mở trang tạo sản phẩm. */}
+          {canWrite && (
+            <Link className="btn btn-primary" to="/admin/products/new">
+              Tạo sản phẩm
+            </Link>
+          )}
+        </div>
       </div>
       {categoriesQuery.isError && (
         <ErrorAlert

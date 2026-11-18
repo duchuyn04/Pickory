@@ -106,7 +106,7 @@ Backend:
 - [x] EXP-06 xuất khách hàng
 
 Frontend:
-- [ ] EXP-UI3 gắn nút "Xuất Excel" vào 4 danh sách
+- [x] EXP-UI3 gắn nút "Xuất Excel" vào 4 danh sách
 
 ### Checkpoint E1
 - [ ] File của 4 danh sách mở được trong Excel, tiếng Việt đúng dấu

@@ -157,12 +157,13 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** Đặt `ExportButton` trên thanh công cụ của trang đơn hàng, sản phẩm, khách hàng và giao dịch thanh toán. Nút gửi bộ lọc đang chọn, không gửi `page`.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Mỗi trang gọi đúng route xuất với đúng bộ lọc trên URL của trang. Test dùng route giả của EXP-UI1
-- [ ] Đổi bộ lọc rồi bấm xuất thì request mang bộ lọc mới
-- [ ] Người dùng có quyền xem danh sách nhưng thiếu `reports:export` không thấy nút
-- [ ] Ở 375 px, nút nằm trong thanh công cụ và trang không tràn ngang
-- [ ] Playwright console 0 lỗi và 0 cảnh báo
+- [x] Mỗi trang gọi đúng route xuất với đúng bộ lọc trên URL của trang. Test dùng route giả của EXP-UI1
+- [x] Đổi bộ lọc rồi bấm xuất thì request mang bộ lọc mới
+- [x] Người dùng có quyền xem danh sách nhưng thiếu `reports:export` không thấy nút
+- [x] Ở 375 px, nút nằm trong thanh công cụ và trang không tràn ngang
+- [x] Playwright console 0 lỗi và 0 cảnh báo
 - [ ] File tải về với backend thật: kiểm ở EXP-E2E1
+  - Task EXP-E2E1 kiểm file tải về. Task này chỉ kiểm request.
 **Kiểm tra:** Vitest; Playwright với route giả; ảnh chụp 1280 px và 375 px
 **Phụ thuộc:** EXP-UI2 · **Quy mô:** M
 

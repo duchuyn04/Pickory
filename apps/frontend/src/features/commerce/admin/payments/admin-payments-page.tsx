@@ -14,6 +14,7 @@ import { formatOrderFlag } from '../../order-labels';
 import { orderFlagBadgeClass } from '../orders/order-badges';
 import {
   ALL_MATCH_STATUSES,
+  buildTransactionsExportPath,
   DEFAULT_MATCH_STATUS,
   PAYMENT_FILTER_NAMES,
   fetchCodPendingOrders,
@@ -23,6 +24,7 @@ import {
 } from './admin-payments-api';
 import { AttachOrderDialog, IgnoreTransactionDialog, ReceiveCodDialog } from './payment-dialogs';
 import { getErrorMessage } from '../../../../shared/error-message';
+import { ExportButton } from '../../../../shared/export-button';
 import './admin-payments.css';
 
 const PANEL_ID = 'payment-panel';
@@ -45,7 +47,7 @@ type OpenDialog =
   | { kind: 'ignore'; transaction: PaymentTransaction }
   | { kind: 'cod'; orderCode: string };
 
-// Màn đối soát: giao dịch SePay chưa khớp đơn và đơn COD đã giao chưa nhận tiền.
+// Màn đối soát: giao dịch SePay chưa khớp đơn và đơn thanh toán khi nhận hàng (COD) đã giao chưa nhận tiền.
 export function AdminPaymentsPage() {
   const canReadPayments = useCan('payments:read');
   const canReconcile = useCan('payments:reconcile');
@@ -92,6 +94,13 @@ export function AdminPaymentsPage() {
           <h1>Đối soát thanh toán</h1>
           <p>Khớp giao dịch chuyển khoản SePay với đơn và ghi nhận tiền COD đã thu.</p>
         </div>
+        {/* Route xuất chỉ có dữ liệu SePay, nên tab COD không có nút. */}
+        {selectedTab === 'sepay' && (
+          <ExportButton
+            path={buildTransactionsExportPath({ matchStatus, orderFlag: values.orderFlag })}
+            requiredPermissions={['payments:read', 'reports:export']}
+          />
+        )}
       </div>
 
       {notice && (

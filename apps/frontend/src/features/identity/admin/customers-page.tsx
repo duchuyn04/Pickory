@@ -10,6 +10,12 @@ import { useCan } from '../hooks/use-actor';
 import { ForbiddenNotice } from '../../../shared/forbidden-notice';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { getErrorMessage } from '../../../shared/error-message';
+import { ExportButton } from '../../../shared/export-button';
+import {
+  buildAdminCustomersExportPath,
+  buildAdminCustomersPath,
+  CUSTOMER_FILTER_NAMES,
+} from './customers-path';
 import './identity-admin.css';
 
 // Một dòng khách hàng như API trả về; không có passwordHash.
@@ -31,9 +37,6 @@ interface CustomersResponse {
   limit: number;
 }
 
-// Tên tham số bộ lọc trên URL. Trùng tên tham số của `GET /api/admin/customers`.
-const FILTER_NAMES = ['search', 'status', 'emailVerified'] as const;
-
 // Trang tra cứu khách hàng, khóa và mở khóa tài khoản.
 export function CustomersPage() {
   // Hai quyền tách nhau: sales và support xem được danh sách nhưng không thấy nút khóa.
@@ -42,27 +45,15 @@ export function CustomersPage() {
   const queryClient = useQueryClient();
 
   // Bộ lọc và trang nằm trên URL. Mở lại link cho đúng danh sách đã lọc.
-  const { values, page, setFilter, setPage } = useListFilters(FILTER_NAMES);
-  const hasFilters = FILTER_NAMES.some((name) => values[name] !== '');
+  const { values, page, setFilter, setPage } = useListFilters(CUSTOMER_FILTER_NAMES);
+  const hasFilters = CUSTOMER_FILTER_NAMES.some((name) => values[name] !== '');
   const [actionError, setActionError] = useState<string | null>(null);
 
   // Lấy cả cờ lỗi để hiện thông báo khi tải thất bại. Nếu bỏ qua, lỗi 403 hay mất mạng sẽ hiện như danh sách rỗng.
   const { data, isLoading, isError, error } = useQuery<CustomersResponse>({
     // Mọi bộ lọc và số trang nằm trong khóa truy vấn. Mỗi tổ hợp có cache riêng và đổi giá trị thì tự gọi lại.
     queryKey: ['admin-customers', values, page],
-    queryFn: () => {
-      // `URLSearchParams` mã hóa ký tự đặc biệt trong từ khóa (như & hay #) để URL không sai.
-      const params = new URLSearchParams();
-      for (const name of FILTER_NAMES) {
-        if (values[name] !== '') params.set(name, values[name]);
-      }
-      // Trang 1 là mặc định của API nên không gửi.
-      if (page > 1) params.set('page', String(page));
-      const queryString = params.toString();
-      return apiRequest<CustomersResponse>(
-        queryString ? `/api/admin/customers?${queryString}` : '/api/admin/customers',
-      );
-    },
+    queryFn: () => apiRequest<CustomersResponse>(buildAdminCustomersPath(values, page)),
     // Không gọi API khi không có quyền, vì chắc chắn bị từ chối với 403.
     enabled: canReadCustomers,
   });
@@ -105,6 +96,11 @@ export function CustomersPage() {
           <h1>Quản lý Khách hàng</h1>
           <p>Tra cứu thông tin khách hàng và kiểm soát quyền truy cập tài khoản.</p>
         </div>
+        {/* Nút chỉ hiện khi actor đọc được khách hàng và có quyền xuất báo cáo. */}
+        <ExportButton
+          path={buildAdminCustomersExportPath(values)}
+          requiredPermissions={['customers:read', 'reports:export']}
+        />
       </div>
 
       {actionError && <ErrorAlert message={actionError} />}
