@@ -117,7 +117,7 @@ Frontend:
 
 Backend:
 - [x] EXP-07 thông tin shop trong cấu hình bán hàng
-- [ ] EXP-08 route dữ liệu in hóa đơn
+- [x] EXP-08 route dữ liệu in hóa đơn
 
 Frontend:
 - [x] EXP-UI4 đọc số tiền thành chữ

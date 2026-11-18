@@ -193,14 +193,14 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** `GET /api/admin/order-invoices?codes=` trong `commerce`. Route trả thông tin shop và dữ liệu in của 1 tới 50 đơn, theo thứ tự trong `codes`.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Contract test đạt với mọi ví dụ trong `order-invoices.json`
-- [ ] Thiếu `orders:read` trả 403. Route có trong ma trận quyền
-- [ ] Mã trùng trong `codes` chỉ tạo một hóa đơn
-- [ ] `codes` rỗng, 51 mã, hoặc mã sai định dạng trả 400 với `details[].key` là `codes`
-- [ ] Một mã không tồn tại trả 404 `ORDER_NOT_FOUND`, `details` có đúng mã đó
-- [ ] `lineTotal` bằng `unitPrice × quantity`. `subtotal` bằng tổng `lineTotal`
-- [ ] `shop` lấy từ khối `shop` của EXP-07
-- [ ] Route chạy đúng 2 câu truy vấn DB với 50 mã: một câu đọc đơn kèm dòng sản phẩm, một câu đọc cấu hình
+- [x] Contract test đạt với mọi ví dụ trong `order-invoices.json`
+- [x] Thiếu `orders:read` trả 403. Route có trong ma trận quyền
+- [x] Mã trùng trong `codes` chỉ tạo một hóa đơn
+- [x] `codes` rỗng, 51 mã, hoặc mã sai định dạng trả 400 với `details[].key` là `codes`
+- [x] Một mã không tồn tại trả 404 `ORDER_NOT_FOUND`, `details` có đúng mã đó
+- [x] `lineTotal` bằng `unitPrice × quantity`. `subtotal` bằng tổng `lineTotal`
+- [x] `shop` lấy từ khối `shop` của EXP-07
+- [x] Route chạy đúng 2 câu truy vấn DB với 50 mã: một câu đọc đơn kèm dòng sản phẩm, một câu đọc cấu hình
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** EXP-02, EXP-07 · **Quy mô:** M
 

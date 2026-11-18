@@ -13,6 +13,7 @@ using Pickory.Modules.Commerce.Contracts.Reports;
 using Pickory.Modules.Commerce.Demo;
 using Pickory.Modules.Commerce.Orders;
 using Pickory.Modules.Commerce.Orders.Admin;
+using Pickory.Modules.Commerce.Orders.Invoices;
 using Pickory.Modules.Commerce.Orders.Lookup;
 using Pickory.Modules.Commerce.Payments;
 using Pickory.Modules.Commerce.Payments.Admin;
@@ -74,6 +75,8 @@ public static class CommerceModule
         services.AddScoped<AdminOrderService>();
         // Xuất Excel đọc mọi đơn khớp bộ lọc và ghi nhật ký cùng transaction, nên tách khỏi dịch vụ đọc một trang.
         services.AddScoped<AdminOrderExportService>();
+        // Đọc dữ liệu in hóa đơn cho tối đa 50 đơn trong đúng hai câu truy vấn DB.
+        services.AddScoped<AdminOrderInvoiceService>();
         // Cỡ lô đọc dòng hàng có giá trị mặc định. Test thay bằng lô nhỏ để chạy nhánh nhiều lô với vài đơn.
         services.TryAddSingleton(new OrderExportLineBatching());
         // Thao tác ghi của nhân viên (xác nhận, hủy, đánh dấu hóa đơn) tách khỏi dịch vụ đọc để phạm vi quyền rõ ràng.
@@ -151,6 +154,8 @@ public static class CommerceModule
         AdminOrderEndpoints.Map(moduleRoutes);
         // Route xuất đơn nằm cạnh route danh sách vì hai route dùng chung bộ lọc đơn.
         AdminOrderExportEndpoints.Map(moduleRoutes);
+        // Route dữ liệu in hóa đơn dùng chung mã đơn và thực thể của miền đơn hàng.
+        AdminOrderInvoiceEndpoints.Map(moduleRoutes);
         AdminPaymentEndpoints.Map(moduleRoutes);
         AdminPaymentTransactionExportEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);
