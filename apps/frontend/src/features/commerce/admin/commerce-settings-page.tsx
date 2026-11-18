@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, type FormEvent } from 'react';
+import { useState, type FormEvent, type InputHTMLAttributes } from 'react';
 import { ApiError } from '../../../shared/api';
 import { ErrorAlert } from '../../../shared/error-alert';
 import { FieldError, hasFieldErrors } from '../../../shared/field-error';
@@ -17,6 +17,10 @@ import {
   MAX_CART_LINES_UPPER_BOUND,
   MAX_QUANTITY_PER_SKU_UPPER_BOUND,
   MONEY_MAX_AMOUNT,
+  SHOP_ADDRESS_MAX_LENGTH,
+  SHOP_NAME_MAX_LENGTH,
+  SHOP_PHONE_MAX_LENGTH,
+  SHOP_TAX_CODE_MAX_LENGTH,
   formatCount,
   mapServerErrors,
   validateCommerceForm,
@@ -42,9 +46,31 @@ const FIELD_IDS: Record<CommerceFieldName, string> = {
   maxCartLines: 'commerce-max-cart-lines',
   sepayAccountNumber: 'commerce-sepay-account-number',
   sepayBankCode: 'commerce-sepay-bank-code',
+  shopName: 'commerce-shop-name',
+  shopAddress: 'commerce-shop-address',
+  shopPhone: 'commerce-shop-phone',
+  shopTaxCode: 'commerce-shop-tax-code',
 };
 
-// Màn cấu hình ngưỡng miễn phí giao hàng, hạn mức COD, giới hạn giỏ hàng và tài khoản nhận chuyển khoản.
+// Chọn bàn phím số hoặc điện thoại cho các ô cần thiết. Mã số thuế dùng mặc định `text` để iOS nhập được dấu `-`.
+const FIELD_INPUT_MODES: Partial<
+  Record<CommerceFieldName, InputHTMLAttributes<HTMLInputElement>['inputMode']>
+> = {
+  maxQuantityPerSku: 'numeric',
+  maxCartLines: 'numeric',
+  sepayAccountNumber: 'numeric',
+  shopPhone: 'tel',
+};
+
+// Giới hạn độ dài ở ô khớp contract backend. Ô mã số thuế dùng 20 ký tự để chứa đủ 13 chữ số kèm dấu gạch ngang.
+const FIELD_MAX_LENGTHS: Partial<Record<CommerceFieldName, number>> = {
+  shopName: SHOP_NAME_MAX_LENGTH,
+  shopAddress: SHOP_ADDRESS_MAX_LENGTH,
+  shopPhone: SHOP_PHONE_MAX_LENGTH,
+  shopTaxCode: SHOP_TAX_CODE_MAX_LENGTH,
+};
+
+// Màn cấu hình giao hàng, hạn mức COD, giỏ hàng, tài khoản nhận tiền và thông tin in hóa đơn.
 export function CommerceSettingsPage() {
   const canManage = useCan(COMMERCE_SETTINGS_PERMISSION);
 
@@ -70,8 +96,8 @@ export function CommerceSettingsPage() {
         <div className="page-head-text">
           <h1>Cấu hình bán hàng</h1>
           <p>
-            Ngưỡng miễn phí giao hàng, hạn mức COD, giới hạn giỏ hàng và tài khoản nhận chuyển
-            khoản.
+            Ngưỡng miễn phí giao hàng, hạn mức COD, giới hạn giỏ hàng, tài khoản nhận chuyển khoản
+            và thông tin in trên hóa đơn.
           </p>
         </div>
       </div>
@@ -93,7 +119,7 @@ export function CommerceSettingsPage() {
   );
 }
 
-// Số `null` ở backend là chuỗi rỗng ở ô nhập, vì ô nhập chỉ giữ chuỗi.
+// Giá trị `null` ở backend thành chuỗi rỗng trong ô nhập, vì thẻ input chỉ giữ chuỗi.
 function toFormValues(settings: CommerceSettings): CommerceFormValues {
   return {
     freeShippingThreshold: String(settings.freeShippingThreshold),
@@ -102,6 +128,10 @@ function toFormValues(settings: CommerceSettings): CommerceFormValues {
     maxCartLines: String(settings.maxCartLines),
     sepayAccountNumber: settings.sepayAccountNumber ?? '',
     sepayBankCode: settings.sepayBankCode ?? '',
+    shopName: settings.shop.name ?? '',
+    shopAddress: settings.shop.address ?? '',
+    shopPhone: settings.shop.phone ?? '',
+    shopTaxCode: settings.shop.taxCode ?? '',
   };
 }
 
@@ -153,7 +183,7 @@ function CommerceSettingsForm({ initialSettings }: CommerceSettingsFormProps) {
 
     setIsSubmitting(true);
     try {
-      // Chỉ gửi 6 trường backend nhận. Khóa webhook SePay nằm ở biến môi trường, không đi qua màn này.
+      // Chỉ gửi bảy khóa backend nhận. Khóa webhook SePay nằm ở biến môi trường, không đi qua màn này.
       const saved = await saveCommerceSettings({
         freeShippingThreshold: Number(values.freeShippingThreshold.trim()),
         codMaxAmount: Number(values.codMaxAmount.trim()),
@@ -161,6 +191,12 @@ function CommerceSettingsForm({ initialSettings }: CommerceSettingsFormProps) {
         maxCartLines: Number(values.maxCartLines.trim()),
         sepayAccountNumber: emptyToNull(values.sepayAccountNumber),
         sepayBankCode: emptyToNull(values.sepayBankCode),
+        shop: {
+          name: emptyToNull(values.shopName),
+          address: emptyToNull(values.shopAddress),
+          phone: emptyToNull(values.shopPhone),
+          taxCode: emptyToNull(values.shopTaxCode),
+        },
       });
 
       // Cập nhật cache để lần mở lại màn trong phiên này hiện dữ liệu vừa lưu.
@@ -267,6 +303,52 @@ function CommerceSettingsForm({ initialSettings }: CommerceSettingsFormProps) {
           />
         </div>
 
+        <div className="card-head commerce-settings-section">
+          <h2>Thông tin in trên hóa đơn</h2>
+        </div>
+        <p className="muted commerce-settings-note">
+          Thông tin này in ở đầu hóa đơn. Ô để trống thì dòng đó không in, tên shop để trống thì hóa
+          đơn in Pickory.
+        </p>
+        <div className="form-grid form-grid-2">
+          <SettingsField
+            field="shopName"
+            label="Tên shop"
+            hint={`Tối đa ${SHOP_NAME_MAX_LENGTH} ký tự. Để trống thì hóa đơn in Pickory.`}
+            values={values}
+            errors={fieldErrors}
+            disabled={isSubmitting}
+            onChange={changeField}
+          />
+          <SettingsField
+            field="shopAddress"
+            label="Địa chỉ"
+            hint={`Tối đa ${SHOP_ADDRESS_MAX_LENGTH} ký tự.`}
+            values={values}
+            errors={fieldErrors}
+            disabled={isSubmitting}
+            onChange={changeField}
+          />
+          <SettingsField
+            field="shopPhone"
+            label="Số điện thoại"
+            hint={`Tối đa ${SHOP_PHONE_MAX_LENGTH} ký tự. Gồm chữ số, dấu cách, +, ., -.`}
+            values={values}
+            errors={fieldErrors}
+            disabled={isSubmitting}
+            onChange={changeField}
+          />
+          <SettingsField
+            field="shopTaxCode"
+            label="Mã số thuế"
+            hint="10 hoặc 13 chữ số. Có thể dùng dấu - để ngăn nhóm."
+            values={values}
+            errors={fieldErrors}
+            disabled={isSubmitting}
+            onChange={changeField}
+          />
+        </div>
+
         <div className="head-actions">
           <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
             {isSubmitting ? 'Đang lưu...' : 'Lưu'}
@@ -320,8 +402,10 @@ function SettingsField({
         <input
           id={inputId}
           type="text"
-          // Ô số mở bàn phím số trên điện thoại. Kiểu ô giữ là chữ để người dùng nhập số âm và thấy lỗi dưới ô.
-          inputMode={field === 'sepayBankCode' ? 'text' : 'numeric'}
+          // Dùng bàn phím chữ mặc định khi ô không khai báo kiểu riêng, để gõ được chữ cái và dấu gạch ngang.
+          inputMode={FIELD_INPUT_MODES[field] ?? 'text'}
+          // Chặn nhập vượt giới hạn ngay trên ô theo hợp đồng của từng trường.
+          maxLength={FIELD_MAX_LENGTHS[field]}
           autoComplete="off"
           disabled={disabled}
           value={values[field]}

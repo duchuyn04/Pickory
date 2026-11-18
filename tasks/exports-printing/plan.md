@@ -123,7 +123,7 @@ Frontend:
 - [x] EXP-UI4 đọc số tiền thành chữ
 - [x] EXP-UI5 trang in hóa đơn
 - [x] EXP-UI6 nút in ở chi tiết đơn và chọn nhiều đơn ở danh sách
-- [ ] EXP-UI7 form thông tin shop
+- [x] EXP-UI7 form thông tin shop
 
 ### Checkpoint E2
 - [ ] Hóa đơn của đơn 15 dòng sản phẩm vừa 1 trang A4

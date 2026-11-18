@@ -3,6 +3,7 @@ import { ApiError } from '../../../../src/shared/api';
 import {
   formatVnd,
   mapServerErrors,
+  mapServerKeyToField,
   validateCommerceForm,
   type CommerceFormValues,
 } from '../../../../src/features/commerce/commerce-settings-validation';
@@ -14,6 +15,10 @@ const validValues: CommerceFormValues = {
   maxCartLines: '20',
   sepayAccountNumber: '0123456789',
   sepayBankCode: 'MB',
+  shopName: '',
+  shopAddress: '',
+  shopPhone: '',
+  shopTaxCode: '',
 };
 
 function withValue(field: keyof CommerceFormValues, value: string): CommerceFormValues {
@@ -174,4 +179,90 @@ describe('mapServerErrors', () => {
       unmatched: ['Máy chủ đang bận.'],
     });
   });
+
+  it.each([
+    ['shop.name', 'shopName'],
+    ['shop.address', 'shopAddress'],
+    ['shop.phone', 'shopPhone'],
+    ['shop.taxCode', 'shopTaxCode'],
+  ] as const)('ánh xạ khóa server %s tới đúng ô %s', (serverKey, expectedField) => {
+    expect(mapServerKeyToField(serverKey)).toBe(expectedField);
+  });
+
+  it('ánh xạ khóa shop.* giữ nguyên văn thông báo server', () => {
+    const error = new ApiError('VALIDATION_ERROR', 400, 'Dữ liệu không hợp lệ.', [
+      { key: 'shop.name', message: 'Tên shop không được vượt quá 120 ký tự.' },
+      { key: 'shop.address', message: 'Địa chỉ shop không được vượt quá 255 ký tự.' },
+      {
+        key: 'shop.phone',
+        message: 'Số điện thoại shop dài tối đa 20 ký tự và chỉ gồm chữ số, dấu cách, +, ., -.',
+      },
+      { key: 'shop.taxCode', message: 'Mã số thuế shop phải gồm 10 hoặc 13 chữ số.' },
+    ]);
+
+    const mapped = mapServerErrors(error);
+
+    expect(mapped.fieldErrors).toEqual({
+      shopName: 'Tên shop không được vượt quá 120 ký tự.',
+      shopAddress: 'Địa chỉ shop không được vượt quá 255 ký tự.',
+      shopPhone: 'Số điện thoại shop dài tối đa 20 ký tự và chỉ gồm chữ số, dấu cách, +, ., -.',
+      shopTaxCode: 'Mã số thuế shop phải gồm 10 hoặc 13 chữ số.',
+    });
+    expect(mapped.unmatched).toEqual([]);
+  });
+
+  it('khóa shop lạ hoặc khóa shop gốc đưa vào danh sách không gắn được', () => {
+    const error = new ApiError('VALIDATION_ERROR', 400, 'Dữ liệu không hợp lệ.', [
+      { key: 'shop.unknown', message: 'Trường này không được hỗ trợ.' },
+      { key: 'shop', message: 'Thông tin shop phải là một đối tượng JSON.' },
+    ]);
+
+    const mapped = mapServerErrors(error);
+
+    expect(mapped.fieldErrors).toEqual({});
+    expect(mapped.unmatched).toEqual([
+      'Trường này không được hỗ trợ.',
+      'Thông tin shop phải là một đối tượng JSON.',
+    ]);
+  });
+
+  it('lỗi shop.phone đi cùng lỗi ô số cũ giữ nguyên câu của client cho ô số', () => {
+    const error = new ApiError('VALIDATION_ERROR', 400, 'Dữ liệu không hợp lệ.', [
+      { key: 'shop.phone', message: 'Số điện thoại không hợp lệ.' },
+      { key: 'maxCartLines', message: 'maxCartLines phải là số nguyên từ 1 đến 100.' },
+    ]);
+
+    const mapped = mapServerErrors(error);
+
+    expect(mapped.fieldErrors).toEqual({
+      shopPhone: 'Số điện thoại không hợp lệ.',
+      maxCartLines: 'Số dòng tối đa mỗi giỏ phải là số nguyên từ 1 đến 100.',
+    });
+    expect(mapped.unmatched).toEqual([]);
+  });
+
+  it('client không tự báo lỗi cho phone và taxCode của shop', () => {
+    const errors = validateCommerceForm({
+      ...validValues,
+      shopPhone: 'abc123',
+      shopTaxCode: '123',
+    });
+
+    expect(errors).toEqual({});
+  });
+
+  it.each(['constructor', 'toString', '__proto__'])(
+    'khóa prototype %s không ánh xạ vào ô và đưa vào unmatched',
+    (prototypeKey) => {
+      expect(mapServerKeyToField(prototypeKey)).toBeNull();
+
+      const error = new ApiError('VALIDATION_ERROR', 400, 'Dữ liệu không hợp lệ.', [
+        { key: prototypeKey, message: 'Trường này không được hỗ trợ.' },
+      ]);
+      const mapped = mapServerErrors(error);
+
+      expect(mapped.fieldErrors).toEqual({});
+      expect(mapped.unmatched).toEqual(['Trường này không được hỗ trợ.']);
+    },
+  );
 });

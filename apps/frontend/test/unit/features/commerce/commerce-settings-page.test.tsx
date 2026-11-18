@@ -33,6 +33,12 @@ const defaultSettings: CommerceSettings = {
   sepayAccountNumber: null,
   sepayBankCode: null,
   updatedAt: null,
+  shop: {
+    name: null,
+    address: null,
+    phone: null,
+    taxCode: null,
+  },
 };
 
 const storedSettings: CommerceSettings = {
@@ -43,6 +49,12 @@ const storedSettings: CommerceSettings = {
   sepayAccountNumber: '0123456789',
   sepayBankCode: 'MB',
   updatedAt: '2026-10-12T06:30:15.000Z',
+  shop: {
+    name: 'Pickory Store',
+    address: '12 Nguyễn Huệ, Quận 1, TP.HCM',
+    phone: '0901234567',
+    taxCode: '0312345678',
+  },
 };
 
 beforeEach(() => {
@@ -178,7 +190,21 @@ const FIELD_IDS = {
   maxCartLines: 'commerce-max-cart-lines',
   sepayAccountNumber: 'commerce-sepay-account-number',
   sepayBankCode: 'commerce-sepay-bank-code',
+  shopName: 'commerce-shop-name',
+  shopAddress: 'commerce-shop-address',
+  shopPhone: 'commerce-shop-phone',
+  shopTaxCode: 'commerce-shop-tax-code',
 };
+
+// Tìm ô nhập theo đúng nhãn hiển thị để kiểm tra liên kết giữa nhãn và ô.
+function inputByLabel(labelText: string): HTMLInputElement {
+  const labels = Array.from(container.querySelectorAll('label'));
+  const label = labels.find((item) => item.textContent === labelText);
+  if (!label || !label.htmlFor) throw new Error(`Không thấy nhãn ${labelText}`);
+  const input = container.querySelector<HTMLInputElement>(`#${label.htmlFor}`);
+  if (!input) throw new Error(`Không thấy ô cho nhãn ${labelText}`);
+  return input;
+}
 
 describe('CommerceSettingsPage: quyền', () => {
   it('thiếu quyền thì hiện thông báo 403 nêu quyền cần có và không có form', async () => {
@@ -247,11 +273,19 @@ describe('CommerceSettingsPage: tải và điền form', () => {
       'Số dòng tối đa mỗi giỏ',
       'Số tài khoản',
       'Mã ngân hàng',
+      'Tên shop',
+      'Địa chỉ',
+      'Số điện thoại',
+      'Mã số thuế',
     ]);
     const headings = Array.from(container.querySelectorAll('h2')).map(
       (heading) => heading.textContent,
     );
-    expect(headings).toEqual(['Giỏ hàng và giao hàng', 'Tài khoản nhận chuyển khoản']);
+    expect(headings).toEqual([
+      'Giỏ hàng và giao hàng',
+      'Tài khoản nhận chuyển khoản',
+      'Thông tin in trên hóa đơn',
+    ]);
   });
 
   it('gợi ý dưới ô tiền chỉ nêu khoảng giới hạn, số đang nhập đã hiện trong ô', async () => {
@@ -381,6 +415,12 @@ describe('CommerceSettingsPage: lưu', () => {
         maxCartLines: 10,
         sepayAccountNumber: null,
         sepayBankCode: null,
+        shop: {
+          name: 'Pickory Store',
+          address: '12 Nguyễn Huệ, Quận 1, TP.HCM',
+          phone: '0901234567',
+          taxCode: '0312345678',
+        },
       },
     ]);
   });
@@ -626,5 +666,266 @@ describe('CommerceSettingsPage: căn lề ô tiền', () => {
     const frames = [...container.querySelectorAll('.money-input')];
     expect(frames).toHaveLength(2);
     expect(frames.some((frame) => frame.classList.contains('money-input-end'))).toBe(false);
+  });
+});
+
+describe('CommerceSettingsPage: thông tin shop', () => {
+  it('GET có đủ 4 giá trị shop thì điền đúng vào 4 ô theo nhãn', async () => {
+    stubServer({ settings: storedSettings });
+    await renderPage(managerActor);
+
+    expect(inputByLabel('Tên shop').value).toBe('Pickory Store');
+    expect(inputByLabel('Địa chỉ').value).toBe('12 Nguyễn Huệ, Quận 1, TP.HCM');
+    expect(inputByLabel('Số điện thoại').value).toBe('0901234567');
+    expect(inputByLabel('Mã số thuế').value).toBe('0312345678');
+  });
+
+  it('GET có shop toàn null thì cả 4 ô hiện trống', async () => {
+    stubServer({ settings: defaultSettings });
+    await renderPage(managerActor);
+
+    expect(inputByLabel('Tên shop').value).toBe('');
+    expect(inputByLabel('Địa chỉ').value).toBe('');
+    expect(inputByLabel('Số điện thoại').value).toBe('');
+    expect(inputByLabel('Mã số thuế').value).toBe('');
+  });
+
+  it.each([
+    ['name', 'Tên shop'],
+    ['address', 'Địa chỉ'],
+    ['phone', 'Số điện thoại'],
+    ['taxCode', 'Mã số thuế'],
+  ] as const)('GET có %s là null chỉ để trống ô tương ứng', async (nullKey, emptyLabel) => {
+    stubServer({
+      settings: {
+        ...storedSettings,
+        shop: { ...storedSettings.shop, [nullKey]: null },
+      },
+    });
+    await renderPage(managerActor);
+
+    const expectedByLabel: Record<string, string> = {
+      'Tên shop': 'Pickory Store',
+      'Địa chỉ': '12 Nguyễn Huệ, Quận 1, TP.HCM',
+      'Số điện thoại': '0901234567',
+      'Mã số thuế': '0312345678',
+    };
+    expectedByLabel[emptyLabel] = '';
+
+    for (const [label, expected] of Object.entries(expectedByLabel)) {
+      expect(inputByLabel(label).value).toBe(expected);
+    }
+  });
+
+  it('nhóm Thông tin in trên hóa đơn nằm sau nhóm tài khoản và trước nút Lưu', async () => {
+    stubServer({ settings: defaultSettings });
+    await renderPage(managerActor);
+
+    const headings = Array.from(container.querySelectorAll('h2'));
+    const sepayHeading = headings.find(
+      (item) => item.textContent === 'Tài khoản nhận chuyển khoản',
+    );
+    const shopHeading = headings.find((item) => item.textContent === 'Thông tin in trên hóa đơn');
+    const button = saveButton();
+
+    expect(shopHeading).toBeDefined();
+    expect(
+      (sepayHeading!.compareDocumentPosition(shopHeading!) & Node.DOCUMENT_POSITION_FOLLOWING) !==
+        0,
+    ).toBe(true);
+    expect(
+      (shopHeading!.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING) !== 0,
+    ).toBe(true);
+    expect(shopHeading?.parentElement?.className).toBe('card-head commerce-settings-section');
+
+    const noteElement = shopHeading?.parentElement?.nextElementSibling;
+    expect(noteElement?.tagName).toBe('P');
+    expect(noteElement?.className).toBe('muted commerce-settings-note');
+    expect(noteElement?.textContent).toBe(
+      'Thông tin này in ở đầu hóa đơn. Ô để trống thì dòng đó không in, tên shop để trống thì hóa đơn in Pickory.',
+    );
+
+    expect(container.querySelector(`#${FIELD_IDS.shopName}-hint`)?.textContent).toBe(
+      'Tối đa 120 ký tự. Để trống thì hóa đơn in Pickory.',
+    );
+    expect(container.querySelector(`#${FIELD_IDS.shopAddress}-hint`)?.textContent).toBe(
+      'Tối đa 255 ký tự.',
+    );
+    expect(container.querySelector(`#${FIELD_IDS.shopPhone}-hint`)?.textContent).toBe(
+      'Tối đa 20 ký tự. Gồm chữ số, dấu cách, +, ., -.',
+    );
+    expect(container.querySelector(`#${FIELD_IDS.shopTaxCode}-hint`)?.textContent).toBe(
+      '10 hoặc 13 chữ số. Có thể dùng dấu - để ngăn nhóm.',
+    );
+  });
+
+  it('4 ô shop có maxLength, autocomplete off và inputMode đúng hợp đồng', async () => {
+    stubServer({ settings: defaultSettings });
+    await renderPage(managerActor);
+
+    const nameInput = inputByLabel('Tên shop');
+    const addressInput = inputByLabel('Địa chỉ');
+    const phoneInput = inputByLabel('Số điện thoại');
+    const taxCodeInput = inputByLabel('Mã số thuế');
+
+    expect(nameInput.getAttribute('maxlength')).toBe('120');
+    expect(addressInput.getAttribute('maxlength')).toBe('255');
+    expect(phoneInput.getAttribute('maxlength')).toBe('20');
+    expect(taxCodeInput.getAttribute('maxlength')).toBe('20');
+
+    expect(nameInput.getAttribute('autocomplete')).toBe('off');
+    expect(addressInput.getAttribute('autocomplete')).toBe('off');
+    expect(phoneInput.getAttribute('autocomplete')).toBe('off');
+    expect(taxCodeInput.getAttribute('autocomplete')).toBe('off');
+
+    expect(nameInput.getAttribute('inputmode')).toBe('text');
+    expect(addressInput.getAttribute('inputmode')).toBe('text');
+    expect(phoneInput.getAttribute('inputmode')).toBe('tel');
+    expect(taxCodeInput.getAttribute('inputmode')).toBe('text');
+  });
+
+  it('lưu gửi đủ 7 khóa gồm shop đã cắt khoảng trắng, chuỗi trắng thành null và nhận lại giá trị server', async () => {
+    stubServer({
+      settings: storedSettings,
+      putHandler: () =>
+        jsonResponse({
+          data: {
+            ...storedSettings,
+            shop: {
+              name: 'Shop A',
+              address: null,
+              phone: '0987 654 321',
+              taxCode: '0312345678-001',
+            },
+          },
+        }),
+    });
+    await renderPage(managerActor);
+
+    await typeInto(FIELD_IDS.shopName, '  Shop A  ');
+    await typeInto(FIELD_IDS.shopAddress, '   ');
+    await typeInto(FIELD_IDS.shopPhone, '  0987 654 321  ');
+    await typeInto(FIELD_IDS.shopTaxCode, '');
+
+    await clickSave();
+
+    expect(putBodies()).toEqual([
+      {
+        freeShippingThreshold: 700000,
+        codMaxAmount: 15000000,
+        maxQuantityPerSku: 3,
+        maxCartLines: 10,
+        sepayAccountNumber: '0123456789',
+        sepayBankCode: 'MB',
+        shop: {
+          name: 'Shop A',
+          address: null,
+          phone: '0987 654 321',
+          taxCode: null,
+        },
+      },
+    ]);
+    expect(container.querySelector('[role="status"]')?.textContent).toBe(
+      'Đã lưu cấu hình bán hàng.',
+    );
+    expect(inputValue(FIELD_IDS.shopName)).toBe('Shop A');
+    expect(inputValue(FIELD_IDS.shopAddress)).toBe('');
+    expect(inputValue(FIELD_IDS.shopPhone)).toBe('0987 654 321');
+    expect(inputValue(FIELD_IDS.shopTaxCode)).toBe('0312345678-001');
+  });
+
+  it.each([
+    [
+      'shop.name',
+      FIELD_IDS.shopName,
+      FIELD_IDS.shopAddress,
+      'Tên shop không được vượt quá 120 ký tự.',
+    ],
+    [
+      'shop.address',
+      FIELD_IDS.shopAddress,
+      FIELD_IDS.shopName,
+      'Địa chỉ shop không được vượt quá 255 ký tự.',
+    ],
+    [
+      'shop.phone',
+      FIELD_IDS.shopPhone,
+      FIELD_IDS.shopTaxCode,
+      'Số điện thoại shop dài tối đa 20 ký tự và chỉ gồm chữ số, dấu cách, +, ., -.',
+    ],
+    [
+      'shop.taxCode',
+      FIELD_IDS.shopTaxCode,
+      FIELD_IDS.shopPhone,
+      'Mã số thuế shop phải gồm 10 hoặc 13 chữ số.',
+    ],
+  ] as const)(
+    'lỗi 400 cho %s hiện dưới đúng ô với aria-invalid và aria-describedby',
+    async (serverKey, targetId, otherId, message) => {
+      stubServer({
+        settings: storedSettings,
+        putHandler: () => validationFailure([{ key: serverKey, message }]),
+      });
+      await renderPage(managerActor);
+
+      await clickSave();
+
+      const targetInput = container.querySelector(`#${targetId}`);
+      const otherInput = container.querySelector(`#${otherId}`);
+      expect(errorText(targetId)).toBe(message);
+      expect(errorText(otherId)).toBeNull();
+      expect(targetInput?.getAttribute('aria-invalid')).toBe('true');
+      expect(targetInput?.getAttribute('aria-describedby')).toBe(`${targetId}-error`);
+      expect(otherInput?.getAttribute('aria-invalid')).toBeNull();
+      expect(otherInput?.getAttribute('aria-describedby')).toBe(`${otherId}-hint`);
+      expect(container.querySelector('[role="alert"]')).toBeNull();
+    },
+  );
+
+  it('lỗi 400 hai ô shop cùng lúc và lỗi kèm ô số cũ hiện đúng dưới từng ô', async () => {
+    stubServer({
+      settings: storedSettings,
+      putHandler: () =>
+        validationFailure([
+          {
+            key: 'shop.phone',
+            message: 'Số điện thoại shop dài tối đa 20 ký tự và chỉ gồm chữ số, dấu cách, +, ., -.',
+          },
+          { key: 'shop.taxCode', message: 'Mã số thuế shop phải gồm 10 hoặc 13 chữ số.' },
+          { key: 'maxCartLines', message: 'maxCartLines phải là số nguyên từ 1 đến 100.' },
+        ]),
+    });
+    await renderPage(managerActor);
+
+    await clickSave();
+
+    expect(errorText(FIELD_IDS.shopPhone)).toBe(
+      'Số điện thoại shop dài tối đa 20 ký tự và chỉ gồm chữ số, dấu cách, +, ., -.',
+    );
+    expect(errorText(FIELD_IDS.shopTaxCode)).toBe('Mã số thuế shop phải gồm 10 hoặc 13 chữ số.');
+    expect(errorText(FIELD_IDS.maxCartLines)).toBe(
+      'Số dòng tối đa mỗi giỏ phải là số nguyên từ 1 đến 100.',
+    );
+    expect(container.querySelector('[role="alert"]')).toBeNull();
+  });
+
+  it('sửa một ô shop thì chỉ xóa lỗi của ô đó, lỗi ô khác giữ nguyên', async () => {
+    stubServer({
+      settings: storedSettings,
+      putHandler: () =>
+        validationFailure([
+          { key: 'shop.phone', message: 'Số điện thoại shop không hợp lệ.' },
+          { key: 'shop.taxCode', message: 'Mã số thuế shop không hợp lệ.' },
+        ]),
+    });
+    await renderPage(managerActor);
+    await clickSave();
+    expect(errorText(FIELD_IDS.shopPhone)).toBe('Số điện thoại shop không hợp lệ.');
+    expect(errorText(FIELD_IDS.shopTaxCode)).toBe('Mã số thuế shop không hợp lệ.');
+
+    await typeInto(FIELD_IDS.shopPhone, '0909998888');
+
+    expect(errorText(FIELD_IDS.shopPhone)).toBeNull();
+    expect(errorText(FIELD_IDS.shopTaxCode)).toBe('Mã số thuế shop không hợp lệ.');
   });
 });

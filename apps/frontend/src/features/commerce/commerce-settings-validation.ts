@@ -7,7 +7,11 @@ export type CommerceFieldName =
   | 'maxQuantityPerSku'
   | 'maxCartLines'
   | 'sepayAccountNumber'
-  | 'sepayBankCode';
+  | 'sepayBankCode'
+  | 'shopName'
+  | 'shopAddress'
+  | 'shopPhone'
+  | 'shopTaxCode';
 
 export type CommerceFieldErrors = FieldErrors<CommerceFieldName>;
 
@@ -22,6 +26,11 @@ const ACCOUNT_NUMBER_MIN_LENGTH = 6;
 const ACCOUNT_NUMBER_MAX_LENGTH = 20;
 const BANK_CODE_MIN_LENGTH = 2;
 const BANK_CODE_MAX_LENGTH = 20;
+export const SHOP_NAME_MAX_LENGTH = 120;
+export const SHOP_ADDRESS_MAX_LENGTH = 255;
+export const SHOP_PHONE_MAX_LENGTH = 20;
+// Cho phép tối đa 20 ký tự để chứa 13 chữ số cùng vài dấu gạch ngang. Backend vẫn kiểm lại luật mã số thuế.
+export const SHOP_TAX_CODE_MAX_LENGTH = 20;
 
 const PAIRED_FIELD_MESSAGE = 'Cần nhập cả số tài khoản và mã ngân hàng, hoặc để trống cả hai.';
 
@@ -115,6 +124,7 @@ export function validateCommerceForm(values: CommerceFormValues): CommerceFieldE
   if (accountNumber && !bankCode) errors.sepayBankCode = PAIRED_FIELD_MESSAGE;
   if (bankCode && !accountNumber) errors.sepayAccountNumber = PAIRED_FIELD_MESSAGE;
 
+  // Không kiểm định dạng trường shop ở client vì backend giữ luật. Giới hạn độ dài do thuộc tính ô giữ.
   return errors;
 }
 
@@ -124,18 +134,25 @@ export interface MappedServerErrors {
   unmatched: string[];
 }
 
-// Khóa của backend (tên trường JSON) cũng là tên ô trong form.
-const FORM_FIELDS: readonly string[] = [
-  'freeShippingThreshold',
-  'codMaxAmount',
-  'maxQuantityPerSku',
-  'maxCartLines',
-  'sepayAccountNumber',
-  'sepayBankCode',
-];
+// Ánh xạ khóa trường từ backend sang tên ô trong form. Trường shop lồng nhau dùng dấu chấm.
+const SERVER_KEY_TO_FIELD: Record<string, CommerceFieldName> = {
+  freeShippingThreshold: 'freeShippingThreshold',
+  codMaxAmount: 'codMaxAmount',
+  maxQuantityPerSku: 'maxQuantityPerSku',
+  maxCartLines: 'maxCartLines',
+  sepayAccountNumber: 'sepayAccountNumber',
+  sepayBankCode: 'sepayBankCode',
+  'shop.name': 'shopName',
+  'shop.address': 'shopAddress',
+  'shop.phone': 'shopPhone',
+  'shop.taxCode': 'shopTaxCode',
+};
 
-function isFormField(key: string): key is CommerceFieldName {
-  return FORM_FIELDS.includes(key);
+// Trả tên ô tương ứng với khóa của backend. Khóa lạ trả `null` để đưa vào danh sách lỗi chung.
+export function mapServerKeyToField(key: string): CommerceFieldName | null {
+  // Khóa kế thừa từ `Object.prototype` không phải tên ô. Chỉ nhận khóa định nghĩa trực tiếp trên bảng ánh xạ.
+  if (!Object.hasOwn(SERVER_KEY_TO_FIELD, key)) return null;
+  return SERVER_KEY_TO_FIELD[key] ?? null;
 }
 
 // Gán lỗi của backend vào đúng ô theo `details`. Khóa lạ và lỗi cả body vào `unmatched`.
@@ -150,9 +167,10 @@ export function mapServerErrors(error: ApiError): MappedServerErrors {
       : [{ key: null as string | null, message: error.message }];
 
   for (const { key, message } of entries) {
-    if (key !== null && isFormField(key) && !fieldErrors[key]) {
+    const field = key !== null ? mapServerKeyToField(key) : null;
+    if (field !== null && !fieldErrors[field]) {
       // Backend nêu tên trường JSON trong câu lỗi số. Ô số dùng câu của client, cùng khoảng giá trị với backend.
-      fieldErrors[key] = NUMBER_RULES.find((rule) => rule.field === key)?.message ?? message;
+      fieldErrors[field] = NUMBER_RULES.find((rule) => rule.field === field)?.message ?? message;
     } else {
       unmatched.push(message);
     }

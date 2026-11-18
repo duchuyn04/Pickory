@@ -255,12 +255,13 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** Trang `/admin/commerce/settings` có thêm nhóm trường "Thông tin in trên hóa đơn": tên shop, địa chỉ, số điện thoại, mã số thuế.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Form hiện giá trị từ khối `shop` của `GET`. Giá trị `null` hiện ô trống
-- [ ] Lưu gửi khối `shop` trong body `PUT`
-- [ ] Lỗi 400 của từng trường `shop.*` hiện dưới đúng ô
-- [ ] Ô có giới hạn độ dài theo contract
-- [ ] Ở 375 px, nhóm trường không tràn ngang. Playwright console 0 lỗi và 0 cảnh báo
+- [x] Form hiện giá trị từ khối `shop` của `GET`. Giá trị `null` hiện ô trống
+- [x] Lưu gửi khối `shop` trong body `PUT`
+- [x] Lỗi 400 của từng trường `shop.*` hiện dưới đúng ô
+- [x] Ô có giới hạn độ dài theo contract
+- [x] Ở 375 px, nhóm trường không tràn ngang. Playwright console 0 lỗi và 0 cảnh báo
 - [ ] Lưu với backend thật: kiểm ở EXP-E2E2
+  - Task EXP-E2E2 kiểm luồng đầy đủ từ lưu thông tin shop tới in hóa đơn. Spec `commerce-settings-shop.spec.ts` đã kiểm lưu với backend thật ở trang cấu hình.
 **Kiểm tra:** Vitest; Playwright với route giả
 **Phụ thuộc:** EXP-UI1 · **Quy mô:** S
 

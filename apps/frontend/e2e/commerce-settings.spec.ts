@@ -13,6 +13,12 @@ interface CommerceSettings {
   maxCartLines: number;
   sepayAccountNumber: string | null;
   sepayBankCode: string | null;
+  shop: {
+    name: string | null;
+    address: string | null;
+    phone: string | null;
+    taxCode: string | null;
+  };
 }
 
 let previousCommerceSettings: CommerceSettings | undefined;
@@ -198,7 +204,7 @@ test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên
     await expect(page.getByRole('status')).toHaveText('Đã lưu cấu hình bán hàng.');
     await expect(page.getByLabel('Mã ngân hàng', { exact: true })).toHaveValue('MB');
     expect(countRequests('PUT')).toBe(1);
-    // Body PUT chỉ có 6 trường của cấu hình. Không có khóa webhook SePay.
+    // Body PUT chỉ có bảy khóa của cấu hình gồm khối shop. Không có khóa webhook SePay.
     const savedBody = settingsRequestBodies[0] ?? '';
     expect(JSON.parse(savedBody)).toEqual({
       freeShippingThreshold: 700000,
@@ -207,6 +213,7 @@ test('COM-UI7: admin cấu hình bán hàng, lỗi hiện đúng ô, nhân viên
       maxCartLines: 10,
       sepayAccountNumber: '0123456789',
       sepayBankCode: 'mb',
+      shop: previousCommerceSettings?.shop,
     });
     expect(savedBody.toLowerCase()).not.toContain('webhook');
     await expectNoHorizontalOverflow(page);
