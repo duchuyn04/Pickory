@@ -78,13 +78,13 @@ Thêm schema `zod` cho response của `GET /api/admin/order-invoices`.
 Thêm component `ExportButton` nhận `path`, `requiredPermissions` và nhãn. Component chỉ hiện khi người dùng có mọi quyền trong `requiredPermissions` (dùng `useCan`).
 
 **Tiêu chí nghiệm thu:**
-- [ ] Đọc đúng tên file từ `filename*` khi header có cả `filename` và `filename*`
-- [ ] Header thiếu tên file thì dùng tên dự phòng `pickory-export.xlsx`
-- [ ] Lỗi 422 `EXPORT_TOO_LARGE` hiện thông báo của server trong `ErrorAlert`
-- [ ] Lỗi mạng hiện "Không tải được file. Vui lòng thử lại."
-- [ ] Đang tải thì nút bị khóa và hiện "Đang tạo file...". Bấm hai lần chỉ gửi một request
-- [ ] Thiếu một quyền thì nút không hiện
-- [ ] Nút có tên truy cập "Xuất Excel" và dùng được bằng bàn phím
+- [x] Đọc đúng tên file từ `filename*` khi header có cả `filename` và `filename*`
+- [x] Header thiếu tên file thì dùng tên dự phòng `pickory-export.xlsx`
+- [x] Lỗi 422 `EXPORT_TOO_LARGE` hiện thông báo của server trong `ErrorAlert`
+- [x] Lỗi mạng hiện "Không tải được file. Vui lòng thử lại."
+- [x] Đang tải thì nút bị khóa và hiện "Đang tạo file...". Bấm hai lần chỉ gửi một request
+- [x] Thiếu một quyền thì nút không hiện
+- [x] Nút có tên truy cập "Xuất Excel" và dùng được bằng bàn phím
 **Kiểm tra:** Vitest với `fetch` giả đọc từ `exports.json`
 **Phụ thuộc:** EXP-UI1 · **Quy mô:** S
 

@@ -26,7 +26,7 @@ const VALIDATION_SUMMARY_PATTERN = /^Dữ liệu không hợp lệ \((.*)\)\.$/s
 const FIELD_KEY_PREFIX_PATTERN = /^[\w.[\]]+:\s*/;
 
 // Câu lỗi theo mã trạng thái, dùng khi phản hồi không có câu lỗi đọc được, ví dụ trang lỗi HTML của proxy.
-function messageForStatus(status: number): string {
+export function messageForStatus(status: number): string {
   if (status === 401) return 'Phiên đăng nhập đã hết hạn. Hãy đăng nhập lại.';
   if (status === 403) return 'Tài khoản không có quyền thực hiện thao tác này.';
   if (status === 404) return 'Không tìm thấy dữ liệu cần xem.';
@@ -52,7 +52,7 @@ function stripFieldKeys(message: string): string {
 }
 
 // Chọn câu lỗi để hiện cho người dùng từ thân lỗi của API.
-function toDisplayMessage(
+export function toDisplayMessage(
   status: number,
   error: { code: string; message: string; details?: ApiErrorDetail[] },
 ): string {

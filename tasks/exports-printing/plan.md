@@ -90,7 +90,7 @@ Backend:
 
 Frontend:
 - [x] EXP-UI1 đọc fixtures và route giả cho E2E
-- [ ] EXP-UI2 hàm tải file và nút "Xuất Excel"
+- [x] EXP-UI2 hàm tải file và nút "Xuất Excel"
 
 ### Checkpoint E0
 - [ ] `dotnet build` và `dotnet test` sạch
