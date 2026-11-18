@@ -101,7 +101,7 @@ Frontend:
 
 Backend:
 - [x] EXP-03 xuất đơn hàng
-- [ ] EXP-04 xuất giao dịch SePay
+- [x] EXP-04 xuất giao dịch SePay
 - [ ] EXP-05 xuất sản phẩm
 - [ ] EXP-06 xuất khách hàng
 

@@ -119,11 +119,11 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** `GET /api/admin/exports/payment-transactions` trong `commerce`. Route đọc tham số bằng `AdminPaymentTransactionListQuery.Read`. File có sheet "Giao dịch SePay" theo spec. Mỗi lần xuất ghi một dòng nhật ký `commerce.payment-transactions.export`.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Contract test đạt với ví dụ `payment transactions export success`
-- [ ] Thiếu `payments:read` hoặc `reports:export` trả 403. Route có trong ma trận quyền
-- [ ] Số dòng bằng `total` của `GET /api/admin/payments/transactions` với từng giá trị `matchStatus`
-- [ ] Giao dịch chưa khớp đơn để trống bốn cột cuối
-- [ ] Xuất thành công ghi đúng 1 dòng nhật ký
+- [x] Contract test đạt với ví dụ `payment transactions export success`
+- [x] Thiếu `payments:read` hoặc `reports:export` trả 403. Route có trong ma trận quyền
+- [x] Số dòng bằng `total` của `GET /api/admin/payments/transactions` với từng giá trị `matchStatus`
+- [x] Giao dịch chưa khớp đơn để trống bốn cột cuối
+- [x] Xuất thành công ghi đúng 1 dòng nhật ký
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** EXP-01, EXP-02 · **Quy mô:** S
 

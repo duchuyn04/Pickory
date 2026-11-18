@@ -7,6 +7,10 @@ namespace Pickory.Modules.Commerce.Payments.Admin;
 // Tham số lọc danh sách giao dịch SePay của nhân viên. Mọi tham số đều tùy chọn và kết hợp theo AND.
 public sealed record AdminPaymentTransactionListQuery(PageQuery Page, string? MatchStatus, string? OrderFlag)
 {
+    // Tên tham số của query. Nhật ký của route xuất dùng lại hai hằng này để khóa bộ lọc khớp tên tham số.
+    internal const string MatchStatusParameter = "matchStatus";
+    internal const string OrderFlagParameter = "orderFlag";
+
     // Ba trạng thái khớp mà `SepayPaymentService` và route đối soát tay ghi vào `payment_transactions.matchStatus`.
     public static readonly IReadOnlyList<string> KnownMatchStatuses = [PaymentMatchStatuses.Unmatched, PaymentMatchStatuses.Matched, PaymentMatchStatuses.Ignored];
 
@@ -17,8 +21,8 @@ public sealed record AdminPaymentTransactionListQuery(PageQuery Page, string? Ma
     public static AdminPaymentTransactionListQuery Read(IQueryCollection query, List<ValidationFailure> failures)
     {
         var page = PageQuery.Read(query, failures);
-        var matchStatus = ReadKnownValue(query, "matchStatus", KnownMatchStatuses, failures);
-        var orderFlag = ReadKnownValue(query, "orderFlag", KnownOrderFlags, failures);
+        var matchStatus = ReadKnownValue(query, MatchStatusParameter, KnownMatchStatuses, failures);
+        var orderFlag = ReadKnownValue(query, OrderFlagParameter, KnownOrderFlags, failures);
         return new AdminPaymentTransactionListQuery(page, matchStatus, orderFlag);
     }
 

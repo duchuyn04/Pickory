@@ -3,7 +3,7 @@ using FluentValidation.Results;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
-using Microsoft.Extensions.Primitives;
+using Pickory.Modules.Commerce.Exports;
 using Pickory.Modules.Identity.Contracts.Actors;
 using Pickory.Modules.Identity.Contracts.Authorization;
 using Pickory.Shared.Exports;
@@ -14,9 +14,6 @@ namespace Pickory.Modules.Commerce.Orders.Admin;
 internal static class AdminOrderExportEndpoints
 {
     private const string ExportPath = "/api/admin/exports/orders";
-
-    // Hai tham số phân trang của route danh sách. Route xuất bỏ qua chúng và luôn trả mọi đơn khớp bộ lọc.
-    private static readonly string[] PagingParameters = ["page", "limit"];
 
     public static void Map(IEndpointRouteBuilder endpoints)
     {
@@ -32,7 +29,7 @@ internal static class AdminOrderExportEndpoints
 
         // Kiểm toàn bộ query string trước khi chạm DB. Tham số lọc sai không tốn một truy vấn và không ghi nhật ký.
         var failures = new List<ValidationFailure>();
-        var filter = AdminOrderListQuery.Read(WithoutPaging(context.Request.Query), failures);
+        var filter = AdminOrderListQuery.Read(ExportQueryString.WithoutPaging(context.Request.Query), failures);
         if (failures.Count > 0)
         {
             throw new ValidationException(failures);
@@ -42,20 +39,5 @@ internal static class AdminOrderExportEndpoints
         var actorId = context.GetActor().UserId!;
         var file = await service.ExportAsync(filter, actorId, context.RequestAborted);
         return ExportResults.Xlsx(file.Content, file.FileName);
-    }
-
-    // Bỏ `page` và `limit` trước khi đọc tham số. Giá trị sai của hai tham số này không gây lỗi 400, theo contract.
-    private static QueryCollection WithoutPaging(IQueryCollection query)
-    {
-        var remaining = new Dictionary<string, StringValues>(StringComparer.OrdinalIgnoreCase);
-        foreach (var (name, values) in query)
-        {
-            if (!PagingParameters.Contains(name, StringComparer.OrdinalIgnoreCase))
-            {
-                remaining[name] = values;
-            }
-        }
-
-        return new QueryCollection(remaining);
     }
 }

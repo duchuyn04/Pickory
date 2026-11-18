@@ -12,27 +12,14 @@ public sealed class AdminPaymentTransactionService(CommerceDbContext database)
     public async Task<PagedResponse<AdminPaymentTransactionResponse>> GetListAsync(
         AdminPaymentTransactionListQuery filter, CancellationToken cancellationToken)
     {
-        var transactions = database.PaymentTransactions.AsNoTracking();
-
-        // Mỗi bộ lọc chỉ thêm điều kiện khi có tham số. Các điều kiện kết hợp theo AND.
-        if (filter.MatchStatus is { } matchStatus)
-        {
-            transactions = transactions.Where(row => row.MatchStatus == matchStatus);
-        }
-
-        // Giao dịch chưa gắn đơn có `Order` là null, nên điều kiện cờ loại chúng ra.
-        if (filter.OrderFlag is { } orderFlag)
-        {
-            transactions = transactions.Where(row => row.Order != null && row.Order.Flags.Contains(orderFlag));
-        }
+        // Bộ lọc viết một lần trong truy vấn chung. Route xuất file dùng cùng điều kiện nên thấy cùng tập giao dịch.
+        var transactions = AdminPaymentTransactionFilterQuery.Apply(database.PaymentTransactions.AsNoTracking(), filter);
 
         // Đếm cùng điều kiện lọc. Giao diện biết có bao nhiêu trang.
         var total = await transactions.CountAsync(cancellationToken);
 
-        // Mới nhất lên đầu, rồi theo `Id`. Thiếu `Id` thì phân trang lặp hoặc sót các giao dịch cùng thời điểm.
-        var rows = await transactions
-            .OrderByDescending(row => row.ReceivedAt)
-            .ThenBy(row => row.Id)
+        // Mới nhất lên đầu, rồi theo `Id`. Thứ tự này viết một lần trong truy vấn chung, để route xuất file dùng cùng thứ tự.
+        var rows = await AdminPaymentTransactionFilterQuery.NewestFirst(transactions)
             .Skip(filter.Page.Skip)
             .Take(filter.Page.Limit)
             // Chỉ chiếu cột cần dùng. Cột `raw` không bao giờ rời DB.

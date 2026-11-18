@@ -99,6 +99,7 @@ public static class CommerceModule
         services.AddScoped<SepayOrderMatcher>();
         // Danh sách giao dịch cho nhân viên đối soát đọc riêng, không đi qua dịch vụ webhook.
         services.AddScoped<AdminPaymentTransactionService>();
+        services.AddScoped<AdminPaymentTransactionExportService>();
         // Gắn tay và bỏ qua giao dịch ghi audit và khóa dòng, nên tách khỏi dịch vụ đọc danh sách.
         services.AddScoped<AdminPaymentReconciliationService>();
         // Processor dùng scope riêng để từng vòng đọc lại đơn và trả kho trong transaction của Commerce.
@@ -151,6 +152,7 @@ public static class CommerceModule
         // Route xuất đơn nằm cạnh route danh sách vì hai route dùng chung bộ lọc đơn.
         AdminOrderExportEndpoints.Map(moduleRoutes);
         AdminPaymentEndpoints.Map(moduleRoutes);
+        AdminPaymentTransactionExportEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);
         // Route SePay có hợp đồng xác thực và phản hồi riêng, không yêu cầu phiên web.
         SepayWebhookEndpoint.Map(moduleRoutes);
