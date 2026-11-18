@@ -93,9 +93,9 @@ Frontend:
 - [x] EXP-UI2 hàm tải file và nút "Xuất Excel"
 
 ### Checkpoint E0
-- [ ] `dotnet build` và `dotnet test` sạch
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test` sạch
-- [ ] Test kiến trúc chặn module tham chiếu ClosedXML
+- [x] `dotnet build` và `dotnet test` sạch
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test` sạch
+- [x] Test kiến trúc chặn module tham chiếu ClosedXML
 
 ### Phase 2: Xuất Excel
 

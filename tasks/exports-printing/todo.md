@@ -89,9 +89,9 @@ Thêm component `ExportButton` nhận `path`, `requiredPermissions` và nhãn. C
 **Phụ thuộc:** EXP-UI1 · **Quy mô:** S
 
 ### Checkpoint E0
-- [ ] `dotnet build` và `dotnet test` sạch
-- [ ] `pnpm lint`, `pnpm typecheck`, `pnpm test` sạch
-- [ ] Test kiến trúc chặn module tham chiếu ClosedXML
+- [x] `dotnet build` và `dotnet test` sạch
+- [x] `pnpm lint`, `pnpm typecheck`, `pnpm test` sạch
+- [x] Test kiến trúc chặn module tham chiếu ClosedXML
 
 ---
 
