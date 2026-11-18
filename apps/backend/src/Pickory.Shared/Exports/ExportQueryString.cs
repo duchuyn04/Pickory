@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
-namespace Pickory.Modules.Commerce.Exports;
+namespace Pickory.Shared.Exports;
 
-// Bỏ tham số phân trang khỏi query string chung của các route xuất file trong `commerce`.
-internal static class ExportQueryString
+// Bỏ tham số phân trang khỏi query string chung của mọi route xuất file.
+public static class ExportQueryString
 {
     // Hai tham số phân trang của route danh sách. Route xuất bỏ qua chúng và luôn trả mọi dòng khớp bộ lọc.
     private static readonly string[] PagingParameters = ["page", "limit"];

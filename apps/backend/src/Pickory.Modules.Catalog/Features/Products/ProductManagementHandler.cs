@@ -36,43 +36,13 @@ public sealed class ProductManagementHandler(
     public async Task<PagedResponse<ProductResponse>> GetListAsync(
         ProductListQuery query, CancellationToken cancellationToken)
     {
-        // Nhân viên cần xem mọi trạng thái, kể cả sản phẩm chưa đăng bán.
-        var products = database.Products.AsNoTracking();
-        if (query.Search is { } term)
-        {
-            // Tên so sánh không dấu và không phân biệt hoa thường. Từ khóa đi qua `unaccent` như cột, để hai phía cùng dạng.
-            var pattern = term.LikePattern;
-            products = products.Where(product =>
-                EF.Functions.ILike(EF.Functions.Unaccent(product.Name), EF.Functions.Unaccent(pattern), SearchTerm.EscapeCharacter)
-                // Mã SKU không có dấu, nên không cần `unaccent`. Mẫu đã escape `%` và `_` trong từ khóa.
-                || product.Skus.Any(sku => EF.Functions.ILike(sku.Code, pattern, SearchTerm.EscapeCharacter)));
-        }
-
-        // Lọc danh mục bao gồm cả các sản phẩm thuộc danh mục con trực thuộc.
-        var categoryId = query.CategoryId?.Trim();
-        if (!string.IsNullOrEmpty(categoryId))
-        {
-            products = products.Where(product => product.CategoryId == categoryId
-                || (product.Category != null && product.Category.ParentId == categoryId));
-        }
-
-        // Lọc trạng thái chính xác theo giá trị hợp lệ được truyền từ tham số.
-        if (query.Status.HasValue)
-        {
-            products = products.Where(product => product.Status == query.Status.Value);
-        }
-
-        // Lọc sản phẩm có ít nhất một biến thể đang bật và tồn kho dưới hoặc bằng ngưỡng.
-        if (query.LowStock)
-        {
-            products = products.Where(product => product.Skus.AsQueryable().Any(LowStockExpressions.IsLowStock));
-        }
+        // Nhân viên cần xem mọi trạng thái, kể cả sản phẩm chưa đăng bán. Bộ lọc dùng chung với route xuất file.
+        var products = ProductListFilter.Apply(database.Products.AsNoTracking(), query);
 
         // Đếm cùng bộ lọc để giao diện không hiển thị trang ngoài tập kết quả.
         var total = await products.CountAsync(cancellationToken);
         // Thứ tự phụ theo định danh giữ phân trang ổn định khi thời điểm tạo trùng nhau.
-        var items = await products.Include(product => product.Skus).Include(product => product.Images)
-            .OrderByDescending(product => product.CreatedAt).ThenBy(product => product.Id)
+        var items = await ProductListFilter.NewestFirst(products.Include(product => product.Skus).Include(product => product.Images))
             .Skip(query.Page.Skip).Take(query.Page.Limit).ToListAsync(cancellationToken);
         return new PagedResponse<ProductResponse>(items.Select(ToResponse).ToList(), total, query.Page.Page, query.Page.Limit);
     }

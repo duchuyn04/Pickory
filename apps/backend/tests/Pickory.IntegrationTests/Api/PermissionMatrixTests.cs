@@ -98,6 +98,9 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
         { "DELETE", "/api/admin/brands/dummy-id", [Permissions.ProductsWrite] },
         { "GET", "/api/admin/products", [Permissions.ProductsRead] },
         { "GET", "/api/admin/products/dummy-id", [Permissions.ProductsRead] },
+        // Route xuất cần cả hai quyền, nên role `sales` thiếu `reports:export` phải nhận 403.
+        // Ca kiểm của admin chạy một lần xuất thật, và route này không ghi nhật ký.
+        { "GET", "/api/admin/exports/products", [Permissions.ProductsRead, Permissions.ReportsExport] },
         { "POST", "/api/admin/products", [Permissions.ProductsWrite] },
         { "PATCH", "/api/admin/products/dummy-id", [Permissions.ProductsWrite] },
         { "PUT", "/api/admin/products/dummy-id/status", [Permissions.ProductsWrite] },

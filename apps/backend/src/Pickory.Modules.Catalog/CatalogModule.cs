@@ -55,6 +55,8 @@ public static class CatalogModule
         services.AddScoped<BrandManagementHandler>();
         services.AddScoped<ProductManagementHandler>();
         services.AddScoped<ProductImageSync>();
+        // Xuất sản phẩm ra Excel. Dịch vụ dùng chung bộ lọc với danh sách và không ghi nhật ký vì file không có dữ liệu cá nhân.
+        services.AddScoped<ProductExportService>();
         // Danh sách sản phẩm công khai: một dịch vụ tìm kiếm dùng chung cho route và module khác về sau.
         services.AddScoped<ProductSearchService>();
         // Chi tiết, tóm tắt và so sánh sản phẩm cho khách. `CatalogReader` ghép các dịch vụ này cho module khác.
@@ -100,6 +102,7 @@ public static class CatalogModule
         CategoriesEndpoints.Map(moduleRoutes);
         BrandsEndpoints.Map(moduleRoutes);
         ProductsEndpoints.Map(moduleRoutes);
+        ProductExportEndpoints.Map(moduleRoutes);
         PublicProductsEndpoints.Map(moduleRoutes);
         PublicProductDetailEndpoints.Map(moduleRoutes);
         // Hai route trang SEO trả HTML, nên không thuộc tài liệu API.

@@ -4,7 +4,6 @@ using Pickory.Modules.Catalog.Entities;
 using Pickory.Modules.Catalog.Products;
 using Pickory.Modules.Catalog.Specs;
 using Pickory.Shared.Exceptions;
-using Pickory.Shared.Http;
 
 namespace Pickory.Modules.Catalog.Features.Products;
 
@@ -51,14 +50,6 @@ public static class ProductStatusNames
         }
     }
 }
-
-// Bộ lọc danh sách sản phẩm quản trị phục vụ tìm kiếm, phân loại và cảnh báo tồn kho.
-public sealed record ProductListQuery(
-    PageQuery Page,
-    SearchTerm? Search = null,
-    string? CategoryId = null,
-    ProductStatus? Status = null,
-    bool LowStock = false);
 
 // Dữ liệu phản hồi chi tiết của một sản phẩm điện tử trong trang quản trị.
 public sealed record ProductResponse(

@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
-using Pickory.Modules.Commerce.Exports;
+using Pickory.Shared.Exports;
 using Xunit;
 
-namespace Pickory.UnitTests.Modules.Commerce.Exports;
+namespace Pickory.UnitTests.Shared.Exports;
 
-// Bỏ `page` và `limit` khỏi query string của route xuất. Mọi route xuất trong `commerce` dùng chung hàm này.
+// Bỏ `page` và `limit` khỏi query string của route xuất. Mọi route xuất trong mọi module dùng chung hàm này.
 public sealed class ExportQueryStringTests
 {
     private static QueryCollection Query(params (string Name, string[] Values)[] parameters) =>

@@ -131,12 +131,12 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** `GET /api/admin/exports/products` trong `catalog`. Route đọc tham số như `GET /api/admin/products`. Mỗi dòng là một SKU. Route không ghi nhật ký.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Contract test đạt với ví dụ `products export success`
-- [ ] Thiếu `products:read` hoặc `reports:export` trả 403. Route có trong ma trận quyền
-- [ ] Sản phẩm có 3 SKU tạo 3 dòng. Cột "Phân loại" ghép giá trị phân loại bằng `, `
-- [ ] Bật `lowStock=true` thì file chỉ có SKU sắp hết, khớp danh sách
-- [ ] Lọc theo `search`, `categoryId`, `status` cho cùng tập sản phẩm với danh sách
-- [ ] Xuất thành công không tạo dòng nhật ký nào
+- [x] Contract test đạt với ví dụ `products export success`
+- [x] Thiếu `products:read` hoặc `reports:export` trả 403. Route có trong ma trận quyền
+- [x] Sản phẩm có 3 SKU tạo 3 dòng. Cột "Phân loại" ghép giá trị phân loại bằng `, `
+- [x] Bật `lowStock=true` thì file chỉ có SKU sắp hết, khớp danh sách
+- [x] Lọc theo `search`, `categoryId`, `status` cho cùng tập sản phẩm với danh sách
+- [x] Xuất thành công không tạo dòng nhật ký nào
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** EXP-01, EXP-02 · **Quy mô:** M
 
