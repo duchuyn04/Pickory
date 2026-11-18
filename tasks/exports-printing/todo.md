@@ -266,7 +266,7 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Phụ thuộc:** EXP-UI1 · **Quy mô:** S
 
 ### Checkpoint E2
-- [ ] Hóa đơn của đơn 15 dòng sản phẩm vừa 1 trang A4
+- [x] Hóa đơn của đơn 15 dòng sản phẩm vừa 1 trang A4
 - [ ] Review với người dùng
 
 ---

@@ -126,7 +126,7 @@ Frontend:
 - [x] EXP-UI7 form thông tin shop
 
 ### Checkpoint E2
-- [ ] Hóa đơn của đơn 15 dòng sản phẩm vừa 1 trang A4
+- [x] Hóa đơn của đơn 15 dòng sản phẩm vừa 1 trang A4
 - [ ] Review với người dùng
 
 ### Phase 4: E2E và nghiệm thu
