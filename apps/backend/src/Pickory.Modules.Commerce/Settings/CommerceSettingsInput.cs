@@ -7,4 +7,12 @@ internal sealed record CommerceSettingsInput(
     int MaxQuantityPerSku,
     int MaxCartLines,
     string? SepayAccountNumber,
-    string? SepayBankCode);
+    string? SepayBankCode,
+    CommerceShopInput? Shop = null);
+
+// Thông tin shop dùng trên hóa đơn in. Khối `Shop` là `null` khi client không gửi trường `shop`.
+internal sealed record CommerceShopInput(
+    string? Name,
+    string? Address,
+    string? Phone,
+    string? TaxCode);

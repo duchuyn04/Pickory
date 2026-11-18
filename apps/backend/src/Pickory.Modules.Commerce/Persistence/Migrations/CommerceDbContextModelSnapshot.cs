@@ -113,6 +113,25 @@ namespace Pickory.Modules.Commerce.Persistence.Migrations
                         .HasColumnType("text")
                         .HasColumnName("sepayBankCode");
 
+                    b.Property<string>("ShopAddress")
+                        .HasMaxLength(255)
+                        .HasColumnType("text")
+                        .HasColumnName("shopAddress");
+
+                    b.Property<string>("ShopName")
+                        .HasMaxLength(120)
+                        .HasColumnType("text")
+                        .HasColumnName("shopName");
+
+                    b.Property<string>("ShopPhone")
+                        .HasMaxLength(20)
+                        .HasColumnType("text")
+                        .HasColumnName("shopPhone");
+
+                    b.Property<string>("ShopTaxCode")
+                        .HasColumnType("text")
+                        .HasColumnName("shopTaxCode");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasPrecision(3)
                         .HasColumnType("timestamp(3) without time zone")

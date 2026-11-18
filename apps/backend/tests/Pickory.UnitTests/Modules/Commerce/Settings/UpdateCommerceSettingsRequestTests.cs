@@ -245,4 +245,183 @@ public class UpdateCommerceSettingsRequestTests
 
         Assert.Equal(["freeShippingThreshold", "maxCartLines", "sepayBankCode"], FailedFields(failures));
     }
+
+    [Fact]
+    // Thiếu khối `shop` thì giữ giá trị `null` để store giữ nguyên thông tin cũ.
+    public void Read_MissingShopBlock_ReturnsNullShop()
+    {
+        var (input, failures) = Read(ValidJson);
+
+        Assert.Empty(failures);
+        Assert.Null(input.Shop);
+    }
+
+    [Fact]
+    // Dữ liệu hợp lệ trong khối `shop` được cắt khoảng trắng hai đầu trước khi lưu.
+    public void Read_ValidShopBlock_TrimsAndReturnsValues()
+    {
+        var shopJson = """
+            {"name":"  Pickory Store  ","address":"  12 Nguyễn Văn Bảo  ","phone":"  +84 28.1234-5678  ","taxCode":"  0312345678-001  "}
+            """;
+
+        var (input, failures) = Read(BodyWith(("shop", shopJson)));
+
+        Assert.Empty(failures);
+        Assert.NotNull(input.Shop);
+        Assert.Equal(
+            ("Pickory Store", "12 Nguyễn Văn Bảo", "+84 28.1234-5678", "0312345678-001"),
+            (input.Shop.Name, input.Shop.Address, input.Shop.Phone, input.Shop.TaxCode));
+    }
+
+    [Theory]
+    [InlineData("""{"name":"","address":"   ","phone":null}""")]
+    [InlineData("{}")]
+    // Trường trống, `null` hoặc thiếu bên trong khối `shop` đều chuẩn hóa thành `null`.
+    public void Read_EmptyOrMissingFieldsInsideShop_ReturnsNullFields(string shopJson)
+    {
+        var (input, failures) = Read(BodyWith(("shop", shopJson)));
+
+        Assert.Empty(failures);
+        Assert.NotNull(input.Shop);
+        Assert.Null(input.Shop.Name);
+        Assert.Null(input.Shop.Address);
+        Assert.Null(input.Shop.Phone);
+        Assert.Null(input.Shop.TaxCode);
+    }
+
+    [Theory]
+    [InlineData("null")]
+    [InlineData("[]")]
+    [InlineData("\"Pickory\"")]
+    [InlineData("123")]
+    [InlineData("true")]
+    // Khối `shop` khi có mặt phải là đối tượng JSON. Kiểu khác bị từ chối ở khóa `shop`.
+    public void Read_ShopIsNotObject_ReportsShopFailure(string shopJson)
+    {
+        var (_, failures) = Read(BodyWith(("shop", shopJson)));
+
+        Assert.Equal(["shop"], FailedFields(failures));
+    }
+
+    [Theory]
+    [InlineData("""{"email":"shop@example.test"}""", "shop.email")]
+    [InlineData("""{"Name":"x"}""", "shop.Name")]
+    // Khối `shop` phân biệt hoa thường và từ chối trường lạ theo đường dẫn khóa.
+    public void Read_UnknownFieldInsideShop_ReportsShopFieldName(string shopJson, string expectedKey)
+    {
+        var (_, failures) = Read(BodyWith(("shop", shopJson)));
+
+        Assert.Equal([expectedKey], FailedFields(failures));
+    }
+
+    [Theory]
+    [InlineData("name", "123")]
+    [InlineData("address", "true")]
+    [InlineData("phone", "[]")]
+    [InlineData("taxCode", "{}")]
+    // Bốn trường của `shop` chỉ nhận chuỗi hoặc `null`. Kiểu khác bị từ chối theo đúng khóa.
+    public void Read_NonStringFieldInsideShop_ReportsFieldKey(string field, string rawValue)
+    {
+        var (_, failures) = Read(BodyWith(("shop", $$"""{"{{field}}":{{rawValue}}}""")));
+
+        Assert.Equal([$"shop.{field}"], FailedFields(failures));
+    }
+
+    [Fact]
+    // Tên shop dài đúng 120 ký tự sau cắt khoảng trắng thì hợp lệ, dài 121 ký tự thì lỗi.
+    public void Read_ShopNameBoundary_Enforces120CharactersAfterTrim()
+    {
+        var acceptedName = $"  {new string('a', 120)}  ";
+        var rejectedName = new string('a', 121);
+
+        var (acceptedInput, acceptedFailures) = Read(BodyWith(("shop", $$"""{"name":"{{acceptedName}}"}""")));
+        var (_, rejectedFailures) = Read(BodyWith(("shop", $$"""{"name":"{{rejectedName}}"}""")));
+
+        Assert.Empty(acceptedFailures);
+        Assert.Equal(120, acceptedInput.Shop?.Name?.Length);
+        Assert.Equal(["shop.name"], FailedFields(rejectedFailures));
+    }
+
+    [Fact]
+    // Địa chỉ shop dài đúng 255 ký tự sau cắt khoảng trắng thì hợp lệ, dài 256 ký tự thì lỗi.
+    public void Read_ShopAddressBoundary_Enforces255CharactersAfterTrim()
+    {
+        var acceptedAddress = $"  {new string('b', 255)}  ";
+        var rejectedAddress = new string('b', 256);
+
+        var (acceptedInput, acceptedFailures) = Read(BodyWith(("shop", $$"""{"address":"{{acceptedAddress}}"}""")));
+        var (_, rejectedFailures) = Read(BodyWith(("shop", $$"""{"address":"{{rejectedAddress}}"}""")));
+
+        Assert.Empty(acceptedFailures);
+        Assert.Equal(255, acceptedInput.Shop?.Address?.Length);
+        Assert.Equal(["shop.address"], FailedFields(rejectedFailures));
+    }
+
+    [Theory]
+    [InlineData("0901234567", true)]
+    [InlineData("+84 28.1234-5678", true)]
+    [InlineData("01234567890123456789", true)]
+    [InlineData("  090 123-4567  ", true)]
+    [InlineData("012345678901234567890", false)]
+    [InlineData("090123456a", false)]
+    [InlineData("090#123456", false)]
+    [InlineData("090/123", false)]
+    [InlineData("090:123", false)]
+    [InlineData("(090)", false)]
+    [InlineData("090\t123", false)]
+    [InlineData("090\u00A0123", false)]
+    [InlineData("٠٩٠١٢٣٤٥٦٧", false)]
+    // Số điện thoại tối đa 20 ký tự, chỉ chứa chữ số từ 0 đến 9, dấu cách, `+`, `.`, `-`.
+    public void Read_ShopPhoneRules_AcceptsValidAndRejectsInvalid(string phone, bool accepted)
+    {
+        var (_, failures) = Read(BodyWith(("shop", JsonSerializer.Serialize(new { phone }))));
+
+        Assert.Equal(accepted ? Array.Empty<string>() : ["shop.phone"], FailedFields(failures));
+    }
+
+    [Theory]
+    [InlineData("0312345678", true)]
+    [InlineData("0312345678001", true)]
+    [InlineData("0312345678-001", true)]
+    [InlineData("  0312345678  ", true)]
+    [InlineData("031234567", false)]
+    [InlineData("031234567890", false)]
+    [InlineData("03123456789012", false)]
+    [InlineData("031234567A", false)]
+    [InlineData("0312 345678", false)]
+    // Mã số thuế kiểm theo `TaxCodeRule` sau khi cắt khoảng trắng hai đầu.
+    public void Read_ShopTaxCodeRules_AcceptsValidAndRejectsInvalid(string taxCode, bool accepted)
+    {
+        var (_, failures) = Read(BodyWith(("shop", $$"""{"taxCode":"{{taxCode}}"}""")));
+
+        Assert.Equal(accepted ? Array.Empty<string>() : ["shop.taxCode"], FailedFields(failures));
+    }
+
+    [Theory]
+    [InlineData("name")]
+    [InlineData("address")]
+    [InlineData("phone")]
+    [InlineData("taxCode")]
+    // Ký tự mã 0 trong bốn trường của `shop` phải bị từ chối theo đúng khóa.
+    public void Read_ShopFieldWithNulCharacter_ReportsFieldKey(string field)
+    {
+        var shopJson = JsonSerializer.Serialize(new Dictionary<string, string> { [field] = "a\u0000b" });
+
+        var (_, failures) = Read(BodyWith(("shop", shopJson)));
+
+        Assert.Equal([$"shop.{field}"], FailedFields(failures));
+    }
+
+    [Fact]
+    // Nhiều trường trong khối `shop` cùng sai thì trả đủ lỗi cho từng khóa.
+    public void Read_MultipleInvalidShopFields_ReportsEveryKey()
+    {
+        var shopJson = $$"""
+            {"name":"{{new string('a', 121)}}","address":"{{new string('b', 256)}}","phone":"090a","taxCode":"123"}
+            """;
+
+        var (_, failures) = Read(BodyWith(("shop", shopJson)));
+
+        Assert.Equal(["shop.address", "shop.name", "shop.phone", "shop.taxCode"], FailedFields(failures));
+    }
 }

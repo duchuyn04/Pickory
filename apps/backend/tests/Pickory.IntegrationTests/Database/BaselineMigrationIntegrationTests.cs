@@ -24,7 +24,7 @@ public sealed class BaselineMigrationIntegrationTests(DatabaseWebApplicationFact
     [InlineData("identity", "ef_identity", "20261030050727_AddRoleSoftDelete")]
     [InlineData("catalog", "ef_catalog", "20261030050718_AddCatalogSoftDelete")]
     [InlineData("shipping", "ef_shipping", "20261019123657_AddShippingQuoteCache")]
-    [InlineData("commerce", "ef_commerce", "20261030050733_AddSavedAddressSoftDelete")]
+    [InlineData("commerce", "ef_commerce", "20261118174514_AddCommerceSettingsShopInfo")]
     [InlineData("activity-tracking", "ef_activity_tracking", "20261020093013_InitialActivityTracking")]
     [InlineData("support-desk", "ef_support_desk", "20261109043926_CannedResponseShortcutUniqueIndexes")]
     public async Task Migration_DownRemovesOnlyOwnedObjectsAndUpRestoresThemWithIsolatedHistory(

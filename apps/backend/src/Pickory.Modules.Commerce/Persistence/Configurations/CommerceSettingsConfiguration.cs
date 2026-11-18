@@ -20,6 +20,11 @@ internal sealed class CommerceSettingsConfiguration : IEntityTypeConfiguration<C
         entity.Property(value => value.MaxCartLines).IsRequired();
         entity.Property(value => value.SepayAccountNumber).IsRequired(false);
         entity.Property(value => value.SepayBankCode).IsRequired(false);
+        // Bốn cột shop đều cho phép rỗng để giữ tương thích dòng cấu hình cũ và khi shop chưa nhập.
+        entity.Property(value => value.ShopName).HasMaxLength(120).IsRequired(false);
+        entity.Property(value => value.ShopAddress).HasMaxLength(255).IsRequired(false);
+        entity.Property(value => value.ShopPhone).HasMaxLength(20).IsRequired(false);
+        entity.Property(value => value.ShopTaxCode).IsRequired(false);
         entity.Property(value => value.UpdatedAt).IsRequired();
     }
 }

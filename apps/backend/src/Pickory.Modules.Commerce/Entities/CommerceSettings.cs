@@ -10,5 +10,9 @@ public sealed class CommerceSettings
     public int MaxCartLines { get; set; }
     public string? SepayAccountNumber { get; set; }
     public string? SepayBankCode { get; set; }
+    public string? ShopName { get; set; }
+    public string? ShopAddress { get; set; }
+    public string? ShopPhone { get; set; }
+    public string? ShopTaxCode { get; set; }
     public DateTime UpdatedAt { get; set; }
 }

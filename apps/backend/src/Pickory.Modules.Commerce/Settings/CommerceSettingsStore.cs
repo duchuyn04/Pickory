@@ -51,6 +51,14 @@ internal sealed class CommerceSettingsStore(
         row.MaxCartLines = input.MaxCartLines;
         row.SepayAccountNumber = input.SepayAccountNumber;
         row.SepayBankCode = input.SepayBankCode;
+        // Chỉ ghi đè bốn cột shop khi body có khối `shop`, giúp request cũ giữ nguyên thông tin shop.
+        if (input.Shop is not null)
+        {
+            row.ShopName = input.Shop.Name;
+            row.ShopAddress = input.Shop.Address;
+            row.ShopPhone = input.Shop.Phone;
+            row.ShopTaxCode = input.Shop.TaxCode;
+        }
         // Lấy giờ từ `TimeProvider` để test đặt được thời điểm cố định.
         row.UpdatedAt = timeProvider.GetUtcNow().UtcDateTime;
         await database.SaveChangesAsync(cancellationToken);

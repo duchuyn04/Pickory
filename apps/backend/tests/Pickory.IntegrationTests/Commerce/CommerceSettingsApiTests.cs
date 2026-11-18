@@ -150,7 +150,7 @@ public sealed class CommerceSettingsApiTests : IClassFixture<CommerceWebApplicat
     }
 
     [Fact]
-    // Response của PUT có đúng 7 trường đã chốt, bọc trong `data`, và dữ liệu lưu khớp response.
+    // Response của PUT có đúng 8 trường đã chốt, bọc trong `data`, và dữ liệu lưu khớp response.
     public async Task Put_Valid_ReturnsExactFieldsAndStoresValues()
     {
         var adminSession = await CreateStaffSessionAsync("admin");
@@ -167,7 +167,7 @@ public sealed class CommerceSettingsApiTests : IClassFixture<CommerceWebApplicat
             var data = document.RootElement.GetProperty("data");
             var fieldNames = data.EnumerateObject().Select(property => property.Name).OrderBy(name => name, StringComparer.Ordinal);
             Assert.Equal(
-                ["codMaxAmount", "freeShippingThreshold", "maxCartLines", "maxQuantityPerSku", "sepayAccountNumber", "sepayBankCode", "updatedAt"],
+                ["codMaxAmount", "freeShippingThreshold", "maxCartLines", "maxQuantityPerSku", "sepayAccountNumber", "sepayBankCode", "shop", "updatedAt"],
                 fieldNames);
             Assert.Equal(700_000, data.GetProperty("freeShippingThreshold").GetInt32());
             Assert.Equal(15_000_000, data.GetProperty("codMaxAmount").GetInt32());

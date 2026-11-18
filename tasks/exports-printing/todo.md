@@ -180,12 +180,12 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** Migration thêm `shop_name`, `shop_address`, `shop_phone`, `shop_tax_code` vào `commerce_settings`, đều cho phép rỗng. `GET` và `PUT /api/admin/commerce/settings` có thêm khối `shop` theo contract. Nhật ký sửa cấu hình hiện có ghi cả khối `shop`.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Migration chạy trên DB sạch và trên DB có sẵn một dòng cấu hình
-- [ ] `GET` trả khối `shop` với 4 trường `null` khi shop chưa nhập
-- [ ] `PUT` có khối `shop` lưu đủ 4 trường. Chuỗi chỉ có khoảng trắng lưu thành `null`
-- [ ] `PUT` thiếu khối `shop` giữ thông tin shop cũ. Test và E2E hiện có của trang cấu hình vẫn đạt
-- [ ] Trường quá dài, số điện thoại có chữ cái, mã số thuế sai `TaxCodeRule` trả 400 `VALIDATION_ERROR` với `details[].key` theo contract
-- [ ] Nhật ký sửa cấu hình có giá trị cũ và mới của khối `shop`
+- [x] Migration chạy trên DB sạch và trên DB có sẵn một dòng cấu hình
+- [x] `GET` trả khối `shop` với 4 trường `null` khi shop chưa nhập
+- [x] `PUT` có khối `shop` lưu đủ 4 trường. Chuỗi chỉ có khoảng trắng lưu thành `null`
+- [x] `PUT` thiếu khối `shop` giữ thông tin shop cũ. Test và E2E hiện có của trang cấu hình vẫn đạt
+- [x] Trường quá dài, số điện thoại có chữ cái, mã số thuế sai `TaxCodeRule` trả 400 `VALIDATION_ERROR` với `details[].key` theo contract
+- [x] Nhật ký sửa cấu hình có giá trị cũ và mới của khối `shop`
 **Kiểm tra:** test tích hợp; migration trên DB test
 **Phụ thuộc:** EXP-02 · **Quy mô:** M
 

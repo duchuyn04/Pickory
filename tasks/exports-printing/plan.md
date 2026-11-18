@@ -116,7 +116,7 @@ Frontend:
 ### Phase 3: In hóa đơn
 
 Backend:
-- [ ] EXP-07 thông tin shop trong cấu hình bán hàng
+- [x] EXP-07 thông tin shop trong cấu hình bán hàng
 - [ ] EXP-08 route dữ liệu in hóa đơn
 
 Frontend:

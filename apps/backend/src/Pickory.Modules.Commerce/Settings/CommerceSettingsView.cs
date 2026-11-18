@@ -10,7 +10,8 @@ internal sealed record CommerceSettingsView(
     int MaxCartLines,
     string? SepayAccountNumber,
     string? SepayBankCode,
-    DateTime? UpdatedAt)
+    DateTime? UpdatedAt,
+    CommerceShopView Shop)
 {
     public static CommerceSettingsView From(CommerceSettings row) => new(
         row.FreeShippingThreshold,
@@ -19,9 +20,10 @@ internal sealed record CommerceSettingsView(
         row.MaxCartLines,
         row.SepayAccountNumber,
         row.SepayBankCode,
-        row.UpdatedAt);
+        row.UpdatedAt,
+        new CommerceShopView(row.ShopName, row.ShopAddress, row.ShopPhone, row.ShopTaxCode));
 
-    // Shop chưa lưu cấu hình thì hiện giá trị mặc định. Hai trường SePay và `UpdatedAt` là `null`.
+    // Shop chưa lưu cấu hình thì hiện giá trị mặc định. Hai trường SePay, `UpdatedAt` và các trường shop là `null`.
     public static CommerceSettingsView FromDefaults() => new(
         CommerceLimits.Defaults.FreeShippingThreshold,
         CommerceLimits.Defaults.CodMaxAmount,
@@ -29,5 +31,16 @@ internal sealed record CommerceSettingsView(
         CommerceLimits.Defaults.MaxCartLines,
         null,
         null,
-        null);
+        null,
+        CommerceShopView.Empty);
+}
+
+// Khối thông tin shop trả ra ngoài trong API cấu hình và trong nhật ký thao tác.
+internal sealed record CommerceShopView(
+    string? Name,
+    string? Address,
+    string? Phone,
+    string? TaxCode)
+{
+    public static CommerceShopView Empty { get; } = new(null, null, null, null);
 }
