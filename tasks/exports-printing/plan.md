@@ -89,7 +89,7 @@ Backend:
 - [x] EXP-02 so response và file Excel với fixtures
 
 Frontend:
-- [ ] EXP-UI1 đọc fixtures và route giả cho E2E
+- [x] EXP-UI1 đọc fixtures và route giả cho E2E
 - [ ] EXP-UI2 hàm tải file và nút "Xuất Excel"
 
 ### Checkpoint E0

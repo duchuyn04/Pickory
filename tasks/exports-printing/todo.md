@@ -64,11 +64,11 @@ Helper đọc file qua `spec/fixtures`, giống `SharedFixtures` của `Pickory.
 Thêm schema `zod` cho response của `GET /api/admin/order-invoices`.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Schema `zod` đọc được mọi ví dụ 200 trong `order-invoices.json`
-- [ ] Xóa khóa `vatInvoice` khỏi một ví dụ thì schema báo lỗi
-- [ ] Helper E2E làm test đỏ khi OpenAPI đã có route. Test dùng một route có thật, ví dụ `GET /api/admin/orders`
-- [ ] Helper E2E trả đúng status và body của ví dụ khi route chưa có
-- [ ] Ví dụ xuất file trả body nhị phân giả có 2 byte đầu `PK` và header theo fixture
+- [x] Schema `zod` đọc được mọi ví dụ 200 trong `order-invoices.json`
+- [x] Xóa khóa `vatInvoice` khỏi một ví dụ thì schema báo lỗi
+- [x] Helper E2E làm test đỏ khi OpenAPI đã có route. Test dùng một route có thật, ví dụ `GET /api/admin/orders`
+- [x] Helper E2E trả đúng status và body của ví dụ khi route chưa có
+- [x] Ví dụ xuất file trả body nhị phân giả có 2 byte đầu `PK` và header theo fixture
 **Kiểm tra:** Vitest; một spec Playwright nhỏ cho helper
 **Phụ thuộc:** không có · **Quy mô:** M
 
