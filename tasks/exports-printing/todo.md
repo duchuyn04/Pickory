@@ -50,11 +50,11 @@ Quy ước:
 Helper đọc file qua `spec/fixtures`, giống `SharedFixtures` của `Pickory.UnitTests`.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Response thiếu một khóa thì helper báo lỗi có đường dẫn khóa, ví dụ `data.invoices[0].vatInvoice`
-- [ ] Response thừa một khóa thì helper báo lỗi có đường dẫn khóa
-- [ ] Khóa có kiểu số trong fixture nhưng chuỗi trong response thì helper báo lỗi
-- [ ] File thiếu một sheet, sai tiêu đề cột, hoặc ô tiền có kiểu chữ thì `WorkbookFixture` báo lỗi
-- [ ] Tên ví dụ không có trong fixture thì helper báo lỗi rõ tên ví dụ
+- [x] Response thiếu một khóa thì helper báo lỗi có đường dẫn khóa, ví dụ `data.invoices[0].vatInvoice`
+- [x] Response thừa một khóa thì helper báo lỗi có đường dẫn khóa
+- [x] Khóa có kiểu số trong fixture nhưng chuỗi trong response thì helper báo lỗi
+- [x] File thiếu một sheet, sai tiêu đề cột, hoặc ô tiền có kiểu chữ thì `WorkbookFixture` báo lỗi
+- [x] Tên ví dụ không có trong fixture thì helper báo lỗi rõ tên ví dụ
 **Kiểm tra:** test của chính helper với response và file dựng tay
 **Phụ thuộc:** EXP-01 · **Quy mô:** S
 

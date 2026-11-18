@@ -86,7 +86,7 @@ Mỗi task một dòng. Tick dòng khi mọi tiêu chí của task trong `todo.m
 
 Backend:
 - [x] EXP-01 bộ ghi `.xlsx` dùng chung
-- [ ] EXP-02 so response và file Excel với fixtures
+- [x] EXP-02 so response và file Excel với fixtures
 
 Frontend:
 - [ ] EXP-UI1 đọc fixtures và route giả cho E2E
