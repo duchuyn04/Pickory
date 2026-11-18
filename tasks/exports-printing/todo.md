@@ -208,12 +208,12 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** Hàm thuần `formatVndInWords(amount)` trong `apps/frontend/src/shared/`. Hàm trả câu viết hoa chữ đầu, kết thúc bằng "đồng".
 
 **Tiêu chí nghiệm thu:**
-- [ ] `0` thành "Không đồng"
-- [ ] `1000005` thành "Một triệu không trăm linh năm đồng"
-- [ ] `12990000` thành "Mười hai triệu chín trăm chín mươi nghìn đồng"
-- [ ] `1000000000` thành "Một tỷ đồng"
-- [ ] `21`, `15`, `25`, `104`, `1001` đọc đúng "hai mươi mốt", "mười lăm", "hai mươi lăm", "một trăm linh tư", "một nghìn không trăm linh một"
-- [ ] Số âm hoặc số không nguyên ném lỗi
+- [x] `0` thành "Không đồng"
+- [x] `1000005` thành "Một triệu không trăm linh năm đồng"
+- [x] `12990000` thành "Mười hai triệu chín trăm chín mươi nghìn đồng"
+- [x] `1000000000` thành "Một tỷ đồng"
+- [x] `21`, `15`, `25`, `104`, `1001` đọc đúng "hai mươi mốt", "mười lăm", "hai mươi lăm", "một trăm linh tư", "một nghìn không trăm linh một"
+- [x] Số âm hoặc số không nguyên ném lỗi
 **Kiểm tra:** Vitest
 **Phụ thuộc:** không có · **Quy mô:** XS
 

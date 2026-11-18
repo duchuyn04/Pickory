@@ -120,7 +120,7 @@ Backend:
 - [ ] EXP-08 route dữ liệu in hóa đơn
 
 Frontend:
-- [ ] EXP-UI4 đọc số tiền thành chữ
+- [x] EXP-UI4 đọc số tiền thành chữ
 - [ ] EXP-UI5 trang in hóa đơn
 - [ ] EXP-UI6 nút in ở chi tiết đơn và chọn nhiều đơn ở danh sách
 - [ ] EXP-UI7 form thông tin shop
