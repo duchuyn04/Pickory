@@ -41,6 +41,8 @@ if (builder.Configuration["PICKORY_SKIP_DOTENV"] != "true")
 // Nạp cấu hình từ biến môi trường và dừng ứng dụng nếu thiếu cấu hình bắt buộc.
 var config = AppConfig.Load(builder.Configuration);
 builder.Services.AddSingleton(config);
+// Route xuất của các module lấy giới hạn dòng từ một đối tượng duy nhất. Module không đọc cấu hình thô.
+builder.Services.AddSingleton(config.Exports);
 
 // Địa chỉ chatbot `http` chỉ hợp lệ ở Development. Môi trường khác dừng ngay, trước khi API nhận request.
 ChatbotWidgetConfigurationCheck.EnsureSecureOutsideDevelopment(config, builder.Environment.IsDevelopment());

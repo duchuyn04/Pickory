@@ -29,24 +29,31 @@ public sealed record AdminOrderListQuery(
         ShipmentStatusChangedHandler.ShipmentCancelledFlag,
     ];
 
-    private const string DateFormat = "yyyy-MM-dd";
+    // Tên tham số và định dạng ngày của query string. Nhật ký của route xuất dùng lại để ghi đúng tên tham số.
+    internal const string StatusParameter = "status";
+    internal const string PaymentStatusParameter = "paymentStatus";
+    internal const string PaymentMethodParameter = "paymentMethod";
+    internal const string FlagParameter = "flag";
+    internal const string FromParameter = "from";
+    internal const string ToParameter = "to";
+    internal const string DateFormat = "yyyy-MM-dd";
 
     // Lỗi được thêm vào `failures`. Route gom mọi lỗi của query string thành một lỗi `VALIDATION_ERROR`.
     public static AdminOrderListQuery Read(IQueryCollection query, List<ValidationFailure> failures)
     {
         var page = PageQuery.Read(query, failures);
-        var status = ReadLabel<OrderStatus>(query, "status", failures);
-        var paymentStatus = ReadLabel<PaymentStatus>(query, "paymentStatus", failures);
-        var paymentMethod = ReadLabel<PaymentMethod>(query, "paymentMethod", failures);
+        var status = ReadLabel<OrderStatus>(query, StatusParameter, failures);
+        var paymentStatus = ReadLabel<PaymentStatus>(query, PaymentStatusParameter, failures);
+        var paymentMethod = ReadLabel<PaymentMethod>(query, PaymentMethodParameter, failures);
         var flag = ReadFlag(query, failures);
-        var from = ReadDate(query, "from", failures);
-        var to = ReadDate(query, "to", failures);
+        var from = ReadDate(query, FromParameter, failures);
+        var to = ReadDate(query, ToParameter, failures);
         var search = SearchTerm.Read(query, failures);
 
         // Khoảng ngược không có đơn nào khớp. Báo lỗi để người dùng sửa thay vì nhận danh sách rỗng khó hiểu.
         if (from is not null && to is not null && from > to)
         {
-            failures.Add(new ValidationFailure("from", "Ngày bắt đầu không được sau ngày kết thúc."));
+            failures.Add(new ValidationFailure(FromParameter, "Ngày bắt đầu không được sau ngày kết thúc."));
         }
 
         return new AdminOrderListQuery(page, status, paymentStatus, paymentMethod, flag, from, to, search);
@@ -72,7 +79,7 @@ public sealed record AdminOrderListQuery(
 
     private static string? ReadFlag(IQueryCollection query, List<ValidationFailure> failures)
     {
-        var raw = QueryParameter.ReadSingle(query, "flag", failures);
+        var raw = QueryParameter.ReadSingle(query, FlagParameter, failures);
         if (raw is null)
         {
             return null;
@@ -80,7 +87,7 @@ public sealed record AdminOrderListQuery(
 
         if (!KnownFlags.Contains(raw, StringComparer.Ordinal))
         {
-            failures.Add(new ValidationFailure("flag", "Cờ đơn không hợp lệ."));
+            failures.Add(new ValidationFailure(FlagParameter, "Cờ đơn không hợp lệ."));
             return null;
         }
 

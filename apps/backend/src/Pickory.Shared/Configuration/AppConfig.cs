@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.Extensions.Configuration;
+using Pickory.Shared.Exports;
 
 namespace Pickory.Shared.Configuration;
 
@@ -69,6 +70,9 @@ public record AppConfig
 
     // Địa chỉ gốc API của dịch vụ `chatbot-rag`. Widget gọi `POST /api/chat` tới địa chỉ này.
     public string ChatbotApiUrl { get; init; } = string.Empty;
+
+    // Giới hạn của các route xuất file. Mục cấu hình `Exports` không có thì dùng giới hạn của spec.
+    public ExportOptions Exports { get; init; } = new();
 
     // Có đủ bộ ba khóa thì dùng Cloudinary thật. `Load` đã chặn trường hợp chỉ có một phần.
     public bool HasCloudinary => CloudinaryCloudName.Length > 0;
@@ -232,11 +236,13 @@ public record AppConfig
             SepayWebhookApiKey = (configuration["SEPAY_WEBHOOK_API_KEY"] ?? string.Empty).Trim(),
             ChatbotWidgetScriptUrl = chatbotWidgetScriptUrl,
             ChatbotApiUrl = chatbotApiUrl,
+            // Giới hạn dòng sai làm API dừng khi khởi động. Route xuất không bao giờ chạy với giới hạn không rõ.
+            Exports = ExportOptions.Load(configuration),
         };
     }
 
-    // Biến tùy chọn. Rỗng nghĩa là không giới hạn thêm. Giá trị ngoài khoảng làm API dừng khi khởi động.
-    private static int? ReadOptionalIntegerInRange(IConfiguration configuration, string key, int minimum, int maximum)
+    // Rỗng hoặc không đặt thì hàm trả `null`, và bên gọi tự chọn giá trị mặc định. Giá trị ngoài khoảng làm API dừng khi khởi động.
+    internal static int? ReadOptionalIntegerInRange(IConfiguration configuration, string key, int minimum, int maximum)
     {
         var rawValue = configuration[key];
         if (string.IsNullOrWhiteSpace(rawValue))

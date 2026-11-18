@@ -18,7 +18,15 @@ public static class ExportLimits
     // Route đọc `MaxRows + 1` dòng rồi gọi hàm này. Dòng thứ 50.001 chứng minh danh sách vượt giới hạn mà không cần câu `COUNT`.
     public static void EnsureWithinLimit(int rowCount)
     {
-        if (rowCount > MaxRows)
+        EnsureWithinLimit(rowCount, MaxRows);
+    }
+
+    // Giới hạn đổi được qua cấu hình, để test không phải tạo 50.001 dòng. Thông báo lỗi giữ nguyên chuỗi của contract.
+    public static void EnsureWithinLimit(int rowCount, int maxRows)
+    {
+        // Giới hạn không dương làm mọi file bị từ chối. Chặn sớm để lỗi cấu hình không hiện thành lỗi 422.
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxRows, 1);
+        if (rowCount > maxRows)
         {
             throw TooLarge();
         }

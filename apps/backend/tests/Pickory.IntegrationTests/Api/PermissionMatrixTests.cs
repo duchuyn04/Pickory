@@ -72,6 +72,9 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
         { "PUT", "/api/admin/commerce/settings", [Permissions.CommerceSettingsManage] },
         { "GET", "/api/admin/orders", [Permissions.OrdersRead] },
         { "GET", "/api/admin/orders/dummy-id", [Permissions.OrdersRead] },
+        // Route xuất cần cả hai quyền, nên role `sales` thiếu `reports:export` phải nhận 403.
+        // Theory của admin chạy một lần xuất thật và ghi một dòng `commerce.orders.export` vào DB dùng chung.
+        { "GET", "/api/admin/exports/orders", [Permissions.OrdersRead, Permissions.ReportsExport] },
         { "POST", "/api/admin/orders/dummy-id/confirmation", [Permissions.OrdersUpdateStatus] },
         { "POST", "/api/admin/orders/dummy-id/cancellation", [Permissions.OrdersCancel] },
         { "PUT", "/api/admin/orders/dummy-id/invoice-issuance", [Permissions.OrdersUpdateStatus] },

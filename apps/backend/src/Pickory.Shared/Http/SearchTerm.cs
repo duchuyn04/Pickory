@@ -12,7 +12,7 @@ public sealed partial record SearchTerm(string Text, string LikePattern)
 
     public const int MaxLength = 100;
 
-    private const string ParameterName = "search";
+    public const string ParameterName = "search";
 
     // Lỗi được thêm vào `failures` và route gom mọi lỗi của query string thành một lỗi `VALIDATION_ERROR`.
     // Trả `null` khi không có từ khóa, để bên gọi bỏ điều kiện tìm.

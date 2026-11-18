@@ -101,18 +101,19 @@ Thêm component `ExportButton` nhận `path`, `requiredPermissions` và nhãn. C
 **Mô tả:** `GET /api/admin/exports/orders` trong `commerce`. Route đọc tham số bằng `AdminOrderListQuery.Read`. Tách phần dựng câu truy vấn có bộ lọc của `AdminOrderService` thành một hàm dùng chung cho route danh sách và route xuất (quyết định 3 của plan). File có sheet "Đơn hàng" và "Chi tiết sản phẩm" theo spec. Mỗi lần xuất ghi một dòng nhật ký `commerce.orders.export`.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Contract test đạt với ví dụ `orders export success`, `orders export invalid filter`, `orders export missing reports export permission`
-- [ ] Có `orders:read` nhưng thiếu `reports:export` trả 403. Có `reports:export` nhưng thiếu `orders:read` trả 403. Route có trong ma trận quyền
-- [ ] Với 5 bộ lọc mẫu, số dòng sheet "Đơn hàng" bằng `total` của `GET /api/admin/orders` cùng bộ lọc
-- [ ] Sheet "Chi tiết sản phẩm" có một dòng cho mỗi dòng sản phẩm của các đơn trong sheet "Đơn hàng"
-- [ ] Nhãn trạng thái, phương thức thanh toán và ghi chú đơn là tiếng Việt, khớp nhãn của danh sách
-- [ ] Đơn có hóa đơn VAT có đủ 4 cột VAT. Cột "Đã xuất hóa đơn VAT" là `Có` khi đơn có cờ `invoice_issued`
-- [ ] Tham số `page` và `limit` không đổi số dòng trong file
-- [ ] Bộ lọc khớp 50.001 đơn trả 422 `EXPORT_TOO_LARGE`, không ghi nhật ký. Test đặt giới hạn nhỏ qua cấu hình test để không phải tạo 50.001 đơn
-- [ ] Xuất thành công ghi đúng 1 dòng nhật ký với người xuất, `details.filters` và `details.rowCount`
-- [ ] Đo thời gian và bộ nhớ khi xuất 50.000 đơn mẫu trên DB `bench`. Ghi số đo vào mục ghi chú của task
+- [x] Contract test đạt với ví dụ `orders export success`, `orders export invalid filter`, `orders export missing reports export permission`
+- [x] Có `orders:read` nhưng thiếu `reports:export` trả 403. Có `reports:export` nhưng thiếu `orders:read` trả 403. Route có trong ma trận quyền
+- [x] Với 5 bộ lọc mẫu, số dòng sheet "Đơn hàng" bằng `total` của `GET /api/admin/orders` cùng bộ lọc
+- [x] Sheet "Chi tiết sản phẩm" có một dòng cho mỗi dòng sản phẩm của các đơn trong sheet "Đơn hàng"
+- [x] Nhãn trạng thái, phương thức thanh toán và ghi chú đơn là tiếng Việt, khớp nhãn của danh sách
+- [x] Đơn có hóa đơn VAT có đủ 4 cột VAT. Cột "Đã xuất hóa đơn VAT" là `Có` khi đơn có cờ `invoice_issued`
+- [x] Tham số `page` và `limit` không đổi số dòng trong file
+- [x] Bộ lọc khớp 50.001 đơn trả 422 `EXPORT_TOO_LARGE`, không ghi nhật ký. Test đặt giới hạn nhỏ qua cấu hình test để không phải tạo 50.001 đơn
+- [x] Xuất thành công ghi đúng 1 dòng nhật ký với người xuất, `details.filters` và `details.rowCount`
+- [x] Đo thời gian và bộ nhớ khi xuất 50.000 đơn mẫu trên DB `bench`. Ghi số đo vào mục ghi chú của task
 **Kiểm tra:** test tích hợp với DB thật; lệnh đo một lần trên DB `bench`
 **Phụ thuộc:** EXP-01, EXP-02 · **Quy mô:** M
+Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng, trong đó 10.000 đơn có hóa đơn VAT. Ba lần xuất mất 15,41 s, 10,37 s và 11,10 s. Bộ nhớ cấp phát là 2.407 MB, 2.369 MB và 2.368 MB. Đỉnh bộ nhớ của tiến trình test là 503 MB, 551 MB và 551 MB. File có 8.880.427 byte. Thời gian vượt 10 s, nên reviewer quyết định có tối ưu thêm hay không. Riêng bước ghi file của `XlsxWorkbookWriter` mất 5,8 s tới 7,9 s với dữ liệu giả cùng cỡ.
 
 ### EXP-04: Xuất giao dịch SePay
 **Mô tả:** `GET /api/admin/exports/payment-transactions` trong `commerce`. Route đọc tham số bằng `AdminPaymentTransactionListQuery.Read`. File có sheet "Giao dịch SePay" theo spec. Mỗi lần xuất ghi một dòng nhật ký `commerce.payment-transactions.export`.

@@ -40,4 +40,33 @@ public sealed class ExportLimitsTests
 
         Assert.Null(exception);
     }
+
+    [Fact]
+    // Đúng bằng giới hạn cấu hình vẫn được xuất.
+    public void EnsureWithinLimit_AtConfiguredLimit_DoesNotThrow()
+    {
+        var exception = Record.Exception(() => ExportLimits.EnsureWithinLimit(3, 3));
+
+        Assert.Null(exception);
+    }
+
+    [Fact]
+    // Vượt giới hạn cấu hình một dòng thì trả lỗi với chuỗi của contract, dù giới hạn không phải 50.000.
+    public void EnsureWithinLimit_OneOverConfiguredLimit_ThrowsContractError()
+    {
+        var exception = Assert.Throws<AppException>(() => ExportLimits.EnsureWithinLimit(4, 3));
+
+        Assert.Equal("EXPORT_TOO_LARGE", exception.Code);
+        Assert.Equal(422, exception.StatusCode);
+        Assert.Equal("Danh sách có hơn 50.000 dòng. Hãy thu hẹp bộ lọc rồi xuất lại.", exception.Message);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    // Giới hạn không dương là lỗi cấu hình của người gọi, không phải lỗi 422 của người dùng.
+    public void EnsureWithinLimit_NonPositiveLimit_ThrowsArgumentOutOfRange(int maxRows)
+    {
+        Assert.Throws<ArgumentOutOfRangeException>(() => ExportLimits.EnsureWithinLimit(1, maxRows));
+    }
 }

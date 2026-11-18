@@ -72,6 +72,10 @@ public static class CommerceModule
         services.AddScoped<OrderTrackingService>();
         // Danh sách và chi tiết đơn của nhân viên đọc mọi đơn, nên tách khỏi dịch vụ theo dõi của khách.
         services.AddScoped<AdminOrderService>();
+        // Xuất Excel đọc mọi đơn khớp bộ lọc và ghi nhật ký cùng transaction, nên tách khỏi dịch vụ đọc một trang.
+        services.AddScoped<AdminOrderExportService>();
+        // Cỡ lô đọc dòng hàng có giá trị mặc định. Test thay bằng lô nhỏ để chạy nhánh nhiều lô với vài đơn.
+        services.TryAddSingleton(new OrderExportLineBatching());
         // Thao tác ghi của nhân viên (xác nhận, hủy, đánh dấu hóa đơn) tách khỏi dịch vụ đọc để phạm vi quyền rõ ràng.
         services.AddScoped<AdminOrderActionService>();
         // Tạo và hủy vận đơn gọi GHN ngoài transaction, nên tách riêng để khóa dòng ngắn.
@@ -144,6 +148,8 @@ public static class CommerceModule
         ReviewEndpoints.Map(moduleRoutes);
         AdminReviewEndpoints.Map(moduleRoutes);
         AdminOrderEndpoints.Map(moduleRoutes);
+        // Route xuất đơn nằm cạnh route danh sách vì hai route dùng chung bộ lọc đơn.
+        AdminOrderExportEndpoints.Map(moduleRoutes);
         AdminPaymentEndpoints.Map(moduleRoutes);
         CommerceSettingsEndpoints.Map(moduleRoutes);
         // Route SePay có hợp đồng xác thực và phản hồi riêng, không yêu cầu phiên web.

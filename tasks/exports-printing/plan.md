@@ -100,7 +100,7 @@ Frontend:
 ### Phase 2: Xuất Excel
 
 Backend:
-- [ ] EXP-03 xuất đơn hàng
+- [x] EXP-03 xuất đơn hàng
 - [ ] EXP-04 xuất giao dịch SePay
 - [ ] EXP-05 xuất sản phẩm
 - [ ] EXP-06 xuất khách hàng
