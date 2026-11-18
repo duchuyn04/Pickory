@@ -169,7 +169,7 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 
 ### Checkpoint E1
 - [ ] File của 4 danh sách mở được trong Excel, tiếng Việt đúng dấu
-- [ ] Số dòng trong file bằng `total` của route danh sách với cùng bộ lọc
+- [x] Số dòng trong file bằng `total` của route danh sách với cùng bộ lọc
 - [ ] Review với người dùng
 
 ---

@@ -110,7 +110,7 @@ Frontend:
 
 ### Checkpoint E1
 - [ ] File của 4 danh sách mở được trong Excel, tiếng Việt đúng dấu
-- [ ] Số dòng trong file bằng `total` của route danh sách với cùng bộ lọc
+- [x] Số dòng trong file bằng `total` của route danh sách với cùng bộ lọc
 - [ ] Review với người dùng
 
 ### Phase 3: In hóa đơn
