@@ -32,6 +32,7 @@ import { PaymentPage } from './features/commerce/customer/checkout/payment-page'
 import { AdminPaymentsPage } from './features/commerce/admin/payments/admin-payments-page';
 import { AdminReviewsPage } from './features/commerce/admin/reviews/admin-reviews-page';
 import { AdminOrderDetailPage } from './features/commerce/admin/orders/admin-order-detail-page';
+import { AdminOrderPrintPage } from './features/commerce/admin/orders/admin-order-print-page';
 import { AdminOrdersPage } from './features/commerce/admin/orders/admin-orders-page';
 import { OrderDetailPage } from './features/commerce/customer/orders/order-detail-page';
 import { CustomerOrdersPage } from './features/commerce/customer/orders/customer-orders-page';
@@ -155,6 +156,8 @@ export function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/admin/login" element={<StaffLoginPage />} />
+        {/* Trang in nằm ngoài AdminLayout để không mang sidebar vào bản in. */}
+        <Route path="/admin/orders/print" element={<AdminOrderPrintPage />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<AdminDashboardPage />} />
           <Route path="roles" element={<RolesPage />} />

@@ -221,17 +221,18 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** Route `/admin/orders/print?codes=` ngoài khung admin, vẫn kiểm đăng nhập và `orders:read`. Trang dựng một hóa đơn cho mỗi đơn theo 10 phần của spec. CSS in theo quyết định 11 của plan. Trang mở hộp thoại in một lần theo quyết định 12.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Hóa đơn hiện đủ 10 phần của spec với ví dụ `order invoices two orders with vat and cancelled`
-- [ ] `shop.name` là `null` thì hóa đơn in "Pickory". Dòng shop có giá trị `null` không hiện
-- [ ] Đơn không có `vatInvoice` không hiện khối VAT
-- [ ] Đơn `cancelled` có dấu "ĐƠN ĐÃ HỦY" ở đầu trang
-- [ ] `window.print` được gọi đúng 1 lần, sau khi dữ liệu và logo tải xong
-- [ ] Thanh công cụ "In" và "Đóng" không hiện khi in (`emulateMedia({ media: 'print' })`)
-- [ ] Đơn 15 dòng sản phẩm cho PDF A4 1 trang. Đơn 40 dòng cho PDF 2 trang và tiêu đề bảng lặp lại ở trang 2
-- [ ] API lỗi 404 hiện `ErrorAlert` có mã đơn thiếu. Thiếu quyền hiện `ForbiddenNotice`
-- [ ] Ảnh chụp bản in đen trắng, không có màu nền
-- [ ] Playwright console 0 lỗi và 0 cảnh báo
+- [x] Hóa đơn hiện đủ 10 phần của spec với ví dụ `order invoices two orders with vat and cancelled`
+- [x] `shop.name` là `null` thì hóa đơn in "Pickory". Dòng shop có giá trị `null` không hiện
+- [x] Đơn không có `vatInvoice` không hiện khối VAT
+- [x] Đơn `cancelled` có dấu "ĐƠN ĐÃ HỦY" ở đầu trang
+- [x] `window.print` được gọi đúng 1 lần, sau khi dữ liệu và logo tải xong
+- [x] Thanh công cụ "In" và "Đóng" không hiện khi in (`emulateMedia({ media: 'print' })`)
+- [x] Đơn 15 dòng sản phẩm cho PDF A4 1 trang. Đơn 40 dòng cho PDF 2 trang và tiêu đề bảng lặp lại ở trang 2
+- [x] API lỗi 404 hiện `ErrorAlert` có mã đơn thiếu. Thiếu quyền hiện `ForbiddenNotice`
+- [x] Ảnh chụp bản in đen trắng, không có màu nền
+- [x] Playwright console 0 lỗi và 0 cảnh báo
 - [ ] Trang in với backend thật: kiểm ở EXP-E2E2
+  - Task EXP-E2E2 kiểm trang in với backend thật. Task này chỉ dùng route giả của EXP-UI1.
 **Kiểm tra:** Vitest; Playwright với route giả, `page.pdf`; ảnh chụp
 **Phụ thuộc:** EXP-UI1, EXP-UI4 · **Quy mô:** M
 

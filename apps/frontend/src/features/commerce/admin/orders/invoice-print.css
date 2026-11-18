@@ -1,0 +1,433 @@
+/* Khổ giấy A4 dọc và lề 12 mm khi in trang hóa đơn. */
+@page {
+  size: A4 portrait;
+  margin: 12mm;
+}
+
+.invoice-print-page {
+  min-height: 100vh;
+  background: var(--color-page);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  padding-bottom: var(--space-6);
+}
+
+.invoice-print-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.invoice-print-toolbar-inner {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+  max-width: 210mm;
+  margin: 0 auto;
+}
+
+.invoice-print-state {
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.invoice-print-sheets {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+  padding: 0 var(--space-4);
+}
+
+/* Mỗi tờ hóa đơn trên màn hình có bề rộng tối đa bằng khổ giấy A4 để nhân viên xem trước bố cục. */
+.invoice-sheet {
+  width: 100%;
+  max-width: 210mm;
+  margin: 0 auto;
+  padding: 12mm;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.invoice-cancelled-banner {
+  margin-bottom: var(--space-2);
+}
+
+/* Dấu đơn đã hủy dùng viền đen đậm và chữ hoa để nhận ra ngay cả khi in đen trắng. */
+.invoice-cancelled-stamp {
+  display: inline-block;
+  padding: 3px 10px;
+  border: 2px solid var(--color-ink);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.invoice-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-ink);
+}
+
+.invoice-brand {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.invoice-logo {
+  width: 44px;
+  height: 44px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.invoice-shop-info {
+  min-width: 0;
+}
+
+.invoice-shop-name {
+  display: block;
+  margin-bottom: 2px;
+  font-size: var(--text-sm);
+}
+
+.invoice-shop-line {
+  margin: 0;
+  color: var(--color-ink-secondary);
+  font-size: 11px;
+}
+
+.invoice-title-block {
+  flex-shrink: 0;
+  text-align: right;
+}
+
+.invoice-title {
+  margin: 0 0 var(--space-1);
+  font-size: var(--text-md);
+  font-weight: 700;
+}
+
+.invoice-meta {
+  margin: 0;
+  font-size: 11px;
+}
+
+.invoice-meta > div {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2);
+}
+
+.invoice-meta dt {
+  color: var(--color-ink-muted);
+}
+
+.invoice-meta dd {
+  margin: 0;
+  font-weight: 600;
+}
+
+.invoice-parties {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.invoice-party {
+  min-width: 0;
+}
+
+.invoice-section-heading {
+  margin: 0 0 3px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.invoice-party-line {
+  margin: 0 0 2px;
+  overflow-wrap: anywhere;
+}
+
+/* Cho phép bảng cuộn ngang trên màn hình hẹp để khung trang không bị tràn. */
+.invoice-table-wrap {
+  margin-top: var(--space-2);
+  overflow-x: auto;
+}
+
+.invoice-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11.5px;
+  line-height: 1.3;
+}
+
+/* Giữ tiêu đề bảng lặp lại ở đầu trang mới khi hóa đơn kéo dài sang trang thứ hai. */
+.invoice-items-table thead {
+  display: table-header-group;
+}
+
+.invoice-items-table th,
+.invoice-items-table td {
+  padding: 4px 6px;
+  border: 1px solid var(--color-border-strong);
+  text-align: left;
+  vertical-align: top;
+}
+
+.invoice-items-table thead th {
+  font-weight: 700;
+}
+
+/* Tránh cắt ngang một dòng sản phẩm giữa hai trang giấy khi in. */
+.invoice-items-table tbody tr {
+  break-inside: avoid;
+}
+
+.invoice-col-index {
+  width: 38px;
+}
+
+.invoice-items-table .invoice-col-index {
+  text-align: center;
+}
+
+/* Cố định bề rộng cột số để phần tên sản phẩm chiếm trọn không gian còn lại. */
+.invoice-items-table th:nth-child(3),
+.invoice-items-table td:nth-child(3) {
+  width: 68px;
+}
+
+.invoice-items-table th:nth-child(4),
+.invoice-items-table td:nth-child(4),
+.invoice-items-table th:nth-child(5),
+.invoice-items-table td:nth-child(5) {
+  width: 108px;
+}
+
+.invoice-items-table .invoice-col-num {
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.invoice-line-name {
+  display: block;
+  font-weight: 600;
+}
+
+.invoice-line-sub {
+  display: block;
+  color: var(--color-ink-muted);
+  font-size: 10.5px;
+}
+
+/* Giữ trọn khối tổng tiền và thông tin thanh toán trên cùng một trang. */
+.invoice-summary-section {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 250px;
+  gap: var(--space-1) var(--space-4);
+  align-items: start;
+  margin-top: var(--space-2);
+  break-inside: avoid;
+}
+
+/* Đưa khối tổng tiền sang cột phải trong khi giữ thứ tự đọc 6, 7, 8 ở cây phần tử. */
+.invoice-totals {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin: 0;
+}
+
+.invoice-amount-words {
+  grid-column: 1;
+  grid-row: 1;
+  margin: 0;
+}
+
+.invoice-payment-info {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.invoice-payment-line {
+  margin: 0 0 3px;
+}
+
+.invoice-totals > div {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 2px 0;
+}
+
+.invoice-totals dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.invoice-totals-grand {
+  margin-top: 2px;
+  padding-top: 4px;
+  border-top: 1px solid var(--color-ink);
+  font-weight: 700;
+}
+
+/* Giữ hai ô ký tên liền khối để không bị tách rời sang hai trang. */
+.invoice-signatures {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-5);
+  margin-top: var(--space-3);
+  text-align: center;
+  break-inside: avoid;
+}
+
+.invoice-signature-box {
+  min-height: 60px;
+}
+
+.invoice-signature-role {
+  margin: 0;
+  font-weight: 700;
+}
+
+.invoice-signature-hint {
+  margin: 2px 0 0;
+  color: var(--color-ink-muted);
+  font-size: 11px;
+}
+
+.invoice-footer-note {
+  margin: var(--space-2) 0 0;
+  color: var(--color-ink-muted);
+  font-size: 11px;
+  font-style: italic;
+  text-align: center;
+  break-inside: avoid;
+}
+
+@media screen and (max-width: 640px) {
+  .invoice-print-toolbar {
+    padding: var(--space-2) var(--space-3);
+  }
+
+  .invoice-print-sheets,
+  .invoice-print-state {
+    padding: 0 var(--space-2);
+  }
+
+  .invoice-sheet {
+    padding: var(--space-3);
+  }
+
+  .invoice-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .invoice-title-block {
+    text-align: left;
+  }
+
+  .invoice-meta > div {
+    justify-content: flex-start;
+  }
+
+  .invoice-summary-section {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2);
+  }
+
+  .invoice-totals,
+  .invoice-amount-words,
+  .invoice-payment-info {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .invoice-col-product {
+    min-width: 150px;
+  }
+}
+
+@media print {
+  /* Giới hạn kiểu in trong trang chứa `.invoice-print-page` để không đổi lề và màu trang khác. */
+  html:has(.invoice-print-page),
+  body:has(.invoice-print-page),
+  .invoice-print-page {
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    background: white;
+    background-image: none;
+    color: black;
+  }
+
+  /* Ẩn thanh công cụ và banner đồng ý cookie khi xuất ra giấy. */
+  .invoice-print-toolbar,
+  body:has(.invoice-print-page) .consent-banner {
+    display: none;
+  }
+
+  .invoice-print-sheets {
+    display: block;
+    padding: 0;
+  }
+
+  .invoice-print-page .invoice-sheet {
+    max-width: none;
+    padding: 0;
+    border: 0;
+    background: white;
+    box-shadow: none;
+    color: black;
+  }
+
+  /* Bắt đầu mỗi hóa đơn từ hóa đơn thứ hai trên một trang giấy mới. */
+  .invoice-print-sheets > .invoice-sheet + .invoice-sheet {
+    break-before: page;
+  }
+
+  /* Xóa mọi màu nền, bóng và giữ chữ đen cho toàn bộ phần tử bên trong hóa đơn. */
+  .invoice-print-page .invoice-sheet * {
+    background: transparent;
+    box-shadow: none;
+    color: black;
+  }
+
+  .invoice-logo {
+    filter: grayscale(100%);
+  }
+
+  .invoice-header,
+  .invoice-parties,
+  .invoice-cancelled-stamp,
+  .invoice-totals-grand,
+  .invoice-items-table th,
+  .invoice-items-table td {
+    border-color: black;
+  }
+
+  .invoice-table-wrap {
+    overflow: visible;
+  }
+}

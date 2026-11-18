@@ -90,4 +90,38 @@ test.describe('helper installFixtureRoute', () => {
     expect(fetched.status).not.toBe(422);
     expect(fetched.bodyText).not.toContain('EXPORT_TOO_LARGE');
   });
+
+  test('route chưa có: tùy chọn transformResponse biến đổi dữ liệu JSON trước khi trả', async ({
+    page,
+  }) => {
+    await page.goto('/');
+    const example = findExportsPrintingExample(
+      'order-invoices.json',
+      'order invoices shop profile not set',
+    );
+
+    await installFixtureRoute(page, 'GET', FIXTURE_ONLY_PATH, 'order-invoices.json', example.name, {
+      transformResponse: (response) => {
+        const cloned = response as { data: { shop: { name: string | null } } };
+        cloned.data.shop.name = 'Pickory Biến Đổi';
+        return cloned;
+      },
+    });
+    const fetched = await fetchFromPage(page, FIXTURE_ONLY_PATH);
+
+    expect(fetched.status).toBe(200);
+    expect(JSON.parse(fetched.bodyText).data.shop.name).toBe('Pickory Biến Đổi');
+  });
+
+  test('từ chối khi truyền transformResponse cho ví dụ xuất file Excel không có response JSON', async ({
+    page,
+  }) => {
+    await page.goto('/');
+
+    await expect(
+      installFixtureRoute(page, 'GET', FIXTURE_ONLY_PATH, 'exports.json', 'orders export success', {
+        transformResponse: (response) => response,
+      }),
+    ).rejects.toThrow('Ví dụ "orders export success" không có "response" để biến đổi.');
+  });
 });

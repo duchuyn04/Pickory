@@ -30,6 +30,8 @@ export interface OpenApiDocumentCache {
 export interface InstallFixtureRouteOptions {
   // Chỉ test của chính helper truyền giá trị này để mỗi case có bộ nhớ đệm riêng. Spec Playwright dùng mặc định.
   openApiCache?: OpenApiDocumentCache;
+  // Cho phép test biến đổi dữ liệu JSON của ví dụ trước khi trả để tạo hóa đơn nhiều dòng.
+  transformResponse?: (response: unknown) => unknown;
 }
 
 // Giữ lời hứa đọc tài liệu thay cho kết quả. Hai lời gọi chạy cùng lúc nhờ vậy chỉ tạo một request.
@@ -108,6 +110,25 @@ async function readOpenApiDocument(page: Page): Promise<OpenApiDocument> {
   return parseOpenApiDocument(body, response.url());
 }
 
+// Chạy hàm biến đổi dữ liệu cho ví dụ JSON và chặn trường hợp truyền hàm này cho ví dụ file Excel.
+function applyResponseTransform(
+  example: ContractExample,
+  exampleName: string,
+  transformResponse?: (response: unknown) => unknown,
+): ContractExample {
+  if (transformResponse === undefined) {
+    return example;
+  }
+  if (example.response === undefined) {
+    throw new Error(`Ví dụ "${exampleName}" không có "response" để biến đổi.`);
+  }
+  // Mỗi lần gọi `findExportsPrintingExample` đã đọc lại tệp từ đĩa nên không cần nhân bản sâu đối tượng.
+  return {
+    ...example,
+    response: transformResponse(example.response),
+  };
+}
+
 // Cài route giả cho một route backend chưa có. Hàm không nuốt lỗi, nên mọi lỗi làm test gọi nó đỏ.
 export async function installFixtureRoute(
   page: Page,
@@ -130,8 +151,10 @@ export async function installFixtureRoute(
       `Ví dụ "${exampleName}" trong file mẫu "${fixtureFile}" dùng phương thức ${example.method.toUpperCase()}, không khớp ${mockedMethod}.`,
     );
   }
+  // Biến đổi dữ liệu JSON của ví dụ khi ca kiểm thử yêu cầu trước khi dựng response giả.
+  const preparedExample = applyResponseTransform(example, exampleName, options.transformResponse);
   // Dựng response một lần ở đây để ví dụ hỏng làm test đỏ ngay, không đợi tới lúc có request.
-  const response = buildFixtureResponse(example);
+  const response = buildFixtureResponse(preparedExample);
   // Bỏ query khỏi đường dẫn đã truyền, vì route khớp theo pathname.
   const mockedPathname = normalizePath(path);
 
