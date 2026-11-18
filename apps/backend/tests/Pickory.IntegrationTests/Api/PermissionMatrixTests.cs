@@ -64,6 +64,9 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
         { "GET", "/api/admin/customers", [Permissions.CustomersRead] },
         { "GET", "/api/admin/customers/dummy-id", [Permissions.CustomersRead] },
         { "PATCH", "/api/admin/customers/dummy-id", [Permissions.CustomersManage] },
+        // Route xuất cần cả hai quyền, nên role `sales` thiếu `reports:export` phải nhận 403.
+        // Ca kiểm của admin chạy một lần xuất thật và ghi một dòng `identity.customers.export` vào DB của các test `Api`.
+        { "GET", "/api/admin/exports/customers", [Permissions.CustomersRead, Permissions.ReportsExport] },
         { "GET", "/api/admin/shipping/settings", [Permissions.ShippingSettingsManage] },
         { "PUT", "/api/admin/shipping/settings", [Permissions.ShippingSettingsManage] },
         { "GET", "/api/admin/shipping/fallback-fee", [Permissions.ShippingSettingsManage] },

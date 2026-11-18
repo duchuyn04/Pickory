@@ -14,6 +14,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="Pickory.UnitTests" />
+    <InternalsVisibleTo Include="Pickory.IntegrationTests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\Pickory.Modules.Identity.Contracts\Pickory.Modules.Identity.Contracts.csproj" />
     <ProjectReference Include="..\Pickory.Shared\Pickory.Shared.csproj" />
   </ItemGroup>

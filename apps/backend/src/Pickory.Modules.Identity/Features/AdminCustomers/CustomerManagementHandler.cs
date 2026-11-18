@@ -18,44 +18,13 @@ public sealed class CustomerManagementHandler(IdentityDbContext database, TimePr
     {
         var page = query.Page;
 
-        // Chỉ lấy khách. Nhân viên có trang quản lý riêng và không lẫn vào danh sách này.
-        var customers = database.Users.AsNoTracking().Where(user => user.Kind == UserKind.Customer);
-
-        if (query.Search is { } term)
-        {
-            // Nhân viên hỗ trợ có thể chỉ biết email, tên hoặc số điện thoại khi khách gọi tới.
-            // Email và tên so sánh không dấu, không phân biệt hoa thường, và từ khóa đi qua `unaccent` như cột.
-            var pattern = term.LikePattern;
-            customers = customers.Where(user =>
-                EF.Functions.ILike(EF.Functions.Unaccent(user.Email), EF.Functions.Unaccent(pattern), SearchTerm.EscapeCharacter)
-                || (user.Name != null
-                    && EF.Functions.ILike(EF.Functions.Unaccent(user.Name), EF.Functions.Unaccent(pattern), SearchTerm.EscapeCharacter))
-                // Số điện thoại không có dấu, nên không cần `unaccent`. Mẫu đã escape `%` và `_` trong từ khóa.
-                || (user.Phone != null && EF.Functions.ILike(user.Phone, pattern, SearchTerm.EscapeCharacter)));
-        }
-
-        // Trạng thái khóa suy ra từ `LockedAt`. Bảng không có cột trạng thái riêng.
-        if (query.Status == CustomerStatusFilter.Locked)
-        {
-            customers = customers.Where(user => user.LockedAt != null);
-        }
-        else if (query.Status == CustomerStatusFilter.Active)
-        {
-            customers = customers.Where(user => user.LockedAt == null);
-        }
-
-        if (query.EmailVerified is { } emailVerified)
-        {
-            customers = customers.Where(user => user.EmailVerified == emailVerified);
-        }
+        // Danh sách và route xuất dùng chung bộ lọc. Bộ lọc chỉ giữ khách, nên nhân viên không lẫn vào danh sách này.
+        var customers = CustomerListFilter.Apply(database.Users.AsNoTracking(), query);
 
         // Đếm cùng điều kiện lọc. Giao diện biết có bao nhiêu trang.
         var total = await customers.CountAsync(cancellationToken);
-        // Khách mới nhất lên đầu, vì nhân viên thường cần tìm người vừa đăng ký.
-        // Thứ tự phụ theo `Id` giữ hai khách cùng `CreatedAt` không đổi chỗ giữa hai trang.
-        var items = await customers
-            .OrderByDescending(user => user.CreatedAt)
-            .ThenBy(user => user.Id)
+        // Thứ tự nằm cùng chỗ với bộ lọc. Route danh sách và route xuất không lệch thứ tự.
+        var items = await CustomerListFilter.NewestFirst(customers)
             .Skip(page.Skip)
             .Take(page.Limit)
             .Select(user => new CustomerResponse(

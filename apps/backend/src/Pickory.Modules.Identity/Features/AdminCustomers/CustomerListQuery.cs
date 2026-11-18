@@ -18,6 +18,18 @@ public sealed record CustomerListQuery(
     CustomerStatusFilter? Status,
     bool? EmailVerified)
 {
+    // Tên tham số của query string. Route xuất dùng lại tên này làm khóa của bộ lọc trong nhật ký.
+    public const string StatusParameter = "status";
+    public const string EmailVerifiedParameter = "emailVerified";
+
+    // Giá trị của tham số `status`. Đọc tham số và ghi nhật ký cùng dùng hai chuỗi này, nên hai nơi không lệch nhau.
+    private const string ActiveStatusValue = "active";
+    private const string LockedStatusValue = "locked";
+
+    // Đổi bộ lọc trạng thái về đúng chữ mà người dùng gửi trong query. Hàm này là chiều ngược của `ReadStatus`.
+    public static string StatusValue(CustomerStatusFilter status) =>
+        status == CustomerStatusFilter.Locked ? LockedStatusValue : ActiveStatusValue;
+
     // Lỗi được thêm vào `failures`. Route gom mọi lỗi của query string thành một lỗi `VALIDATION_ERROR`.
     public static CustomerListQuery Read(IQueryCollection query, List<ValidationFailure> failures)
     {
@@ -30,7 +42,7 @@ public sealed record CustomerListQuery(
 
     private static CustomerStatusFilter? ReadStatus(IQueryCollection query, List<ValidationFailure> failures)
     {
-        var raw = QueryParameter.ReadSingle(query, "status", failures);
+        var raw = QueryParameter.ReadSingle(query, StatusParameter, failures);
         if (raw is null)
         {
             return null;
@@ -39,15 +51,15 @@ public sealed record CustomerListQuery(
         // So sánh đúng chữ thường. Giá trị lạ nhận lỗi, vì danh sách không lọc làm nhân viên hiểu sai kết quả.
         return raw switch
         {
-            "active" => CustomerStatusFilter.Active,
-            "locked" => CustomerStatusFilter.Locked,
-            _ => AddFailure<CustomerStatusFilter>(failures, "status", "Trạng thái phải là `active` hoặc `locked`."),
+            ActiveStatusValue => CustomerStatusFilter.Active,
+            LockedStatusValue => CustomerStatusFilter.Locked,
+            _ => AddFailure<CustomerStatusFilter>(failures, StatusParameter, "Trạng thái phải là `active` hoặc `locked`."),
         };
     }
 
     private static bool? ReadEmailVerified(IQueryCollection query, List<ValidationFailure> failures)
     {
-        var raw = QueryParameter.ReadSingle(query, "emailVerified", failures);
+        var raw = QueryParameter.ReadSingle(query, EmailVerifiedParameter, failures);
         if (raw is null)
         {
             return null;
@@ -57,7 +69,7 @@ public sealed record CustomerListQuery(
         {
             "true" => true,
             "false" => false,
-            _ => AddFailure<bool>(failures, "emailVerified", "Trạng thái xác minh email phải là `true` hoặc `false`."),
+            _ => AddFailure<bool>(failures, EmailVerifiedParameter, "Trạng thái xác minh email phải là `true` hoặc `false`."),
         };
     }
 

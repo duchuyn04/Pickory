@@ -103,7 +103,7 @@ Backend:
 - [x] EXP-03 xuất đơn hàng
 - [x] EXP-04 xuất giao dịch SePay
 - [x] EXP-05 xuất sản phẩm
-- [ ] EXP-06 xuất khách hàng
+- [x] EXP-06 xuất khách hàng
 
 Frontend:
 - [ ] EXP-UI3 gắn nút "Xuất Excel" vào 4 danh sách

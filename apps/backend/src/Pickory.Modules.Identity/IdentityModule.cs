@@ -73,6 +73,8 @@ public static class IdentityModule
         services.AddScoped<RoleManagementHandler>();
         services.AddScoped<StaffManagementHandler>();
         services.AddScoped<CustomerManagementHandler>();
+        // Xuất khách dùng `DbContext` scoped và ghi nhật ký trong cùng request. Mỗi request nhận một service riêng.
+        services.AddScoped<CustomerExportService>();
         services.AddScoped<AuditLogReadHandler>();
         // Module khác đọc tên nhân viên qua contract này. Tra cứu chạy trong cùng request với `DbContext` của Identity.
         services.AddScoped<IStaffDirectory, StaffDirectory>();
@@ -155,6 +157,7 @@ public static class IdentityModule
         AdminRolesEndpoints.Map(moduleRoutes);
         AdminStaffEndpoints.Map(moduleRoutes);
         AdminCustomersEndpoints.Map(moduleRoutes);
+        CustomerExportEndpoints.Map(moduleRoutes);
         AdminAuditLogsEndpoints.Map(moduleRoutes);
         return endpoints;
     }

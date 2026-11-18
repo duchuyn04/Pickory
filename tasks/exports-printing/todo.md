@@ -144,12 +144,12 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** `GET /api/admin/exports/customers` trong `identity`. Route đọc tham số bằng `CustomerListQuery.Read`. Mỗi lần xuất ghi một dòng nhật ký `identity.customers.export`.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Contract test đạt với ví dụ `customers export success`, `customers export invalid status`
-- [ ] Thiếu `customers:read` hoặc `reports:export` trả 403. Route có trong ma trận quyền
-- [ ] Số dòng bằng `total` của `GET /api/admin/customers` với từng bộ lọc `status` và `emailVerified`
-- [ ] Khách bị khóa có "Đã khóa" và ngày khóa. Khách hoạt động để trống ô ngày khóa
-- [ ] File không có tài khoản nhân viên
-- [ ] Xuất thành công ghi đúng 1 dòng nhật ký
+- [x] Contract test đạt với ví dụ `customers export success`, `customers export invalid status`
+- [x] Thiếu `customers:read` hoặc `reports:export` trả 403. Route có trong ma trận quyền
+- [x] Số dòng bằng `total` của `GET /api/admin/customers` với từng bộ lọc `status` và `emailVerified`
+- [x] Khách bị khóa có "Đã khóa" và ngày khóa. Khách hoạt động để trống ô ngày khóa
+- [x] File không có tài khoản nhân viên
+- [x] Xuất thành công ghi đúng 1 dòng nhật ký
 **Kiểm tra:** test tích hợp
 **Phụ thuộc:** EXP-01, EXP-02 · **Quy mô:** S
 
