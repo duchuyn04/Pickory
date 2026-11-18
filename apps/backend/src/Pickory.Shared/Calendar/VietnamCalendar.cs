@@ -33,10 +33,15 @@ public static class VietnamCalendar
     // Ngày lịch giờ Việt Nam của một thời điểm UTC. Báo cáo dùng hàm này để xếp đơn và giao dịch vào đúng ngày.
     public static DateOnly ToVietnamDate(DateTime utc)
     {
+        return DateOnly.FromDateTime(ToVietnamDateTime(utc));
+    }
+
+    // Giờ treo tường Việt Nam của một thời điểm UTC. Kết quả có `Kind` không xác định và không mang offset.
+    public static DateTime ToVietnamDateTime(DateTime utc)
+    {
         // Bên gọi có thể truyền `DateTime` có `Kind` không xác định. Gán `Utc` để phép đổi offset không dùng múi giờ của máy chủ.
         var utcMoment = new DateTimeOffset(DateTime.SpecifyKind(utc, DateTimeKind.Utc));
-        var vietnamMoment = utcMoment.ToOffset(VietnamOffset);
-        return DateOnly.FromDateTime(vietnamMoment.DateTime);
+        return utcMoment.ToOffset(VietnamOffset).DateTime;
     }
 
     // Trả dạng `yyyy-MM-dd`. Dạng này sắp xếp đúng theo thứ tự thời gian khi so chuỗi.

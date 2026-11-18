@@ -1,0 +1,160 @@
+{
+  "description": "Ví dụ của bốn route xuất Excel. Response thành công là file nhị phân, nên ví dụ ghi header và nội dung sheet mong đợi thay cho body. Contract: tasks/exports-printing/api-contract.md.",
+  "examples": [
+    {
+      "name": "orders export success",
+      "method": "GET",
+      "path": "/api/admin/exports/orders?status=confirmed&from=2026-11-01&to=2026-11-09",
+      "request": null,
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": "attachment; filename=\"don-hang-20261110-1530.xlsx\"; filename*=UTF-8''don-hang-20261110-1530.xlsx"
+      },
+      "workbook": {
+        "sheets": [
+          {
+            "name": "Đơn hàng",
+            "header": [
+              "Mã đơn", "Ngày đặt", "Trạng thái đơn", "Trạng thái thanh toán", "Phương thức thanh toán",
+              "Tên khách", "Số điện thoại", "Email", "Địa chỉ giao", "Số sản phẩm",
+              "Tạm tính", "Phí vận chuyển", "Giảm phí vận chuyển", "Tổng tiền",
+              "Tên công ty", "Mã số thuế", "Địa chỉ xuất hóa đơn", "Email nhận hóa đơn",
+              "Đã xuất hóa đơn VAT", "Ghi chú đơn"
+            ],
+            "sampleRow": [
+              "PK7KQ2M9XA", "09/11/2026 10:15", "Đã xác nhận", "Đã thanh toán", "Chuyển khoản SePay",
+              "Trần Thị Minh Thư", "0901234567", "minhthu@example.com", "45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh", 3,
+              25370000, 35000, 35000, 25370000,
+              "Công ty TNHH Ánh Dương", "0109876543", "8 Trần Hưng Đạo, Hoàn Kiếm, Hà Nội", "ketoan@anhduong.example.com",
+              "Không", ""
+            ]
+          },
+          {
+            "name": "Chi tiết sản phẩm",
+            "header": ["Mã đơn", "Ngày đặt", "Mã SKU", "Tên sản phẩm", "Phân loại", "Số lượng", "Đơn giá", "Thành tiền"],
+            "sampleRow": ["PK7KQ2M9XA", "09/11/2026 10:15", "IP16-256-BLK", "iPhone 16 256GB", "Đen, 256 GB", 1, 24990000, 24990000]
+          }
+        ]
+      }
+    },
+    {
+      "name": "orders export too large",
+      "method": "GET",
+      "path": "/api/admin/exports/orders",
+      "request": null,
+      "status": 422,
+      "response": {
+        "error": {
+          "code": "EXPORT_TOO_LARGE",
+          "message": "Danh sách có hơn 50.000 dòng. Hãy thu hẹp bộ lọc rồi xuất lại."
+        }
+      }
+    },
+    {
+      "name": "orders export invalid filter",
+      "method": "GET",
+      "path": "/api/admin/exports/orders?from=2026-11-09&to=2026-11-01",
+      "request": null,
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "Dữ liệu không hợp lệ.",
+          "details": [
+            { "key": "from", "message": "Ngày bắt đầu không được sau ngày kết thúc." }
+          ]
+        }
+      }
+    },
+    {
+      "name": "orders export missing reports export permission",
+      "method": "GET",
+      "path": "/api/admin/exports/orders",
+      "request": null,
+      "status": 403,
+      "response": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "Bạn không có quyền thực hiện thao tác này."
+        }
+      }
+    },
+    {
+      "name": "products export success",
+      "method": "GET",
+      "path": "/api/admin/exports/products?lowStock=true",
+      "request": null,
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": "attachment; filename=\"san-pham-20261110-1530.xlsx\"; filename*=UTF-8''san-pham-20261110-1530.xlsx"
+      },
+      "workbook": {
+        "sheets": [
+          {
+            "name": "Sản phẩm",
+            "header": ["Tên sản phẩm", "Mã SKU", "Phân loại", "Thương hiệu", "Danh mục", "Giá bán", "Số bán được", "Trạng thái", "Ngày tạo"],
+            "sampleRow": ["iPhone 16 256GB", "IP16-256-BLK", "Đen, 256 GB", "Apple", "Điện thoại", 24990000, 3, "Đang bán", "01/10/2026 09:00"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "customers export success",
+      "method": "GET",
+      "path": "/api/admin/exports/customers?status=active",
+      "request": null,
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": "attachment; filename=\"khach-hang-20261110-1530.xlsx\"; filename*=UTF-8''khach-hang-20261110-1530.xlsx"
+      },
+      "workbook": {
+        "sheets": [
+          {
+            "name": "Khách hàng",
+            "header": ["Họ tên", "Email", "Số điện thoại", "Đã xác minh email", "Trạng thái", "Ngày khóa", "Ngày đăng ký"],
+            "sampleRow": ["Trần Thị Minh Thư", "minhthu@example.com", "0901234567", "Có", "Hoạt động", "", "15/09/2026 14:20"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "customers export invalid status",
+      "method": "GET",
+      "path": "/api/admin/exports/customers?status=deleted",
+      "request": null,
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "Dữ liệu không hợp lệ.",
+          "details": [
+            { "key": "status", "message": "Trạng thái phải là `active` hoặc `locked`." }
+          ]
+        }
+      }
+    },
+    {
+      "name": "payment transactions export success",
+      "method": "GET",
+      "path": "/api/admin/exports/payment-transactions?matchStatus=unmatched",
+      "request": null,
+      "status": 200,
+      "headers": {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": "attachment; filename=\"giao-dich-sepay-20261110-1530.xlsx\"; filename*=UTF-8''giao-dich-sepay-20261110-1530.xlsx"
+      },
+      "workbook": {
+        "sheets": [
+          {
+            "name": "Giao dịch SePay",
+            "header": ["Mã giao dịch SePay", "Thời điểm nhận tiền", "Số tiền", "Nội dung chuyển khoản", "Trạng thái khớp", "Mã đơn", "Tổng tiền đơn", "Trạng thái thanh toán của đơn", "Ghi chú đơn"],
+            "sampleRow": ["FT26313123456", "09/11/2026 10:20", 25370000, "CK tien hang thang 11", "Chưa khớp", "", "", "", ""]
+          }
+        ]
+      }
+    }
+  ]
+}

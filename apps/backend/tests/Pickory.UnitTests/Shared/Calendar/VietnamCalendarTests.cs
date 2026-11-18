@@ -92,4 +92,34 @@ public sealed class VietnamCalendarTests
 
         Assert.Equal(new DateTime(2026, 12, 31, 17, 0, 0, DateTimeKind.Utc), endExclusive);
     }
+
+    [Fact]
+    // 16:59 UTC là 23:59 cùng ngày, nên giờ treo tường chưa sang ngày mới.
+    public void ToVietnamDateTime_BeforeVietnamMidnight_KeepsSameDay()
+    {
+        var moment = new DateTime(2026, 11, 9, 16, 59, 0, DateTimeKind.Utc);
+
+        Assert.Equal(new DateTime(2026, 11, 9, 23, 59, 0), VietnamCalendar.ToVietnamDateTime(moment));
+    }
+
+    [Fact]
+    // 17:00 UTC là nửa đêm giờ Việt Nam, nên giờ treo tường sang ngày kế tiếp.
+    public void ToVietnamDateTime_AtVietnamMidnight_MovesToNextDay()
+    {
+        var moment = new DateTime(2026, 11, 9, 17, 0, 0, DateTimeKind.Utc);
+
+        Assert.Equal(new DateTime(2026, 11, 10, 0, 0, 0), VietnamCalendar.ToVietnamDateTime(moment));
+    }
+
+    [Fact]
+    // `Kind` không xác định vẫn được hiểu là UTC, và kết quả không mang múi giờ nào.
+    public void ToVietnamDateTime_UnspecifiedKind_IsTreatedAsUtc_AndResultIsUnspecified()
+    {
+        var moment = new DateTime(2026, 12, 31, 17, 0, 0, DateTimeKind.Unspecified);
+
+        var result = VietnamCalendar.ToVietnamDateTime(moment);
+
+        Assert.Equal(new DateTime(2027, 1, 1, 0, 0, 0), result);
+        Assert.Equal(DateTimeKind.Unspecified, result.Kind);
+    }
 }

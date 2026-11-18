@@ -1,0 +1,201 @@
+{
+  "description": "Ví dụ request và response của route dữ liệu in hóa đơn bán hàng. Contract: tasks/exports-printing/api-contract.md.",
+  "examples": [
+    {
+      "name": "order invoices two orders with vat and cancelled",
+      "method": "GET",
+      "path": "/api/admin/order-invoices?codes=PK7KQ2M9XA,PK3HN8RT2B",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "shop": {
+            "name": "Pickory",
+            "address": "12 Nguyễn Văn Bảo, Phường 4, Quận Gò Vấp, TP. Hồ Chí Minh",
+            "phone": "028 3894 0390",
+            "taxCode": "0312345678"
+          },
+          "invoices": [
+            {
+              "code": "PK7KQ2M9XA",
+              "createdAt": "2026-11-09T03:15:00Z",
+              "status": "confirmed",
+              "paymentMethod": "sepay",
+              "paymentStatus": "paid",
+              "customer": {
+                "name": "Trần Thị Minh Thư",
+                "phone": "0901234567",
+                "email": "minhthu@example.com"
+              },
+              "shippingAddressText": "45 Lê Lợi, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh",
+              "vatInvoice": {
+                "companyName": "Công ty TNHH Ánh Dương",
+                "taxCode": "0109876543",
+                "address": "8 Trần Hưng Đạo, Hoàn Kiếm, Hà Nội",
+                "email": "ketoan@anhduong.example.com"
+              },
+              "lines": [
+                {
+                  "skuCode": "IP16-256-BLK",
+                  "name": "iPhone 16 256GB",
+                  "optionText": "Đen, 256 GB",
+                  "quantity": 1,
+                  "unitPrice": 24990000,
+                  "lineTotal": 24990000
+                },
+                {
+                  "skuCode": "CBL-USBC-1M",
+                  "name": "Cáp USB-C 1 m",
+                  "optionText": null,
+                  "quantity": 2,
+                  "unitPrice": 190000,
+                  "lineTotal": 380000
+                }
+              ],
+              "subtotal": 25370000,
+              "shippingFee": 35000,
+              "shippingDiscount": 35000,
+              "total": 25370000
+            },
+            {
+              "code": "PK3HN8RT2B",
+              "createdAt": "2026-11-08T10:42:00Z",
+              "status": "cancelled",
+              "paymentMethod": "cod",
+              "paymentStatus": "unpaid",
+              "customer": {
+                "name": "Lê Văn Hải",
+                "phone": "0987654321",
+                "email": "levanhai@example.com"
+              },
+              "shippingAddressText": "102 Nguyễn Trãi, Phường Thượng Đình, Quận Thanh Xuân, Hà Nội",
+              "vatInvoice": null,
+              "lines": [
+                {
+                  "skuCode": "AIRP-PRO2",
+                  "name": "AirPods Pro 2",
+                  "optionText": null,
+                  "quantity": 1,
+                  "unitPrice": 5990000,
+                  "lineTotal": 5990000
+                }
+              ],
+              "subtotal": 5990000,
+              "shippingFee": 30000,
+              "shippingDiscount": 0,
+              "total": 6020000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "order invoices shop profile not set",
+      "method": "GET",
+      "path": "/api/admin/order-invoices?codes=PK3HN8RT2B",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "shop": {
+            "name": null,
+            "address": null,
+            "phone": null,
+            "taxCode": null
+          },
+          "invoices": [
+            {
+              "code": "PK3HN8RT2B",
+              "createdAt": "2026-11-08T10:42:00Z",
+              "status": "delivered",
+              "paymentMethod": "cod",
+              "paymentStatus": "paid",
+              "customer": {
+                "name": "Lê Văn Hải",
+                "phone": "0987654321",
+                "email": "levanhai@example.com"
+              },
+              "shippingAddressText": "102 Nguyễn Trãi, Phường Thượng Đình, Quận Thanh Xuân, Hà Nội",
+              "vatInvoice": null,
+              "lines": [
+                {
+                  "skuCode": "AIRP-PRO2",
+                  "name": "AirPods Pro 2",
+                  "optionText": null,
+                  "quantity": 1,
+                  "unitPrice": 5990000,
+                  "lineTotal": 5990000
+                }
+              ],
+              "subtotal": 5990000,
+              "shippingFee": 30000,
+              "shippingDiscount": 0,
+              "total": 6020000
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "order invoices empty codes",
+      "method": "GET",
+      "path": "/api/admin/order-invoices?codes=",
+      "request": null,
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "Dữ liệu không hợp lệ.",
+          "details": [
+            { "key": "codes", "message": "Chọn ít nhất 1 đơn để in." }
+          ]
+        }
+      }
+    },
+    {
+      "name": "order invoices too many codes",
+      "method": "GET",
+      "path": "/api/admin/order-invoices?codes=<51 mã>",
+      "request": null,
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "Dữ liệu không hợp lệ.",
+          "details": [
+            { "key": "codes", "message": "Mỗi lần in tối đa 50 đơn." }
+          ]
+        }
+      }
+    },
+    {
+      "name": "order invoices unknown code",
+      "method": "GET",
+      "path": "/api/admin/order-invoices?codes=PK7KQ2M9XA,PKZZZZZZZZ",
+      "request": null,
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "ORDER_NOT_FOUND",
+          "message": "Không tìm thấy một số đơn hàng.",
+          "details": [
+            { "key": "codes", "message": "Không tìm thấy đơn PKZZZZZZZZ." }
+          ]
+        }
+      }
+    },
+    {
+      "name": "order invoices missing permission",
+      "method": "GET",
+      "path": "/api/admin/order-invoices?codes=PK7KQ2M9XA",
+      "request": null,
+      "status": 403,
+      "response": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "Bạn không có quyền thực hiện thao tác này."
+        }
+      }
+    }
+  ]
+}
