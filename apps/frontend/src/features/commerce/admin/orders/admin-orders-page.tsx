@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ErrorAlert } from '../../../../shared/error-alert';
 import { FilteredEmptyState } from '../../../../shared/filtered-empty-state';
@@ -34,6 +35,15 @@ import {
   paymentStatusBadgeClass,
 } from './order-badges';
 import { getErrorMessage } from '../../../../shared/error-message';
+import { buildOrderPrintPath } from './order-print-path';
+import {
+  buildOrderListSelectionKey,
+  getSelectAllState,
+  getVisibleSelectedCodes,
+  MAX_ORDERS_PER_PRINT,
+  toggleOrderSelection,
+  toggleSelectAllOrders,
+} from './order-print-selection';
 import './admin-orders.css';
 
 const ALL_STATUS_TAB_LABEL = 'Tất cả';
@@ -53,6 +63,32 @@ export function AdminOrdersPage() {
     enabled: canReadOrders,
   });
 
+  const limitNoteId = useId();
+  // Gắn lựa chọn với khóa bộ lọc và số trang để phát hiện lúc cần xóa toàn bộ lựa chọn.
+  const listKey = buildOrderListSelectionKey(values, page);
+  // Lưu khóa vừa thấy để đặt lại lựa chọn ngay khi bộ lọc hoặc số trang thay đổi.
+  const [seenListKey, setSeenListKey] = useState(listKey);
+  const [selectedCodes, setSelectedCodes] = useState<Set<string>>(() => new Set());
+
+  if (seenListKey !== listKey) {
+    // Xóa lựa chọn ngay trong lúc vẽ lại khi bộ lọc hoặc trang đổi để không in nhầm mã cũ.
+    setSeenListKey(listKey);
+    setSelectedCodes(new Set());
+  }
+
+  const items = data?.items ?? [];
+  const visibleCodes = items.map((order) => order.code);
+  // Chỉ giữ và đếm các đơn đang hiển thị theo đúng thứ tự bảng để URL in khớp dữ liệu hiện có.
+  const visibleSelectedCodes = getVisibleSelectedCodes(selectedCodes, visibleCodes);
+  if (data !== undefined && selectedCodes.size > visibleSelectedCodes.length) {
+    // Loại hẳn mã đã biến mất khỏi trang để đơn đó không tự chọn lại nếu xuất hiện ở lần nạp sau.
+    setSelectedCodes(new Set(visibleSelectedCodes));
+  }
+  const visibleSelectedSet = new Set(visibleSelectedCodes);
+  const selectAllState = getSelectAllState(visibleSelectedCodes.length, visibleCodes.length);
+  // Đạt giới hạn 50 đơn thì khóa các ô chưa chọn nhằm chặn tạo URL vượt ngưỡng API.
+  const isLimitReached = visibleSelectedCodes.length >= MAX_ORDERS_PER_PRINT;
+
   // Hook ở trên phải chạy hết trước lệnh return sớm này. Backend vẫn chặn mọi request thật sự.
   if (!canReadOrders) {
     return <ForbiddenNotice permission="orders:read" subject="danh sách đơn hàng" />;
@@ -64,9 +100,17 @@ export function AdminOrdersPage() {
     ...ORDER_STATUS_CODES.map((code) => ({ code, label: formatOrderStatus(code) })),
   ];
 
-  const items = data?.items ?? [];
   const showFilteredEmpty = data !== undefined && items.length === 0 && (hasFilters || page > 1);
   const showPlainEmpty = data !== undefined && items.length === 0 && !hasFilters && page === 1;
+
+  function handlePrintSelected() {
+    // Bỏ qua khi chưa chọn đơn nào để tránh mở trang in thiếu mã đơn.
+    if (visibleSelectedCodes.length === 0) {
+      return;
+    }
+    // Mở tab mới ngay trong sự kiện bấm để trình duyệt không chặn tab mới.
+    window.open(buildOrderPrintPath(visibleSelectedCodes), '_blank', 'noopener,noreferrer');
+  }
 
   return (
     <div className="page">
@@ -179,70 +223,142 @@ export function AdminOrdersPage() {
           ) : showPlainEmpty ? (
             <p className="empty-state">Chưa có đơn hàng nào.</p>
           ) : (
-            <div className="table-wrap">
-              <table className="tbl order-table">
-                <thead>
-                  <tr>
-                    <th scope="col" className="num col-row-number">
-                      STT
-                    </th>
-                    <th scope="col">Mã đơn</th>
-                    <th scope="col">Ngày đặt</th>
-                    <th scope="col">Người nhận</th>
-                    <th scope="col" className="num">
-                      Số dòng
-                    </th>
-                    <th scope="col" className="num">
-                      Tổng tiền
-                    </th>
-                    <th scope="col">Trạng thái</th>
-                    <th scope="col">Thanh toán</th>
-                    <th scope="col">Ghi chú</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data &&
-                    items.map((order, index) => (
-                      <tr key={order.code}>
-                        {/* STT theo `page` và `limit` của response đang hiện, không theo URL. */}
-                        <td className="num col-row-number">{rowNumber(data, index)}</td>
-                        <th scope="row">
-                          {/* Mã đơn là liên kết, nên bảng dùng được bằng phím Tab và Enter. */}
-                          <Link className="wrap-anywhere" to={`/admin/orders/${order.code}`}>
-                            {order.code}
-                          </Link>
-                        </th>
-                        <td className="order-time">{formatVietnamDateTime(order.createdAt)}</td>
-                        <td>
-                          {order.recipientName || 'Chưa có tên'}
-                          <span className="cell-sub">{order.recipientPhone || 'Chưa có'}</span>
-                        </td>
-                        <td className="num">{order.lineCount}</td>
-                        <td className="num">{formatProductPrice(order.total)}</td>
-                        <td>
-                          <span className={orderStatusBadgeClass(order.status)}>
-                            {formatOrderStatus(order.status)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={paymentStatusBadgeClass(order.paymentStatus)}>
-                            {formatPaymentStatus(order.paymentStatus)}
-                          </span>
-                        </td>
-                        <td>
-                          <div className="row-actions">
-                            {order.flags.map((flag) => (
-                              <span key={flag} className={orderFlagBadgeClass(flag)}>
-                                {formatOrderFlag(flag)}
+            <>
+              <div className="order-selection-bar">
+                <div className="order-selection-info">
+                  {/* Đọc số đơn đã chọn bằng vùng thông báo nhẹ để trình đọc màn hình cập nhật ngay. */}
+                  <span className="order-selection-count" aria-live="polite" aria-atomic="true">
+                    Đã chọn {visibleSelectedCodes.length} đơn
+                  </span>
+                  {/* Chỉ hiện chú thích khi chạm ngưỡng 50 đơn để giải thích lý do khóa các ô còn lại. */}
+                  {isLimitReached && (
+                    <span id={limitNoteId} className="order-selection-limit" aria-live="polite">
+                      Mỗi lần in tối đa {MAX_ORDERS_PER_PRINT} đơn
+                    </span>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  // Khóa nút khi chưa chọn đơn nào để không mở trang in rỗng.
+                  disabled={visibleSelectedCodes.length === 0}
+                  onClick={handlePrintSelected}
+                >
+                  In hóa đơn
+                </button>
+              </div>
+              <div className="table-wrap">
+                <table className="tbl order-table">
+                  <thead>
+                    <tr>
+                      <th scope="col" className="num col-row-number">
+                        STT
+                      </th>
+                      <th scope="col" className="col-order-select">
+                        <label className="order-select-hit">
+                          <input
+                            ref={(element) => {
+                              if (element) {
+                                // Đặt qua thuộc tính DOM mỗi lần gắn hoặc cập nhật để không mất trạng thái lưng chừng.
+                                element.indeterminate = selectAllState === 'some';
+                              }
+                            }}
+                            type="checkbox"
+                            className="order-select-checkbox"
+                            aria-label="Chọn tất cả đơn trong trang"
+                            checked={selectAllState === 'all'}
+                            // Đặt aria-checked="mixed" cùng indeterminate để trình đọc màn hình đọc đúng trạng thái lưng chừng.
+                            aria-checked={selectAllState === 'some' ? 'mixed' : undefined}
+                            // Đảo lựa chọn toàn trang qua hàm thuần để giữ giới hạn 50 đơn.
+                            onChange={() =>
+                              setSelectedCodes((current) =>
+                                toggleSelectAllOrders(current, visibleCodes),
+                              )
+                            }
+                          />
+                        </label>
+                      </th>
+                      <th scope="col">Mã đơn</th>
+                      <th scope="col">Ngày đặt</th>
+                      <th scope="col">Người nhận</th>
+                      <th scope="col" className="num">
+                        Số dòng
+                      </th>
+                      <th scope="col" className="num">
+                        Tổng tiền
+                      </th>
+                      <th scope="col">Trạng thái</th>
+                      <th scope="col">Thanh toán</th>
+                      <th scope="col">Ghi chú</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data &&
+                      items.map((order, index) => {
+                        const isSelected = visibleSelectedSet.has(order.code);
+                        // Chỉ khóa ô chưa chọn khi đủ 50 để người dùng vẫn bỏ chọn bớt được.
+                        const isDisabled = isLimitReached && !isSelected;
+                        return (
+                          <tr key={order.code}>
+                            {/* STT theo `page` và `limit` của response đang hiện, không theo URL. */}
+                            <td className="num col-row-number">{rowNumber(data, index)}</td>
+                            <td className="col-order-select">
+                              <label className="order-select-hit">
+                                <input
+                                  type="checkbox"
+                                  className="order-select-checkbox"
+                                  aria-label={`Chọn đơn ${order.code}`}
+                                  checked={isSelected}
+                                  disabled={isDisabled}
+                                  aria-describedby={isDisabled ? limitNoteId : undefined}
+                                  // Đổi lựa chọn một dòng qua hàm thuần để giữ ngưỡng tối đa và bỏ mã thừa.
+                                  onChange={() =>
+                                    setSelectedCodes((current) =>
+                                      toggleOrderSelection(current, order.code, visibleCodes),
+                                    )
+                                  }
+                                />
+                              </label>
+                            </td>
+                            <th scope="row">
+                              {/* Mã đơn là liên kết, nên bảng dùng được bằng phím Tab và Enter. */}
+                              <Link className="wrap-anywhere" to={`/admin/orders/${order.code}`}>
+                                {order.code}
+                              </Link>
+                            </th>
+                            <td className="order-time">{formatVietnamDateTime(order.createdAt)}</td>
+                            <td>
+                              {order.recipientName || 'Chưa có tên'}
+                              <span className="cell-sub">{order.recipientPhone || 'Chưa có'}</span>
+                            </td>
+                            <td className="num">{order.lineCount}</td>
+                            <td className="num">{formatProductPrice(order.total)}</td>
+                            <td>
+                              <span className={orderStatusBadgeClass(order.status)}>
+                                {formatOrderStatus(order.status)}
                               </span>
-                            ))}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
+                            </td>
+                            <td>
+                              <span className={paymentStatusBadgeClass(order.paymentStatus)}>
+                                {formatPaymentStatus(order.paymentStatus)}
+                              </span>
+                            </td>
+                            <td>
+                              <div className="row-actions">
+                                {order.flags.map((flag) => (
+                                  <span key={flag} className={orderFlagBadgeClass(flag)}>
+                                    {formatOrderFlag(flag)}
+                                  </span>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 

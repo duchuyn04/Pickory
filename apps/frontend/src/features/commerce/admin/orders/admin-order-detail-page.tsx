@@ -27,6 +27,7 @@ import {
   substituteFeeBadgeClass,
 } from './order-badges';
 import { getErrorMessage } from '../../../../shared/error-message';
+import { buildOrderPrintPath } from './order-print-path';
 import './admin-orders.css';
 
 // Người làm của một lần đổi trạng thái. Backend trả tên nhân viên; mã đầy đủ nằm trong `title` để đối chiếu.
@@ -144,8 +145,19 @@ export function AdminOrderDetailPage() {
           <h1>Đơn hàng {order.code}</h1>
           <p>Đặt lúc {formatVietnamDateTime(order.createdAt)}</p>
         </div>
-        {/* Nút thao tác theo quyền và trạng thái đơn. Component tự ẩn nút khi thiếu quyền. */}
-        <OrderActions order={order} onDone={setNotice} />
+        <div className="head-actions">
+          {/* Dùng thẻ liên kết dạng nút để mở được bằng chuột giữa và giữ đúng ngữ nghĩa chuyển trang. */}
+          <a
+            className="btn"
+            href={buildOrderPrintPath([order.code])}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            In hóa đơn
+          </a>
+          {/* Nút thao tác theo quyền và trạng thái đơn. Component tự ẩn nút khi thiếu quyền. */}
+          <OrderActions order={order} onDone={setNotice} />
+        </div>
       </div>
 
       {notice && (

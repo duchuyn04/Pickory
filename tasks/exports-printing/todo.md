@@ -240,14 +240,14 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** Trang chi tiết đơn có nút "In hóa đơn". Danh sách đơn có cột ô chọn, ô "chọn tất cả trong trang", dòng "Đã chọn N đơn" và nút "In hóa đơn". Hai nút mở trang in trong tab mới.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Nút ở trang chi tiết mở `/admin/orders/print?codes=<mã đơn>` trong tab mới
-- [ ] Chọn 3 đơn rồi bấm in mở trang in với 3 mã theo thứ tự trong danh sách
-- [ ] Đổi trang hoặc đổi bộ lọc thì danh sách bỏ chọn hết
-- [ ] Đã chọn 50 đơn thì các ô còn lại bị khóa và có chú thích "Mỗi lần in tối đa 50 đơn"
-- [ ] Chưa chọn đơn nào thì nút "In hóa đơn" của danh sách bị khóa
-- [ ] Ô chọn có tên truy cập theo mã đơn, ví dụ "Chọn đơn PK7KQ2M9XA"
-- [ ] Ở 375 px, ô chọn và nút in dùng được, trang không tràn ngang
-- [ ] Playwright console 0 lỗi và 0 cảnh báo
+- [x] Nút ở trang chi tiết mở `/admin/orders/print?codes=<mã đơn>` trong tab mới
+- [x] Chọn 3 đơn rồi bấm in mở trang in với 3 mã theo thứ tự trong danh sách
+- [x] Đổi trang hoặc đổi bộ lọc thì danh sách bỏ chọn hết
+- [x] Đã chọn 50 đơn thì các ô còn lại bị khóa và có chú thích "Mỗi lần in tối đa 50 đơn"
+- [x] Chưa chọn đơn nào thì nút "In hóa đơn" của danh sách bị khóa
+- [x] Ô chọn có tên truy cập theo mã đơn, ví dụ "Chọn đơn PK7KQ2M9XA"
+- [x] Ở 375 px, ô chọn và nút in dùng được, trang không tràn ngang
+- [x] Playwright console 0 lỗi và 0 cảnh báo
 **Kiểm tra:** Vitest; Playwright với route giả; ảnh chụp 1280 px và 375 px
 **Phụ thuộc:** EXP-UI5 · **Quy mô:** M
 
