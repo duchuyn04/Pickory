@@ -54,7 +54,13 @@ function OrderSuccessSkeleton() {
 
 // Nội dung đơn đã tải: sản phẩm, các bước tiếp theo bên trái, tiền và nơi nhận bên phải.
 function OrderSuccessDetails({ order }: { order: OrderDetail }) {
-  const steps = buildNextSteps(order);
+  // Truyền tường minh `trackingCode`. Thiếu khóa này thì đơn giao thủ công hiện sai chữ.
+  const steps = buildNextSteps({
+    status: order.status,
+    paymentMethod: order.paymentMethod,
+    paymentStatus: order.paymentStatus,
+    trackingCode: order.trackingCode,
+  });
   return (
     <div className="order-detail-layout">
       <div>

@@ -905,11 +905,14 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 ### COM-UI15: Nội dung giao hàng thủ công trên trang khách
 **Mô tả:** Dùng `trackingCode` hiện có để đổi nội dung bước giao hàng. API khách không thêm trường mới.
 **Tiêu chí nghiệm thu:**
-- [ ] Đơn `shipping` có `trackingCode=null` hiện "Shop đang giao hàng thủ công. Không có mã vận đơn GHN."
+- [x] Đơn `shipping` có `trackingCode=null` hiện "Shop đang giao hàng thủ công. Không có mã vận đơn GHN."
 - [ ] Đơn có mã vận đơn giữ nguyên nội dung hiện tại
-- [ ] Các trạng thái khác `shipping` giữ nguyên tiến trình và nội dung
-- [ ] Trang chi tiết truyền `trackingCode` vào `buildNextSteps`. Không đọc cờ nội bộ của admin
+  Frontend giữ nguyên chữ khi có mã, có test. Chưa tick vì API khách luôn trả `trackingCode: null` (`OrderTrackingService.ToDetailResponse`). Đơn GHN thật vẫn hiện chữ giao thủ công. Cần sửa backend ở task khác.
+- [x] Các trạng thái khác `shipping` giữ nguyên tiến trình và nội dung
+- [x] Trang chi tiết truyền `trackingCode` vào `buildNextSteps`. Không đọc cờ nội bộ của admin
+  Hàm chỉ được gọi ở trang đơn đặt thành công. Trang chi tiết đơn dùng cùng chữ qua hằng chung.
 - [ ] Nội dung không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E6
+  Kiểm chính thức trên trình duyệt ở COM-E2E6. Đã có ảnh 375 px ở COM-UI15.
 **Kiểm tra:**
 - `pnpm test -- test/unit/features/commerce/customer/orders/order-next-steps.test.ts test/unit/features/commerce/customer/orders/order-detail-page.test.tsx` trong `apps/frontend`
 - `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`
