@@ -3,6 +3,7 @@ import {
   initialParcelForm,
   toParcelBody,
   validateCancelReason,
+  validateFulfillmentReason,
   validateParcelForm,
   validateTransactionRef,
 } from '../../../../../../src/features/commerce/admin/orders/order-action-forms';
@@ -26,6 +27,29 @@ describe('validateCancelReason', () => {
 
   it('đếm ký tự sau khi bỏ khoảng trắng hai đầu', () => {
     expect(validateCancelReason(`  ${'a'.repeat(500)}  `)).toBeNull();
+  });
+});
+
+describe('validateFulfillmentReason', () => {
+  const REASON_ERROR = 'Nhập lý do từ 1 đến 500 ký tự.';
+
+  it('nhận lý do một ký tự và lý do đúng 500 ký tự', () => {
+    expect(validateFulfillmentReason('a')).toBeNull();
+    expect(validateFulfillmentReason('a'.repeat(500))).toBeNull();
+  });
+
+  it('từ chối lý do rỗng hoặc chỉ có khoảng trắng', () => {
+    expect(validateFulfillmentReason('')).toBe(REASON_ERROR);
+    expect(validateFulfillmentReason('   ')).toBe(REASON_ERROR);
+  });
+
+  it('từ chối lý do dài 501 ký tự sau khi cắt khoảng trắng', () => {
+    expect(validateFulfillmentReason('a'.repeat(501))).toBe(REASON_ERROR);
+    expect(validateFulfillmentReason(`  ${'a'.repeat(501)}  `)).toBe(REASON_ERROR);
+  });
+
+  it('không tính khoảng trắng hai đầu vào độ dài', () => {
+    expect(validateFulfillmentReason(`  ${'a'.repeat(500)}  `)).toBeNull();
   });
 });
 

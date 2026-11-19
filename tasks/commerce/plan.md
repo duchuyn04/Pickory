@@ -237,7 +237,7 @@ Backend track:
 
 Frontend track:
 - [x] COM-UI12 đọc fixtures và gọi API fulfillment
-- [ ] COM-UI13 bắt đầu và hủy giao hàng thủ công trên trang admin
+- [x] COM-UI13 bắt đầu và hủy giao hàng thủ công trên trang admin
 - [ ] COM-UI14 xác nhận giao, ghi nhận hoàn và hiển thị cờ trên trang admin
 - [ ] COM-UI15 hiển thị nội dung giao hàng thủ công trên trang khách
 

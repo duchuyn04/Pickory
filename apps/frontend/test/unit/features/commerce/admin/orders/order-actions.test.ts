@@ -111,7 +111,7 @@ describe('availableOrderActions: vận đơn', () => {
       permissions('orders:fulfill'),
     );
 
-    expect(result).toEqual(['createShipment']);
+    expect(result).toEqual(['startManualShipping', 'createShipment']);
   });
 
   it('không hiện nút tạo vận đơn khi đơn chờ xác nhận', () => {
@@ -135,6 +135,93 @@ describe('availableOrderActions: vận đơn', () => {
     );
 
     expect(result).toEqual([]);
+  });
+});
+
+describe('availableOrderActions: giao hàng thủ công', () => {
+  it('hiện nút bắt đầu giao thủ công khi đơn confirmed và có orders:fulfill', () => {
+    const result = availableOrderActions(
+      orderIn({ status: 'confirmed' }),
+      permissions('orders:fulfill'),
+    );
+
+    expect(result).toContain('startManualShipping');
+  });
+
+  it.each(['pending_confirmation', 'shipping', 'delivered', 'cancelled', 'returned'])(
+    'không hiện nút bắt đầu giao thủ công khi đơn ở trạng thái %s',
+    (status) => {
+      const result = availableOrderActions(orderIn({ status }), permissions('orders:fulfill'));
+
+      expect(result).not.toContain('startManualShipping');
+    },
+  );
+
+  it('hiện nút quay về đã xác nhận khi đơn shipping có cờ manual_shipping', () => {
+    const result = availableOrderActions(
+      orderIn({ status: 'shipping', flags: ['manual_shipping'] }),
+      permissions('orders:fulfill'),
+    );
+
+    expect(result).toEqual(['returnToConfirmed']);
+  });
+
+  it('không hiện nút quay về khi đơn shipping không có cờ, dù có hay không có vận đơn', () => {
+    const withShipment = orderIn({ status: 'shipping', shipment: { trackingCode: 'GHN1' } });
+    const withoutShipment = orderIn({ status: 'shipping' });
+
+    expect(availableOrderActions(withShipment, permissions('orders:fulfill'))).not.toContain(
+      'returnToConfirmed',
+    );
+    expect(availableOrderActions(withoutShipment, permissions('orders:fulfill'))).not.toContain(
+      'returnToConfirmed',
+    );
+  });
+
+  it.each(['pending_confirmation', 'confirmed', 'delivered', 'cancelled', 'returned'])(
+    'không hiện nút quay về khi đơn ở trạng thái %s dù có cờ manual_shipping',
+    (status) => {
+      const result = availableOrderActions(
+        orderIn({ status, flags: ['manual_shipping'] }),
+        permissions('orders:fulfill'),
+      );
+
+      expect(result).not.toContain('returnToConfirmed');
+    },
+  );
+
+  it('đơn shipping có cờ và có vận đơn hiện cả hủy vận đơn và quay về, theo thứ tự', () => {
+    const result = availableOrderActions(
+      orderIn({
+        status: 'shipping',
+        flags: ['manual_shipping'],
+        shipment: { trackingCode: 'GHN1' },
+      }),
+      permissions('orders:fulfill'),
+    );
+
+    expect(result).toEqual(['cancelShipment', 'returnToConfirmed']);
+  });
+
+  it.each([['orders:read'], ['orders:update-status'], ['orders:cancel']])(
+    'không hiện hai nút khi chỉ có quyền %s',
+    (permission) => {
+      const confirmed = orderIn({ status: 'confirmed' });
+      const shipping = orderIn({ status: 'shipping', flags: ['manual_shipping'] });
+
+      expect(availableOrderActions(confirmed, permissions(permission))).not.toContain(
+        'startManualShipping',
+      );
+      expect(availableOrderActions(shipping, permissions(permission))).not.toContain(
+        'returnToConfirmed',
+      );
+    },
+  );
+
+  it('đơn confirmed có đủ quyền hiện đúng tập nút theo thứ tự', () => {
+    const result = availableOrderActions(orderIn({ status: 'confirmed' }), everyPermission);
+
+    expect(result).toEqual(['cancel', 'startManualShipping', 'createShipment']);
   });
 });
 
@@ -210,12 +297,12 @@ describe('availableOrderActions: tổng hợp', () => {
     expect(availableOrderActions(orderIn(), noPermission)).toEqual([]);
   });
 
-  it('đơn chờ xác nhận có hóa đơn và đủ quyền hiện xác nhận, hóa đơn rồi hủy đơn', () => {
+  it('đơn chờ xác nhận có hóa đơn và đủ quyền hiện hủy đơn, hóa đơn rồi xác nhận', () => {
     const result = availableOrderActions(
       orderIn({ invoice: { companyName: 'ABC' } }),
       everyPermission,
     );
 
-    expect(result).toEqual(['confirm', 'issueInvoice', 'cancel']);
+    expect(result).toEqual(['cancel', 'issueInvoice', 'confirm']);
   });
 });

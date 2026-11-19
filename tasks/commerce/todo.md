@@ -856,14 +856,15 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 ### COM-UI13: Bắt đầu và hủy giao hàng thủ công trên admin
 **Mô tả:** Thêm hai thao tác vào cụm `OrderActions` hiện có. Component test dùng response trong fixtures, không gọi backend.
 **Tiêu chí nghiệm thu:**
-- [ ] Đơn `confirmed` hiện `Giao hàng thủ công` khi nhân viên có `orders:fulfill`
-- [ ] Đơn `shipping` có `manual_shipping` hiện `Quay về đã xác nhận` với cùng quyền
-- [ ] Nhân viên chỉ có `orders:read` không thấy hai nút. Nút tạo và hủy vận đơn GHN giữ nguyên điều kiện
-- [ ] Hai hộp thoại giải thích hậu quả và bắt buộc lý do từ 1 đến 500 ký tự
-- [ ] Submit gửi đúng `toStatus`. Nút gửi bị khóa trong lúc chờ API
-- [ ] Thành công cập nhật chi tiết trong cache và làm mới danh sách đơn
-- [ ] Lỗi 409 giữ hộp thoại mở, giữ lý do và làm mới chi tiết đơn
+- [x] Đơn `confirmed` hiện `Giao hàng thủ công` khi nhân viên có `orders:fulfill`
+- [x] Đơn `shipping` có `manual_shipping` hiện `Quay về đã xác nhận` với cùng quyền
+- [x] Nhân viên chỉ có `orders:read` không thấy hai nút. Nút tạo và hủy vận đơn GHN giữ nguyên điều kiện
+- [x] Hai hộp thoại giải thích hậu quả và bắt buộc lý do từ 1 đến 500 ký tự
+- [x] Submit gửi đúng `toStatus`. Nút gửi bị khóa trong lúc chờ API
+- [x] Thành công cập nhật chi tiết trong cache và làm mới danh sách đơn
+- [x] Lỗi 409 giữ hộp thoại mở, giữ lý do và làm mới chi tiết đơn
 - [ ] Bố cục hai hộp thoại không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E7
+  Kiểm chính thức trên trình duyệt ở COM-E2E7. Đã có ảnh 375 px ở COM-UI13.
 **Kiểm tra:**
 - `pnpm test -- test/unit/features/commerce/admin/orders/order-actions.test.ts test/unit/features/commerce/admin/orders/order-action-forms.test.ts test/unit/features/commerce/admin/orders/admin-order-actions.test.tsx` trong `apps/frontend`
 - `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`

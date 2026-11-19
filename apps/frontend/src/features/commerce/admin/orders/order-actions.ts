@@ -13,6 +13,8 @@ export type OrderActionKey =
   | 'confirm'
   | 'createShipment'
   | 'cancelShipment'
+  | 'startManualShipping'
+  | 'returnToConfirmed'
   | 'issueInvoice'
   | 'receiveCod'
   | 'refund'
@@ -23,6 +25,9 @@ export const ORDER_ACTION_PERMISSIONS: Record<OrderActionKey, string> = {
   confirm: 'orders:update-status',
   createShipment: 'orders:fulfill',
   cancelShipment: 'orders:fulfill',
+  // Hai thao tác giao thủ công cùng đi qua route `fulfillment`, nên cùng quyền với vận đơn.
+  startManualShipping: 'orders:fulfill',
+  returnToConfirmed: 'orders:fulfill',
   issueInvoice: 'orders:update-status',
   receiveCod: 'payments:reconcile',
   refund: 'refunds:manage',
@@ -35,6 +40,9 @@ const CANCELLABLE_STATUSES = ['pending_payment', 'pending_confirmation', 'confir
 // Cờ ghi nhận hóa đơn đã xuất. Khớp hằng của backend.
 const INVOICE_ISSUED_FLAG = 'invoice_issued';
 
+// Cờ backend gắn vào đơn khi shop tự giao. Khớp hằng của backend.
+const MANUAL_SHIPPING_FLAG = 'manual_shipping';
+
 // Điều kiện về trạng thái đơn của từng thao tác, không tính quyền.
 function isActionApplicable(action: OrderActionKey, order: OrderActionSubject): boolean {
   switch (action) {
@@ -44,6 +52,11 @@ function isActionApplicable(action: OrderActionKey, order: OrderActionSubject): 
       return order.status === 'confirmed';
     case 'cancelShipment':
       return order.status === 'shipping' && order.shipment !== null;
+    case 'startManualShipping':
+      return order.status === 'confirmed';
+    case 'returnToConfirmed':
+      // Chỉ đơn do shop tự giao mới được quay về. Đơn giao qua GHN phải hủy vận đơn.
+      return order.status === 'shipping' && order.flags.includes(MANUAL_SHIPPING_FLAG);
     case 'issueInvoice':
       // Hóa đơn chỉ xuất cho đơn còn hiệu lực và có yêu cầu hóa đơn, và chỉ xuất một lần.
       return (
@@ -65,15 +78,18 @@ function isActionApplicable(action: OrderActionKey, order: OrderActionSubject): 
   }
 }
 
-// Thứ tự nút trên màn: thao tác tiến trước, thao tác hủy sau cùng.
+// Thứ tự nút trên màn: nút nguy hiểm đứng đầu, nút phụ ở giữa, nút chính ngoài cùng bên phải.
+// Nút phụ và nút nguy hiểm dùng kiểu khác nút chính.
 const ACTION_ORDER: OrderActionKey[] = [
+  'cancelShipment',
+  'cancel',
+  'returnToConfirmed',
+  'startManualShipping',
+  'issueInvoice',
   'confirm',
   'createShipment',
-  'cancelShipment',
-  'issueInvoice',
   'receiveCod',
   'refund',
-  'cancel',
 ];
 
 // Nút nhân viên thấy trên một đơn cần đủ hai điều kiện: quyền của route và trạng thái route chấp nhận.
