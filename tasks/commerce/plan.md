@@ -242,7 +242,7 @@ Frontend track:
 - [x] COM-UI15 hiển thị nội dung giao hàng thủ công trên trang khách
 
 Hai track gặp nhau:
-- [ ] COM-E2E6 hoàn thành đơn thủ công rồi khách viết đánh giá
+- [x] COM-E2E6 hoàn thành đơn thủ công rồi khách viết đánh giá
 - [ ] COM-E2E7 hủy giao hàng thủ công và ghi nhận hoàn hàng
 
 ### Checkpoint M7

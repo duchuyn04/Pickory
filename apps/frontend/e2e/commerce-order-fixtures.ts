@@ -263,3 +263,19 @@ export async function readAdminOrder(
   expect(detail.status(), await detail.text()).toBe(200);
   return (await detail.json()).data as AdminOrderSummary;
 }
+
+export interface AdminOrderDetail extends AdminOrderSummary {
+  flags: string[];
+  statusHistory: { fromStatus: string; toStatus: string; reason: string | null }[];
+}
+
+// Đọc đơn kèm cờ và lịch sử trạng thái, để spec giao thủ công kiểm cả cờ ghi tay và lý do nhân viên nhập.
+export async function readAdminOrderDetail(
+  adminPage: Page,
+  orderCode: string,
+): Promise<AdminOrderDetail> {
+  const detail = await adminPage.request.get(`/api/admin/orders/${orderCode}`);
+  expect(detail.status(), await detail.text()).toBe(200);
+  const body: { data: AdminOrderDetail } = await detail.json();
+  return body.data;
+}

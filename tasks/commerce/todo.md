@@ -911,8 +911,9 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 - [x] Các trạng thái khác `shipping` giữ nguyên tiến trình và nội dung
 - [x] Trang chi tiết truyền `trackingCode` vào `buildNextSteps`. Không đọc cờ nội bộ của admin
   Hàm chỉ được gọi ở trang đơn đặt thành công. Trang chi tiết đơn dùng cùng chữ qua hằng chung.
-- [ ] Nội dung không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E6
+- [x] Nội dung không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E6
   Kiểm chính thức trên trình duyệt ở COM-E2E6. Đã có ảnh 375 px ở COM-UI15.
+  COM-E2E6 kiểm trang chi tiết đơn của khách ở 375 px.
 **Kiểm tra:**
 - `pnpm test -- test/unit/features/commerce/customer/orders/order-next-steps.test.ts test/unit/features/commerce/customer/orders/order-detail-page.test.tsx` trong `apps/frontend`
 - `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`
@@ -926,14 +927,14 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 ### COM-E2E6: Hoàn thành đơn thủ công rồi khách viết đánh giá
 **Mô tả:** Chạy luồng thật từ `sales` xác nhận đơn tới khách viết đánh giá. Test dùng API thật và không gắn route giả cho fulfillment.
 **Tiêu chí nghiệm thu:**
-- [ ] `sales` xác nhận đơn, bắt đầu giao thủ công và thấy đơn `shipping` với `manual_shipping`
-- [ ] Trang khách hiện nội dung không có mã vận đơn GHN khi đơn đang giao thủ công
-- [ ] Trước khi `delivered`, khách không thấy form đánh giá và API viết đánh giá trả 403
-- [ ] `sales` xác nhận đã giao qua giao diện. Đơn có `delivered` và `manual_delivery`
-- [ ] Khách mở trang sản phẩm và gửi đánh giá thành công ngay sau đó
-- [ ] `support` không thấy nút fulfillment và nhận 403 khi gọi trực tiếp route
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console có 0 lỗi và 0 cảnh báo
-- [ ] Spec không gọi `page.route` cho đường fulfillment hoặc đánh giá. Luồng GHN hiện có vẫn đạt
+- [x] `sales` xác nhận đơn, bắt đầu giao thủ công và thấy đơn `shipping` với `manual_shipping`
+- [x] Trang khách hiện nội dung không có mã vận đơn GHN khi đơn đang giao thủ công
+- [x] Trước khi `delivered`, khách không thấy form đánh giá và API viết đánh giá trả 403
+- [x] `sales` xác nhận đã giao qua giao diện. Đơn có `delivered` và `manual_delivery`
+- [x] Khách mở trang sản phẩm và gửi đánh giá thành công ngay sau đó
+- [x] `support` không thấy nút fulfillment và nhận 403 khi gọi trực tiếp route
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console có 0 lỗi và 0 cảnh báo
+- [x] Spec không gọi `page.route` cho đường fulfillment hoặc đánh giá. Luồng GHN hiện có vẫn đạt
 **Kiểm tra:**
 - `pnpm test:e2e e2e/commerce-manual-fulfillment.spec.ts` trong `apps/frontend`
 - `pnpm test:e2e e2e/commerce-fulfillment.spec.ts e2e/commerce-review-moderation.spec.ts` trong `apps/frontend`
