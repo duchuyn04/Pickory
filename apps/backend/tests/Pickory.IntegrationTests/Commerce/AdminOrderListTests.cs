@@ -130,6 +130,17 @@ public sealed class AdminOrderListTests : IClassFixture<CommerceWebApplicationFa
     }
 
     [Fact]
+    // Bộ lọc `manual_shipping` chỉ trả đơn đã đặt cờ giao hàng thủ công.
+    public async Task List_FiltersByManualShippingFlag()
+    {
+        await _kit.AddOrderAsync("F-MANUAL", BaseTime.AddMinutes(1), OrderStatus.Shipping, flags: ["manual_shipping"]);
+        await _kit.AddOrderAsync("F-GHN", BaseTime.AddMinutes(2), OrderStatus.Shipping);
+        await _kit.AddOrderAsync("F-OTHER", BaseTime.AddMinutes(3), flags: ["underpaid"]);
+
+        Assert.Equal(["F-MANUAL"], CodesOf(await ReadDataAsync(await GetAsync("flag=manual_shipping"))));
+    }
+
+    [Fact]
     // COM-17 lọc "COD đã giao chưa nhận tiền" bằng tổ hợp ba tham số. Các bộ lọc kết hợp theo AND.
     public async Task List_CombinesFiltersWithAnd()
     {

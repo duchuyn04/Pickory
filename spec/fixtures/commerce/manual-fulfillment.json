@@ -1,0 +1,219 @@
+{
+  "description": "Ví dụ request và response của PUT /api/admin/orders/{code}/fulfillment. Hợp đồng: tasks/commerce/api-contract.md.",
+  "examples": [
+    {
+      "name": "start manual shipping",
+      "method": "PUT",
+      "path": "/api/admin/orders/PKFULTESTQ/fulfillment",
+      "request": {
+        "toStatus": "shipping",
+        "reason": "GHN không nhận vận đơn. Shop tự giao."
+      },
+      "status": 200,
+      "response": {
+        "data": {
+          "code": "PKFULTESTQ",
+          "status": "shipping",
+          "paymentStatus": "unpaid",
+          "paymentMethod": "cod",
+          "createdAt": "2026-11-19T01:00:00Z",
+          "paymentDeadline": null,
+          "flags": ["manual_shipping"],
+          "contact": {
+            "name": "Trần Khách Hàng",
+            "phone": "0901234567",
+            "email": "khach@example.com"
+          },
+          "shippingAddress": {
+            "provinceName": "TP. Hồ Chí Minh",
+            "wardName": "Phường Bến Nghé",
+            "line": "45 Lê Lợi"
+          },
+          "invoice": null,
+          "items": [
+            {
+              "skuId": "8d6707de-2c7f-4b0f-a2ea-3cf82f90a001",
+              "name": "Chuột không dây Pickory",
+              "variantName": "Đen",
+              "quantity": 1,
+              "unitPrice": 100000,
+              "lineTotal": 100000
+            }
+          ],
+          "subtotal": 100000,
+          "shippingFee": 30000,
+          "shippingDiscount": 0,
+          "total": 130000,
+          "shippingFeeSource": "ghn",
+          "statusHistory": [
+            {
+              "fromStatus": "confirmed",
+              "toStatus": "shipping",
+              "actorId": "staff-sales-1",
+              "actorName": "Nguyễn Sales",
+              "reason": "GHN không nhận vận đơn. Shop tự giao.",
+              "createdAt": "2026-11-19T02:00:00Z"
+            }
+          ],
+          "shipment": null,
+          "suggestedParcel": null,
+          "refundTransactionRef": null
+        }
+      }
+    },
+    {
+      "name": "confirm manual delivery",
+      "method": "PUT",
+      "path": "/api/admin/orders/PKFULTESTQ/fulfillment",
+      "request": {
+        "toStatus": "delivered",
+        "reason": "Khách đã nhận hàng và xác nhận qua điện thoại."
+      },
+      "status": 200,
+      "response": {
+        "data": {
+          "code": "PKFULTESTQ",
+          "status": "delivered",
+          "paymentStatus": "unpaid",
+          "paymentMethod": "cod",
+          "createdAt": "2026-11-19T01:00:00Z",
+          "paymentDeadline": null,
+          "flags": ["manual_shipping", "manual_delivery"],
+          "contact": {
+            "name": "Trần Khách Hàng",
+            "phone": "0901234567",
+            "email": "khach@example.com"
+          },
+          "shippingAddress": {
+            "provinceName": "TP. Hồ Chí Minh",
+            "wardName": "Phường Bến Nghé",
+            "line": "45 Lê Lợi"
+          },
+          "invoice": null,
+          "items": [
+            {
+              "skuId": "8d6707de-2c7f-4b0f-a2ea-3cf82f90a001",
+              "name": "Chuột không dây Pickory",
+              "variantName": "Đen",
+              "quantity": 1,
+              "unitPrice": 100000,
+              "lineTotal": 100000
+            }
+          ],
+          "subtotal": 100000,
+          "shippingFee": 30000,
+          "shippingDiscount": 0,
+          "total": 130000,
+          "shippingFeeSource": "ghn",
+          "statusHistory": [
+            {
+              "fromStatus": "confirmed",
+              "toStatus": "shipping",
+              "actorId": "staff-sales-1",
+              "actorName": "Nguyễn Sales",
+              "reason": "GHN không nhận vận đơn. Shop tự giao.",
+              "createdAt": "2026-11-19T02:00:00Z"
+            },
+            {
+              "fromStatus": "shipping",
+              "toStatus": "delivered",
+              "actorId": "staff-sales-1",
+              "actorName": "Nguyễn Sales",
+              "reason": "Khách đã nhận hàng và xác nhận qua điện thoại.",
+              "createdAt": "2026-11-19T03:00:00Z"
+            }
+          ],
+          "shipment": null,
+          "suggestedParcel": null,
+          "refundTransactionRef": null
+        }
+      }
+    },
+    {
+      "name": "invalid reason",
+      "method": "PUT",
+      "path": "/api/admin/orders/PKFULTESTQ/fulfillment",
+      "request": {
+        "toStatus": "shipping",
+        "reason": " "
+      },
+      "status": 400,
+      "response": {
+        "error": {
+          "code": "VALIDATION_ERROR",
+          "message": "Dữ liệu không hợp lệ.",
+          "details": [
+            {
+              "key": "reason",
+              "message": "Nhập lý do từ 1 đến 500 ký tự."
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "invalid transition",
+      "method": "PUT",
+      "path": "/api/admin/orders/PKFULTESTQ/fulfillment",
+      "request": {
+        "toStatus": "delivered",
+        "reason": "Bỏ qua bước giao hàng."
+      },
+      "status": 409,
+      "response": {
+        "error": {
+          "code": "INVALID_ORDER_TRANSITION",
+          "message": "Không thể chuyển trạng thái giao hàng theo yêu cầu."
+        }
+      }
+    },
+    {
+      "name": "forbidden",
+      "method": "PUT",
+      "path": "/api/admin/orders/PKFULTESTQ/fulfillment",
+      "request": {
+        "toStatus": "delivered",
+        "reason": "Nhân viên không có quyền thử gọi."
+      },
+      "status": 403,
+      "response": {
+        "error": {
+          "code": "FORBIDDEN",
+          "message": "Bạn không có đủ quyền thực hiện thao tác này."
+        }
+      }
+    },
+    {
+      "name": "order not found",
+      "method": "PUT",
+      "path": "/api/admin/orders/PKMISSINGQ/fulfillment",
+      "request": {
+        "toStatus": "delivered",
+        "reason": "Đơn không tồn tại."
+      },
+      "status": 404,
+      "response": {
+        "error": {
+          "code": "ORDER_NOT_FOUND",
+          "message": "Không tìm thấy đơn hàng."
+        }
+      }
+    },
+    {
+      "name": "unauthorized",
+      "method": "PUT",
+      "path": "/api/admin/orders/PKFULTESTQ/fulfillment",
+      "request": {
+        "toStatus": "delivered",
+        "reason": "Khách chưa đăng nhập."
+      },
+      "status": 401,
+      "response": {
+        "error": {
+          "code": "UNAUTHORIZED",
+          "message": "Vui lòng đăng nhập để tiếp tục."
+        }
+      }
+    }
+  ]
+}

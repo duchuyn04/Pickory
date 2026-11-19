@@ -40,6 +40,7 @@ public sealed class OrderExportLabelsTests
         ["payment_expired"] = "Quá hạn thanh toán",
         ["invoice_issued"] = "Đã xuất hóa đơn",
         ["shipment_cancelled"] = "Vận đơn đã hủy",
+        ["manual_shipping"] = "Giao hàng thủ công",
         ["demo_order"] = "Đơn mẫu",
     };
 

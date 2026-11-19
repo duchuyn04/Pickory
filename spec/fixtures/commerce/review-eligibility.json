@@ -1,0 +1,33 @@
+{
+  "description": "Ví dụ điều kiện viết đánh giá trước và sau khi đơn chuyển delivered. Hợp đồng: tasks/commerce/api-contract.md.",
+  "examples": [
+    {
+      "name": "order shipping",
+      "method": "GET",
+      "path": "/api/products/8d6707de-2c7f-4b0f-a2ea-3cf82f90a001/reviews/mine",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "eligible": false,
+          "reason": "NOT_PURCHASED",
+          "review": null
+        }
+      }
+    },
+    {
+      "name": "order delivered",
+      "method": "GET",
+      "path": "/api/products/8d6707de-2c7f-4b0f-a2ea-3cf82f90a001/reviews/mine",
+      "request": null,
+      "status": 200,
+      "response": {
+        "data": {
+          "eligible": true,
+          "reason": null,
+          "review": null
+        }
+      }
+    }
+  ]
+}

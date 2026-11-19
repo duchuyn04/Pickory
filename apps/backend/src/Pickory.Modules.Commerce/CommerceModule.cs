@@ -84,6 +84,8 @@ public static class CommerceModule
         // Tạo và hủy vận đơn gọi GHN ngoài transaction, nên tách riêng để khóa dòng ngắn.
         services.AddScoped<OrderParcelResolver>();
         services.AddScoped<AdminOrderShipmentService>();
+        // Giao hàng thủ công đổi trạng thái đơn mà không gọi GHN, nên tách khỏi dịch vụ vận đơn.
+        services.AddScoped<AdminOrderFulfillmentService>();
         // Nguồn mã đơn là singleton không giữ trạng thái. Test thay bằng nguồn có kịch bản để ép tình huống trùng mã.
         services.AddSingleton<IOrderCodeSource, RandomOrderCodeSource>();
 

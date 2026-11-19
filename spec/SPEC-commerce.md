@@ -1,6 +1,6 @@
 # Spec: commerce
 
-Module id: `commerce` · Phụ thuộc: `identity`, `catalog`, `shipping`, `inventory` · Quy ước chung: `SPEC.md`
+Module id: `commerce` · Phụ thuộc: `identity`, `catalog`, `shipping` · Quy ước chung: `SPEC.md`
 
 ## Objective
 
@@ -53,7 +53,7 @@ Biến ý định mua thành đơn hàng đã giao: giỏ hàng, checkout, đơn
    - GHN không gọi được hoặc hết thời gian chờ: khách vẫn đặt được đơn. Server ghi log cảnh báo, vì lỗi của GHN không phải lỗi của khách.
 6. Server làm trong 1 transaction. Bước 4 và 5 chạy trước transaction, vì lời gọi GHN có thể chờ mạng và không được giữ khóa DB.
    - Khóa giỏ. Giỏ đã đổi từ lúc tính tiền thì trả 409 `ORDER_TOTAL_CHANGED`, kể cả khi tổng tiền bằng nhau.
-   - `IInventoryService.ReserveAsync(orderId, items)` của `inventory`. Thiếu hàng thì trả 409 `INSUFFICIENT_STOCK` kèm danh sách SKU thiếu.
+   - `IStockService.ReserveAsync(orderId, items)` của `catalog`, dùng chung transaction của đơn. Giữ hàng theo kiểu tất cả hoặc không. Thiếu hàng thì trả 409 `INSUFFICIENT_STOCK` kèm danh sách SKU thiếu.
    - Tạo đơn với snapshot: tên sản phẩm, SKU, giá, ảnh, địa chỉ (tên và mã), phí ship.
    - Xóa các dòng đã đặt khỏi giỏ.
 7. Gửi email xác nhận đơn. Email lỗi không làm đặt đơn thất bại.
@@ -91,6 +91,7 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 ### Trạng thái đơn hàng
 
 Đơn có 2 trạng thái độc lập: **trạng thái đơn** và **trạng thái thanh toán**.
+Sơ đồ dưới đây mô tả luồng GHN mặc định. Luồng dự phòng có bảng chuyển đổi riêng phía dưới.
 
 ```
                  ┌─(SePay, chưa trả)─→ pending_payment ─(tiền về)─┐
@@ -109,9 +110,9 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 | `pending_payment` | Đặt đơn SePay | hệ thống |
 | `pending_confirmation` | Đặt đơn COD, hoặc SePay đã nhận đủ tiền | hệ thống |
 | `confirmed` | Sales xác nhận (đã gọi khách nếu cần) | `orders:update-status` |
-| `shipping` | Tạo vận đơn GHN thành công | `orders:fulfill` |
-| `delivered` | `shipping` báo `delivered` | hệ thống |
-| `returned` | `shipping` báo `returned` | hệ thống |
+| `shipping` | Tạo vận đơn GHN thành công, hoặc nhân viên bắt đầu giao hàng thủ công | hệ thống hoặc `orders:fulfill` |
+| `delivered` | `shipping` báo `delivered`, hoặc nhân viên xác nhận đã giao | hệ thống hoặc `orders:fulfill` |
+| `returned` | `shipping` báo `returned`, hoặc nhân viên ghi nhận hoàn hàng | hệ thống hoặc `orders:fulfill` |
 | `cancelled` | Khách hủy, sales hủy, hoặc quá hạn thanh toán | khách, `orders:cancel`, hệ thống |
 
 | Trạng thái thanh toán | Ý nghĩa |
@@ -127,12 +128,107 @@ Cột `shippingFeeSource` là enum Postgres `ShippingFeeSource`, không cho `nul
 - Nhân viên hủy được tới trước `delivered`. Đơn đang `shipping` thì phải hủy vận đơn GHN thành công trước.
 - GHN tự hủy vận đơn khi đơn đang `shipping`: đơn về `confirmed` và có cờ `shipment_cancelled`. `sales` tạo lại vận đơn hoặc hủy đơn. Khi `sales` tạo vận đơn mới, server gỡ cờ này.
 - Sự kiện của vận đơn cũ đến sau khi đã có vận đơn mới thì bị bỏ qua. Handler so `ShipmentId` của sự kiện với vận đơn hiện tại của đơn.
-- Hủy đơn thì gọi `IInventoryService.ReleaseAsync(orderId)`. Đơn đã `paid` khi hủy thì chuyển `refund_pending`.
-- Đơn sang `shipping` thì gọi `IInventoryService.CommitAsync(orderId)`: hàng rời kho. Lời gọi chạy trong transaction đổi trạng thái.
-- Đơn từ `shipping` về `confirmed` (nhân viên hoặc GHN hủy vận đơn) thì gọi `IInventoryService.UncommitAsync(orderId)`: hàng về kho.
+- Hủy đơn thì gọi `IStockService.ReleaseAsync(orderId)` của `catalog` trong transaction đổi trạng thái. Hàng đã giữ quay về số bán được. Đơn đã `paid` khi hủy thì chuyển `refund_pending`.
 - `returned` thì hàng **không** tự nhập lại kho. Nhân viên có `products:write` kiểm hàng rồi sửa số lượng trong form sản phẩm.
-- Bảng đầy đủ giữa trạng thái đơn và số lượng nằm ở mục "Giữ hàng cho đơn" của `SPEC-inventory.md`.
+- Đơn sang `shipping`, `delivered`, hoặc từ `shipping` về `confirmed` không đổi tồn kho. Hàng đã trừ khỏi số bán được từ lúc đặt đơn.
+- `catalog` chỉ có một số tồn kho cho mỗi SKU (`skus.stock`). Chi tiết ở `SPEC-catalog.md`.
 - Job mỗi phút: đơn `pending_payment` quá 30 phút thì hủy và trả hàng.
+
+### Quy trình giao hàng và hoàn thành đơn
+
+`delivered` là trạng thái kết thúc thành công của đơn. Hệ thống không thêm `completed`.
+Điều kiện đánh giá, báo cáo và xuất dữ liệu tiếp tục dùng `delivered`.
+
+#### Luồng GHN mặc định
+
+1. `sales` xác nhận đơn từ trang chi tiết đơn.
+2. `sales` tạo vận đơn GHN bằng kiện hàng đã kiểm tra.
+3. `shipping` cập nhật trạng thái vận đơn qua webhook và job đồng bộ.
+4. GHN báo `delivered` thì đơn chuyển `delivered` và mở khóa đánh giá.
+5. `sales` ghi nhận tiền COD sau khi đối soát bảng kê GHN.
+
+Việc nhận tiền COD không làm thay đổi trạng thái đơn. Trạng thái đơn và trạng thái thanh toán vẫn độc lập.
+
+#### Luồng dự phòng thủ công
+
+Nhân viên chỉ dùng luồng thủ công sau khi đối chiếu kết quả giao hàng bên ngoài Pickory.
+Route `PUT /api/admin/orders/:code/fulfillment` dùng quyền `orders:fulfill`.
+Route không gọi GHN, không tạo vận đơn và không hủy vận đơn.
+
+Request có hai trường:
+
+| Trường | Quy tắc |
+|---|---|
+| `toStatus` | Một trong `confirmed`, `shipping`, `delivered`, `returned` |
+| `reason` | Chuỗi sau khi cắt khoảng trắng dài 1 đến 500 ký tự |
+
+Trường lạ, thiếu trường hoặc sai kiểu trả 400 `VALIDATION_ERROR`.
+Route chỉ nhận các chuyển đổi sau:
+
+| Trạng thái hiện tại | `toStatus` | Điều kiện thêm | Tác động |
+|---|---|---|---|
+| `confirmed` | `shipping` | Không có vận đơn GHN còn hiệu lực | Thêm cờ `manual_shipping` |
+| `shipping` | `confirmed` | Có `manual_shipping` và không có vận đơn GHN còn hiệu lực | Bỏ cờ `manual_shipping` |
+| `shipping` | `delivered` | Nhân viên đã xác minh khách nhận hàng | Thêm cờ `manual_delivery` |
+| `shipping` | `returned` | Nhân viên đã xác minh hàng đã hoàn | Thêm cờ `manual_return`; `paid` chuyển `refund_pending` |
+
+Mọi chuyển đổi khác trả 409 `INVALID_ORDER_TRANSITION`.
+Yêu cầu có `toStatus` bằng trạng thái hiện tại trả 200 và không tạo thay đổi.
+Trường hợp này không ghi nhật ký và không phát sự kiện.
+
+Backend khóa dòng đơn trước khi kiểm tra trạng thái.
+Transaction ghi cùng lúc các thay đổi sau:
+
+- Trạng thái đơn, trạng thái thanh toán và cờ.
+- Lịch sử trạng thái với `actorId` và `reason`.
+- Audit với hành động `commerce.order.fulfillment_update`.
+
+Backend phát `OrderStatusChangedEvent` sau commit khi trạng thái đổi.
+Thao tác thủ công không thay đổi tồn kho.
+Đơn `returned` chờ nhân viên kiểm hàng trước khi sửa tồn kho.
+
+Nếu đơn có vận đơn GHN, trạng thái vận đơn giữ giá trị gần nhất từ GHN.
+Giao diện hiện cờ thủ công cạnh trạng thái vận đơn để tránh khẳng định GHN đã xác nhận.
+Sự kiện GHN đến sau không đổi đơn đã `delivered` hoặc `returned`.
+
+Ba cờ mới có trong API admin, bộ lọc cờ và nhãn admin.
+API khách giữ nguyên hình dạng. Không cần migration cho ba cờ này.
+
+| Cờ | Nhãn admin |
+|---|---|
+| `manual_shipping` | Giao hàng thủ công |
+| `manual_delivery` | Xác nhận giao thủ công |
+| `manual_return` | Ghi nhận hoàn thủ công |
+
+#### Thao tác trên trang admin
+
+Trang chi tiết đơn chỉ hiện thao tác phù hợp với quyền và trạng thái.
+
+| Trạng thái đơn | Thao tác của `sales` |
+|---|---|
+| `pending_confirmation` | Xác nhận đơn, hủy đơn |
+| `confirmed` | Tạo vận đơn GHN, giao hàng thủ công, hủy đơn |
+| `shipping` có vận đơn GHN | Hủy vận đơn, xác nhận đã giao, ghi nhận hoàn hàng |
+| `shipping` có `manual_shipping` | Quay về đã xác nhận, xác nhận đã giao, ghi nhận hoàn hàng |
+| `delivered` và COD `unpaid` | Ghi nhận đã nhận tiền COD |
+
+Mỗi thao tác thủ công mở hộp thoại xác nhận và giải thích hậu quả.
+Hộp thoại xác nhận đã giao yêu cầu nhân viên chỉ tiếp tục khi khách đã nhận hàng.
+Hộp thoại ghi nhận hoàn hàng báo rằng đơn đã trả tiền sẽ chuyển `refund_pending`.
+Nút gửi bị khóa trong lúc chờ API. Lỗi 409 giữ hộp thoại mở và làm mới chi tiết đơn.
+Nhân viên `support` xem được trạng thái nhưng không thấy các nút ghi.
+
+Với đơn `shipping` có `trackingCode` là `null`, trang khách hiện "Shop đang giao hàng thủ công. Không có mã vận đơn GHN."
+Với đơn có mã vận đơn, trang khách giữ cách hiển thị hiện tại.
+
+#### Mở khóa đánh giá
+
+Khách có tài khoản được đánh giá ngay sau khi đơn chuyển `delivered`.
+Điều kiện này áp dụng cho cả chuyển đổi của GHN và chuyển đổi thủ công.
+Mọi trạng thái khác `delivered` không mở khóa đánh giá.
+Thanh toán COD chưa đối soát không chặn đánh giá.
+Khách vãng lai vẫn phải gắn đơn vào tài khoản theo luồng hiện có.
+Trang sản phẩm tiếp tục dùng `GET /api/products/:id/reviews/mine` để quyết định hiển thị form.
 
 ### Thanh toán SePay
 
@@ -276,6 +372,7 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 | GET | `/api/admin/orders[/:code]` | `orders:read` | Danh sách, lọc theo trạng thái, thanh toán, ngày, cờ. Chi tiết có `shippingFeeSource` |
 | POST | `/api/admin/orders/:code/confirmation` | `orders:update-status` | Xác nhận đơn |
 | POST | `/api/admin/orders/:code/shipment` | `orders:fulfill` | Tạo vận đơn (sửa được kích thước kiện) |
+| PUT | `/api/admin/orders/:code/fulfillment` | `orders:fulfill` | Chuyển trạng thái giao hàng thủ công theo bảng chuyển đổi, bắt buộc lý do |
 | DELETE | `/api/admin/orders/:code/shipment` | `orders:fulfill` | Hủy vận đơn |
 | POST | `/api/admin/orders/:code/cancellation` | `orders:cancel` | Hủy đơn, bắt buộc lý do |
 | PUT | `/api/admin/orders/:code/invoice-issuance` | `orders:update-status` | Đánh dấu đã xuất hóa đơn VAT |
@@ -286,6 +383,9 @@ Khi `UserDeletedEvent`: xóa giỏ, sổ địa chỉ; ẩn danh hóa đánh gi�
 | GET | `/api/admin/reviews` | `reviews:moderate` | Hàng chờ kiểm duyệt |
 | PATCH | `/api/admin/reviews/:id` | `reviews:moderate` | Ẩn hoặc hiện lại bằng `hidden` và `reason` |
 | GET · PUT | `/api/admin/commerce/settings` | `commerce-settings:manage` | Ngưỡng miễn phí ship, hạn mức COD, tài khoản nhận |
+
+Hợp đồng của route fulfillment nằm ở `tasks/commerce/api-contract.md`.
+Fixtures dùng chung nằm ở `spec/fixtures/commerce/`.
 
 ## Data Model (rút gọn)
 
@@ -360,6 +460,13 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerS
   - Ma trận quyền cho mọi endpoint back-office.
   - `onShipmentStatusChanged` cập nhật đúng trạng thái đơn.
   - Nguồn phí: GHN không phản hồi thì đơn ghi `fallback` hoặc `cached` với phí và tổng tiền đúng, ngưỡng miễn phí ship vẫn áp, bảng tắt thì giữ `SHIPPING_UNAVAILABLE`. API của khách không có trường nguồn phí, và đơn có sẵn trước migration nhận `ghn`.
+  - Bốn chuyển đổi fulfillment thủ công có test theo bảng chuyển đổi. Test kiểm tra dữ liệu sau mỗi chuyển đổi.
+  - Hai request cùng `toStatus` chỉ tạo một lần chuyển trạng thái. Request thứ hai trả 200 và không thêm nhật ký.
+  - Chuyển đổi sai trả 409. Request thiếu lý do trả 400. Nhân viên thiếu `orders:fulfill` nhận 403.
+  - Không thể bắt đầu hoặc hủy giao hàng thủ công khi còn vận đơn GHN hiệu lực.
+  - Sự kiện GHN đến sau không đổi đơn đã hoàn thành thủ công.
+  - Khách có đơn `shipping` nhận `eligible=false`. Sau khi xác nhận `delivered` thủ công, cùng khách nhận `eligible=true`.
+  - Đơn COD `delivered` và `unpaid` vẫn mở khóa đánh giá. Đơn `returned` không mở khóa.
 - `shipping` và `catalog` dùng implementation thật trong integration test, GHN dùng HTTP mock.
 - E2E:
   - Khách vãng lai mua COD.
@@ -368,6 +475,8 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerS
   - GHN giả không phản hồi lúc báo phí, bảng phí dự phòng bật: khách đặt COD bình thường, admin thấy nhãn "Phí ship dự phòng" trên trang đơn.
   - Khách mua SePay (bắn webhook giả lập), trang tự chuyển khi đã thanh toán.
   - Sales xác nhận và tạo vận đơn.
+  - Sales giao hàng thủ công và xác nhận đã giao qua giao diện. Khách viết được đánh giá ngay sau đó.
+  - Sales hủy giao hàng thủ công thì đơn về `confirmed` và không có vận đơn GHN.
   - Khách đánh giá sau khi giao, support ẩn đánh giá.
 
 ## Boundaries (riêng module)
@@ -385,8 +494,10 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerS
 - [ ] Thiếu tiền, thừa tiền, sai nội dung đều hiện trong màn hình đối soát và xử lý tay được.
 - [ ] Đơn trên hạn mức COD không chọn được COD; tạm tính trên ngưỡng thì phí ship khách trả bằng 0.
 - [ ] Sales tạo vận đơn GHN (sandbox) từ trang đơn; trạng thái giao hàng tự cập nhật vào đơn.
-- [ ] Nhân viên `support` xem được đơn nhưng gọi API hủy hoặc tạo vận đơn nhận 403.
-- [ ] Chỉ người đã nhận hàng mới đánh giá được; review bị ẩn biến mất khỏi trang sản phẩm và điểm trung bình được tính lại.
+- [ ] Sales đưa đơn từ `confirmed` sang `shipping` rồi `delivered` bằng thao tác thủ công, không cần gọi GHN.
+- [ ] Mỗi thao tác thủ công có lý do, nhân viên thực hiện và audit. Gửi lại cùng trạng thái không tạo thêm nhật ký.
+- [ ] Nhân viên `support` xem được đơn nhưng gọi API hủy, tạo vận đơn hoặc fulfillment nhận 403.
+- [ ] Chỉ khách đã nhận hàng mới đánh giá được; review bị ẩn biến mất khỏi trang sản phẩm và điểm trung bình được tính lại.
 - [ ] Dịch vụ chatbot lỗi (không tải được script của widget), khách vẫn đặt được đơn COD.
 - [ ] Coverage dòng của `Pickory.Modules.Commerce` ít nhất 80%, gộp unit và tích hợp, bỏ `Persistence/Migrations/`.
 
@@ -405,3 +516,6 @@ model CommerceSettings { /* freeShippingThreshold, codMaxAmount, maxQuantityPerS
    - Đã chốt (cùng mục 10): chưa làm. Khách liên hệ chăm sóc khách hàng.
 4. Email thông báo đơn hàng dùng chung dịch vụ email với `identity`.
    - Đã chốt (2026-10-11): `IEmailSender` và `DevOutboxEmailSender` nằm trong `Pickory.Shared/Email/`, dùng chung cho mọi module.
+5. Shop có cho phép `sales` xác nhận `delivered` khi GHN chưa báo `delivered` không?
+   - Đã chốt (2026-11-19): cho phép sau đối chiếu ngoài hệ thống, bắt buộc lý do và ghi cờ `manual_delivery`.
+   - Giới hạn lý do từ 1 đến 500 ký tự đã được duyệt cùng quyết định này.
