@@ -64,6 +64,8 @@ export const e2eEnvironment = {
   // Spec giao hàng thủ công mời hai nhân viên riêng. Mỗi email chỉ mời được một lần trong một lần chạy suite.
   manualFulfillmentSalesEmail: 'e2e-manual-fulfillment-sales@pickory.local',
   manualFulfillmentSupportEmail: 'e2e-manual-fulfillment-support@pickory.local',
+  // Spec hoàn hàng mời một nhân viên sales riêng. Mỗi email chỉ mời được một lần trong một lần chạy suite.
+  manualReturnSalesEmail: 'e2e-manual-return-sales@pickory.local',
   reviewsSalesEmail: 'e2e-reviews-sales@pickory.local',
   reviewsSupportEmail: 'e2e-reviews-support@pickory.local',
   accountPassword: process.env.E2E_ACCOUNT_PASSWORD,

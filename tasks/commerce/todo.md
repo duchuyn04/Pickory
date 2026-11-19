@@ -863,8 +863,9 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 - [x] Submit gửi đúng `toStatus`. Nút gửi bị khóa trong lúc chờ API
 - [x] Thành công cập nhật chi tiết trong cache và làm mới danh sách đơn
 - [x] Lỗi 409 giữ hộp thoại mở, giữ lý do và làm mới chi tiết đơn
-- [ ] Bố cục hai hộp thoại không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E7
+- [x] Bố cục hai hộp thoại không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E7
   Kiểm chính thức trên trình duyệt ở COM-E2E7. Đã có ảnh 375 px ở COM-UI13.
+  `commerce-manual-fulfillment.spec.ts` (COM-E2E7) mở trang chi tiết đơn admin ở 375 px, kiểm hộp thoại `Quay về đã xác nhận` và `Giao hàng thủ công` nằm trọn khung và trang không tràn ngang.
 **Kiểm tra:**
 - `pnpm test -- test/unit/features/commerce/admin/orders/order-actions.test.ts test/unit/features/commerce/admin/orders/order-action-forms.test.ts test/unit/features/commerce/admin/orders/admin-order-actions.test.tsx` trong `apps/frontend`
 - `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`
@@ -887,8 +888,9 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 - [x] Submit gửi đúng `toStatus` và dùng chung xử lý cache, lỗi và khóa nút của COM-UI13
 - [x] Ba cờ có nhãn tiếng Việt và xuất hiện trong `ORDER_FLAG_CODES`
 - [x] Chi tiết đơn hiện cờ thủ công cạnh trạng thái vận đơn GHN. Trạng thái GHN không bị ghi đè bằng nhãn thủ công
-- [ ] Bố cục thao tác không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E6 và COM-E2E7
+- [x] Bố cục thao tác không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E6 và COM-E2E7
   Kiểm chính thức trên trình duyệt ở COM-E2E6 và COM-E2E7. Đã có ảnh 375 px ở COM-UI14.
+  `commerce-manual-fulfillment.spec.ts` (COM-E2E7) kiểm trang chi tiết đơn admin ở 375 px với đơn `confirmed` và `shipping`, và hộp thoại `Ghi nhận hoàn hàng`, không tràn ngang.
 **Kiểm tra:**
 - `pnpm test -- test/unit/features/commerce/admin/orders test/unit/features/commerce/order-labels.test.ts` trong `apps/frontend`
 - `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`
@@ -946,13 +948,13 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 ### COM-E2E7: Hủy giao hàng thủ công và ghi nhận hoàn hàng
 **Mô tả:** Kiểm hai nhánh kết thúc khác trên API thật. Một đơn quay về `confirmed`, một đơn SePay đã trả chuyển `returned`.
 **Tiêu chí nghiệm thu:**
-- [ ] Đơn giao thủ công quay về `confirmed`, bỏ `manual_shipping` và không có vận đơn GHN
-- [ ] Nhân viên có thể bắt đầu lại giao hàng thủ công sau khi quay về `confirmed`
-- [ ] Đơn SePay `paid` được giao thủ công rồi ghi nhận `returned`
-- [ ] Đơn hoàn có `manual_return` và thanh toán `refund_pending`
-- [ ] Lịch sử hiện đúng lý do của hai thao tác
-- [ ] Ảnh chụp 1280 px và 375 px không tràn ngang. Console có 0 lỗi và 0 cảnh báo
-- [ ] Spec không gọi `page.route` cho đường fulfillment hoặc webhook SePay
+- [x] Đơn giao thủ công quay về `confirmed`, bỏ `manual_shipping` và không có vận đơn GHN
+- [x] Nhân viên có thể bắt đầu lại giao hàng thủ công sau khi quay về `confirmed`
+- [x] Đơn SePay `paid` được giao thủ công rồi ghi nhận `returned`
+- [x] Đơn hoàn có `manual_return` và thanh toán `refund_pending`
+- [x] Lịch sử hiện đúng lý do của hai thao tác
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console có 0 lỗi và 0 cảnh báo
+- [x] Spec không gọi `page.route` cho đường fulfillment hoặc webhook SePay
 **Kiểm tra:**
 - `pnpm test:e2e e2e/commerce-manual-fulfillment.spec.ts` trong `apps/frontend`
 - `pnpm test:e2e e2e/commerce-fulfillment.spec.ts` trong `apps/frontend`

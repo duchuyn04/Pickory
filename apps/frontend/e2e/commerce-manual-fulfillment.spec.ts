@@ -10,7 +10,14 @@ import {
   loginSeededCustomer,
   openIsolatedSession,
   placeCodOrderByApi,
+  placeSepayOrderByApi,
   readAdminOrderDetail,
+  readAdminOrderPaymentStatus,
+  readCommerceSettings,
+  saveCommerceSettings,
+  sendSepayWebhook,
+  type AdminOrderDetail,
+  type CommerceSettings,
   type IsolatedSession,
 } from './commerce-order-fixtures';
 import { e2eEnvironment } from './environment';
@@ -304,6 +311,291 @@ test.describe('COM-E2E6: giao hàng thủ công rồi khách viết đánh giá'
     } finally {
       for (const [, session] of namedSessions) {
         await session.context.close();
+      }
+    }
+  });
+});
+
+const SEPAY_ACCOUNT_NUMBER = '1017588888';
+const SEPAY_BANK_CODE = 'VCB';
+
+// Vùng tổng quan chứa trạng thái đơn, trạng thái thanh toán và hàng Ghi chú.
+function overviewOf(page: Page) {
+  return page.getByLabel('Tổng quan đơn');
+}
+
+// Hàng Ghi chú chỉ có khi đơn còn ít nhất một cờ.
+function flagsRowOf(page: Page) {
+  return overviewOf(page).locator('dl > div').filter({ hasText: 'Ghi chú' });
+}
+
+// Lý do của mọi lần chuyển giữa hai trạng thái, theo thứ tự API trả về.
+function reasonsOfTransition(order: AdminOrderDetail, fromStatus: string, toStatus: string) {
+  return order.statusHistory
+    .filter((entry) => entry.fromStatus === fromStatus && entry.toStatus === toStatus)
+    .map((entry) => entry.reason);
+}
+
+// Mở hộp thoại ở khung 375 px, kiểm hộp thoại nằm trọn khung và trang không tràn ngang, rồi đóng bằng nút Hủy.
+async function expectDialogFitsMobileViewport(page: Page, buttonName: string) {
+  await page.getByRole('button', { name: buttonName, exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+
+  // Đọc lại khung của hộp thoại cho tới khi ổn định, vì hộp thoại có thể còn đang hiện dần.
+  await expect
+    .poll(
+      async () => {
+        const box = await dialog.boundingBox();
+        return box !== null && box.x >= 0 && box.x + box.width <= MOBILE_VIEWPORT.width;
+      },
+      { message: `Hộp thoại ${buttonName} phải nằm trọn khung 375 px` },
+    )
+    .toBe(true);
+  await expectNoHorizontalOverflow(page);
+
+  await dialog.getByRole('button', { name: 'Hủy', exact: true }).click();
+  await expect(dialog).toBeHidden();
+}
+
+test.describe('COM-E2E7: hủy giao thủ công và ghi nhận hoàn hàng', () => {
+  test('sales đưa đơn COD về đã xác nhận rồi giao lại, và ghi nhận hoàn đơn SePay đã trả thành chờ hoàn tiền', async ({
+    browser,
+  }) => {
+    // Test dựng nhân viên, hai đơn và một webhook, nên cần nhiều thời gian hơn mặc định.
+    test.setTimeout(300000);
+
+    const admin = await openIsolatedSession(browser);
+    const sales = await openIsolatedSession(browser);
+    const customer = await openIsolatedSession(browser);
+    const namedSessions: [string, IsolatedSession][] = [
+      ['admin', admin],
+      ['sales', sales],
+      ['khách', customer],
+    ];
+
+    // Chuỗi duy nhất của lần chạy. Mỗi lý do chứa chuỗi này nên kiểm lịch sử không nhầm với dữ liệu lần khác.
+    const runId = Date.now().toString(36);
+    const firstShippingReason = `Shop tự giao lần đầu ${runId}`;
+    const returnToConfirmedReason = `GHN nhận lại đơn nên quay về ${runId}`;
+    const secondShippingReason = `Shop tự giao lại lần hai ${runId}`;
+    const paidShippingReason = `Shop tự giao đơn đã trả tiền ${runId}`;
+    const returnReason = `Khách từ chối nhận, hàng về shop ${runId}`;
+
+    let previousSettings: CommerceSettings | undefined;
+    let product: SeededProduct;
+    let orderACode = '';
+    let orderBCode = '';
+    let orderBTotal = 0;
+
+    try {
+      await test.step('Admin dựng sản phẩm, kho gửi, bật SePay, mời sales, rồi khách đặt đơn A (COD) và đơn B (SePay)', async () => {
+        await loginAdmin(admin.page);
+        // Giữ cấu hình cũ để trả lại ở khối finally. Spec khác không được nhận tài khoản SePay của test này.
+        previousSettings = await readCommerceSettings(admin.page);
+        product = await seedProduct(admin.page);
+        await prepareShipping(admin.page);
+        await saveCommerceSettings(admin.page, {
+          ...previousSettings,
+          sepayAccountNumber: SEPAY_ACCOUNT_NUMBER,
+          sepayBankCode: SEPAY_BANK_CODE,
+        });
+
+        await inviteStaff(admin.page, {
+          email: e2eEnvironment.manualReturnSalesEmail,
+          fullName: 'Sales Hoàn Hàng E2E',
+          roleCode: 'sales',
+        });
+        await activateStaffAccount(sales.page, e2eEnvironment.manualReturnSalesEmail);
+
+        // Hai đơn cùng thuộc một khách đã đăng nhập. Đơn A đi COD, đơn B đi chuyển khoản.
+        await loginSeededCustomer(customer.page, e2eEnvironment.reviewsVisibleCustomerEmail);
+        orderACode = await placeCodOrderByApi(customer.page, product);
+        expect(orderACode).toMatch(/^PK/);
+        const orderB = await placeSepayOrderByApi(customer.page, product);
+        orderBCode = orderB.code;
+        orderBTotal = orderB.expectedTotal;
+        expect(orderBCode).toMatch(/^PK/);
+        expect(orderBCode).not.toBe(orderACode);
+      });
+
+      await test.step('Đơn A: sales xác nhận rồi giao thủ công thì đơn Đang giao hàng, có cờ giao thủ công, không có vận đơn', async () => {
+        await openAdminOrder(sales.page, orderACode);
+        await sales.page.getByRole('button', { name: 'Xác nhận đơn', exact: true }).click();
+        const confirmDialog = sales.page.getByRole('dialog');
+        await confirmDialog.getByRole('button', { name: 'Xác nhận', exact: true }).click();
+        await expect(confirmDialog).toBeHidden();
+        await expect(overviewOf(sales.page)).toContainText('Đã xác nhận');
+
+        await submitFulfillmentDialog(
+          sales.page,
+          'Giao hàng thủ công',
+          'Bắt đầu giao thủ công',
+          firstShippingReason,
+        );
+        await expect(overviewOf(sales.page)).toContainText('Đang giao hàng');
+        await expect(flagsRowOf(sales.page)).toContainText('Giao hàng thủ công');
+
+        const order = await readAdminOrderDetail(sales.page, orderACode);
+        expect(order.status).toBe('shipping');
+        expect(order.flags).toContain('manual_shipping');
+        expect(order.shipment).toBeNull();
+      });
+
+      await test.step('Đơn A ở Đang giao hàng: ở khung 375 px trang và hộp thoại Quay về đã xác nhận không tràn ngang', async () => {
+        await sales.page.setViewportSize(MOBILE_VIEWPORT);
+        await expectNoHorizontalOverflow(sales.page);
+        // Cụm nút thao tác của đơn đang giao phải hiện đủ ở khung hẹp.
+        for (const buttonName of FULFILLMENT_BUTTON_NAMES) {
+          await expect(
+            sales.page.getByRole('button', { name: buttonName, exact: true }),
+          ).toBeVisible();
+        }
+        await expectDialogFitsMobileViewport(sales.page, 'Quay về đã xác nhận');
+        await sales.page.setViewportSize(DESKTOP_VIEWPORT);
+      });
+
+      await test.step('Đơn A: sales bấm Quay về đã xác nhận thì đơn Đã xác nhận, bỏ cờ giao thủ công, lịch sử có lý do', async () => {
+        await submitFulfillmentDialog(
+          sales.page,
+          'Quay về đã xác nhận',
+          'Quay về đã xác nhận',
+          returnToConfirmedReason,
+        );
+        await expect(overviewOf(sales.page)).toContainText('Đã xác nhận');
+        // Nút Giao hàng thủ công hiện lại nghĩa là trang đã nhận dữ liệu mới. Nhờ đó kiểm vắng hàng Ghi chú không xanh giả.
+        await expect(
+          sales.page.getByRole('button', { name: 'Giao hàng thủ công', exact: true }),
+        ).toBeVisible();
+        await expect(flagsRowOf(sales.page)).toHaveCount(0);
+        await expect(
+          sales.page.getByRole('cell', { name: returnToConfirmedReason, exact: true }),
+        ).toBeVisible();
+
+        const order = await readAdminOrderDetail(sales.page, orderACode);
+        expect(order.status).toBe('confirmed');
+        expect(order.flags).not.toContain('manual_shipping');
+        expect(order.shipment).toBeNull();
+        expect(reasonsOfTransition(order, 'shipping', 'confirmed')).toEqual([
+          returnToConfirmedReason,
+        ]);
+      });
+
+      await test.step('Đơn A ở Đã xác nhận: ở khung 375 px trang và hộp thoại Giao hàng thủ công không tràn ngang', async () => {
+        await sales.page.setViewportSize(MOBILE_VIEWPORT);
+        await expectNoHorizontalOverflow(sales.page);
+        await expectDialogFitsMobileViewport(sales.page, 'Giao hàng thủ công');
+        await sales.page.setViewportSize(DESKTOP_VIEWPORT);
+      });
+
+      await test.step('Đơn A: sales giao thủ công lần hai thì đơn Đang giao hàng, cờ trở lại, lịch sử có hai lần giao đúng thứ tự', async () => {
+        await submitFulfillmentDialog(
+          sales.page,
+          'Giao hàng thủ công',
+          'Bắt đầu giao thủ công',
+          secondShippingReason,
+        );
+        await expect(overviewOf(sales.page)).toContainText('Đang giao hàng');
+        await expect(flagsRowOf(sales.page)).toContainText('Giao hàng thủ công');
+        await expect(
+          sales.page.getByRole('cell', { name: secondShippingReason, exact: true }),
+        ).toBeVisible();
+
+        const order = await readAdminOrderDetail(sales.page, orderACode);
+        expect(order.status).toBe('shipping');
+        expect(order.flags).toContain('manual_shipping');
+        expect(order.shipment).toBeNull();
+        // Hai lần giao phải nằm trong lịch sử theo thứ tự đã làm, vì lý do lần hai không được ghi đè lần một.
+        expect(reasonsOfTransition(order, 'confirmed', 'shipping')).toEqual([
+          firstShippingReason,
+          secondShippingReason,
+        ]);
+      });
+
+      await test.step('Đơn B: webhook SePay báo đủ tiền thì đơn Đã thanh toán, rồi sales xác nhận và giao thủ công', async () => {
+        // Lấy tổng từ API thanh toán. Số tiền webhook phải là số server tính, không phải số tự cộng.
+        const payment = await customer.page.request.get(`/api/orders/${orderBCode}/payment`);
+        expect(payment.status(), await payment.text()).toBe(200);
+        const paymentTotal = (await payment.json()).data.total as number;
+        expect(paymentTotal).toBe(orderBTotal);
+
+        const webhook = await sendSepayWebhook(admin.page, {
+          accountNumber: SEPAY_ACCOUNT_NUMBER,
+          orderCode: orderBCode,
+          amount: paymentTotal,
+        });
+        expect(webhook.status(), await webhook.text()).toBe(200);
+        expect(await readAdminOrderPaymentStatus(sales.page, orderBCode)).toBe('paid');
+        // Tiền về xong, đơn chờ nhân viên xác nhận. Trạng thái này do backend đặt, không phải spec.
+        expect((await readAdminOrderDetail(sales.page, orderBCode)).status).toBe(
+          'pending_confirmation',
+        );
+
+        await openAdminOrder(sales.page, orderBCode);
+        await expect(overviewOf(sales.page)).toContainText('Đã thanh toán');
+        await sales.page.getByRole('button', { name: 'Xác nhận đơn', exact: true }).click();
+        const confirmDialog = sales.page.getByRole('dialog');
+        await confirmDialog.getByRole('button', { name: 'Xác nhận', exact: true }).click();
+        await expect(confirmDialog).toBeHidden();
+        await expect(overviewOf(sales.page)).toContainText('Đã xác nhận');
+
+        await submitFulfillmentDialog(
+          sales.page,
+          'Giao hàng thủ công',
+          'Bắt đầu giao thủ công',
+          paidShippingReason,
+        );
+        await expect(overviewOf(sales.page)).toContainText('Đang giao hàng');
+
+        const order = await readAdminOrderDetail(sales.page, orderBCode);
+        expect(order.status).toBe('shipping');
+        expect(order.flags).toContain('manual_shipping');
+        expect(order.shipment).toBeNull();
+      });
+
+      await test.step('Đơn B đã thanh toán: ở khung 375 px hộp thoại Ghi nhận hoàn hàng không tràn ngang', async () => {
+        await sales.page.setViewportSize(MOBILE_VIEWPORT);
+        await expectNoHorizontalOverflow(sales.page);
+        await expectDialogFitsMobileViewport(sales.page, 'Ghi nhận hoàn hàng');
+        await sales.page.setViewportSize(DESKTOP_VIEWPORT);
+      });
+
+      await test.step('Đơn B: sales ghi nhận hoàn hàng thì đơn Đã trả hàng, thanh toán Chờ hoàn tiền, có cờ hoàn thủ công', async () => {
+        await sales.page.getByRole('button', { name: 'Ghi nhận hoàn hàng', exact: true }).click();
+        const dialog = sales.page.getByRole('dialog');
+        // Đơn đã thanh toán nên hộp thoại phải báo trước hậu quả là Chờ hoàn tiền.
+        await expect(dialog).toContainText(
+          'Đơn này đã thanh toán, nên sẽ chuyển sang Chờ hoàn tiền.',
+        );
+        await dialog.getByLabel('Lý do', { exact: true }).fill(returnReason);
+        await dialog.getByRole('button', { name: 'Ghi nhận hoàn hàng', exact: true }).click();
+        await expect(dialog).toBeHidden();
+
+        await expect(overviewOf(sales.page)).toContainText('Đã trả hàng');
+        await expect(overviewOf(sales.page)).toContainText('Chờ hoàn tiền');
+        await expect(flagsRowOf(sales.page)).toContainText('Ghi nhận hoàn thủ công');
+        await expect(
+          sales.page.getByRole('cell', { name: returnReason, exact: true }),
+        ).toBeVisible();
+
+        const order = await readAdminOrderDetail(sales.page, orderBCode);
+        expect(order.status).toBe('returned');
+        expect(await readAdminOrderPaymentStatus(sales.page, orderBCode)).toBe('refund_pending');
+        expect(order.flags).toEqual(expect.arrayContaining(['manual_return', 'manual_shipping']));
+        expect(reasonsOfTransition(order, 'shipping', 'returned')).toEqual([returnReason]);
+      });
+
+      for (const [label, session] of namedSessions) {
+        expect(session.consoleIssues, `Console của ${label} phải sạch`).toEqual([]);
+      }
+    } finally {
+      try {
+        // Trả đúng cấu hình cũ kể cả khi test đỏ. Spec khác không được nhận tài khoản SePay của test này.
+        if (previousSettings) await saveCommerceSettings(admin.page, previousSettings);
+      } finally {
+        for (const [, session] of namedSessions) {
+          await session.context.close();
+        }
       }
     }
   });

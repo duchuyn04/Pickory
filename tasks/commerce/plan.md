@@ -243,7 +243,7 @@ Frontend track:
 
 Hai track gặp nhau:
 - [x] COM-E2E6 hoàn thành đơn thủ công rồi khách viết đánh giá
-- [ ] COM-E2E7 hủy giao hàng thủ công và ghi nhận hoàn hàng
+- [x] COM-E2E7 hủy giao hàng thủ công và ghi nhận hoàn hàng
 
 ### Checkpoint M7
 - [ ] Backend unit, integration và contract test của fulfillment đạt
