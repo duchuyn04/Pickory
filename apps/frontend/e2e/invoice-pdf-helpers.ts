@@ -28,6 +28,33 @@ export function countPdfPages(pdfBuffer: Buffer): number {
   return matches?.length ?? 0;
 }
 
+// Đọc khung cắt lề trang đầu tiên trong luồng PDF theo đơn vị 0.24 point (pt).
+// Giá trị giúp kiểm tra quy tắc lề `@page` 12 mm khi xuất bản in.
+export function readFirstPdfPageClipMargin(pdfBuffer: Buffer): { x: number; y: number } | null {
+  const latin1 = pdfBuffer.toString('latin1');
+  // Tìm đối tượng trang đầu tiên cùng mã tham chiếu luồng nội dung của trang đó.
+  const firstPage = /\/Type\s*\/Page(?![s\w])[\s\S]*?\/Contents\s+(\d+)\s+0\s+R/.exec(latin1);
+  if (!firstPage) {
+    return null;
+  }
+  // Truy xuất thân đối tượng chứa luồng lệnh vẽ đã nén của trang đầu tiên.
+  const objPattern = new RegExp(
+    `${firstPage[1]}\\s+0\\s+obj[\\s\\S]*?stream\\r?\\n([\\s\\S]*?)\\r?\\nendstream`,
+  );
+  const objMatch = objPattern.exec(latin1);
+  if (!objMatch) {
+    return null;
+  }
+  // Giải nén luồng nội dung PDF để đọc tọa độ khung cắt vẽ trang.
+  const decoded = inflateSync(Buffer.from(objMatch[1]!, 'latin1')).toString('latin1');
+  // Đọc hình chữ nhật cắt `W* n` đầu tiên đại diện cho vùng nội dung nằm trong lề `@page`.
+  const rectMatch = /([\d.]+)\s+([\d.]+)\s+[\d.]+\s+[\d.]+\s+re\s*\r?\n\s*W\*\s+n/.exec(decoded);
+  if (!rectMatch) {
+    return null;
+  }
+  return { x: Number.parseFloat(rectMatch[1]!), y: Number.parseFloat(rectMatch[2]!) };
+}
+
 // Giải nén luồng nội dung PDF và giải mã chữ từng trang qua bảng `ToUnicode` của font.
 export function extractPdfPageTexts(pdfBuffer: Buffer): string[] {
   const latin1 = pdfBuffer.toString('latin1');
