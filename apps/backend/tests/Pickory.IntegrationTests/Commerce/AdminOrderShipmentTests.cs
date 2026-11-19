@@ -605,6 +605,34 @@ public sealed class AdminOrderShipmentTests : IClassFixture<CheckoutWebApplicati
     }
 
     [Fact]
+    // Đơn giao thủ công không có vận đơn GHN. Route hủy vận đơn trả 409 và không đổi đơn, nên không thay được lệnh quay về.
+    public async Task CancelShipment_ManualShippingOrder_Returns409AndKeepsOrderUnchanged()
+    {
+        var order = await PlaceOrderAsync("cod", status: OrderStatus.Shipping);
+        // Đặt cờ trực tiếp trong DB để dựng đơn giao thủ công mà không gọi route fulfillment.
+        await using (var commerce = _database.CreateCommerceContext())
+        {
+            var row = await commerce.Orders.SingleAsync(candidate => candidate.Code == order.Code);
+            row.Flags = ["manual_shipping"];
+            await commerce.SaveChangesAsync();
+        }
+
+        var (_, session) = await StaffAsync("sales");
+        var callsBefore = _factory.Recorder.TotalCallCount;
+        var eventsBefore = StatusEventCount(order.Code);
+
+        var response = await CancelShipmentAsync(order.Code, session);
+
+        var error = await AssertErrorAsync(response, HttpStatusCode.Conflict, "INVALID_ORDER_TRANSITION");
+        Assert.Equal("Chỉ hủy được vận đơn của đơn đang giao và còn vận đơn hiệu lực.", error.GetProperty("message").GetString());
+        Assert.Equal(callsBefore, _factory.Recorder.TotalCallCount);
+        Assert.Equal(OrderStatus.Shipping, await StatusOfAsync(order.Code));
+        Assert.Equal(["manual_shipping"], await FlagsOfAsync(order.Code));
+        Assert.Empty(await AuditOfAsync(order.Code, CancelAuditAction));
+        Assert.Equal(eventsBefore, StatusEventCount(order.Code));
+    }
+
+    [Fact]
     // GHN từ chối hủy (shipper đã lấy hàng): 422, đơn giữ `shipping`, vận đơn còn nguyên, không có audit.
     public async Task CancelShipment_GhnRejects_KeepsOrderShipping()
     {

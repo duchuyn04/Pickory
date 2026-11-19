@@ -27,18 +27,24 @@ public sealed class AdminOrderFulfillmentService(
     private const string InvalidTransitionCode = "INVALID_ORDER_TRANSITION";
     private const string InvalidTransitionMessage = "Không thể chuyển trạng thái giao hàng theo yêu cầu.";
     private const string ShipmentActiveMessage = "Đơn còn vận đơn GHN hiệu lực. Hủy vận đơn trước khi giao thủ công.";
+    private const string ManualFlagRequiredMessage = "Chỉ đơn giao thủ công mới quay về đã xác nhận.";
 
-    // Chuyển đổi nhân viên được làm tay, cùng điều kiện vận đơn và cách đổi cờ của chúng.
+    // Chuyển đổi nhân viên được làm tay, cùng điều kiện cờ, điều kiện vận đơn và cách đổi cờ của chúng.
+    // `RequiredFlag` rỗng nghĩa là đơn không cần cờ nào.
     private sealed record Transition(
         OrderStatus From,
         OrderStatus To,
+        string? RequiredFlag,
         bool RequiresNoActiveShipment,
         Action<List<string>> ApplyFlags);
 
-    // Bảng chuyển đổi hiện chỉ nhận cặp `confirmed` sang `shipping`. Cặp khác bị từ chối cho tới khi có dòng mới ở đây.
+    // Cặp ngoài bảng này bị từ chối, dù máy trạng thái cho phép.
     private static readonly Transition[] SupportedTransitions =
     [
-        new(OrderStatus.Confirmed, OrderStatus.Shipping, RequiresNoActiveShipment: true, flags => AddFlag(flags, ManualShippingFlag)),
+        new(OrderStatus.Confirmed, OrderStatus.Shipping, RequiredFlag: null, RequiresNoActiveShipment: true,
+            flags => AddFlag(flags, ManualShippingFlag)),
+        new(OrderStatus.Shipping, OrderStatus.Confirmed, RequiredFlag: ManualShippingFlag, RequiresNoActiveShipment: true,
+            flags => RemoveFlag(flags, ManualShippingFlag)),
     ];
 
     public async Task<AdminOrderDetailResponse> UpdateAsync(
@@ -62,6 +68,12 @@ public sealed class AdminOrderFulfillmentService(
         if (!decision.IsAllowed || transition is null)
         {
             throw new AppException(InvalidTransitionCode, 409, InvalidTransitionMessage);
+        }
+
+        // Đơn không có cờ bắt buộc không do luồng thủ công tạo ra. Từ chối bằng thông báo riêng để nhân viên biết lý do.
+        if (transition.RequiredFlag is not null && !order.Flags.Contains(transition.RequiredFlag))
+        {
+            throw new AppException(InvalidTransitionCode, 409, ManualFlagRequiredMessage);
         }
 
         // Vận đơn GHN còn hiệu lực nghĩa là GHN đang giữ hàng. Tra sau khi giữ khóa để thấy trạng thái mới nhất.
@@ -124,6 +136,12 @@ public sealed class AdminOrderFulfillmentService(
         {
             flags.Add(flag);
         }
+    }
+
+    // Bỏ đúng cờ được chỉ định. Cờ khác của đơn phải giữ nguyên.
+    private static void RemoveFlag(List<string> flags, string flag)
+    {
+        flags.Remove(flag);
     }
 
     // Tra mã đơn sang `Id` trước khi mở transaction, để mã không tồn tại trả 404 mà không giữ khóa hay kết nối.

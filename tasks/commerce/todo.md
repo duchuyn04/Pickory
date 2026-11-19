@@ -789,12 +789,12 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 ### COM-30: API hủy giao hàng thủ công
 **Mô tả:** Mở rộng service cho chuyển đổi `shipping` về `confirmed`. Chỉ đơn có `manual_shipping` và không có vận đơn GHN hiệu lực được quay lại.
 **Tiêu chí nghiệm thu:**
-- [ ] Đơn đủ điều kiện chuyển `confirmed` và bỏ `manual_shipping`
-- [ ] Lịch sử, audit và sự kiện ghi đúng lý do cùng nhân viên thực hiện
-- [ ] Đơn thiếu `manual_shipping` trả 409. Đơn còn vận đơn GHN hiệu lực cũng trả 409
-- [ ] Route `DELETE /api/admin/orders/{code}/shipment` giữ nguyên hành vi
-- [ ] Request lặp về `confirmed` trả 200 và không tạo thêm nhật ký
-- [ ] Không gọi nghiệp vụ GHN. Tồn kho và thanh toán không đổi
+- [x] Đơn đủ điều kiện chuyển `confirmed` và bỏ `manual_shipping`
+- [x] Lịch sử, audit và sự kiện ghi đúng lý do cùng nhân viên thực hiện
+- [x] Đơn thiếu `manual_shipping` trả 409. Đơn còn vận đơn GHN hiệu lực cũng trả 409
+- [x] Route `DELETE /api/admin/orders/{code}/shipment` giữ nguyên hành vi
+- [x] Request lặp về `confirmed` trả 200 và không tạo thêm nhật ký
+- [x] Không gọi nghiệp vụ GHN. Tồn kho và thanh toán không đổi
 **Kiểm tra:**
 - `dotnet build Pickory.sln` trong `apps/backend`
 - `dotnet test tests/Pickory.IntegrationTests --filter "FullyQualifiedName~AdminOrderFulfillmentTests|FullyQualifiedName~AdminOrderShipmentTests"` trong `apps/backend`

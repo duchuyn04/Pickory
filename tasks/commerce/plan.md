@@ -232,7 +232,7 @@ Kế hoạch được duyệt ngày 2026-11-19. Tiêu chí chi tiết của từ
 
 Backend track:
 - [x] COM-29 API bắt đầu giao hàng thủ công từ `confirmed` sang `shipping`
-- [ ] COM-30 API hủy giao hàng thủ công từ `shipping` về `confirmed`
+- [x] COM-30 API hủy giao hàng thủ công từ `shipping` về `confirmed`
 - [ ] COM-31 API xác nhận `delivered` hoặc `returned` và kiểm tra mở khóa đánh giá
 
 Frontend track:
