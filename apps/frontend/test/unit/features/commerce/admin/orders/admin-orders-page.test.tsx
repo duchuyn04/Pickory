@@ -76,6 +76,23 @@ describe('màn danh sách đơn hàng của nhân viên', () => {
     expect(findField(harness.container, 'Phương thức')!.value).toBe('cod');
   });
 
+  it('ô Ghi chú có ba lựa chọn cờ thủ công và gửi đúng mã cờ khi mở link', async () => {
+    await open('/admin/orders?flag=manual_return', () => ordersPage([orderRow('PK-1')]));
+    await waitFor(() => orderRequests().length > 0, 'request đơn hàng');
+
+    const flagSelect = harness.container.querySelector<HTMLSelectElement>('#order-flag')!;
+    const options = [...flagSelect.options].map((option) => [option.value, option.textContent]);
+    expect(options).toEqual(
+      expect.arrayContaining([
+        ['manual_shipping', 'Giao hàng thủ công'],
+        ['manual_delivery', 'Xác nhận giao thủ công'],
+        ['manual_return', 'Ghi nhận hoàn thủ công'],
+      ]),
+    );
+    expect(flagSelect.value).toBe('manual_return');
+    expect(queryOf(orderRequests()[0]!)).toEqual({ flag: 'manual_return' });
+  });
+
   it('gửi cờ và khoảng ngày lên API khi có trên URL', async () => {
     await open('/admin/orders?flag=underpaid&from=2026-10-01&to=2026-10-12', () =>
       ordersPage([orderRow('PK-1')]),

@@ -393,6 +393,14 @@ const START_SUBMIT = 'Bắt đầu giao thủ công';
 const RETURN_LABEL = 'Quay về đã xác nhận';
 const REASON_ERROR = 'Nhập lý do từ 1 đến 500 ký tự.';
 const FULFILL_PERMISSIONS = ['orders:read', 'orders:fulfill'];
+const DELIVERED_LABEL = 'Xác nhận đã giao';
+const RETURNED_LABEL = 'Ghi nhận hoàn hàng';
+const GHN_SHIPMENT = {
+  id: 'shipment-1',
+  trackingCode: 'GHN1',
+  status: 'pending_pickup',
+  fee: 30000,
+};
 
 // Đơn trong response mẫu mang mã riêng của file mẫu. Đổi về mã của màn để màn vẫn tìm thấy đơn.
 function fixtureOrder(exampleName: string) {
@@ -433,6 +441,22 @@ const FULFILLMENT_CASES = [
     submitLabel: RETURN_LABEL,
     toStatus: 'confirmed',
     successMessage: 'Đã đưa đơn về đã xác nhận.',
+  },
+  {
+    name: 'xác nhận đã giao',
+    initial: () => order({ status: 'shipping', shipment: GHN_SHIPMENT }),
+    openLabel: DELIVERED_LABEL,
+    submitLabel: DELIVERED_LABEL,
+    toStatus: 'delivered',
+    successMessage: 'Đã xác nhận đơn đã giao.',
+  },
+  {
+    name: 'ghi nhận hoàn hàng',
+    initial: () => order({ status: 'shipping', flags: ['manual_shipping'] }),
+    openLabel: RETURNED_LABEL,
+    submitLabel: RETURNED_LABEL,
+    toStatus: 'returned',
+    successMessage: 'Đã ghi nhận hoàn hàng.',
   },
 ];
 
@@ -505,6 +529,76 @@ describe('nút giao hàng thủ công trên chi tiết đơn', () => {
     expect(dialog()!.querySelector('textarea#fulfillment-reason')).not.toBeNull();
   });
 
+  it('hộp thoại xác nhận đã giao nhắc chỉ tiếp tục khi khách đã nhận hàng', async () => {
+    await open({
+      initial: order({ status: 'shipping', shipment: GHN_SHIPMENT }),
+      permissions: FULFILL_PERMISSIONS,
+    });
+    await waitForOrder();
+
+    await openAction(DELIVERED_LABEL);
+
+    expect(dialog()!.textContent).toContain('Xác nhận đã giao PK-1001');
+    expect(dialog()!.textContent).toContain('Chỉ tiếp tục khi khách đã nhận hàng');
+    expect(dialog()!.textContent).toContain('khách được viết đánh giá');
+    expect(dialog()!.querySelector('textarea#fulfillment-reason')).not.toBeNull();
+  });
+
+  it('hộp thoại hoàn hàng báo đơn đã thanh toán sẽ chuyển sang Chờ hoàn tiền', async () => {
+    await open({
+      initial: order({ status: 'shipping', paymentStatus: 'paid' }),
+      permissions: FULFILL_PERMISSIONS,
+    });
+    await waitForOrder();
+
+    await openAction(RETURNED_LABEL);
+
+    expect(dialog()!.textContent).toContain('Dùng khi hàng đã về tay shop');
+    expect(dialog()!.textContent).toContain(
+      'Đơn này đã thanh toán, nên sẽ chuyển sang Chờ hoàn tiền.',
+    );
+    expect(dialog()!.textContent).not.toContain('không phát sinh hoàn tiền');
+  });
+
+  it('hộp thoại hoàn hàng báo đơn chưa thanh toán không phát sinh hoàn tiền', async () => {
+    await open({
+      initial: order({ status: 'shipping', paymentStatus: 'unpaid' }),
+      permissions: FULFILL_PERMISSIONS,
+    });
+    await waitForOrder();
+
+    await openAction(RETURNED_LABEL);
+
+    expect(dialog()!.textContent).toContain(
+      'Đơn này chưa thanh toán, nên không phát sinh hoàn tiền.',
+    );
+    expect(dialog()!.textContent).not.toContain('Chờ hoàn tiền');
+  });
+
+  it('hộp thoại xác nhận đã giao không có câu báo thanh toán', async () => {
+    await open({
+      initial: order({ status: 'shipping', paymentStatus: 'paid' }),
+      permissions: FULFILL_PERMISSIONS,
+    });
+    await waitForOrder();
+
+    await openAction(DELIVERED_LABEL);
+
+    expect(dialog()!.textContent).not.toContain('hoàn tiền');
+  });
+
+  it('đơn shipping có GHN xếp nút Hủy vận đơn, Ghi nhận hoàn hàng rồi Xác nhận đã giao', async () => {
+    await open({
+      initial: order({ status: 'shipping', shipment: GHN_SHIPMENT }),
+      permissions: FULFILL_PERMISSIONS,
+    });
+    await waitForOrder();
+
+    const labels = [...actionBar().querySelectorAll('button')].map((button) => button.textContent);
+    expect(labels).toEqual(['Hủy vận đơn', RETURNED_LABEL, DELIVERED_LABEL]);
+    expect(actionBar().querySelectorAll('.btn-primary')).toHaveLength(1);
+  });
+
   it.each(FULFILLMENT_CASES)(
     '$name: bộ đếm ký tự đếm sau khi cắt khoảng trắng',
     async (scenario) => {
@@ -551,7 +645,7 @@ describe('nút giao hàng thủ công trên chi tiết đơn', () => {
       await open({
         initial: scenario.initial(),
         permissions: FULFILL_PERMISSIONS,
-        onWrite: () => fixtureOrder('start manual shipping'),
+        onWrite: () => fixtureOrder('confirm manual delivery'),
       });
       await waitForOrder();
 
@@ -593,7 +687,7 @@ describe('nút giao hàng thủ công trên chi tiết đơn', () => {
       await act(async () => submit.click());
       expect(harness.writes).toHaveLength(1);
 
-      release(fixtureOrder('start manual shipping'));
+      release(fixtureOrder('confirm manual delivery'));
       await waitFor(() => dialog() === null, 'đóng hộp thoại');
     },
   );
@@ -601,7 +695,7 @@ describe('nút giao hàng thủ công trên chi tiết đơn', () => {
   it.each(FULFILLMENT_CASES)(
     '$name: thành công ghi chi tiết vào cache, đánh dấu danh sách cũ và báo thành công',
     async (scenario) => {
-      const updated = fixtureOrder('start manual shipping');
+      const updated = fixtureOrder('confirm manual delivery');
       await open({
         initial: scenario.initial(),
         permissions: FULFILL_PERMISSIONS,
@@ -717,6 +811,18 @@ const BUTTON_STYLE_CASES = [
   {
     label: RETURN_LABEL,
     className: 'btn btn-outline',
+    initial: () => order({ status: 'shipping', flags: ['manual_shipping'] }),
+    permissions: FULFILL_PERMISSIONS,
+  },
+  {
+    label: RETURNED_LABEL,
+    className: 'btn btn-outline',
+    initial: () => order({ status: 'shipping', flags: ['manual_shipping'] }),
+    permissions: FULFILL_PERMISSIONS,
+  },
+  {
+    label: DELIVERED_LABEL,
+    className: 'btn btn-primary',
     initial: () => order({ status: 'shipping', flags: ['manual_shipping'] }),
     permissions: FULFILL_PERMISSIONS,
   },

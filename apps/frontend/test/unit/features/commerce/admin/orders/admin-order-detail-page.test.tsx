@@ -250,6 +250,80 @@ describe('màn chi tiết đơn hàng của nhân viên', () => {
     expect(text()).not.toContain('Khách đã trả');
   });
 
+  const MANUAL_CASES = [
+    { flags: ['manual_shipping'], labels: ['Giao hàng thủ công'] },
+    { flags: ['manual_delivery'], labels: ['Xác nhận giao thủ công'] },
+    { flags: ['manual_return'], labels: ['Ghi nhận hoàn thủ công'] },
+    {
+      flags: ['manual_shipping', 'manual_delivery', 'manual_return'],
+      labels: ['Giao hàng thủ công', 'Xác nhận giao thủ công', 'Ghi nhận hoàn thủ công'],
+    },
+  ];
+
+  it.each(MANUAL_CASES)(
+    'thẻ Vận đơn hiện dòng Ghi nhận thủ công với cờ $flags, trạng thái GHN giữ nguyên',
+    async ({ flags, labels }) => {
+      await open({
+        ...fullOrder(),
+        flags,
+        shipment: { id: 'ship-1', trackingCode: 'GHN1', status: 'pending_pickup', fee: 30000 },
+      });
+      await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+      const shipmentCard = sectionOf('Vận đơn');
+      const badges = [...rowIn(shipmentCard, 'Ghi nhận thủ công').querySelectorAll('dd .badge')];
+      expect(badges.map((badge) => badge.textContent)).toEqual(labels);
+      expect(badges.every((badge) => badge.className === 'badge badge-warn')).toBe(true);
+      // Trạng thái GHN không bị ghi đè bởi nhãn thủ công.
+      expect(rowIn(shipmentCard, 'Trạng thái').textContent).toContain('Chờ lấy hàng');
+      expect(rowIn(shipmentCard, 'Trạng thái').textContent).not.toContain('Đã giao');
+      // Dòng mới nằm ngay dưới dòng Trạng thái.
+      expect(rowIn(shipmentCard, 'Trạng thái').nextElementSibling).toBe(
+        rowIn(shipmentCard, 'Ghi nhận thủ công'),
+      );
+    },
+  );
+
+  it('dòng Ghi nhận thủ công chỉ liệt kê cờ thủ công, không lấy cờ khác', async () => {
+    await open({
+      ...fullOrder(),
+      flags: ['invoice_issued', 'manual_delivery', 'underpaid'],
+    });
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    const row = rowIn(sectionOf('Vận đơn'), 'Ghi nhận thủ công');
+    expect(row.textContent).toContain('Xác nhận giao thủ công');
+    expect(row.textContent).not.toContain('Đã xuất hóa đơn');
+    expect(row.textContent).not.toContain('Thanh toán thiếu');
+  });
+
+  it('đơn có vận đơn mà không có cờ thủ công không hiện dòng Ghi nhận thủ công', async () => {
+    await open({ ...fullOrder(), flags: [] });
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    expect(sectionOf('Vận đơn').textContent).not.toContain('Ghi nhận thủ công');
+  });
+
+  it('đơn có vận đơn và chỉ cờ invoice_issued không hiện dòng Ghi nhận thủ công', async () => {
+    await open({ ...fullOrder(), flags: ['invoice_issued'] });
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    expect(sectionOf('Vận đơn').textContent).not.toContain('Ghi nhận thủ công');
+  });
+
+  it('đơn giao thủ công không có vận đơn không dựng thẻ Vận đơn, nhãn nằm ở hàng Ghi chú', async () => {
+    await open({ ...minimalOrder(), flags: ['manual_shipping'] });
+    await waitFor(() => text().includes('PK-1001'), 'mã đơn');
+
+    const titles = [...harness.container.querySelectorAll('.order-section-title')].map(
+      (element) => element.textContent,
+    );
+    expect(titles).not.toContain('Vận đơn');
+    expect(text()).not.toContain('Ghi nhận thủ công');
+    const overview = harness.container.querySelector<HTMLElement>('.order-overview')!;
+    expect(rowIn(overview, 'Ghi chú').textContent).toContain('Giao hàng thủ công');
+  });
+
   it('lịch sử theo thời gian tăng dần, tô màu trạng thái và hiện tên nhân viên hoặc Hệ thống', async () => {
     await open(fullOrder());
     await waitFor(() => text().includes('PK-1001'), 'mã đơn');

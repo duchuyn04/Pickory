@@ -880,14 +880,15 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 ### COM-UI14: Xác nhận giao, ghi nhận hoàn và hiển thị cờ trên admin
 **Mô tả:** Thêm thao tác `delivered` và `returned` cho đơn `shipping`. Hiển thị ba cờ mới trong nhãn, bộ lọc và chi tiết đơn.
 **Tiêu chí nghiệm thu:**
-- [ ] Đơn `shipping` hiện `Xác nhận đã giao` và `Ghi nhận hoàn hàng` khi có `orders:fulfill`
-- [ ] Hai hộp thoại dùng lý do bắt buộc và cảnh báo đúng hậu quả
-- [ ] Hộp thoại giao hàng yêu cầu chỉ tiếp tục khi khách đã nhận hàng
-- [ ] Hộp thoại hoàn hàng báo rằng đơn `paid` sẽ chuyển `refund_pending`
-- [ ] Submit gửi đúng `toStatus` và dùng chung xử lý cache, lỗi và khóa nút của COM-UI13
-- [ ] Ba cờ có nhãn tiếng Việt và xuất hiện trong `ORDER_FLAG_CODES`
-- [ ] Chi tiết đơn hiện cờ thủ công cạnh trạng thái vận đơn GHN. Trạng thái GHN không bị ghi đè bằng nhãn thủ công
+- [x] Đơn `shipping` hiện `Xác nhận đã giao` và `Ghi nhận hoàn hàng` khi có `orders:fulfill`
+- [x] Hai hộp thoại dùng lý do bắt buộc và cảnh báo đúng hậu quả
+- [x] Hộp thoại giao hàng yêu cầu chỉ tiếp tục khi khách đã nhận hàng
+- [x] Hộp thoại hoàn hàng báo rằng đơn `paid` sẽ chuyển `refund_pending`
+- [x] Submit gửi đúng `toStatus` và dùng chung xử lý cache, lỗi và khóa nút của COM-UI13
+- [x] Ba cờ có nhãn tiếng Việt và xuất hiện trong `ORDER_FLAG_CODES`
+- [x] Chi tiết đơn hiện cờ thủ công cạnh trạng thái vận đơn GHN. Trạng thái GHN không bị ghi đè bằng nhãn thủ công
 - [ ] Bố cục thao tác không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E6 và COM-E2E7
+  Kiểm chính thức trên trình duyệt ở COM-E2E6 và COM-E2E7. Đã có ảnh 375 px ở COM-UI14.
 **Kiểm tra:**
 - `pnpm test -- test/unit/features/commerce/admin/orders test/unit/features/commerce/order-labels.test.ts` trong `apps/frontend`
 - `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`

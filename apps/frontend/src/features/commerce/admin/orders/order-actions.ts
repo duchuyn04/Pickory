@@ -14,6 +14,8 @@ export type OrderActionKey =
   | 'createShipment'
   | 'cancelShipment'
   | 'startManualShipping'
+  | 'recordReturn'
+  | 'confirmDelivered'
   | 'returnToConfirmed'
   | 'issueInvoice'
   | 'receiveCod'
@@ -25,9 +27,11 @@ export const ORDER_ACTION_PERMISSIONS: Record<OrderActionKey, string> = {
   confirm: 'orders:update-status',
   createShipment: 'orders:fulfill',
   cancelShipment: 'orders:fulfill',
-  // Hai thao tác giao thủ công cùng đi qua route `fulfillment`, nên cùng quyền với vận đơn.
+  // Các thao tác giao thủ công cùng đi qua route `fulfillment`, nên cùng quyền với vận đơn.
   startManualShipping: 'orders:fulfill',
   returnToConfirmed: 'orders:fulfill',
+  recordReturn: 'orders:fulfill',
+  confirmDelivered: 'orders:fulfill',
   issueInvoice: 'orders:update-status',
   receiveCod: 'payments:reconcile',
   refund: 'refunds:manage',
@@ -57,6 +61,10 @@ function isActionApplicable(action: OrderActionKey, order: OrderActionSubject): 
     case 'returnToConfirmed':
       // Chỉ đơn do shop tự giao mới được quay về. Đơn giao qua GHN phải hủy vận đơn.
       return order.status === 'shipping' && order.flags.includes(MANUAL_SHIPPING_FLAG);
+    case 'recordReturn':
+    case 'confirmDelivered':
+      // Backend nhận hai thao tác này cho mọi đơn đang giao, có vận đơn GHN hay không.
+      return order.status === 'shipping';
     case 'issueInvoice':
       // Hóa đơn chỉ xuất cho đơn còn hiệu lực và có yêu cầu hóa đơn, và chỉ xuất một lần.
       return (
@@ -78,16 +86,18 @@ function isActionApplicable(action: OrderActionKey, order: OrderActionSubject): 
   }
 }
 
-// Thứ tự nút trên màn: nút nguy hiểm đứng đầu, nút phụ ở giữa, nút chính ngoài cùng bên phải.
+// Thứ tự nút trên màn: nút nguy hiểm đứng đầu, nút phụ ở giữa, nút chính ở cuối.
 // Nút phụ và nút nguy hiểm dùng kiểu khác nút chính.
 const ACTION_ORDER: OrderActionKey[] = [
   'cancelShipment',
   'cancel',
   'returnToConfirmed',
   'startManualShipping',
+  'recordReturn',
   'issueInvoice',
   'confirm',
   'createShipment',
+  'confirmDelivered',
   'receiveCod',
   'refund',
 ];

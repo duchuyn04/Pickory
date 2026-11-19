@@ -125,7 +125,7 @@ describe('availableOrderActions: vận đơn', () => {
       permissions('orders:fulfill'),
     );
 
-    expect(result).toEqual(['cancelShipment']);
+    expect(result).toEqual(['cancelShipment', 'recordReturn', 'confirmDelivered']);
   });
 
   it('không hiện nút hủy vận đơn khi đơn shipping nhưng không có vận đơn', () => {
@@ -134,7 +134,7 @@ describe('availableOrderActions: vận đơn', () => {
       permissions('orders:fulfill'),
     );
 
-    expect(result).toEqual([]);
+    expect(result).toEqual(['recordReturn', 'confirmDelivered']);
   });
 });
 
@@ -163,7 +163,7 @@ describe('availableOrderActions: giao hàng thủ công', () => {
       permissions('orders:fulfill'),
     );
 
-    expect(result).toEqual(['returnToConfirmed']);
+    expect(result).toEqual(['returnToConfirmed', 'recordReturn', 'confirmDelivered']);
   });
 
   it('không hiện nút quay về khi đơn shipping không có cờ, dù có hay không có vận đơn', () => {
@@ -200,7 +200,12 @@ describe('availableOrderActions: giao hàng thủ công', () => {
       permissions('orders:fulfill'),
     );
 
-    expect(result).toEqual(['cancelShipment', 'returnToConfirmed']);
+    expect(result).toEqual([
+      'cancelShipment',
+      'returnToConfirmed',
+      'recordReturn',
+      'confirmDelivered',
+    ]);
   });
 
   it.each([['orders:read'], ['orders:update-status'], ['orders:cancel']])(
@@ -222,6 +227,63 @@ describe('availableOrderActions: giao hàng thủ công', () => {
     const result = availableOrderActions(orderIn({ status: 'confirmed' }), everyPermission);
 
     expect(result).toEqual(['cancel', 'startManualShipping', 'createShipment']);
+  });
+});
+
+describe('availableOrderActions: xác nhận giao và ghi nhận hoàn hàng', () => {
+  const NEW_ACTIONS = ['confirmDelivered', 'recordReturn'];
+  const ghnShipment = { trackingCode: 'GHN1' };
+
+  it.each([
+    ['đơn có vận đơn GHN, không cờ', { shipment: ghnShipment }],
+    ['đơn giao thủ công có cờ manual_shipping', { flags: ['manual_shipping'] }],
+    ['đơn không vận đơn, không cờ', {}],
+  ])('hiện cả hai nút cho đơn shipping: %s', (_name, overrides) => {
+    const result = availableOrderActions(
+      orderIn({ status: 'shipping', ...overrides }),
+      permissions('orders:fulfill'),
+    );
+
+    expect(result).toEqual(expect.arrayContaining(NEW_ACTIONS));
+  });
+
+  it.each([
+    'pending_payment',
+    'pending_confirmation',
+    'confirmed',
+    'delivered',
+    'returned',
+    'cancelled',
+  ])('không hiện hai nút khi đơn ở trạng thái %s', (status) => {
+    const result = availableOrderActions(
+      orderIn({ status, flags: ['manual_shipping'], shipment: ghnShipment }),
+      permissions('orders:fulfill'),
+    );
+
+    expect(result).not.toContain('confirmDelivered');
+    expect(result).not.toContain('recordReturn');
+  });
+
+  it.each([['orders:read'], ['orders:update-status'], ['orders:cancel'], ['payments:reconcile']])(
+    'không hiện hai nút khi chỉ có quyền %s',
+    (permission) => {
+      const result = availableOrderActions(
+        orderIn({ status: 'shipping', shipment: ghnShipment }),
+        permissions(permission),
+      );
+
+      expect(result).not.toContain('confirmDelivered');
+      expect(result).not.toContain('recordReturn');
+    },
+  );
+
+  it('đơn shipping có GHN và đủ quyền xếp nguy hiểm, nút phụ rồi nút chính', () => {
+    const result = availableOrderActions(
+      orderIn({ status: 'shipping', shipment: ghnShipment }),
+      everyPermission,
+    );
+
+    expect(result).toEqual(['cancelShipment', 'recordReturn', 'confirmDelivered']);
   });
 });
 

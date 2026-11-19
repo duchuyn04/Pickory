@@ -26,6 +26,7 @@ import {
 } from './order-action-forms';
 import { availableOrderActions, type OrderActionKey } from './order-actions';
 import { getErrorMessage } from '../../../../shared/error-message';
+import { formatPaymentStatus } from '../../order-labels';
 
 interface ActionCopy {
   // Chữ trên nút mở hộp thoại.
@@ -81,6 +82,23 @@ const ACTION_COPY: Record<OrderActionKey, ActionCopy> = {
     successMessage: 'Đã đưa đơn về đã xác nhận.',
     secondary: true,
   },
+  recordReturn: {
+    buttonLabel: 'Ghi nhận hoàn hàng',
+    title: 'Ghi nhận hoàn hàng',
+    description:
+      'Dùng khi hàng đã về tay shop. Đơn chuyển sang đã trả hàng. Lý do được lưu vào lịch sử đơn.',
+    submitText: 'Ghi nhận hoàn hàng',
+    successMessage: 'Đã ghi nhận hoàn hàng.',
+    secondary: true,
+  },
+  confirmDelivered: {
+    buttonLabel: 'Xác nhận đã giao',
+    title: 'Xác nhận đã giao',
+    description:
+      'Chỉ tiếp tục khi khách đã nhận hàng. Đơn chuyển sang đã giao và khách được viết đánh giá. Lý do được lưu vào lịch sử đơn.',
+    submitText: 'Xác nhận đã giao',
+    successMessage: 'Đã xác nhận đơn đã giao.',
+  },
   issueInvoice: {
     buttonLabel: 'Đã xuất hóa đơn',
     title: 'Đánh dấu đã xuất hóa đơn',
@@ -125,6 +143,8 @@ const PARCEL_FIELD_INPUTS: { field: ParcelField; id: string; label: string }[] =
 const FULFILLMENT_TARGET_STATUS = {
   startManualShipping: 'shipping',
   returnToConfirmed: 'confirmed',
+  confirmDelivered: 'delivered',
+  recordReturn: 'returned',
 } satisfies Partial<Record<OrderActionKey, FulfillmentTargetStatus>>;
 
 type FulfillmentActionKey = keyof typeof FULFILLMENT_TARGET_STATUS;
@@ -187,7 +207,9 @@ function OrderActionDialog({ action, order, onClose, onDone }: ActionDialogProps
       case 'cancelShipment':
         return { kind: 'cancelShipment' };
       case 'startManualShipping':
-      case 'returnToConfirmed': {
+      case 'returnToConfirmed':
+      case 'confirmDelivered':
+      case 'recordReturn': {
         const error = validateFulfillmentReason(reason);
         setReasonError(error);
         return error
@@ -249,6 +271,15 @@ function OrderActionDialog({ action, order, onClose, onDone }: ActionDialogProps
       error={apiError}
     >
       <p className="muted">{copy.description}</p>
+
+      {/* Đơn đã thanh toán phải hoàn tiền sau khi hàng về. Nhân viên cần biết trước khi gửi. */}
+      {action === 'recordReturn' && (
+        <p className="muted">
+          {order.paymentStatus === 'paid'
+            ? `Đơn này đã thanh toán, nên sẽ chuyển sang ${formatPaymentStatus('refund_pending')}.`
+            : 'Đơn này chưa thanh toán, nên không phát sinh hoàn tiền.'}
+        </p>
+      )}
 
       {action === 'cancel' && (
         <div className="field">

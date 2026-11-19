@@ -66,6 +66,16 @@ export const ORDER_FLAG_CODES = [
   'payment_expired',
   'invoice_issued',
   'shipment_cancelled',
+  'manual_shipping',
+  'manual_delivery',
+  'manual_return',
+] as const;
+
+// Ba cờ do nhân viên ghi tay khi shop tự giao. Trang chi tiết gom chúng thành một dòng riêng.
+export const MANUAL_FULFILLMENT_FLAGS = [
+  'manual_shipping',
+  'manual_delivery',
+  'manual_return',
 ] as const;
 
 // Bảng ánh xạ cờ đơn sang tiếng Việt. Cờ ghi lại điều bất thường nhân viên cần chú ý.
@@ -77,6 +87,9 @@ const ORDER_FLAG_LABELS: Record<string, string> = {
   payment_expired: 'Quá hạn thanh toán',
   invoice_issued: 'Đã xuất hóa đơn',
   shipment_cancelled: 'Vận đơn đã hủy',
+  manual_shipping: 'Giao hàng thủ công',
+  manual_delivery: 'Xác nhận giao thủ công',
+  manual_return: 'Ghi nhận hoàn thủ công',
 };
 
 // Bảng ánh xạ trạng thái vận đơn của module Shipping sang tiếng Việt.
