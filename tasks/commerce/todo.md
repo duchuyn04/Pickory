@@ -835,11 +835,11 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 ### COM-UI12: Fixtures, schema và API client fulfillment
 **Mô tả:** Thêm bộ đọc fixtures cho `commerce`, schema Zod và mutation fulfillment chung. Các task UI sau dùng phần này mà không chờ endpoint thật.
 **Tiêu chí nghiệm thu:**
-- [ ] Bộ đọc tìm được ví dụ theo tên trong hai file fixtures. Tên sai báo đúng tên ví dụ và file
-- [ ] Schema chi tiết đơn đọc được hai response thành công. Schema `/reviews/mine` đọc được hai trạng thái điều kiện
-- [ ] Mutation gọi `PUT /api/admin/orders/{code}/fulfillment` với đúng `toStatus` và `reason`
-- [ ] Response của mutation được kiểm bằng Zod trước khi ghi vào cache
-- [ ] Test chứng minh thiếu khóa hoặc sai kiểu trong fixture làm schema báo lỗi
+- [x] Bộ đọc tìm được ví dụ theo tên trong hai file fixtures. Tên sai báo đúng tên ví dụ và file
+- [x] Schema chi tiết đơn đọc được hai response thành công. Schema `/reviews/mine` đọc được hai trạng thái điều kiện
+- [x] Mutation gọi `PUT /api/admin/orders/{code}/fulfillment` với đúng `toStatus` và `reason`
+- [x] Response của mutation được kiểm bằng Zod trước khi ghi vào cache
+- [x] Test chứng minh thiếu khóa hoặc sai kiểu trong fixture làm schema báo lỗi
 **Kiểm tra:**
 - `pnpm test -- test/unit/features/commerce/contract-fixtures.test.ts test/unit/features/commerce/admin/orders/admin-orders-api.test.ts` trong `apps/frontend`
 - `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`
