@@ -18,13 +18,14 @@ using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Persistence;
 using Pickory.Modules.Identity.Contracts.Audit;
 using Pickory.Modules.Shipping.Contracts;
+using Pickory.Modules.Shipping.Contracts.Events;
 using Pickory.Modules.Shipping.Contracts.Shipments;
 using Pickory.Shared.Events;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Commerce;
 
-// Nhân viên bắt đầu giao hàng thủ công bằng `PUT /api/admin/orders/{code}/fulfillment`.
+// Nhân viên giao thủ công, xác nhận giao và ghi nhận hoàn bằng `PUT /api/admin/orders/{code}/fulfillment`.
 // Test đọc parser qua HTTP vì `UpdateFulfillmentRequest` là lớp `internal` của module.
 [Collection(CommerceCollection.Name)]
 public sealed class AdminOrderFulfillmentTests : IClassFixture<CheckoutWebApplicationFactory>, IAsyncLifetime
@@ -38,6 +39,8 @@ public sealed class AdminOrderFulfillmentTests : IClassFixture<CheckoutWebApplic
     private const string FulfillmentAuditAction = "commerce.order.fulfillment_update";
     private const string FulfillmentFixture = "commerce/manual-fulfillment.json";
     private const string ManualShippingFlag = "manual_shipping";
+    private const string ManualDeliveryFlag = "manual_delivery";
+    private const string ManualReturnFlag = "manual_return";
     private const string InvalidReasonMessage = "Nhập lý do từ 1 đến 500 ký tự.";
     private const string ManualFlagRequiredMessage = "Chỉ đơn giao thủ công mới quay về đã xác nhận.";
     private const string ShipmentActiveMessage = "Đơn còn vận đơn GHN hiệu lực. Hủy vận đơn trước khi giao thủ công.";
@@ -258,6 +261,17 @@ public sealed class AdminOrderFulfillmentTests : IClassFixture<CheckoutWebApplic
             .CreateShipmentAsync(ShipmentTestSetup.CreateRequest(code), CancellationToken.None);
     }
 
+    // Phát sự kiện trạng thái giao hàng như GHN báo về, để kiểm hành vi khi GHN báo muộn sau thao tác thủ công.
+    private async Task PublishShipmentEventAsync(string shipmentId, string reference, ShipmentStatus status)
+    {
+        var dispatcher = _factory.Services.GetRequiredService<IEventDispatcher>();
+        await dispatcher.PublishAsync(new ShipmentStatusChangedEvent(
+            shipmentId, reference, status, PreviousStatus: null, DateTimeOffset.UtcNow, ShipmentStatusChangeSource.Carrier));
+    }
+
+    private static string[] FlagsOf(JsonElement data) =>
+        data.GetProperty("flags").EnumerateArray().Select(flag => flag.GetString()!).ToArray();
+
     // Mọi đường lỗi và đường lặp lại phải để nguyên đơn, lịch sử, audit và sự kiện.
     private sealed record Baseline(OrderSnapshot Order, int HistoryCount, int EventCount);
 
@@ -323,8 +337,8 @@ public sealed class AdminOrderFulfillmentTests : IClassFixture<CheckoutWebApplic
         var before = audit.Before!.RootElement;
         var after = audit.After!.RootElement;
         // Audit chỉ có nhãn trạng thái, cờ và lý do. Cột `jsonb` không giữ thứ tự khóa, nên test sắp tên khóa trước khi so.
-        Assert.Equal(["flags", "status"], before.EnumerateObject().Select(property => property.Name).Order());
-        Assert.Equal(["flags", "reason", "status"], after.EnumerateObject().Select(property => property.Name).Order());
+        Assert.Equal(["flags", "paymentStatus", "status"], before.EnumerateObject().Select(property => property.Name).Order());
+        Assert.Equal(["flags", "paymentStatus", "reason", "status"], after.EnumerateObject().Select(property => property.Name).Order());
         Assert.Equal("confirmed", before.GetProperty("status").GetString());
         Assert.Equal(["late_payment"], before.GetProperty("flags").EnumerateArray().Select(flag => flag.GetString()));
         Assert.Equal("shipping", after.GetProperty("status").GetString());
@@ -550,12 +564,21 @@ public sealed class AdminOrderFulfillmentTests : IClassFixture<CheckoutWebApplic
     }
 
     [Theory]
-    [InlineData("delivered")]
-    [InlineData("returned")]
-    // Hai cặp `shipping` sang `delivered` và `returned` chưa mở cho route, nên trả 409 và không ghi gì.
-    public async Task Fulfill_FromShippingToOtherStatus_Returns409AndWritesNothing(string toStatus)
+    [InlineData(OrderStatus.PendingPayment, "delivered")]
+    [InlineData(OrderStatus.PendingPayment, "returned")]
+    [InlineData(OrderStatus.PendingConfirmation, "delivered")]
+    [InlineData(OrderStatus.PendingConfirmation, "returned")]
+    [InlineData(OrderStatus.Confirmed, "delivered")]
+    [InlineData(OrderStatus.Confirmed, "returned")]
+    [InlineData(OrderStatus.Cancelled, "delivered")]
+    [InlineData(OrderStatus.Cancelled, "returned")]
+    [InlineData(OrderStatus.Delivered, "returned")]
+    [InlineData(OrderStatus.Returned, "delivered")]
+    // Đơn ngoài `shipping` có cờ `manual_shipping` vẫn không sang `delivered` hay `returned`. Bảng chuyển đổi phải khớp cả trạng thái nguồn.
+    public async Task Fulfill_ToDeliveredOrReturnedFromOtherStatusWithManualFlag_Returns409AndWritesNothing(
+        OrderStatus current, string toStatus)
     {
-        var order = await PlaceOrderAsync(OrderStatus.Shipping, flags: [ManualShippingFlag]);
+        var order = await PlaceOrderAsync(current, flags: [ManualShippingFlag]);
         var (_, session) = await StaffAsync("sales");
         var baseline = await BaselineOfAsync(order.Code);
 
@@ -691,8 +714,8 @@ public sealed class AdminOrderFulfillmentTests : IClassFixture<CheckoutWebApplic
         var before = audit.Before!.RootElement;
         var after = audit.After!.RootElement;
         // Cột `jsonb` không giữ thứ tự khóa, nên test sắp tên khóa trước khi so.
-        Assert.Equal(["flags", "status"], before.EnumerateObject().Select(property => property.Name).Order());
-        Assert.Equal(["flags", "reason", "status"], after.EnumerateObject().Select(property => property.Name).Order());
+        Assert.Equal(["flags", "paymentStatus", "status"], before.EnumerateObject().Select(property => property.Name).Order());
+        Assert.Equal(["flags", "paymentStatus", "reason", "status"], after.EnumerateObject().Select(property => property.Name).Order());
         Assert.Equal("shipping", before.GetProperty("status").GetString());
         Assert.Equal(
             ["late_payment", ManualShippingFlag], before.GetProperty("flags").EnumerateArray().Select(flag => flag.GetString()));
@@ -817,12 +840,192 @@ public sealed class AdminOrderFulfillmentTests : IClassFixture<CheckoutWebApplic
         Assert.Equal(PaymentStatus.Paid, (await SnapshotOfAsync(order.Code)).PaymentStatus);
     }
 
+    // ---------- Xác nhận giao hoặc hoàn thủ công ----------
+
+    [Fact]
+    // Đơn `shipping` giao thủ công sang `delivered`: giữ cờ cũ, thêm `manual_delivery`, ghi lịch sử với người làm và lý do đã cắt.
+    public async Task ConfirmManualDelivery_FromManualShipping_AddsFlagAndWritesHistory()
+    {
+        var order = await PlaceOrderAsync(OrderStatus.Shipping, flags: ["late_payment", ManualShippingFlag]);
+        var (staffId, session) = await StaffAsync("sales");
+
+        var response = await FulfillAsync(order.Code, session, "delivered", "  " + ValidReason + "  ");
+
+        var data = await ReadDataAsync(response);
+        string[] expectedFlags = ["late_payment", ManualShippingFlag, ManualDeliveryFlag];
+        Assert.Equal("delivered", data.GetProperty("status").GetString());
+        Assert.Equal(expectedFlags, FlagsOf(data));
+        var stored = await SnapshotOfAsync(order.Code);
+        Assert.Equal(OrderStatus.Delivered, stored.Status);
+        Assert.Equal(expectedFlags, stored.Flags);
+
+        var history = Assert.Single(await HistoryOfAsync(order.Code), row => row.To == OrderStatus.Delivered);
+        Assert.Equal(OrderStatus.Shipping, history.From);
+        Assert.Equal(staffId, history.ActorId);
+        Assert.Equal(ValidReason, history.Reason);
+    }
+
+    [Fact]
+    // Đơn `shipping` ghi nhận hoàn: giữ mọi cờ cũ, thêm `manual_return`, ghi lịch sử với người làm và lý do đã cắt khoảng trắng.
+    public async Task RecordManualReturn_FromManualShipping_AddsFlagAndWritesHistory()
+    {
+        var order = await PlaceOrderAsync(OrderStatus.Shipping, flags: ["late_payment", ManualShippingFlag]);
+        var (staffId, session) = await StaffAsync("sales");
+
+        var response = await FulfillAsync(order.Code, session, "returned", "  " + ValidReason + "  ");
+
+        var data = await ReadDataAsync(response);
+        string[] expectedFlags = ["late_payment", ManualShippingFlag, ManualReturnFlag];
+        Assert.Equal("returned", data.GetProperty("status").GetString());
+        Assert.Equal(expectedFlags, FlagsOf(data));
+        var stored = await SnapshotOfAsync(order.Code);
+        Assert.Equal(OrderStatus.Returned, stored.Status);
+        Assert.Equal(expectedFlags, stored.Flags);
+
+        var history = Assert.Single(await HistoryOfAsync(order.Code), row => row.To == OrderStatus.Returned);
+        Assert.Equal(OrderStatus.Shipping, history.From);
+        Assert.Equal(staffId, history.ActorId);
+        Assert.Equal(ValidReason, history.Reason);
+    }
+
+    [Theory]
+    [InlineData("delivered", OrderStatus.Delivered, "paid")]
+    [InlineData("returned", OrderStatus.Returned, "refund_pending")]
+    // Audit ghi trạng thái, thanh toán và cờ trước sau, kèm lý do. Sự kiện đổi trạng thái phát đúng một lần với trạng thái cũ `shipping`.
+    public async Task ConfirmDeliveryOrReturn_WritesAuditAndEventOnce(string toStatus, OrderStatus expectedStatus, string expectedPayment)
+    {
+        var order = await PlaceOrderAsync(OrderStatus.Shipping, PaymentStatus.Paid, [ManualShippingFlag]);
+        var (staffId, session) = await StaffAsync("sales");
+
+        await ReadDataAsync(await FulfillAsync(order.Code, session, toStatus));
+
+        var audit = Assert.Single(await AuditOfAsync(order.Code));
+        Assert.Equal(staffId, audit.ActorId);
+        var before = audit.Before!.RootElement;
+        var after = audit.After!.RootElement;
+        // Cột `jsonb` không giữ thứ tự khóa, nên test sắp tên khóa trước khi so.
+        Assert.Equal(["flags", "paymentStatus", "status"], before.EnumerateObject().Select(property => property.Name).Order());
+        Assert.Equal(["flags", "paymentStatus", "reason", "status"], after.EnumerateObject().Select(property => property.Name).Order());
+        Assert.Equal("shipping", before.GetProperty("status").GetString());
+        Assert.Equal("paid", before.GetProperty("paymentStatus").GetString());
+        Assert.Equal([ManualShippingFlag], FlagsOf(before));
+        Assert.Equal(toStatus, after.GetProperty("status").GetString());
+        Assert.Equal(expectedPayment, after.GetProperty("paymentStatus").GetString());
+        Assert.Equal(ValidReason, after.GetProperty("reason").GetString());
+
+        var statusEvent = Assert.Single(
+            _factory.DomainEvents.OfType<OrderStatusChangedEvent>(), e => e.Code == order.Code && e.Status == expectedStatus);
+        Assert.Equal(OrderStatus.Shipping, statusEvent.PreviousStatus);
+    }
+
+    [Theory]
+    [InlineData("delivered", PaymentStatus.Paid, PaymentStatus.Paid, ManualDeliveryFlag)]
+    [InlineData("delivered", PaymentStatus.Unpaid, PaymentStatus.Unpaid, ManualDeliveryFlag)]
+    [InlineData("returned", PaymentStatus.Paid, PaymentStatus.RefundPending, ManualReturnFlag)]
+    [InlineData("returned", PaymentStatus.Unpaid, PaymentStatus.Unpaid, ManualReturnFlag)]
+    // Chỉ đơn đã trả tiền mà hoàn hàng mới sang chờ hoàn tiền. Đơn COD chưa trả và đơn đã giao giữ nguyên thanh toán.
+    public async Task ConfirmDeliveryOrReturn_UpdatesPaymentStatusOnlyForPaidReturn(
+        string toStatus, PaymentStatus before, PaymentStatus expected, string expectedFlag)
+    {
+        var order = await PlaceOrderAsync(OrderStatus.Shipping, before, [ManualShippingFlag]);
+        var (_, session) = await StaffAsync("sales");
+
+        var data = await ReadDataAsync(await FulfillAsync(order.Code, session, toStatus));
+
+        var expectedLabel = JsonNamingPolicy.SnakeCaseLower.ConvertName(expected.ToString());
+        Assert.Equal(expectedLabel, data.GetProperty("paymentStatus").GetString());
+        var stored = await SnapshotOfAsync(order.Code);
+        Assert.Equal(expected, stored.PaymentStatus);
+        Assert.Equal([ManualShippingFlag, expectedFlag], stored.Flags);
+    }
+
+    [Theory]
+    [InlineData("delivered", ManualDeliveryFlag)]
+    [InlineData("returned", ManualReturnFlag)]
+    // Đơn GHN còn vận đơn hiệu lực vẫn được nhân viên xác nhận. Chỉ có cờ mới của thao tác, vận đơn và trạng thái từ GHN giữ nguyên.
+    public async Task ConfirmDeliveryOrReturn_WithActiveGhnShipment_Returns200AndKeepsShipmentStatus(string toStatus, string expectedFlag)
+    {
+        var order = await PlaceOrderAsync(OrderStatus.Shipping);
+        var shipment = await CreateShipmentDirectAsync(order.Code);
+        var (_, session) = await StaffAsync("sales");
+        var shipmentBefore = (await ReadDataAsync(await SendAsync(HttpMethod.Get, $"{AdminOrdersPath}/{order.Code}", session)))
+            .GetProperty("shipment");
+
+        var data = await ReadDataAsync(await FulfillAsync(order.Code, session, toStatus));
+
+        Assert.Equal(toStatus, data.GetProperty("status").GetString());
+        Assert.Equal([expectedFlag], FlagsOf(data));
+        var shipmentAfter = data.GetProperty("shipment");
+        Assert.Equal(shipment.Id, shipmentAfter.GetProperty("id").GetString());
+        Assert.Equal(shipmentBefore.GetProperty("status").GetString(), shipmentAfter.GetProperty("status").GetString());
+        Assert.NotEqual(toStatus, shipmentAfter.GetProperty("status").GetString());
+    }
+
+    [Theory]
+    [InlineData("delivered")]
+    [InlineData("returned")]
+    // Xác nhận giao hoặc hoàn không gọi GHN, không tạo vận đơn và không đổi tồn kho. Hàng hoàn không tự nhập kho.
+    public async Task ConfirmDeliveryOrReturn_DoesNotTouchGhnOrStock(string toStatus)
+    {
+        var order = await PlaceOrderAsync(OrderStatus.Shipping, PaymentStatus.Unpaid, [ManualShippingFlag]);
+        var (_, session) = await StaffAsync("sales");
+        var stockBefore = await _kit.StockOfAsync(order.SkuId);
+        var movementsBefore = await _kit.MovementCountOfAsync(order.SkuId);
+        var ghnCallsBefore = _factory.Recorder.TotalCallCount;
+
+        await ReadDataAsync(await FulfillAsync(order.Code, session, toStatus));
+
+        Assert.Equal(ghnCallsBefore, _factory.Recorder.TotalCallCount);
+        Assert.DoesNotContain(_factory.Recorder.CreateOrderRequests, request => request.ClientOrderCode == order.Code);
+        Assert.Empty(_factory.Recorder.CancelledOrderCodes);
+        await using var scope = _factory.Services.CreateAsyncScope();
+        Assert.Null(await scope.ServiceProvider.GetRequiredService<IShippingService>()
+            .GetShipmentByRefAsync(order.Code, CancellationToken.None));
+        Assert.Equal(stockBefore, await _kit.StockOfAsync(order.SkuId));
+        Assert.Equal(movementsBefore, await _kit.MovementCountOfAsync(order.SkuId));
+    }
+
+    [Theory]
+    [InlineData("delivered", ShipmentStatus.Delivered)]
+    [InlineData("delivered", ShipmentStatus.Returned)]
+    [InlineData("returned", ShipmentStatus.Delivered)]
+    [InlineData("returned", ShipmentStatus.Returned)]
+    // GHN báo muộn sau khi nhân viên đã xác nhận: đơn, thanh toán, cờ, lịch sử và sự kiện không đổi.
+    public async Task CarrierEventAfterManualConfirmation_DoesNotChangeOrder(string manualStatus, ShipmentStatus carrierStatus)
+    {
+        var order = await PlaceOrderAsync(OrderStatus.Shipping, PaymentStatus.Paid);
+        var shipment = await CreateShipmentDirectAsync(order.Code);
+        var (_, session) = await StaffAsync("sales");
+        await ReadDataAsync(await FulfillAsync(order.Code, session, manualStatus));
+        var baseline = await BaselineOfAsync(order.Code);
+
+        await PublishShipmentEventAsync(shipment.Id, order.Code, carrierStatus);
+
+        Assert.Equal(baseline.Order, await SnapshotOfAsync(order.Code), new OrderSnapshotComparer());
+        Assert.Equal(baseline.HistoryCount, (await HistoryOfAsync(order.Code)).Count);
+        Assert.Equal(baseline.EventCount, StatusEventCount(order.Code));
+    }
+
+    [Fact]
+    // Response thành công của `delivered` khớp hình dạng ví dụ `confirm manual delivery`: đơn COD `unpaid` đi qua `shipping` rồi `delivered`.
+    public async Task ConfirmManualDelivery_MatchesContractFixture()
+    {
+        var order = await PlaceOrderAsync(paymentStatus: PaymentStatus.Unpaid);
+        var (_, session) = await StaffAsync("sales");
+        await ReadDataAsync(await FulfillAsync(order.Code, session, "shipping"));
+
+        var response = await FulfillAsync(order.Code, session, "delivered", "Khách đã nhận hàng và xác nhận qua điện thoại.");
+
+        await AssertMatchesFixtureIgnoringOptionalKeysAsync("confirm manual delivery", response);
+    }
+
     // ---------- Cùng trạng thái ----------
 
     [Theory]
     [InlineData(OrderStatus.Confirmed)]
     [InlineData(OrderStatus.Shipping)]
     [InlineData(OrderStatus.Delivered)]
+    [InlineData(OrderStatus.Returned)]
     // Request tới trạng thái hiện tại trả 200 và không thêm lịch sử, audit, sự kiện hay cờ.
     public async Task Fulfill_ToCurrentStatus_Returns200AndWritesNothing(OrderStatus current)
     {

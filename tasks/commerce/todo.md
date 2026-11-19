@@ -807,17 +807,17 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 ### COM-31: API xác nhận giao hoặc hoàn thủ công
 **Mô tả:** Thêm chuyển đổi của nhân viên từ `shipping` sang `delivered` hoặc `returned`. Giữ nguyên điều kiện đánh giá hiện có và trạng thái thật của vận đơn GHN.
 **Tiêu chí nghiệm thu:**
-- [ ] `OrderTransitions` nhận nhân viên chuyển `shipping` sang `delivered` hoặc `returned`. Các cặp khác giữ nguyên
-- [ ] Xác nhận `delivered` thêm `manual_delivery` và giữ `manual_shipping` nếu đã có
-- [ ] Khách có đơn `shipping` nhận `eligible=false`. Sau khi xác nhận `delivered`, cùng khách nhận `eligible=true`
-- [ ] Khách chưa đạt `delivered` vẫn nhận 403 `REVIEW_NOT_ALLOWED` khi gọi API viết đánh giá
-- [ ] Đơn COD `delivered` và `unpaid` vẫn mở khóa đánh giá
-- [ ] Ghi nhận `returned` thêm `manual_return`. Đơn `paid` chuyển `refund_pending`, các trạng thái khác giữ nguyên
-- [ ] Thao tác không đổi tồn kho. Đơn `returned` không mở khóa đánh giá
-- [ ] Sự kiện GHN đến sau không đổi đơn đã kết thúc. Response vẫn giữ trạng thái vận đơn gần nhất từ GHN
-- [ ] Request cùng trạng thái trả 200 và không thêm nhật ký. Chuyển đổi sai trả 409
-- [ ] `AdminOrderListQuery` nhận bộ lọc `manual_delivery` và `manual_return`
-- [ ] Response khớp fixture `confirm manual delivery`. Hai trạng thái điều kiện đánh giá khớp fixtures của route `/reviews/mine`
+- [x] `OrderTransitions` nhận nhân viên chuyển `shipping` sang `delivered` hoặc `returned`. Các cặp khác giữ nguyên
+- [x] Xác nhận `delivered` thêm `manual_delivery` và giữ `manual_shipping` nếu đã có
+- [x] Khách có đơn `shipping` nhận `eligible=false`. Sau khi xác nhận `delivered`, cùng khách nhận `eligible=true`
+- [x] Khách chưa đạt `delivered` vẫn nhận 403 `REVIEW_NOT_ALLOWED` khi gọi API viết đánh giá
+- [x] Đơn COD `delivered` và `unpaid` vẫn mở khóa đánh giá
+- [x] Ghi nhận `returned` thêm `manual_return`. Đơn `paid` chuyển `refund_pending`, các trạng thái khác giữ nguyên
+- [x] Thao tác không đổi tồn kho. Đơn `returned` không mở khóa đánh giá
+- [x] Sự kiện GHN đến sau không đổi đơn đã kết thúc. Response vẫn giữ trạng thái vận đơn gần nhất từ GHN
+- [x] Request cùng trạng thái trả 200 và không thêm nhật ký. Chuyển đổi sai trả 409
+- [x] `AdminOrderListQuery` nhận bộ lọc `manual_delivery` và `manual_return`
+- [x] Response khớp fixture `confirm manual delivery`. Hai trạng thái điều kiện đánh giá khớp fixtures của route `/reviews/mine`
 **Kiểm tra:**
 - `dotnet build Pickory.sln` trong `apps/backend`
 - `dotnet test tests/Pickory.UnitTests --filter "FullyQualifiedName~OrderTransitionsTests"` trong `apps/backend`

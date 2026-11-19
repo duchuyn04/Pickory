@@ -22,6 +22,8 @@ public sealed class AdminOrderFulfillmentService(
 {
     public const string FulfillmentAuditAction = "commerce.order.fulfillment_update";
     public const string ManualShippingFlag = "manual_shipping";
+    public const string ManualDeliveryFlag = "manual_delivery";
+    public const string ManualReturnFlag = "manual_return";
 
     private const string OrderNotFoundMessage = "Không tìm thấy đơn hàng.";
     private const string InvalidTransitionCode = "INVALID_ORDER_TRANSITION";
@@ -45,6 +47,12 @@ public sealed class AdminOrderFulfillmentService(
             flags => AddFlag(flags, ManualShippingFlag)),
         new(OrderStatus.Shipping, OrderStatus.Confirmed, RequiredFlag: ManualShippingFlag, RequiresNoActiveShipment: true,
             flags => RemoveFlag(flags, ManualShippingFlag)),
+        // Nhân viên được xác nhận giao dù GHN chưa báo, nên không đòi vắng vận đơn. Cờ `manual_shipping` giữ nguyên để biết đơn từng giao tay.
+        new(OrderStatus.Shipping, OrderStatus.Delivered, RequiredFlag: null, RequiresNoActiveShipment: false,
+            flags => AddFlag(flags, ManualDeliveryFlag)),
+        // Hoàn hàng cũng không đòi vắng vận đơn, vì GHN có thể chưa báo hoàn.
+        new(OrderStatus.Shipping, OrderStatus.Returned, RequiredFlag: null, RequiresNoActiveShipment: false,
+            flags => AddFlag(flags, ManualReturnFlag)),
     ];
 
     public async Task<AdminOrderDetailResponse> UpdateAsync(
@@ -90,11 +98,15 @@ public sealed class AdminOrderFulfillmentService(
             var previousStatus = order.Status;
             // Chụp bản sao cờ trước khi sửa. Audit `before` không đổi theo cờ mới.
             var previousFlags = order.Flags.ToArray();
+            // Chụp trạng thái thanh toán cũ. Hoàn hàng có thể đổi thanh toán, nên audit `before` cần giá trị này.
+            var previousPaymentStatus = order.PaymentStatus;
 
             // Trạng thái đích lấy từ dòng của bảng. Cặp chuyển đổi này đã qua kiểm tra ở trên.
             order.Status = transition.To;
             // Cờ đổi độc lập với trạng thái. Mỗi chuyển đổi tự quy định cờ nào thêm hoặc bỏ.
             transition.ApplyFlags(order.Flags);
+            // Đơn đã trả tiền mà hoàn hàng thì thanh toán sang chờ hoàn tiền. Các chuyển đổi khác giữ nguyên thanh toán, kể cả đơn COD.
+            order.PaymentStatus = OrderTransitions.PaymentStatusAfterOrderChange(transition.To, order.PaymentStatus);
 
             // Lịch sử giữ lý do của nhân viên nguyên văn, không thêm tiền tố.
             var now = OrderHistoryEntries.TruncateToMicroseconds(clock.GetUtcNow().UtcDateTime);
@@ -111,8 +123,14 @@ public sealed class AdminOrderFulfillmentService(
                 FulfillmentAuditAction,
                 OrderCancellationService.AuditTargetType,
                 order.Code,
-                new { status = OrderLabels.ToLabel(previousStatus), flags = previousFlags },
-                new { status = OrderLabels.ToLabel(order.Status), flags = order.Flags.ToArray(), reason });
+                new { status = OrderLabels.ToLabel(previousStatus), paymentStatus = OrderLabels.ToLabel(previousPaymentStatus), flags = previousFlags },
+                new
+                {
+                    status = OrderLabels.ToLabel(order.Status),
+                    paymentStatus = OrderLabels.ToLabel(order.PaymentStatus),
+                    flags = order.Flags.ToArray(),
+                    reason,
+                });
             await auditLogWriter.WriteAsync(entry, transaction.GetDbTransaction(), cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);

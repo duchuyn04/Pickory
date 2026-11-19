@@ -21,7 +21,9 @@ public sealed class OrderTransitionsTests
         (OrderStatus.PendingConfirmation, OrderStatus.Cancelled, TransitionActor.Staff),
         (OrderStatus.Confirmed, OrderStatus.Shipping, TransitionActor.Staff),
         (OrderStatus.Confirmed, OrderStatus.Cancelled, TransitionActor.Staff),
+        (OrderStatus.Shipping, OrderStatus.Delivered, TransitionActor.Staff),
         (OrderStatus.Shipping, OrderStatus.Delivered, TransitionActor.System),
+        (OrderStatus.Shipping, OrderStatus.Returned, TransitionActor.Staff),
         (OrderStatus.Shipping, OrderStatus.Returned, TransitionActor.System),
         (OrderStatus.Shipping, OrderStatus.Confirmed, TransitionActor.Staff),
         (OrderStatus.Shipping, OrderStatus.Confirmed, TransitionActor.System),
@@ -54,11 +56,37 @@ public sealed class OrderTransitionsTests
     }
 
     [Fact]
-    // Bảng mong đợi có đúng 15 dòng khác nhau. Dòng bị trùng hoặc bị xóa nhầm trong test sẽ lộ ra.
-    public void ExpectedTable_HasFifteenAllowedEntries()
+    // Bảng mong đợi có đúng 17 dòng khác nhau. Dòng bị trùng hoặc bị xóa nhầm trong test sẽ lộ ra.
+    public void ExpectedTable_HasSeventeenAllowedEntries()
     {
-        Assert.Equal(15, ExpectedAllowed.Length);
-        Assert.Equal(15, ExpectedAllowed.Distinct().Count());
+        Assert.Equal(17, ExpectedAllowed.Length);
+        Assert.Equal(17, ExpectedAllowed.Distinct().Count());
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Delivered, TransitionActor.Staff, true)]
+    [InlineData(OrderStatus.Delivered, TransitionActor.System, true)]
+    [InlineData(OrderStatus.Delivered, TransitionActor.Customer, false)]
+    [InlineData(OrderStatus.Returned, TransitionActor.Staff, true)]
+    [InlineData(OrderStatus.Returned, TransitionActor.System, true)]
+    [InlineData(OrderStatus.Returned, TransitionActor.Customer, false)]
+    // Đơn `shipping` sang `delivered` hoặc `returned`: nhân viên và hệ thống làm được, khách bị từ chối vì sai người chuyển.
+    public void Evaluate_ShippingToDeliveredOrReturned_AllowsStaffAndSystemOnly(
+        OrderStatus to, TransitionActor actor, bool expected)
+    {
+        var decision = OrderTransitions.Evaluate(OrderStatus.Shipping, to, actor, hasActiveShipment: false);
+
+        Assert.Equal(expected, decision.IsAllowed);
+        Assert.Equal(expected ? TransitionRejection.None : TransitionRejection.ActorNotAllowed, decision.Rejection);
+    }
+
+    [Theory]
+    [InlineData(OrderStatus.Delivered)]
+    [InlineData(OrderStatus.Returned)]
+    // Vận đơn GHN còn hiệu lực không chặn nhân viên xác nhận giao hoặc hoàn, vì GHN có thể chưa báo.
+    public void Evaluate_StaffShippingToDeliveredOrReturned_AllowedWithActiveShipment(OrderStatus to)
+    {
+        Assert.True(OrderTransitions.Evaluate(OrderStatus.Shipping, to, TransitionActor.Staff, hasActiveShipment: true).IsAllowed);
     }
 
     [Fact]

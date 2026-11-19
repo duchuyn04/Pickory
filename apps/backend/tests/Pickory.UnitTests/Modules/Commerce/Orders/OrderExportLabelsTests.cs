@@ -41,6 +41,8 @@ public sealed class OrderExportLabelsTests
         ["invoice_issued"] = "Đã xuất hóa đơn",
         ["shipment_cancelled"] = "Vận đơn đã hủy",
         ["manual_shipping"] = "Giao hàng thủ công",
+        ["manual_delivery"] = "Xác nhận giao thủ công",
+        ["manual_return"] = "Ghi nhận hoàn thủ công",
         ["demo_order"] = "Đơn mẫu",
     };
 

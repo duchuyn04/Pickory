@@ -49,6 +49,14 @@ public sealed class ProductReviewTests : IClassFixture<CommerceWebApplicationFac
         {
             // Xóa đánh giá trước đơn vì khóa ngoại chặn xóa đơn còn đánh giá. Báo cáo xóa theo đánh giá.
             await commerce.Reviews.Where(review => _productIds.Contains(review.ProductId)).ExecuteDeleteAsync();
+            // Xóa audit và lịch sử do route fulfillment ghi trước khi xóa đơn. Khóa ngoại chặn xóa đơn còn lịch sử.
+            var orderCodes = await commerce.Orders.Where(order => _orderIds.Contains(order.Id)).Select(order => order.Code).ToListAsync();
+            await using (var identity = _database.CreateIdentityContext())
+            {
+                await identity.AuditLogs.Where(log => log.TargetType == "order" && orderCodes.Contains(log.TargetId)).ExecuteDeleteAsync();
+            }
+
+            await commerce.OrderStatusHistory.Where(history => _orderIds.Contains(history.OrderId)).ExecuteDeleteAsync();
             await commerce.OrderItems.Where(item => _orderIds.Contains(item.OrderId)).ExecuteDeleteAsync();
             await commerce.Orders.Where(order => _orderIds.Contains(order.Id)).ExecuteDeleteAsync();
         }
@@ -81,7 +89,7 @@ public sealed class ProductReviewTests : IClassFixture<CommerceWebApplicationFac
     // Ghi thẳng một đơn có dòng hàng của `productId`, để điều khiển trạng thái và tên người nhận.
     private async Task<string> AddOrderAsync(
         string? userId, string productId, OrderStatus status = OrderStatus.Delivered,
-        string recipientName = "Nguyễn Văn An", DateTime? createdAt = null)
+        string recipientName = "Nguyễn Văn An", DateTime? createdAt = null, PaymentStatus paymentStatus = PaymentStatus.Paid)
     {
         var orderId = Guid.NewGuid().ToString();
         var code = "RV" + Guid.NewGuid().ToString("N")[..10].ToUpperInvariant();
@@ -101,7 +109,7 @@ public sealed class ProductReviewTests : IClassFixture<CommerceWebApplicationFac
             }),
             PaymentMethod = PaymentMethod.Cod,
             Status = status,
-            PaymentStatus = PaymentStatus.Paid,
+            PaymentStatus = paymentStatus,
             Flags = [],
             Subtotal = 200_000,
             ShippingFee = 30_000,
@@ -470,6 +478,103 @@ public sealed class ProductReviewTests : IClassFixture<CommerceWebApplicationFac
         Assert.True(data.GetProperty("eligible").GetBoolean());
         Assert.Equal(JsonValueKind.Null, data.GetProperty("reason").ValueKind);
         Assert.Equal(JsonValueKind.Null, data.GetProperty("review").ValueKind);
+    }
+
+    // Nhân viên đổi trạng thái đơn bằng route fulfillment thật, để test đánh giá đi qua đúng đường mà nhân viên dùng.
+    private async Task StaffSetsStatusAsync(string orderId, string toStatus)
+    {
+        var (staff, session) = await IdentityTestData.CreateStaffSessionAsync(_database, "sales", "com31");
+        _userIds.Add(staff.Id);
+        await using var commerce = _database.CreateCommerceContext();
+        var code = await commerce.Orders.Where(order => order.Id == orderId).Select(order => order.Code).SingleAsync();
+        var response = await SendAsync(
+            HttpMethod.Put, $"/api/admin/orders/{code}/fulfillment", $"pk_session={session}",
+            new { toStatus, reason = "Nhân viên xác nhận thủ công." });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData(PaymentStatus.Unpaid)]
+    [InlineData(PaymentStatus.Paid)]
+    // Đơn đang giao chưa mở khóa đánh giá, dù là đơn COD chưa trả hay đơn SePay đã trả. Viết đánh giá trả 403.
+    public async Task ShippingOrder_IsNotEligibleAndCreateReturns403(PaymentStatus paymentStatus)
+    {
+        var productId = await NewProductAsync();
+        var customer = await NewCustomerAsync();
+        await AddOrderAsync(customer.Id, productId, OrderStatus.Shipping, paymentStatus: paymentStatus);
+
+        var data = await ReadDataAsync(await SendAsync(HttpMethod.Get, MinePath(productId), customer.Cookie));
+        var createResponse = await SendAsync(HttpMethod.Post, ReviewsPath(productId), customer.Cookie, new { rating = 5 });
+
+        Assert.False(data.GetProperty("eligible").GetBoolean());
+        Assert.Equal("NOT_PURCHASED", data.GetProperty("reason").GetString());
+        await AssertErrorAsync(createResponse, HttpStatusCode.Forbidden, "REVIEW_NOT_ALLOWED");
+        Assert.Empty(await ReviewsOfAsync(productId));
+    }
+
+    [Theory]
+    [InlineData(PaymentStatus.Unpaid)]
+    [InlineData(PaymentStatus.Paid)]
+    // Nhân viên xác nhận đã giao thì đơn mở khóa đánh giá, kể cả đơn COD chưa trả. Khách viết được đánh giá.
+    public async Task StaffConfirmsDelivery_UnlocksReview(PaymentStatus paymentStatus)
+    {
+        var productId = await NewProductAsync();
+        var customer = await NewCustomerAsync();
+        var orderId = await AddOrderAsync(customer.Id, productId, OrderStatus.Shipping, paymentStatus: paymentStatus);
+        await StaffSetsStatusAsync(orderId, "delivered");
+
+        var data = await ReadDataAsync(await SendAsync(HttpMethod.Get, MinePath(productId), customer.Cookie));
+        var createResponse = await SendAsync(HttpMethod.Post, ReviewsPath(productId), customer.Cookie, new { rating = 5 });
+
+        Assert.True(data.GetProperty("eligible").GetBoolean());
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("reason").ValueKind);
+        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        Assert.Single(await ReviewsOfAsync(productId));
+    }
+
+    [Fact]
+    // Nhân viên ghi nhận hoàn hàng thì đơn không mở khóa đánh giá. Viết đánh giá trả 403.
+    public async Task StaffRecordsReturn_KeepsReviewLocked()
+    {
+        var productId = await NewProductAsync();
+        var customer = await NewCustomerAsync();
+        var orderId = await AddOrderAsync(customer.Id, productId, OrderStatus.Shipping);
+        await StaffSetsStatusAsync(orderId, "returned");
+
+        var data = await ReadDataAsync(await SendAsync(HttpMethod.Get, MinePath(productId), customer.Cookie));
+        var createResponse = await SendAsync(HttpMethod.Post, ReviewsPath(productId), customer.Cookie, new { rating = 5 });
+
+        Assert.False(data.GetProperty("eligible").GetBoolean());
+        Assert.Equal("NOT_PURCHASED", data.GetProperty("reason").GetString());
+        await AssertErrorAsync(createResponse, HttpStatusCode.Forbidden, "REVIEW_NOT_ALLOWED");
+        Assert.Empty(await ReviewsOfAsync(productId));
+    }
+
+    [Fact]
+    // Response của đơn đang giao khớp hình dạng ví dụ `order shipping` của fixture điều kiện đánh giá.
+    public async Task Mine_WithShippingOrder_MatchesContractFixture()
+    {
+        var productId = await NewProductAsync();
+        var customer = await NewCustomerAsync();
+        await AddOrderAsync(customer.Id, productId, OrderStatus.Shipping, paymentStatus: PaymentStatus.Unpaid);
+
+        var response = await SendAsync(HttpMethod.Get, MinePath(productId), customer.Cookie);
+
+        await ContractFixture.AssertMatches("commerce/review-eligibility.json", "order shipping", response);
+    }
+
+    [Fact]
+    // Sau khi nhân viên xác nhận giao, response khớp hình dạng ví dụ `order delivered` của fixture điều kiện đánh giá.
+    public async Task Mine_AfterStaffConfirmsDelivery_MatchesContractFixture()
+    {
+        var productId = await NewProductAsync();
+        var customer = await NewCustomerAsync();
+        var orderId = await AddOrderAsync(customer.Id, productId, OrderStatus.Shipping, paymentStatus: PaymentStatus.Unpaid);
+        await StaffSetsStatusAsync(orderId, "delivered");
+
+        var response = await SendAsync(HttpMethod.Get, MinePath(productId), customer.Cookie);
+
+        await ContractFixture.AssertMatches("commerce/review-eligibility.json", "order delivered", response);
     }
 
     [Fact]

@@ -25,9 +25,9 @@ public static class OrderTransitions
         new(OrderStatus.PendingConfirmation, OrderStatus.Cancelled, CustomerOrStaff),
         new(OrderStatus.Confirmed, OrderStatus.Shipping, StaffOnly),
         new(OrderStatus.Confirmed, OrderStatus.Cancelled, StaffOnly),
-        // Trạng thái giao hàng do `shipping` báo về. Con người không đặt tay hai trạng thái này.
-        new(OrderStatus.Shipping, OrderStatus.Delivered, SystemOnly),
-        new(OrderStatus.Shipping, OrderStatus.Returned, SystemOnly),
+        // GHN báo giao hoặc hoàn thì hệ thống đổi trạng thái. Nhân viên cũng xác nhận tay khi luồng GHN không dùng được.
+        new(OrderStatus.Shipping, OrderStatus.Delivered, StaffOrSystem),
+        new(OrderStatus.Shipping, OrderStatus.Returned, StaffOrSystem),
         // Hủy vận đơn thành công thì đơn về `confirmed`. GHN tự hủy vận đơn cũng đưa đơn về đây.
         new(OrderStatus.Shipping, OrderStatus.Confirmed, StaffOrSystem),
         // Đơn đang giao chỉ hủy được khi vận đơn không còn hiệu lực. Điều kiện này kiểm riêng trong `Evaluate`.
