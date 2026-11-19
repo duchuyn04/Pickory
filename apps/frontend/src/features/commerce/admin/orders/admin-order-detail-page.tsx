@@ -13,6 +13,7 @@ import {
   formatPaymentMethod,
   formatPaymentStatus,
   formatShipmentStatus,
+  MANUAL_FULFILLMENT_FLAGS,
 } from '../../order-labels';
 import { OrderActions } from './admin-order-actions';
 import {
@@ -137,6 +138,9 @@ export function AdminOrderDetailPage() {
 
   // Phí đã lưu hoặc phí dự phòng khác phí GHN vừa tính. Biến này quyết định cả nhãn và dòng so sánh phí ở thẻ Vận đơn.
   const usesSubstituteFee = order.shippingFeeSource !== 'ghn';
+
+  // Chỉ ba cờ ghi tay vào dòng riêng. Cờ khác đã hiện ở hàng Ghi chú, nên không lặp lại ở thẻ Vận đơn.
+  const manualFlags = MANUAL_FULFILLMENT_FLAGS.filter((flag) => order.flags.includes(flag));
 
   return (
     <div className="page">
@@ -371,6 +375,20 @@ export function AdminOrderDetailPage() {
                   <dt>Trạng thái</dt>
                   <dd>{formatShipmentStatus(order.shipment.status)}</dd>
                 </div>
+                {manualFlags.length > 0 && (
+                  <div>
+                    <dt>Ghi nhận thủ công</dt>
+                    <dd>
+                      <div className="row-actions">
+                        {manualFlags.map((flag) => (
+                          <span key={flag} className={orderFlagBadgeClass(flag)}>
+                            {formatOrderFlag(flag)}
+                          </span>
+                        ))}
+                      </div>
+                    </dd>
+                  </div>
+                )}
                 <div>
                   <dt>Phí GHN thực tế</dt>
                   <dd>{formatProductPrice(order.shipment.fee)}</dd>

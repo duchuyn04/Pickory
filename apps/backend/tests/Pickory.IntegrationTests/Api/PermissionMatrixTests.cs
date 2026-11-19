@@ -93,6 +93,7 @@ public sealed class PermissionMatrixTests : IClassFixture<ApiWebApplicationFacto
         { "PATCH", "/api/admin/reviews/dummy-id", [Permissions.ReviewsModerate] },
         { "POST", "/api/admin/orders/dummy-id/shipment", [Permissions.OrdersFulfill] },
         { "DELETE", "/api/admin/orders/dummy-id/shipment", [Permissions.OrdersFulfill] },
+        { "PUT", "/api/admin/orders/dummy-id/fulfillment", [Permissions.OrdersFulfill] },
         { "GET", "/api/admin/categories", [Permissions.ProductsRead] },
         { "POST", "/api/admin/categories", [Permissions.ProductsWrite] },
         { "PATCH", "/api/admin/categories/dummy-id", [Permissions.ProductsWrite] },

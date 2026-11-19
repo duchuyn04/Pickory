@@ -129,6 +129,28 @@ describe('OrderSuccessPage', () => {
     expect(container.querySelector('[aria-current="step"]')).toBeNull();
   });
 
+  it('đơn shipping giao thủ công hiện chữ thông báo ở bước Giao hàng', async () => {
+    stubOrderApi(() => orderResponse(buildOrderDetail({ status: 'shipping', trackingCode: null })));
+    await renderOrderSuccess('PK12345678', { accessToken: 'token-abc' }, null);
+
+    const shipStep = Array.from(container.querySelectorAll('.order-next-step')).find((step) =>
+      step.textContent?.includes('Giao hàng'),
+    );
+    expect(shipStep?.textContent).toContain(
+      'Shop đang giao hàng thủ công. Không có mã vận đơn GHN.',
+    );
+  });
+
+  it('đơn shipping có mã vận đơn giữ chữ bàn giao cho đơn vị vận chuyển', async () => {
+    stubOrderApi(() =>
+      orderResponse(buildOrderDetail({ status: 'shipping', trackingCode: 'GHN-1' })),
+    );
+    await renderOrderSuccess('PK12345678', { accessToken: 'token-abc' }, null);
+
+    expect(container.textContent).toContain('Shop bàn giao đơn cho đơn vị vận chuyển.');
+    expect(container.textContent).not.toContain('giao hàng thủ công');
+  });
+
   it('hiển thị mã đơn và liên kết xem đơn kèm token khi có accessToken trong state', async () => {
     // Khách có token thì nhận liên kết xem đơn kèm token truy cập.
     stubOrderApi(() => orderResponse(buildOrderDetail()));

@@ -1,3 +1,4 @@
+import { adminOrderDetailSchema } from './admin-order-schemas';
 import { apiRequest } from '../../../../shared/api';
 
 // Tên tham số bộ lọc trên URL. Trùng tên tham số của `GET /api/admin/orders`.
@@ -147,6 +148,9 @@ export function fetchAdminOrderDetail(code: string) {
   return apiRequest<AdminOrderDetail>(`/api/admin/orders/${encodeURIComponent(code)}`);
 }
 
+// Trạng thái đích của giao hàng thủ công. Backend chỉ nhận bốn giá trị này ở route `fulfillment`.
+export type FulfillmentTargetStatus = 'confirmed' | 'shipping' | 'delivered' | 'returned';
+
 // Thao tác ghi lên một đơn. Mỗi thao tác là một tài nguyên con của đơn, theo `AdminOrderEndpoints`.
 export type OrderMutation =
   | { kind: 'confirm' }
@@ -155,7 +159,8 @@ export type OrderMutation =
   | { kind: 'createShipment'; parcel: AdminOrderSuggestedParcel }
   | { kind: 'cancelShipment' }
   | { kind: 'receiveCod' }
-  | { kind: 'refund'; transactionRef: string };
+  | { kind: 'refund'; transactionRef: string }
+  | { kind: 'fulfillment'; toStatus: FulfillmentTargetStatus; reason: string };
 
 // Gọi route của thao tác và trả chi tiết đơn mới. Lỗi 400, 409, 422 thành `ApiError` mang thông báo của API.
 export function runOrderMutation(code: string, mutation: OrderMutation) {
@@ -184,5 +189,11 @@ export function runOrderMutation(code: string, mutation: OrderMutation) {
         method: 'PUT',
         body: JSON.stringify({ transactionRef: mutation.transactionRef }),
       });
+    case 'fulfillment':
+      // Response sai hợp đồng thì `parse` ném `ZodError`. Nơi gọi không ghi dữ liệu nửa vời vào cache.
+      return apiRequest<unknown>(`${base}/fulfillment`, {
+        method: 'PUT',
+        body: JSON.stringify({ toStatus: mutation.toStatus, reason: mutation.reason }),
+      }).then((data) => adminOrderDetailSchema.parse(data));
   }
 }

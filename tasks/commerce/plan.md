@@ -68,6 +68,27 @@ COM-24 nghiệm thu
 
 COM-07 cần COM-06, vì ngưỡng miễn phí ship và hạn mức COD nằm trong cấu hình. COM-08 cần COM-07, vì đặt đơn so tổng tiền với preview. COM-12 cần COM-11, vì job hết hạn và tiền về muộn dùng chung luật khớp đơn.
 
+## Đồ thị phụ thuộc bổ sung: fulfillment thủ công
+
+Hợp đồng và fixtures đã được duyệt ngày 2026-11-19. Hai track có thể bắt đầu song song.
+
+```
+Backend                              Frontend
+COM-29 bắt đầu giao thủ công         COM-UI12 fixtures và API client
+  └─ COM-30 hủy giao thủ công         ├── COM-UI13 bắt đầu và hủy giao thủ công
+    └─ COM-31 giao hoặc hoàn          │     └── COM-UI14 xác nhận giao, hoàn và cờ
+         │                            └── COM-UI15 nội dung giao thủ công phía khách
+         │                                  │
+         └──────────── COM-E2E6 ────────────┘
+         └──────────── COM-E2E7 ────────────┘
+```
+
+COM-30 và COM-31 đi sau COM-29 vì cùng sửa service fulfillment.
+COM-UI14 đi sau COM-UI13 vì cùng sửa cụm component thao tác đơn.
+COM-UI15 chỉ phụ thuộc dữ liệu đơn hiện có, nên có thể làm song song với COM-UI13 và COM-UI14.
+Hai task E2E chỉ chạy sau khi cả hai track hoàn thành phần liên quan.
+COM-32 sửa API khách để đơn GHN không hiện chữ giao thủ công. Task này đi sau COM-UI15 và trước Checkpoint M7.
+
 ## Architecture Decisions
 
 1. **Cấu trúc theo `tasks/dotnet-migration/plan.md`.** Hai project mới: `Pickory.Modules.Commerce` và `Pickory.Modules.Commerce.Contracts`. `CommerceModule.cs` có `AddCommerceModule` và `MapCommerceEndpoints`. `Pickory.ArchitectureTests` thêm luật cho module mới. `CommerceDbContext` dùng schema lịch sử `ef_commerce`.
@@ -134,6 +155,14 @@ COM-07 cần COM-06, vì ngưỡng miễn phí ship và hạn mức COD nằm tr
     - DB chỉ lưu một hash token cho mỗi đơn (`AccessTokenHash`) và không giữ token gốc. Module tạo token mới và thay hash cũ, nên không cần đổi schema. Link trong email cũ hết hiệu lực.
     - Giới hạn số lần theo IP và theo email chặn dò mã đơn hàng loạt.
 
+22. **`delivered` là trạng thái hoàn thành duy nhất.** Không thêm trạng thái `completed`. Không đổi schema, phân quyền hoặc Contracts. Ba cờ thủ công dùng mảng `orders.flags` hiện có. API khách giữ nguyên hình dạng.
+23. **Một service nhận mọi chuyển đổi fulfillment thủ công.** `AdminOrderFulfillmentService` kiểm request, khóa đơn và áp bảng chuyển đổi. `AdminOrderEndpoints` map `PUT /api/admin/orders/{code}/fulfillment` với `orders:fulfill`. Response đọc lại qua `AdminOrderService`.
+24. **Máy trạng thái giữ làm nguồn luật chung.** COM-31 thêm hai chuyển đổi của nhân viên sang `delivered` và `returned`. Service kiểm riêng `manual_shipping` và vận đơn hiệu lực. Request cùng trạng thái trả 200 mà không ghi thêm dữ liệu.
+25. **Thao tác thủ công không gọi nghiệp vụ GHN.** Service chỉ đọc vận đơn hiện tại qua `IShippingService`. Module `shipping` không đổi. Tồn kho không đổi. Đơn `returned` dùng quy tắc `refund_pending` hiện có.
+26. **Frontend mở rộng cụm thao tác đơn hiện có.** `runOrderMutation` nhận một mutation fulfillment chung. `OrderActions` quyết định nút theo quyền, trạng thái và cờ. Zod kiểm response route mới. Trang khách dùng `trackingCode` để chọn nội dung giao hàng.
+27. **Hai track dùng chung fixtures.** Backend dùng `ContractFixture.AssertMatches`. Frontend thêm bộ đọc theo mẫu `support-desk` và kiểm schema bằng Vitest. Component test dùng response mẫu. E2E chỉ chạy với API thật, không thêm route giả Playwright.
+28. **Không mở rộng nghiệp vụ đánh giá.** `ReviewService` giữ nguyên điều kiện `delivered`. Không thêm nút khách xác nhận nhận hàng. Không làm hoàn hàng sau `delivered` trong đợt này.
+
 ## Task List
 
 Chi tiết từng task ở `tasks/commerce/todo.md`.
@@ -197,6 +226,37 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 - [x] COM-27 đơn dùng phí vận chuyển dự phòng
 - [x] COM-28 đặt đơn song song cùng khóa không trả 400 (thêm ngày 2026-10-21)
 
+### Phase 9: Fulfillment thủ công và đánh giá sau giao
+
+Phần mở rộng giúp `sales` hoàn thành đơn khi GHN không cập nhật. Khách chỉ đánh giá sau khi đơn đạt `delivered`.
+Kế hoạch được duyệt ngày 2026-11-19. Tiêu chí chi tiết của từng task nằm ở `tasks/commerce/todo.md`.
+
+Backend track:
+- [x] COM-29 API bắt đầu giao hàng thủ công từ `confirmed` sang `shipping`
+- [x] COM-30 API hủy giao hàng thủ công từ `shipping` về `confirmed`
+- [x] COM-31 API xác nhận `delivered` hoặc `returned` và kiểm tra mở khóa đánh giá
+- [x] COM-32 API khách trả mã vận đơn GHN thật
+  Thêm ngày 2026-11-19, sau khi COM-UI15 thấy API khách luôn trả `trackingCode: null`. Làm trước Checkpoint M7.
+
+Frontend track:
+- [x] COM-UI12 đọc fixtures và gọi API fulfillment
+- [x] COM-UI13 bắt đầu và hủy giao hàng thủ công trên trang admin
+- [x] COM-UI14 xác nhận giao, ghi nhận hoàn và hiển thị cờ trên trang admin
+- [x] COM-UI15 hiển thị nội dung giao hàng thủ công trên trang khách
+
+Hai track gặp nhau:
+- [x] COM-E2E6 hoàn thành đơn thủ công rồi khách viết đánh giá
+- [x] COM-E2E7 hủy giao hàng thủ công và ghi nhận hoàn hàng
+
+### Checkpoint M7
+- [x] Backend unit, integration và contract test của fulfillment đạt
+- [x] Frontend lint, typecheck, unit test và build đạt
+- [x] COM-E2E6 và COM-E2E7 chạy với API thật, không có route giả cho fulfillment
+- [x] `support` đọc được đơn nhưng không thực hiện được thao tác fulfillment
+- [x] Khách chỉ viết được đánh giá sau khi đơn chuyển `delivered`
+- [ ] Review kế hoạch và kết quả với chủ shop
+  Kế hoạch đã được duyệt ngày 2026-11-19. Kết quả chờ triển khai.
+
 ### Checkpoint cuối
 - [ ] Mọi dòng Traceability đạt, trừ dòng ghi chờ khóa
   Dòng chatbot chờ CBW-E2E1. Dòng SePay chờ khóa.
@@ -217,8 +277,11 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 | Thiếu tiền, thừa tiền, sai nội dung hiện trong màn đối soát và khớp tay được | COM-11, COM-13, COM-UI6 | Test tích hợp; Vitest; E2E `--headed` |
 | Đơn trên hạn mức COD không chọn được COD; tạm tính trên ngưỡng thì phí ship khách trả bằng 0 | COM-01, COM-07, COM-08, COM-UI2 | Unit test tính tiền; test tích hợp preview và đặt đơn; Vitest form checkout |
 | Sales tạo vận đơn GHN (sandbox) từ trang đơn; trạng thái giao hàng tự cập nhật | COM-16, COM-UI5, COM-E2E3, COM-24 | Test tích hợp với `FakeGhnClient`; E2E. Sandbox chờ token GHN |
-| `support` xem được đơn nhưng gọi API hủy hoặc tạo vận đơn nhận 403 | COM-14, COM-15, COM-16, COM-24 | Ma trận quyền; COM-E2E3 |
-| Chỉ người đã nhận hàng đánh giá được; review bị ẩn biến mất khỏi trang sản phẩm và điểm trung bình được tính lại | COM-19, COM-20, COM-UI9, COM-E2E4 | Test tích hợp; E2E |
+| Sales đưa đơn từ `confirmed` sang `shipping` rồi `delivered` thủ công | COM-29, COM-31, COM-UI13, COM-UI14, COM-E2E6 | Integration test từng chuyển đổi; E2E với API thật |
+| Đơn GHN đang giao hiện mã vận đơn cho khách, đơn giao thủ công hiện chữ giao thủ công | COM-UI15, COM-32 | Integration test API khách; E2E GHN kiểm trang đơn của khách |
+| Thao tác thủ công có lý do và audit; gửi lại không thêm nhật ký | COM-29, COM-30, COM-31 | Integration test đếm lịch sử, audit và sự kiện sau request lặp |
+| `support` xem được đơn nhưng gọi API hủy, tạo vận đơn hoặc fulfillment nhận 403 | COM-14, COM-15, COM-16, COM-29, COM-UI13, COM-E2E6 | Ma trận quyền; component test; E2E |
+| Chỉ khách đã nhận hàng đánh giá được; review bị ẩn biến mất khỏi trang sản phẩm và điểm trung bình được tính lại | COM-19, COM-20, COM-31, COM-UI9, COM-E2E4, COM-E2E6 | Test tích hợp; E2E |
 | Dịch vụ chatbot lỗi, khách vẫn mua hàng (đổi ngày 2026-10-18, trước đây là khóa AI sai) | CBW-E2E1 của `tasks/chatbot-widget/` | E2E đặt đơn COD khi địa chỉ script chatbot không truy cập được |
 | Coverage ít nhất 80% | COM-24 | Coverage gộp unit và tích hợp, cách đo như shipping |
 
@@ -233,6 +296,10 @@ Chi tiết từng task ở `tasks/commerce/todo.md`.
 | Admin đổi số tài khoản nhận trên giao diện | Người chiếm quyền admin chuyển hướng tiền | Audit log mỗi lần sửa. Đã chốt ở Câu hỏi mở 6 |
 | Sự kiện của vận đơn cũ đến sau khi tạo vận đơn mới | Đơn bị chuyển sai trạng thái | Quyết định 9: so `ShipmentId` với vận đơn hiện tại |
 | Email lỗi khi đặt đơn | Khách không nhận link xem đơn | Email lỗi không làm hỏng đặt đơn. Trang đặt hàng thành công hiện link xem đơn |
+| Nhân viên xác nhận `delivered` nhầm | Mở khóa đánh giá khi khách chưa nhận hàng | Hộp thoại cảnh báo, lý do bắt buộc, cờ thủ công và audit |
+| GHN cập nhật sau thao tác thủ công | Trạng thái đơn và vận đơn không khớp nhau | Hiện cả hai trạng thái. Sự kiện muộn không đổi đơn đã kết thúc. Integration test kiểm tra |
+| Hai request fulfillment cùng lúc | Nhật ký và audit bị nhân đôi | Khóa dòng đơn. Request cùng trạng thái trả 200 mà không ghi thêm |
+| Response khác hợp đồng đã duyệt | Frontend đọc sai dữ liệu | `ContractFixture` ở backend và Zod với fixtures ở frontend |
 
 ## Câu hỏi mở
 

@@ -226,6 +226,44 @@ describe('OrderDetailPage', () => {
     expect(container.textContent).not.toContain('Mã vận đơn');
   });
 
+  it('đơn shipping giao thủ công hiện mục Giao hàng và ẩn mục Mã vận đơn', async () => {
+    stubOrderApi(buildDetail({ status: 'shipping', trackingCode: null }));
+    await renderOrderDetail('PK12345678');
+
+    const labels = Array.from(container.querySelectorAll('.order-meta-item small')).map(
+      (label) => label.textContent,
+    );
+    expect(labels).toContain('Giao hàng');
+    expect(labels).not.toContain('Mã vận đơn');
+    expect(container.textContent).toContain(
+      'Shop đang giao hàng thủ công. Không có mã vận đơn GHN.',
+    );
+  });
+
+  it('đơn shipping có mã vận đơn hiện mã và không hiện chữ giao thủ công', async () => {
+    stubOrderApi(buildDetail({ status: 'shipping', trackingCode: 'GHN-TRACK-999' }));
+    await renderOrderDetail('PK12345678');
+
+    const labels = Array.from(container.querySelectorAll('.order-meta-item small')).map(
+      (label) => label.textContent,
+    );
+    expect(labels).toContain('Mã vận đơn');
+    expect(labels).not.toContain('Giao hàng');
+    expect(container.textContent).toContain('GHN-TRACK-999');
+    expect(container.textContent).not.toContain('giao hàng thủ công');
+  });
+
+  it.each(['confirmed', 'delivered'])(
+    'đơn %s có trackingCode null không hiện chữ giao thủ công',
+    async (status) => {
+      stubOrderApi(buildDetail({ status, trackingCode: null }));
+      await renderOrderDetail('PK12345678');
+
+      expect(container.textContent).not.toContain('giao hàng thủ công');
+      expect(container.textContent).not.toContain('Mã vận đơn');
+    },
+  );
+
   it('hiển thị thông báo không tìm thấy đơn và liên kết về trang chủ khi API trả 404', async () => {
     // Đơn không tồn tại hoặc không đủ quyền xem.
     stubOrderApi(null);

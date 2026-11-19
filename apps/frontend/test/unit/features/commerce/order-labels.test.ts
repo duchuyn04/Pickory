@@ -5,6 +5,7 @@ import {
   formatPaymentMethod,
   formatPaymentStatus,
   formatShipmentStatus,
+  MANUAL_FULFILLMENT_FLAGS,
   ORDER_FLAG_CODES,
   ORDER_STATUS_CODES,
 } from '../../../../src/features/commerce/order-labels';
@@ -57,20 +58,23 @@ describe('formatPaymentMethod', () => {
 });
 
 describe('formatOrderFlag', () => {
-  it('chuyển đổi đúng sáu cờ đơn sang tiếng Việt', () => {
+  it('chuyển đổi đúng chín cờ đơn sang tiếng Việt', () => {
     expect(formatOrderFlag('underpaid')).toBe('Thanh toán thiếu');
     expect(formatOrderFlag('overpaid')).toBe('Thanh toán dư');
     expect(formatOrderFlag('late_payment')).toBe('Thanh toán trễ');
     expect(formatOrderFlag('payment_expired')).toBe('Quá hạn thanh toán');
     expect(formatOrderFlag('invoice_issued')).toBe('Đã xuất hóa đơn');
     expect(formatOrderFlag('shipment_cancelled')).toBe('Vận đơn đã hủy');
+    expect(formatOrderFlag('manual_shipping')).toBe('Giao hàng thủ công');
+    expect(formatOrderFlag('manual_delivery')).toBe('Xác nhận giao thủ công');
+    expect(formatOrderFlag('manual_return')).toBe('Ghi nhận hoàn thủ công');
   });
 
   it('giữ nguyên chuỗi khi gặp cờ lạ', () => {
     expect(formatOrderFlag('future_flag')).toBe('future_flag');
   });
 
-  it('danh sách mã cờ gồm đúng sáu cờ theo thứ tự của backend', () => {
+  it('danh sách mã cờ gồm đúng chín cờ theo thứ tự của backend', () => {
     expect(ORDER_FLAG_CODES).toEqual([
       'underpaid',
       'overpaid',
@@ -78,6 +82,19 @@ describe('formatOrderFlag', () => {
       'payment_expired',
       'invoice_issued',
       'shipment_cancelled',
+      'manual_shipping',
+      'manual_delivery',
+      'manual_return',
+    ]);
+  });
+});
+
+describe('MANUAL_FULFILLMENT_FLAGS', () => {
+  it('gồm đúng ba cờ ghi nhận thủ công', () => {
+    expect(MANUAL_FULFILLMENT_FLAGS).toEqual([
+      'manual_shipping',
+      'manual_delivery',
+      'manual_return',
     ]);
   });
 });

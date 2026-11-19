@@ -130,6 +130,29 @@ public sealed class AdminOrderListTests : IClassFixture<CommerceWebApplicationFa
     }
 
     [Fact]
+    // Bộ lọc `manual_shipping` chỉ trả đơn đã đặt cờ giao hàng thủ công.
+    public async Task List_FiltersByManualShippingFlag()
+    {
+        await _kit.AddOrderAsync("F-MANUAL", BaseTime.AddMinutes(1), OrderStatus.Shipping, flags: ["manual_shipping"]);
+        await _kit.AddOrderAsync("F-GHN", BaseTime.AddMinutes(2), OrderStatus.Shipping);
+        await _kit.AddOrderAsync("F-OTHER", BaseTime.AddMinutes(3), flags: ["underpaid"]);
+
+        Assert.Equal(["F-MANUAL"], CodesOf(await ReadDataAsync(await GetAsync("flag=manual_shipping"))));
+    }
+
+    [Fact]
+    // Bộ lọc `manual_delivery` và `manual_return` chỉ trả đơn có đúng cờ đó.
+    public async Task List_FiltersByManualDeliveryAndReturnFlags()
+    {
+        await _kit.AddOrderAsync("F-DELIVERED", BaseTime.AddMinutes(1), OrderStatus.Delivered, flags: ["manual_shipping", "manual_delivery"]);
+        await _kit.AddOrderAsync("F-RETURNED", BaseTime.AddMinutes(2), OrderStatus.Returned, flags: ["manual_shipping", "manual_return"]);
+        await _kit.AddOrderAsync("F-GHN", BaseTime.AddMinutes(3), OrderStatus.Delivered);
+
+        Assert.Equal(["F-DELIVERED"], CodesOf(await ReadDataAsync(await GetAsync("flag=manual_delivery"))));
+        Assert.Equal(["F-RETURNED"], CodesOf(await ReadDataAsync(await GetAsync("flag=manual_return"))));
+    }
+
+    [Fact]
     // COM-17 lọc "COD đã giao chưa nhận tiền" bằng tổ hợp ba tham số. Các bộ lọc kết hợp theo AND.
     public async Task List_CombinesFiltersWithAnd()
     {

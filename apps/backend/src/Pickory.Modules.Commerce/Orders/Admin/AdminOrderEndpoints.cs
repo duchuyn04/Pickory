@@ -42,6 +42,10 @@ internal static class AdminOrderEndpoints
             .RequirePermission(Permissions.OrdersFulfill);
         endpoints.MapDelete($"{OrdersPath}/{{code}}/shipment", CancelShipmentAsync)
             .RequirePermission(Permissions.OrdersFulfill);
+
+        // Giao hàng thủ công đặt trạng thái đơn bằng PUT, cùng quyền `orders:fulfill` với vận đơn GHN.
+        endpoints.MapPut($"{OrdersPath}/{{code}}/fulfillment", UpdateFulfillmentAsync)
+            .RequirePermission(Permissions.OrdersFulfill);
     }
 
     private static async Task<IResult> ConfirmAsync(string code, HttpContext context, AdminOrderActionService service)
@@ -132,6 +136,24 @@ internal static class AdminOrderEndpoints
 
         var actorId = context.GetActor().UserId!;
         var result = await service.CancelAsync(code, actorId, context.RequestAborted);
+        return Results.Ok(new ApiResponse<AdminOrderDetailResponse>(result));
+    }
+
+    private static async Task<IResult> UpdateFulfillmentAsync(
+        string code, HttpContext context, JsonElement? body, AdminOrderFulfillmentService service)
+    {
+        SetNoStore(context);
+
+        // Kiểm body trước khi mở transaction. Body sai không khóa đơn và không ghi audit.
+        var failures = new List<ValidationFailure>();
+        var update = UpdateFulfillmentRequest.Read(body, failures);
+        if (failures.Count > 0)
+        {
+            throw new ValidationException(failures);
+        }
+
+        var actorId = context.GetActor().UserId!;
+        var result = await service.UpdateAsync(code, actorId, update.ToStatus, update.Reason, context.RequestAborted);
         return Results.Ok(new ApiResponse<AdminOrderDetailResponse>(result));
     }
 

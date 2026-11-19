@@ -12,7 +12,12 @@ interface NextStepsInput {
   status: string;
   paymentMethod: string;
   paymentStatus: string;
+  // Khóa này có thể vắng mặt. Chỉ giá trị `null` thật mới là đơn giao thủ công.
+  trackingCode?: string | null;
 }
+
+// Chữ khách thấy khi shop giao hàng thủ công. Cả hai trang đơn của khách dùng chung hằng này.
+export const MANUAL_SHIPPING_NOTICE = 'Shop đang giao hàng thủ công. Không có mã vận đơn GHN.';
 
 // Trạng thái đơn đã qua bước xác nhận. Từ đây shop chuẩn bị giao hoặc đã giao.
 const CONFIRMED_STATUSES = ['confirmed', 'shipping', 'delivered'];
@@ -22,6 +27,7 @@ export function buildNextSteps({
   status,
   paymentMethod,
   paymentStatus,
+  trackingCode,
 }: NextStepsInput): NextStep[] {
   // Đơn đã hủy hoặc đã trả không đi tiếp, nên hiện các bước sẽ gây hiểu nhầm.
   if (status === 'cancelled' || status === 'returned') return [];
@@ -58,10 +64,14 @@ export function buildNextSteps({
       : status === 'confirmed' || status === 'shipping'
         ? 'current'
         : 'upcoming';
+  // So sánh chặt với `null`. Chuỗi rỗng hoặc `undefined` không phải đơn giao thủ công.
+  const isManualShipping = status === 'shipping' && trackingCode === null;
   steps.push({
     key: 'ship',
     title: 'Giao hàng',
-    description: 'Shop bàn giao đơn cho đơn vị vận chuyển. Mã vận đơn hiện trên trang đơn hàng.',
+    description: isManualShipping
+      ? MANUAL_SHIPPING_NOTICE
+      : 'Shop bàn giao đơn cho đơn vị vận chuyển. Mã vận đơn hiện trên trang đơn hàng.',
     state: shipState,
   });
 

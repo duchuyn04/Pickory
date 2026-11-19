@@ -1,5 +1,6 @@
 import { useInfiniteQuery, useQuery, type InfiniteData } from '@tanstack/react-query';
 import { apiRequest, type ApiError } from '../../../../shared/api';
+import { myReviewStatusSchema } from './review-schemas';
 
 // Số đánh giá mỗi trang. Nằm trong khoảng 1 đến 50 mà backend cho phép.
 export const REVIEW_PAGE_SIZE = 10;
@@ -72,8 +73,12 @@ export function fetchReviewPage(productId: string, cursor: string | null): Promi
   );
 }
 
-export function fetchMyReview(productId: string): Promise<MyReviewStatus> {
-  return apiRequest<MyReviewStatus>(`/api/products/${encodeURIComponent(productId)}/reviews/mine`);
+export async function fetchMyReview(productId: string): Promise<MyReviewStatus> {
+  const data = await apiRequest<unknown>(
+    `/api/products/${encodeURIComponent(productId)}/reviews/mine`,
+  );
+  // Response sai hình dạng thì `parse` ném `ZodError`. Giao diện không đọc trường thiếu để hiện giá trị sai.
+  return myReviewStatusSchema.parse(data);
 }
 
 export function createReview(productId: string, payload: ReviewPayload): Promise<OwnReview> {

@@ -2,14 +2,22 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { FieldError, fieldErrorProps } from '../../../../shared/field-error';
 import { AdminFormDialog } from '../../../../shared/admin-form-dialog';
+import { ApiError } from '../../../../shared/api';
 import { checkPermission, useActor } from '../../../identity/hooks/use-actor';
-import { runOrderMutation, type AdminOrderDetail, type OrderMutation } from './admin-orders-api';
+import {
+  runOrderMutation,
+  type AdminOrderDetail,
+  type FulfillmentTargetStatus,
+  type OrderMutation,
+} from './admin-orders-api';
 import {
   CANCEL_REASON_MAX_LENGTH,
+  FULFILLMENT_REASON_MAX_LENGTH,
   TRANSACTION_REF_MAX_LENGTH,
   initialParcelForm,
   toParcelBody,
   validateCancelReason,
+  validateFulfillmentReason,
   validateParcelForm,
   validateTransactionRef,
   type ParcelErrors,
@@ -18,6 +26,7 @@ import {
 } from './order-action-forms';
 import { availableOrderActions, type OrderActionKey } from './order-actions';
 import { getErrorMessage } from '../../../../shared/error-message';
+import { formatPaymentStatus } from '../../order-labels';
 
 interface ActionCopy {
   // Chữ trên nút mở hộp thoại.
@@ -28,6 +37,8 @@ interface ActionCopy {
   successMessage: string;
   // Nút hủy dùng màu nguy hiểm để nhân viên không bấm nhầm.
   danger?: boolean;
+  // Đường dự phòng và việc ghi sổ dùng nút viền, để nút chính của đơn nổi bật.
+  secondary?: boolean;
 }
 
 const ACTION_COPY: Record<OrderActionKey, ActionCopy> = {
@@ -45,6 +56,15 @@ const ACTION_COPY: Record<OrderActionKey, ActionCopy> = {
     submitText: 'Tạo vận đơn',
     successMessage: 'Đã tạo vận đơn.',
   },
+  startManualShipping: {
+    buttonLabel: 'Giao hàng thủ công',
+    title: 'Giao hàng thủ công',
+    description:
+      'Dùng khi GHN không nhận vận đơn và shop tự giao. Đơn chuyển sang đang giao và hệ thống không tạo vận đơn GHN. Lý do được lưu vào lịch sử đơn.',
+    submitText: 'Bắt đầu giao thủ công',
+    successMessage: 'Đã chuyển đơn sang giao hàng thủ công.',
+    secondary: true,
+  },
   cancelShipment: {
     buttonLabel: 'Hủy vận đơn',
     title: 'Hủy vận đơn',
@@ -53,12 +73,39 @@ const ACTION_COPY: Record<OrderActionKey, ActionCopy> = {
     successMessage: 'Đã hủy vận đơn.',
     danger: true,
   },
+  returnToConfirmed: {
+    buttonLabel: 'Quay về đã xác nhận',
+    title: 'Quay về đã xác nhận',
+    description:
+      'Đơn quay về đã xác nhận để tạo vận đơn GHN hoặc giao thủ công lại. Cờ giao thủ công của đơn bị bỏ. Lý do được lưu vào lịch sử đơn.',
+    submitText: 'Quay về đã xác nhận',
+    successMessage: 'Đã đưa đơn về đã xác nhận.',
+    secondary: true,
+  },
+  recordReturn: {
+    buttonLabel: 'Ghi nhận hoàn hàng',
+    title: 'Ghi nhận hoàn hàng',
+    description:
+      'Dùng khi hàng đã về tay shop. Đơn chuyển sang đã trả hàng. Lý do được lưu vào lịch sử đơn.',
+    submitText: 'Ghi nhận hoàn hàng',
+    successMessage: 'Đã ghi nhận hoàn hàng.',
+    secondary: true,
+  },
+  confirmDelivered: {
+    buttonLabel: 'Xác nhận đã giao',
+    title: 'Xác nhận đã giao',
+    description:
+      'Chỉ tiếp tục khi khách đã nhận hàng. Đơn chuyển sang đã giao và khách được viết đánh giá. Lý do được lưu vào lịch sử đơn.',
+    submitText: 'Xác nhận đã giao',
+    successMessage: 'Đã xác nhận đơn đã giao.',
+  },
   issueInvoice: {
     buttonLabel: 'Đã xuất hóa đơn',
     title: 'Đánh dấu đã xuất hóa đơn',
     description: 'Ghi nhận hóa đơn VAT của đơn này đã được xuất.',
     submitText: 'Đánh dấu',
     successMessage: 'Đã đánh dấu đã xuất hóa đơn.',
+    secondary: true,
   },
   receiveCod: {
     buttonLabel: 'Đã nhận tiền COD',
@@ -91,6 +138,28 @@ const PARCEL_FIELD_INPUTS: { field: ParcelField; id: string; label: string }[] =
   { field: 'widthCm', id: 'parcel-width', label: 'Rộng (cm)' },
   { field: 'heightCm', id: 'parcel-height', label: 'Cao (cm)' },
 ];
+
+// Đích của từng thao tác giao hàng thủ công, gửi lên route `fulfillment`. Thao tác mới cùng nhóm thêm vào đây.
+const FULFILLMENT_TARGET_STATUS = {
+  startManualShipping: 'shipping',
+  returnToConfirmed: 'confirmed',
+  confirmDelivered: 'delivered',
+  recordReturn: 'returned',
+} satisfies Partial<Record<OrderActionKey, FulfillmentTargetStatus>>;
+
+type FulfillmentActionKey = keyof typeof FULFILLMENT_TARGET_STATUS;
+
+// Các thao tác trong nhóm này dùng chung ô lý do. Chúng cũng chung cách báo lỗi 409.
+function isFulfillmentAction(action: OrderActionKey): action is FulfillmentActionKey {
+  return action in FULFILLMENT_TARGET_STATUS;
+}
+
+// Nút nguy hiểm và nút phụ dùng kiểu khác nút chính. Nhờ vậy nút chính ngoài cùng bên phải nổi bật.
+function buttonClassName(copy: ActionCopy): string {
+  if (copy.danger) return 'btn btn-danger';
+  if (copy.secondary) return 'btn btn-outline';
+  return 'btn btn-primary';
+}
 
 interface ActionDialogProps {
   action: OrderActionKey;
@@ -137,6 +206,20 @@ function OrderActionDialog({ action, order, onClose, onDone }: ActionDialogProps
         return { kind: 'issueInvoice' };
       case 'cancelShipment':
         return { kind: 'cancelShipment' };
+      case 'startManualShipping':
+      case 'returnToConfirmed':
+      case 'confirmDelivered':
+      case 'recordReturn': {
+        const error = validateFulfillmentReason(reason);
+        setReasonError(error);
+        return error
+          ? null
+          : {
+              kind: 'fulfillment',
+              toStatus: FULFILLMENT_TARGET_STATUS[action],
+              reason: reason.trim(),
+            };
+      }
       case 'receiveCod':
         return { kind: 'receiveCod' };
     }
@@ -162,8 +245,12 @@ function OrderActionDialog({ action, order, onClose, onDone }: ActionDialogProps
       onDone(copy.successMessage);
       onClose();
     } catch (error: unknown) {
-      // Giữ hộp thoại mở và dữ liệu đã nhập. Lỗi 409 cho nhân viên đọc lý do rồi tải lại đơn.
+      // Giữ hộp thoại mở cùng lý do đã nhập. Nhân viên đọc lỗi, sau đó sửa lý do.
       setApiError(getErrorMessage(error, 'Thao tác thất bại.'));
+      // Lỗi 409 nghĩa là trạng thái đơn đã đổi. Tải lại chi tiết để nút trên màn khớp với đơn thật.
+      if (isFulfillmentAction(action) && error instanceof ApiError && error.status === 409) {
+        void queryClient.invalidateQueries({ queryKey: ['admin-order', order.code] });
+      }
       setIsSubmitting(false);
     }
   }
@@ -185,6 +272,15 @@ function OrderActionDialog({ action, order, onClose, onDone }: ActionDialogProps
     >
       <p className="muted">{copy.description}</p>
 
+      {/* Đơn đã thanh toán phải hoàn tiền sau khi hàng về. Nhân viên cần biết trước khi gửi. */}
+      {action === 'recordReturn' && (
+        <p className="muted">
+          {order.paymentStatus === 'paid'
+            ? `Đơn này đã thanh toán, nên sẽ chuyển sang ${formatPaymentStatus('refund_pending')}.`
+            : 'Đơn này chưa thanh toán, nên không phát sinh hoàn tiền.'}
+        </p>
+      )}
+
       {action === 'cancel' && (
         <div className="field">
           <label htmlFor="cancel-reason">Lý do hủy</label>
@@ -198,6 +294,23 @@ function OrderActionDialog({ action, order, onClose, onDone }: ActionDialogProps
           <FieldError inputId="cancel-reason" message={reasonError} />
           <small>
             {reason.trim().length}/{CANCEL_REASON_MAX_LENGTH} ký tự
+          </small>
+        </div>
+      )}
+
+      {isFulfillmentAction(action) && (
+        <div className="field">
+          <label htmlFor="fulfillment-reason">Lý do</label>
+          <textarea
+            id="fulfillment-reason"
+            rows={3}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+            {...fieldErrorProps('fulfillment-reason', reasonError)}
+          />
+          <FieldError inputId="fulfillment-reason" message={reasonError} />
+          <small>
+            {reason.trim().length}/{FULFILLMENT_REASON_MAX_LENGTH} ký tự
           </small>
         </div>
       )}
@@ -257,7 +370,7 @@ export function OrderActions({ order, onDone }: OrderActionsProps) {
           <button
             key={action}
             type="button"
-            className={ACTION_COPY[action].danger ? 'btn btn-danger' : 'btn btn-primary'}
+            className={buttonClassName(ACTION_COPY[action])}
             onClick={() => setOpenAction(action)}
           >
             {ACTION_COPY[action].buttonLabel}

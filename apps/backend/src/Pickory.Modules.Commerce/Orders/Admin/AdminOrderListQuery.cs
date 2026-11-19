@@ -17,8 +17,8 @@ public sealed record AdminOrderListQuery(
     DateOnly? To,
     SearchTerm? Search)
 {
-    // Cờ đơn ghi vào `orders.flags`. Bốn cờ đầu do luồng thanh toán ghi (`SepayPaymentService`, `SepayLatePaymentMatcher`,
-    // `ExpiredPaymentProcessor`), `invoice_issued` do nhân viên đánh dấu, còn `shipment_cancelled` do `ShipmentStatusChangedHandler` ghi.
+    // Cờ đơn ghi vào `orders.flags`.
+    // Luồng thanh toán ghi bốn cờ đầu, nhân viên đặt `invoice_issued` và ba cờ giao hàng, còn `ShipmentStatusChangedHandler` ghi `shipment_cancelled`.
     public static readonly IReadOnlyList<string> KnownFlags =
     [
         "underpaid",
@@ -27,6 +27,9 @@ public sealed record AdminOrderListQuery(
         OrderReportMarkers.PaymentExpiredFlag,
         AdminOrderActionService.InvoiceIssuedFlag,
         ShipmentStatusChangedHandler.ShipmentCancelledFlag,
+        AdminOrderFulfillmentService.ManualShippingFlag,
+        AdminOrderFulfillmentService.ManualDeliveryFlag,
+        AdminOrderFulfillmentService.ManualReturnFlag,
     ];
 
     // Tên tham số và định dạng ngày của query string. Nhật ký của route xuất dùng lại để ghi đúng tên tham số.

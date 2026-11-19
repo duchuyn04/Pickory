@@ -7,6 +7,7 @@ import { ResultPanel } from '../../../../shared/result-panel';
 import { CancelOrderDialog } from './cancel-order-dialog';
 import { formatOrderStatus, formatPaymentMethod, formatPaymentStatus } from '../../order-labels';
 import { formatDateTime } from './order-format';
+import { MANUAL_SHIPPING_NOTICE } from './order-next-steps';
 import { OrderItemsList, OrderPaymentRows, formatShippingAddress } from './order-sections';
 import { cancelOrder, fetchOrderDetail } from './orders-api';
 import { getErrorMessage } from '../../../../shared/error-message';
@@ -148,6 +149,13 @@ export function OrderDetailPage() {
                 <div className="order-meta-item">
                   <small>Hạn thanh toán</small>
                   <strong>{formatDateTime(order.paymentDeadline)}</strong>
+                </div>
+              )}
+              {/* Đơn giao thủ công không có mã GHN. Mục Giao hàng thay cho mục Mã vận đơn để khách biết lý do. */}
+              {order.status === 'shipping' && order.trackingCode === null && (
+                <div className="order-meta-item">
+                  <small>Giao hàng</small>
+                  <strong>{MANUAL_SHIPPING_NOTICE}</strong>
                 </div>
               )}
               {order.trackingCode && (

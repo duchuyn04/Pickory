@@ -749,3 +749,250 @@ Cách chạy lại:
 **Kiểm tra:** test tích hợp đặt đơn
 **Phụ thuộc:** không · **Quy mô:** S
 **File:** `apps/backend/src/Pickory.Modules.Commerce/Orders/PlaceOrderService.cs`
+
+---
+
+## Phase 9: Fulfillment thủ công và đánh giá sau giao
+
+Kế hoạch đã được duyệt ngày 2026-11-19. Hợp đồng API nằm ở `tasks/commerce/api-contract.md`.
+Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
+
+### COM-29: API bắt đầu giao hàng thủ công
+**Mô tả:** Thêm `PUT /api/admin/orders/{code}/fulfillment` cho chuyển đổi `confirmed` sang `shipping`. Tạo parser request và `AdminOrderFulfillmentService`. Route dùng `orders:fulfill` và không gọi nghiệp vụ GHN.
+**Tiêu chí nghiệm thu:**
+- [x] Parser nhận bốn giá trị `toStatus` trong hợp đồng. Trường lạ, thiếu trường hoặc sai kiểu trả 400 `VALIDATION_ERROR`
+- [x] `reason` sau khi cắt khoảng trắng phải dài 1 đến 500 ký tự. Request sai bị chặn trước khi khóa đơn
+- [x] Đơn `confirmed` chuyển `shipping` và thêm `manual_shipping`. Lịch sử có `actorId` và `reason`
+- [x] Audit `commerce.order.fulfillment_update` và `OrderStatusChangedEvent` chỉ xuất hiện sau commit
+- [x] Không tạo hoặc hủy vận đơn GHN. Tồn kho và thanh toán không đổi
+- [x] Đơn có vận đơn GHN hiệu lực hoặc sai trạng thái trả 409 `INVALID_ORDER_TRANSITION`, không ghi dữ liệu
+- [x] Request tới trạng thái hiện tại trả 200 và không thêm lịch sử, audit hoặc sự kiện
+- [x] Khách chưa đăng nhập nhận 401. Nhân viên thiếu quyền nhận 403. Mã đơn không tồn tại nhận 404
+- [x] Ma trận quyền có route mới. Cột `Có từ` của route trong hợp đồng đổi thành `COM-29`
+- [x] `AdminOrderListQuery` nhận bộ lọc `manual_shipping`
+- [x] Response khớp fixtures `start manual shipping` và `invalid reason`. Các lỗi chính khớp fixtures còn lại
+**Kiểm tra:**
+- `dotnet build Pickory.sln` trong `apps/backend`
+- `dotnet test tests/Pickory.IntegrationTests --filter "FullyQualifiedName~AdminOrderFulfillmentTests|FullyQualifiedName~PermissionMatrixTests|FullyQualifiedName~AdminOrderListTests"` trong `apps/backend`
+**Phụ thuộc:** không · **Quy mô:** M
+**File:**
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/Admin/UpdateFulfillmentRequest.cs`
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/Admin/AdminOrderFulfillmentService.cs`
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/Admin/AdminOrderEndpoints.cs`
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/Admin/AdminOrderListQuery.cs`
+- `apps/backend/src/Pickory.Modules.Commerce/CommerceModule.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Commerce/AdminOrderFulfillmentTests.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Commerce/AdminOrderListTests.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Api/PermissionMatrixTests.cs`
+- `tasks/commerce/api-contract.md`
+
+### COM-30: API hủy giao hàng thủ công
+**Mô tả:** Mở rộng service cho chuyển đổi `shipping` về `confirmed`. Chỉ đơn có `manual_shipping` và không có vận đơn GHN hiệu lực được quay lại.
+**Tiêu chí nghiệm thu:**
+- [x] Đơn đủ điều kiện chuyển `confirmed` và bỏ `manual_shipping`
+- [x] Lịch sử, audit và sự kiện ghi đúng lý do cùng nhân viên thực hiện
+- [x] Đơn thiếu `manual_shipping` trả 409. Đơn còn vận đơn GHN hiệu lực cũng trả 409
+- [x] Route `DELETE /api/admin/orders/{code}/shipment` giữ nguyên hành vi
+- [x] Request lặp về `confirmed` trả 200 và không tạo thêm nhật ký
+- [x] Không gọi nghiệp vụ GHN. Tồn kho và thanh toán không đổi
+**Kiểm tra:**
+- `dotnet build Pickory.sln` trong `apps/backend`
+- `dotnet test tests/Pickory.IntegrationTests --filter "FullyQualifiedName~AdminOrderFulfillmentTests|FullyQualifiedName~AdminOrderShipmentTests"` trong `apps/backend`
+**Phụ thuộc:** COM-29 · **Quy mô:** XS
+**File:**
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/Admin/AdminOrderFulfillmentService.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Commerce/AdminOrderFulfillmentTests.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Commerce/AdminOrderShipmentTests.cs`
+
+### COM-31: API xác nhận giao hoặc hoàn thủ công
+**Mô tả:** Thêm chuyển đổi của nhân viên từ `shipping` sang `delivered` hoặc `returned`. Giữ nguyên điều kiện đánh giá hiện có và trạng thái thật của vận đơn GHN.
+**Tiêu chí nghiệm thu:**
+- [x] `OrderTransitions` nhận nhân viên chuyển `shipping` sang `delivered` hoặc `returned`. Các cặp khác giữ nguyên
+- [x] Xác nhận `delivered` thêm `manual_delivery` và giữ `manual_shipping` nếu đã có
+- [x] Khách có đơn `shipping` nhận `eligible=false`. Sau khi xác nhận `delivered`, cùng khách nhận `eligible=true`
+- [x] Khách chưa đạt `delivered` vẫn nhận 403 `REVIEW_NOT_ALLOWED` khi gọi API viết đánh giá
+- [x] Đơn COD `delivered` và `unpaid` vẫn mở khóa đánh giá
+- [x] Ghi nhận `returned` thêm `manual_return`. Đơn `paid` chuyển `refund_pending`, các trạng thái khác giữ nguyên
+- [x] Thao tác không đổi tồn kho. Đơn `returned` không mở khóa đánh giá
+- [x] Sự kiện GHN đến sau không đổi đơn đã kết thúc. Response vẫn giữ trạng thái vận đơn gần nhất từ GHN
+- [x] Request cùng trạng thái trả 200 và không thêm nhật ký. Chuyển đổi sai trả 409
+- [x] `AdminOrderListQuery` nhận bộ lọc `manual_delivery` và `manual_return`
+- [x] Response khớp fixture `confirm manual delivery`. Hai trạng thái điều kiện đánh giá khớp fixtures của route `/reviews/mine`
+**Kiểm tra:**
+- `dotnet build Pickory.sln` trong `apps/backend`
+- `dotnet test tests/Pickory.UnitTests --filter "FullyQualifiedName~OrderTransitionsTests"` trong `apps/backend`
+- `dotnet test tests/Pickory.IntegrationTests --filter "FullyQualifiedName~AdminOrderFulfillmentTests|FullyQualifiedName~AdminOrderShipmentTests|FullyQualifiedName~AdminOrderListTests"` trong `apps/backend`
+**Phụ thuộc:** COM-29 · **Quy mô:** M
+**File:**
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/OrderTransitions.cs`
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/Admin/AdminOrderFulfillmentService.cs`
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/Admin/AdminOrderListQuery.cs`
+- `apps/backend/tests/Pickory.UnitTests/Modules/Commerce/Orders/OrderTransitionsTests.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Commerce/AdminOrderFulfillmentTests.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Commerce/AdminOrderShipmentTests.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Commerce/AdminOrderListTests.cs`
+
+### COM-32: API khách trả mã vận đơn GHN thật
+**Mô tả:** Chi tiết đơn của khách đang luôn trả `trackingCode: null` (`OrderTrackingService.ToDetailResponse`). Đơn GHN đang giao vì vậy hiện chữ "Shop đang giao hàng thủ công", sai với thực tế. Task này đọc mã từ vận đơn GHN còn hiệu lực của đơn. Không đổi hình dạng response, vì trường `trackingCode` đã có.
+**Tiêu chí nghiệm thu:**
+- [x] Đơn có vận đơn GHN còn hiệu lực trả `trackingCode` bằng mã của vận đơn đó, qua `IShippingService`
+- [x] Đơn giao thủ công, đơn chưa có vận đơn và đơn có vận đơn đã hủy trả `trackingCode: null`
+- [x] Khách đăng nhập và khách vãng lai có token đều nhận `trackingCode`. Token sai hoặc đơn của người khác vẫn nhận 404
+- [x] Response sau khi khách tự hủy đơn dùng cùng cách tính `trackingCode`
+- [x] Trang đơn của khách ở `commerce-fulfillment.spec.ts` hiện mã vận đơn và không hiện chữ giao thủ công sau khi `sales` tạo vận đơn
+- [x] Sau khi các tiêu chí trên đạt, tick tiêu chí "Đơn có mã vận đơn giữ nguyên nội dung hiện tại" của COM-UI15
+**Kiểm tra:**
+- `dotnet build Pickory.sln` trong `apps/backend`
+- `dotnet test tests/Pickory.IntegrationTests --filter "FullyQualifiedName~OrderTrackingTests|FullyQualifiedName~AdminOrderShipmentTests"` trong `apps/backend`
+- `pnpm test:e2e e2e/commerce-fulfillment.spec.ts` trong `apps/frontend`
+**Phụ thuộc:** COM-UI15, COM-E2E6 · **Quy mô:** M
+**File:**
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/OrderTrackingService.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Commerce/OrderTrackingTests.cs`
+- `apps/frontend/e2e/commerce-fulfillment.spec.ts`
+
+### COM-UI12: Fixtures, schema và API client fulfillment
+**Mô tả:** Thêm bộ đọc fixtures cho `commerce`, schema Zod và mutation fulfillment chung. Các task UI sau dùng phần này mà không chờ endpoint thật.
+**Tiêu chí nghiệm thu:**
+- [x] Bộ đọc tìm được ví dụ theo tên trong hai file fixtures. Tên sai báo đúng tên ví dụ và file
+- [x] Schema chi tiết đơn đọc được hai response thành công. Schema `/reviews/mine` đọc được hai trạng thái điều kiện
+- [x] Mutation gọi `PUT /api/admin/orders/{code}/fulfillment` với đúng `toStatus` và `reason`
+- [x] Response của mutation được kiểm bằng Zod trước khi ghi vào cache
+- [x] Test chứng minh thiếu khóa hoặc sai kiểu trong fixture làm schema báo lỗi
+**Kiểm tra:**
+- `pnpm test -- test/unit/features/commerce/contract-fixtures.test.ts test/unit/features/commerce/admin/orders/admin-orders-api.test.ts` trong `apps/frontend`
+- `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`
+**Phụ thuộc:** không · **Quy mô:** M
+**File:**
+- `apps/frontend/src/features/commerce/admin/orders/admin-order-schemas.ts`
+- `apps/frontend/src/features/commerce/admin/orders/admin-orders-api.ts`
+- `apps/frontend/src/features/commerce/customer/reviews/review-schemas.ts`
+- `apps/frontend/src/features/commerce/customer/reviews/reviews-api.ts`
+- `apps/frontend/test/unit/features/commerce/contract-fixtures.ts`
+- `apps/frontend/test/unit/features/commerce/contract-fixtures.test.ts`
+- `apps/frontend/test/unit/features/commerce/admin/orders/admin-orders-api.test.ts`
+
+### COM-UI13: Bắt đầu và hủy giao hàng thủ công trên admin
+**Mô tả:** Thêm hai thao tác vào cụm `OrderActions` hiện có. Component test dùng response trong fixtures, không gọi backend.
+**Tiêu chí nghiệm thu:**
+- [x] Đơn `confirmed` hiện `Giao hàng thủ công` khi nhân viên có `orders:fulfill`
+- [x] Đơn `shipping` có `manual_shipping` hiện `Quay về đã xác nhận` với cùng quyền
+- [x] Nhân viên chỉ có `orders:read` không thấy hai nút. Nút tạo và hủy vận đơn GHN giữ nguyên điều kiện
+- [x] Hai hộp thoại giải thích hậu quả và bắt buộc lý do từ 1 đến 500 ký tự
+- [x] Submit gửi đúng `toStatus`. Nút gửi bị khóa trong lúc chờ API
+- [x] Thành công cập nhật chi tiết trong cache và làm mới danh sách đơn
+- [x] Lỗi 409 giữ hộp thoại mở, giữ lý do và làm mới chi tiết đơn
+- [x] Bố cục hai hộp thoại không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E7
+  Kiểm chính thức trên trình duyệt ở COM-E2E7. Đã có ảnh 375 px ở COM-UI13.
+  `commerce-manual-fulfillment.spec.ts` (COM-E2E7) mở trang chi tiết đơn admin ở 375 px, kiểm hộp thoại `Quay về đã xác nhận` và `Giao hàng thủ công` nằm trọn khung và trang không tràn ngang.
+**Kiểm tra:**
+- `pnpm test -- test/unit/features/commerce/admin/orders/order-actions.test.ts test/unit/features/commerce/admin/orders/order-action-forms.test.ts test/unit/features/commerce/admin/orders/admin-order-actions.test.tsx` trong `apps/frontend`
+- `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`
+**Phụ thuộc:** COM-UI12 · **Quy mô:** M
+**File:**
+- `apps/frontend/src/features/commerce/admin/orders/order-actions.ts`
+- `apps/frontend/src/features/commerce/admin/orders/order-action-forms.ts`
+- `apps/frontend/src/features/commerce/admin/orders/admin-order-actions.tsx`
+- `apps/frontend/test/unit/features/commerce/admin/orders/order-actions.test.ts`
+- `apps/frontend/test/unit/features/commerce/admin/orders/order-action-forms.test.ts`
+- `apps/frontend/test/unit/features/commerce/admin/orders/admin-order-actions.test.tsx`
+
+### COM-UI14: Xác nhận giao, ghi nhận hoàn và hiển thị cờ trên admin
+**Mô tả:** Thêm thao tác `delivered` và `returned` cho đơn `shipping`. Hiển thị ba cờ mới trong nhãn, bộ lọc và chi tiết đơn.
+**Tiêu chí nghiệm thu:**
+- [x] Đơn `shipping` hiện `Xác nhận đã giao` và `Ghi nhận hoàn hàng` khi có `orders:fulfill`
+- [x] Hai hộp thoại dùng lý do bắt buộc và cảnh báo đúng hậu quả
+- [x] Hộp thoại giao hàng yêu cầu chỉ tiếp tục khi khách đã nhận hàng
+- [x] Hộp thoại hoàn hàng báo rằng đơn `paid` sẽ chuyển `refund_pending`
+- [x] Submit gửi đúng `toStatus` và dùng chung xử lý cache, lỗi và khóa nút của COM-UI13
+- [x] Ba cờ có nhãn tiếng Việt và xuất hiện trong `ORDER_FLAG_CODES`
+- [x] Chi tiết đơn hiện cờ thủ công cạnh trạng thái vận đơn GHN. Trạng thái GHN không bị ghi đè bằng nhãn thủ công
+- [x] Bố cục thao tác không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E6 và COM-E2E7
+  Kiểm chính thức trên trình duyệt ở COM-E2E6 và COM-E2E7. Đã có ảnh 375 px ở COM-UI14.
+  `commerce-manual-fulfillment.spec.ts` (COM-E2E7) kiểm trang chi tiết đơn admin ở 375 px với đơn `confirmed` và `shipping`, và hộp thoại `Ghi nhận hoàn hàng`, không tràn ngang.
+**Kiểm tra:**
+- `pnpm test -- test/unit/features/commerce/admin/orders test/unit/features/commerce/order-labels.test.ts` trong `apps/frontend`
+- `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`
+**Phụ thuộc:** COM-UI13 · **Quy mô:** M
+**File:**
+- `apps/frontend/src/features/commerce/admin/orders/order-actions.ts`
+- `apps/frontend/src/features/commerce/admin/orders/order-action-forms.ts`
+- `apps/frontend/src/features/commerce/admin/orders/admin-order-actions.tsx`
+- `apps/frontend/src/features/commerce/admin/orders/admin-order-detail-page.tsx`
+- `apps/frontend/src/features/commerce/order-labels.ts`
+- `apps/frontend/test/unit/features/commerce/admin/orders/`
+- `apps/frontend/test/unit/features/commerce/order-labels.test.ts`
+
+### COM-UI15: Nội dung giao hàng thủ công trên trang khách
+**Mô tả:** Dùng `trackingCode` hiện có để đổi nội dung bước giao hàng. API khách không thêm trường mới.
+**Tiêu chí nghiệm thu:**
+- [x] Đơn `shipping` có `trackingCode=null` hiện "Shop đang giao hàng thủ công. Không có mã vận đơn GHN."
+- [x] Đơn có mã vận đơn giữ nguyên nội dung hiện tại
+  Frontend giữ nguyên chữ khi có mã, có test. Chưa tick vì API khách luôn trả `trackingCode: null` (`OrderTrackingService.ToDetailResponse`). Đơn GHN thật vẫn hiện chữ giao thủ công. Cần sửa backend ở task khác.
+  COM-32 trả mã vận đơn thật qua API khách. E2E GHN kiểm trang đơn của khách hiện mã vận đơn và không hiện chữ giao thủ công.
+- [x] Các trạng thái khác `shipping` giữ nguyên tiến trình và nội dung
+- [x] Trang chi tiết truyền `trackingCode` vào `buildNextSteps`. Không đọc cờ nội bộ của admin
+  Hàm chỉ được gọi ở trang đơn đặt thành công. Trang chi tiết đơn dùng cùng chữ qua hằng chung.
+- [x] Nội dung không tràn ngang ở 375 px. Kiểm lại trên trình duyệt ở COM-E2E6
+  Kiểm chính thức trên trình duyệt ở COM-E2E6. Đã có ảnh 375 px ở COM-UI15.
+  COM-E2E6 kiểm trang chi tiết đơn của khách ở 375 px.
+**Kiểm tra:**
+- `pnpm test -- test/unit/features/commerce/customer/orders/order-next-steps.test.ts test/unit/features/commerce/customer/orders/order-detail-page.test.tsx` trong `apps/frontend`
+- `pnpm lint && pnpm typecheck && pnpm test` trong `apps/frontend`
+**Phụ thuộc:** COM-UI12 · **Quy mô:** S
+**File:**
+- `apps/frontend/src/features/commerce/customer/orders/order-next-steps.ts`
+- `apps/frontend/src/features/commerce/customer/orders/order-detail-page.tsx`
+- `apps/frontend/test/unit/features/commerce/customer/orders/order-next-steps.test.ts`
+- `apps/frontend/test/unit/features/commerce/customer/orders/order-detail-page.test.tsx`
+
+### COM-E2E6: Hoàn thành đơn thủ công rồi khách viết đánh giá
+**Mô tả:** Chạy luồng thật từ `sales` xác nhận đơn tới khách viết đánh giá. Test dùng API thật và không gắn route giả cho fulfillment.
+**Tiêu chí nghiệm thu:**
+- [x] `sales` xác nhận đơn, bắt đầu giao thủ công và thấy đơn `shipping` với `manual_shipping`
+- [x] Trang khách hiện nội dung không có mã vận đơn GHN khi đơn đang giao thủ công
+- [x] Trước khi `delivered`, khách không thấy form đánh giá và API viết đánh giá trả 403
+- [x] `sales` xác nhận đã giao qua giao diện. Đơn có `delivered` và `manual_delivery`
+- [x] Khách mở trang sản phẩm và gửi đánh giá thành công ngay sau đó
+- [x] `support` không thấy nút fulfillment và nhận 403 khi gọi trực tiếp route
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console có 0 lỗi và 0 cảnh báo
+- [x] Spec không gọi `page.route` cho đường fulfillment hoặc đánh giá. Luồng GHN hiện có vẫn đạt
+**Kiểm tra:**
+- `pnpm test:e2e e2e/commerce-manual-fulfillment.spec.ts` trong `apps/frontend`
+- `pnpm test:e2e e2e/commerce-fulfillment.spec.ts e2e/commerce-review-moderation.spec.ts` trong `apps/frontend`
+**Phụ thuộc:** COM-29, COM-31, COM-UI13, COM-UI14, COM-UI15 · **Quy mô:** M
+**File:**
+- `apps/frontend/e2e/commerce-manual-fulfillment.spec.ts`
+- `apps/frontend/e2e/commerce-order-fixtures.ts`
+
+### COM-E2E7: Hủy giao hàng thủ công và ghi nhận hoàn hàng
+**Mô tả:** Kiểm hai nhánh kết thúc khác trên API thật. Một đơn quay về `confirmed`, một đơn SePay đã trả chuyển `returned`.
+**Tiêu chí nghiệm thu:**
+- [x] Đơn giao thủ công quay về `confirmed`, bỏ `manual_shipping` và không có vận đơn GHN
+- [x] Nhân viên có thể bắt đầu lại giao hàng thủ công sau khi quay về `confirmed`
+- [x] Đơn SePay `paid` được giao thủ công rồi ghi nhận `returned`
+- [x] Đơn hoàn có `manual_return` và thanh toán `refund_pending`
+- [x] Lịch sử hiện đúng lý do của hai thao tác
+- [x] Ảnh chụp 1280 px và 375 px không tràn ngang. Console có 0 lỗi và 0 cảnh báo
+- [x] Spec không gọi `page.route` cho đường fulfillment hoặc webhook SePay
+**Kiểm tra:**
+- `pnpm test:e2e e2e/commerce-manual-fulfillment.spec.ts` trong `apps/frontend`
+- `pnpm test:e2e e2e/commerce-fulfillment.spec.ts` trong `apps/frontend`
+**Phụ thuộc:** COM-29, COM-30, COM-31, COM-UI13, COM-UI14 · **Quy mô:** M
+**File:**
+- `apps/frontend/e2e/commerce-manual-fulfillment.spec.ts`
+- `apps/frontend/e2e/commerce-order-fixtures.ts`
+
+### Checkpoint M7
+- [x] Mọi tiêu chí của backend track đã được tick
+- [x] Mọi tiêu chí của frontend track đã được tick
+- [x] `dotnet build Pickory.sln` và các test fulfillment của backend đạt
+  Ngày 2026-11-19: build 0 cảnh báo, 0 lỗi. Unit 2196, architecture 51, toàn bộ integration 3250 test đạt (8 bỏ qua).
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` trong `apps/frontend` đạt
+- [x] COM-E2E6 và COM-E2E7 đạt với API thật, không có route giả cho fulfillment
+  Toàn bộ E2E ngày 2026-11-19: 264 đạt, 6 lỗi nằm ngoài Phase 9. Năm lỗi của `admin-invoice-print.spec.ts` do spec còn dữ liệu giả cho route `GET /api/admin/order-invoices` mà backend đã có. Một lỗi chập chờn của `support-desk-callback.spec.ts` đạt khi chạy lại.
+- [x] Ma trận quyền có route mới và `support` nhận 403
+  `PermissionMatrixTests` có `PUT /api/admin/orders/{code}/fulfillment` và `Fulfill_AsSupport_Returns403` đạt.
+- [x] Bảng Traceability trong `plan.md` đã cập nhật bằng chứng cho các tiêu chí mới
+- [ ] Review kết quả với chủ shop
+

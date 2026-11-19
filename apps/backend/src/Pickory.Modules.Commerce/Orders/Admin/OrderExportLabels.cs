@@ -43,6 +43,9 @@ internal static class OrderExportLabels
         [OrderReportMarkers.PaymentExpiredFlag] = "Quá hạn thanh toán",
         [AdminOrderActionService.InvoiceIssuedFlag] = "Đã xuất hóa đơn",
         [ShipmentStatusChangedHandler.ShipmentCancelledFlag] = "Vận đơn đã hủy",
+        [AdminOrderFulfillmentService.ManualShippingFlag] = "Giao hàng thủ công",
+        [AdminOrderFulfillmentService.ManualDeliveryFlag] = "Xác nhận giao thủ công",
+        [AdminOrderFulfillmentService.ManualReturnFlag] = "Ghi nhận hoàn thủ công",
         [DemoOrderSeeder.DemoFlag] = "Đơn mẫu",
     };
 

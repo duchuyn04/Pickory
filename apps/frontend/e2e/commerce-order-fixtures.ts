@@ -262,3 +262,80 @@ export async function readAdminOrder(
   expect(detail.status(), await detail.text()).toBe(200);
   return (await detail.json()).data as AdminOrderSummary;
 }
+
+export interface AdminOrderDetail extends AdminOrderSummary {
+  flags: string[];
+  statusHistory: { fromStatus: string; toStatus: string; reason: string | null }[];
+}
+
+// Đọc đơn kèm cờ và lịch sử trạng thái, để spec giao thủ công kiểm cả cờ ghi tay và lý do nhân viên nhập.
+export async function readAdminOrderDetail(
+  adminPage: Page,
+  orderCode: string,
+): Promise<AdminOrderDetail> {
+  const detail = await adminPage.request.get(`/api/admin/orders/${orderCode}`);
+  expect(detail.status(), await detail.text()).toBe(200);
+  const body: { data: AdminOrderDetail } = await detail.json();
+  return body.data;
+}
+
+export interface PlacedSepayOrder {
+  code: string;
+  // Tổng khách thấy ở bản xem trước. Spec so số này với số API thanh toán trả về.
+  expectedTotal: number;
+}
+
+// Khách đã đăng nhập đặt một đơn chuyển khoản SePay bằng API. Đơn ở `pending_payment` cho tới khi webhook báo đủ tiền.
+export async function placeSepayOrderByApi(
+  page: Page,
+  product: SeededProduct,
+): Promise<PlacedSepayOrder> {
+  const headers = { Origin: e2eEnvironment.webOrigin };
+
+  // Dùng cùng địa chỉ đầu tiên với `prepareShipping`, nên GHN giả tính được phí.
+  const { provinceCode, wardCode } = await readFirstShippingAddress(page);
+  const address = { provinceCode, wardCode, line: '27 Đường Hoàn Hàng' };
+
+  const cart = await page.request.post('/api/cart/items', {
+    headers,
+    data: { skuId: product.skuId, quantity: 1 },
+  });
+  expect(cart.status(), await cart.text()).toBe(200);
+
+  // API từ chối đơn nếu tổng dự kiến lệch tổng server tính, nên lấy tổng từ bản xem trước.
+  const preview = await page.request.post('/api/checkout/previews', {
+    headers,
+    data: { address, paymentMethod: 'sepay' },
+  });
+  expect(preview.status(), await preview.text()).toBe(200);
+  const expectedTotal = (await preview.json()).data.total as number;
+
+  const placed = await page.request.post('/api/orders', {
+    headers: {
+      ...headers,
+      // Khóa ngẫu nhiên cho mỗi lần đặt, để đơn SePay không bị coi là lần gửi lại của đơn trước.
+      'Idempotency-Key': `e2e-sepay-return-${Date.now().toString(36)}-${randomInt(100000, 999999)}`,
+    },
+    data: {
+      contact: { name: 'Lê Văn Đánh', phone: '0987001133', email: 'danh.review@example.com' },
+      address,
+      note: null,
+      paymentMethod: 'sepay',
+      invoice: null,
+      expectedTotal,
+    },
+  });
+  expect(placed.status(), await placed.text()).toBe(201);
+  return { code: (await placed.json()).data.code as string, expectedTotal };
+}
+
+// Đọc trạng thái thanh toán của đơn bằng API admin, để spec kiểm tiền về hay chờ hoàn mà không phụ thuộc giao diện.
+export async function readAdminOrderPaymentStatus(
+  adminPage: Page,
+  orderCode: string,
+): Promise<string> {
+  const detail = await adminPage.request.get(`/api/admin/orders/${orderCode}`);
+  expect(detail.status(), await detail.text()).toBe(200);
+  const body: { data: { paymentStatus: string } } = await detail.json();
+  return body.data.paymentStatus;
+}

@@ -24,6 +24,10 @@ const ORDER_FLAG_BADGES: Record<string, string> = {
   payment_expired: 'badge badge-bad',
   invoice_issued: 'badge badge-info',
   shipment_cancelled: 'badge badge-bad',
+  // Ba cờ ghi tay dùng nhãn vàng. Chúng chưa có xác nhận từ GHN.
+  manual_shipping: 'badge badge-warn',
+  manual_delivery: 'badge badge-warn',
+  manual_return: 'badge badge-warn',
 };
 
 // Phí đã lưu và phí dự phòng dùng nhãn vàng để nhân viên chú ý. Trang chỉ gọi hàm này khi đơn không dùng phí GHN vừa tính.

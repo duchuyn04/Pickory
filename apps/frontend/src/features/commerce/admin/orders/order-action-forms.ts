@@ -1,6 +1,7 @@
 // Luật kiểm form của các hộp thoại thao tác đơn. Cùng giới hạn với backend để lỗi hiện ngay dưới ô.
 
 export const CANCEL_REASON_MAX_LENGTH = 500;
+export const FULFILLMENT_REASON_MAX_LENGTH = 500;
 export const TRANSACTION_REF_MAX_LENGTH = 100;
 
 // Backend đọc cân nặng và kích thước vào `int`, nên giá trị lớn hơn bị từ chối.
@@ -13,6 +14,16 @@ export function validateCancelReason(reason: string): string | null {
   if (trimmed.length === 0) return 'Nhập lý do hủy đơn.';
   if (trimmed.length > CANCEL_REASON_MAX_LENGTH) {
     return `Lý do hủy đơn không được dài quá ${CANCEL_REASON_MAX_LENGTH} ký tự.`;
+  }
+  return null;
+}
+
+// Trả câu lỗi, hoặc `null` khi lý do giao hàng hợp lệ. Câu lỗi cùng chữ với backend.
+export function validateFulfillmentReason(reason: string): string | null {
+  const trimmed = reason.trim();
+  // Backend cắt khoảng trắng trước khi đếm, nên lý do chỉ có khoảng trắng coi như trống.
+  if (trimmed.length < 1 || trimmed.length > FULFILLMENT_REASON_MAX_LENGTH) {
+    return 'Nhập lý do từ 1 đến 500 ký tự.';
   }
   return null;
 }
