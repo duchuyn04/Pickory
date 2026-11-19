@@ -162,7 +162,7 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 - [x] Người dùng có quyền xem danh sách nhưng thiếu `reports:export` không thấy nút
 - [x] Ở 375 px, nút nằm trong thanh công cụ và trang không tràn ngang
 - [x] Playwright console 0 lỗi và 0 cảnh báo
-- [ ] File tải về với backend thật: kiểm ở EXP-E2E1
+- [x] File tải về với backend thật: kiểm ở EXP-E2E1
   - Task EXP-E2E1 kiểm file tải về. Task này chỉ kiểm request.
 **Kiểm tra:** Vitest; Playwright với route giả; ảnh chụp 1280 px và 375 px
 **Phụ thuộc:** EXP-UI2 · **Quy mô:** M
@@ -277,9 +277,9 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** Spec `apps/frontend/e2e/admin-exports.spec.ts` đăng nhập admin, mở bốn danh sách, chọn một bộ lọc và bấm "Xuất Excel".
 
 **Tiêu chí nghiệm thu:**
-- [ ] Mỗi danh sách tải về một file có tên đúng mẫu, `Content-Type` đúng và 2 byte đầu `PK`
-- [ ] Nhân viên thiếu `reports:export` không thấy nút ở cả bốn trang
-- [ ] Spec chạy với backend thật và không có route giả cho route của đợt việc
+- [x] Mỗi danh sách tải về một file có tên đúng mẫu, `Content-Type` đúng và 2 byte đầu `PK`
+- [x] Nhân viên thiếu `reports:export` không thấy nút ở cả bốn trang
+- [x] Spec chạy với backend thật và không có route giả cho route của đợt việc
 **Kiểm tra:** Playwright headless
 **Phụ thuộc:** EXP-03, EXP-04, EXP-05, EXP-06, EXP-UI3 · **Quy mô:** S
 
