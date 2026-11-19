@@ -135,7 +135,7 @@ Frontend:
 
 ### Checkpoint cuối
 - [ ] Mọi mục Success criteria của spec đạt
-- [ ] Không còn route giả cho route của đợt việc
+- [x] Không còn route giả cho route của đợt việc
 - [ ] Review với người dùng
 
 ## Traceability: Success criteria → Task

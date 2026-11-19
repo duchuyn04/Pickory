@@ -297,5 +297,5 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 
 ### Checkpoint cuối
 - [ ] Mọi mục Success criteria của spec đạt
-- [ ] Không còn route giả cho route của đợt việc
+- [x] Không còn route giả cho route của đợt việc
 - [ ] Review với người dùng
