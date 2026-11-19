@@ -131,7 +131,7 @@ Frontend:
 
 ### Phase 4: E2E và nghiệm thu
 - [x] EXP-E2E1 xuất Excel với backend thật
-- [ ] EXP-E2E2 in hóa đơn với backend thật
+- [x] EXP-E2E2 in hóa đơn với backend thật
 
 ### Checkpoint cuối
 - [ ] Mọi mục Success criteria của spec đạt

@@ -231,7 +231,7 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 - [x] API lỗi 404 hiện `ErrorAlert` có mã đơn thiếu. Thiếu quyền hiện `ForbiddenNotice`
 - [x] Ảnh chụp bản in đen trắng, không có màu nền
 - [x] Playwright console 0 lỗi và 0 cảnh báo
-- [ ] Trang in với backend thật: kiểm ở EXP-E2E2
+- [x] Trang in với backend thật: kiểm ở EXP-E2E2
   - Task EXP-E2E2 kiểm trang in với backend thật. Task này chỉ dùng route giả của EXP-UI1.
 **Kiểm tra:** Vitest; Playwright với route giả, `page.pdf`; ảnh chụp
 **Phụ thuộc:** EXP-UI1, EXP-UI4 · **Quy mô:** M
@@ -260,14 +260,14 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 - [x] Lỗi 400 của từng trường `shop.*` hiện dưới đúng ô
 - [x] Ô có giới hạn độ dài theo contract
 - [x] Ở 375 px, nhóm trường không tràn ngang. Playwright console 0 lỗi và 0 cảnh báo
-- [ ] Lưu với backend thật: kiểm ở EXP-E2E2
+- [x] Lưu với backend thật: kiểm ở EXP-E2E2
   - Task EXP-E2E2 kiểm luồng đầy đủ từ lưu thông tin shop tới in hóa đơn. Spec `commerce-settings-shop.spec.ts` đã kiểm lưu với backend thật ở trang cấu hình.
 **Kiểm tra:** Vitest; Playwright với route giả
 **Phụ thuộc:** EXP-UI1 · **Quy mô:** S
 
 ### Checkpoint E2
 - [x] Hóa đơn của đơn 15 dòng sản phẩm vừa 1 trang A4
-- [ ] Review với người dùng
+- [x] Review với người dùng
 
 ---
 
@@ -287,11 +287,11 @@ Ghi chú đo: DB `pickory_bench_exp03` có 50.000 đơn và 125.000 dòng hàng,
 **Mô tả:** Spec `apps/frontend/e2e/admin-order-invoices.spec.ts` nhập thông tin shop, in một đơn từ trang chi tiết và in 20 đơn từ danh sách.
 
 **Tiêu chí nghiệm thu:**
-- [ ] Thông tin shop vừa lưu hiện ở đầu hóa đơn
-- [ ] In một đơn cho PDF A4 1 trang có đúng mã đơn
-- [ ] In 20 đơn cho PDF 20 trang, mỗi trang có một mã đơn khác nhau
-- [ ] Đơn đã hủy có dấu "ĐƠN ĐÃ HỦY"
-- [ ] Spec chạy với backend thật và không có route giả cho route của đợt việc
+- [x] Thông tin shop vừa lưu hiện ở đầu hóa đơn
+- [x] In một đơn cho PDF A4 1 trang có đúng mã đơn
+- [x] In 20 đơn cho PDF 20 trang, mỗi trang có một mã đơn khác nhau
+- [x] Đơn đã hủy có dấu "ĐƠN ĐÃ HỦY"
+- [x] Spec chạy với backend thật và không có route giả cho route của đợt việc
 **Kiểm tra:** Playwright headless, `page.pdf`
 **Phụ thuộc:** EXP-07, EXP-08, EXP-UI5, EXP-UI6, EXP-UI7 · **Quy mô:** S
 
