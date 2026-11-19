@@ -3,7 +3,6 @@ import { expect, test, type Browser, type BrowserContext, type Page } from '@pla
 import { expectNoHorizontalOverflow } from './admin-order-fixtures';
 import { collectConsoleIssues, type AllowedLoadFailure } from './catalog-admin-flow';
 import {
-  dismissConsent,
   loginAdmin,
   seedCatalog,
   stubProductImages,
@@ -67,7 +66,6 @@ async function openSupportPage(page: Page) {
   // SD-UI8: apiRequest đã tự chờ request đầu tiên của tab để nhận cookie pk_anon.
   // Mở thẳng trang mà không cần nạp trước cookie.
   await page.goto('/support');
-  await dismissConsent(page);
   await expect(page.getByRole('heading', { name: 'Liên hệ CSKH', exact: true })).toBeVisible();
 }
 
@@ -156,7 +154,6 @@ test.describe('SD-UI7: trang /support của khách', () => {
 
     // Không gọi `/api/me` trước. Đây là đường khách thật đi từ `form_url` của chatbot tới trang.
     await page.goto('/support');
-    await dismissConsent(page);
     await expect(page.getByRole('heading', { name: 'Liên hệ CSKH', exact: true })).toBeVisible();
 
     await composer(page).fill('Mình vào từ link ngoài giờ hỗ trợ.');
@@ -207,7 +204,6 @@ test.describe('SD-UI7: trang /support của khách', () => {
 
     // DB E2E dựng lại mỗi lần chạy và không sẵn tài khoản khách. Đăng ký qua giao diện rồi dùng luôn phiên đó.
     await page.goto('/register');
-    await dismissConsent(page);
     await page.getByLabel(/^Email/).fill(supportCustomerEmail);
     await page.getByLabel(/^Mật khẩu/).fill(e2eEnvironment.accountPassword);
     await page.getByLabel(/^Họ và tên/).fill('Khách hỗ trợ E2E');
@@ -227,7 +223,6 @@ test.describe('SD-UI7: trang /support của khách', () => {
     const { context, page, consoleIssues } = await openGuestPage(browser);
 
     await page.goto('/');
-    await dismissConsent(page);
     await page.getByRole('contentinfo').getByRole('link', { name: 'Liên hệ CSKH' }).click();
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/support`);
     await expect(page.getByRole('heading', { name: 'Liên hệ CSKH', exact: true })).toBeVisible();
@@ -308,7 +303,6 @@ test.describe('SD-UI7: trang /support của khách', () => {
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/cart');
-    await dismissConsent(page);
     await expect(page.getByRole('heading', { level: 1, name: 'Giỏ hàng' })).toBeVisible();
 
     // Khung `main` phải giãn hết khung trang. Cột flex bọc ngoài từng làm nó co theo nội dung.
@@ -427,7 +421,6 @@ test.describe('SD-UI7: ảnh bố cục', () => {
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/cart');
-    await dismissConsent(page);
     await expect(page.getByRole('heading', { level: 1, name: 'Giỏ hàng' })).toBeVisible();
     await page.screenshot({
       path: screenshotPath(testInfo, 'support-r3-cart-empty-1280.png'),
@@ -443,7 +436,6 @@ test.describe('SD-UI7: ảnh bố cục', () => {
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(`/p/${catalog.activeSlug}`);
-    await dismissConsent(page);
     await page.getByRole('button', { name: 'Thêm vào giỏ' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Đã thêm vào giỏ' })).toBeVisible();
 
@@ -471,7 +463,6 @@ test.describe('SD-UI7: ảnh bố cục', () => {
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(`/c/${catalog.categorySlug}`);
-    await dismissConsent(page);
     await expect(page.locator('.product-card').first()).toBeVisible();
     await page.screenshot({
       path: screenshotPath(testInfo, 'support-r3-category-1280.png'),
@@ -494,7 +485,6 @@ test.describe('SD-UI7: ảnh bố cục', () => {
 
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/');
-    await dismissConsent(page);
     await expect(page.locator('.product-card').first()).toBeVisible();
     // Cuộn qua các khối để IntersectionObserver gắn lớp hiển thị, không dùng sleep cố định.
     for (const section of await page.locator('.reveal').all()) {
@@ -534,7 +524,6 @@ test.describe('SD-UI8: một mã khách vãng lai cho mọi request đầu trang
     });
 
     await page.goto('/support');
-    await dismissConsent(page);
     await expect(page.getByRole('heading', { name: 'Liên hệ CSKH', exact: true })).toBeVisible();
     await expect(composer(page)).toBeVisible();
 
@@ -573,7 +562,6 @@ test.describe('SD-UI8: một mã khách vãng lai cho mọi request đầu trang
     });
 
     await page.goto('/');
-    await dismissConsent(page);
 
     // Chờ danh sách sản phẩm hiển thị để các request đầu trang chạy đủ.
     await expect(page.locator('.product-card').first()).toBeVisible();

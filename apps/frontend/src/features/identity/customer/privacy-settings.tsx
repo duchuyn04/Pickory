@@ -45,8 +45,6 @@ export function PrivacySettingsPage() {
           marketing,
         }),
       });
-      // Người vào trang này trực tiếp mà chưa qua banner cũng coi là đã chọn, để banner không hỏi lại.
-      localStorage.setItem('pk_consent_chosen', 'true');
       // Nạp lại actor để các nơi đọc lựa chọn đồng ý dùng giá trị mới ngay.
       await queryClient.invalidateQueries({ queryKey: ['actor'] });
       setSavedMessage(true);

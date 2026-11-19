@@ -211,7 +211,7 @@ ordersRouter.patch(
 | `personalization` | tắt cho tới khi người dùng chọn | Ghi hành vi, gợi ý và nội dung cá nhân hóa |
 | `marketing` | tắt | Email khuyến mãi |
 
-- Lần đầu truy cập hiện banner với hai nút "Đồng ý" và "Chỉ cần thiết" ngang nhau, cùng link "Tùy chỉnh".
+- Không có banner hỏi đồng ý khi vào trang lần đầu. Người dùng đổi lựa chọn tại trang `/privacy`. Khi chưa chọn, `personalization` và `marketing` đều tắt.
 - Mỗi lần đổi lựa chọn lưu một bản ghi mới (`consent_records`): anonymousId, userId (nếu có), lựa chọn, phiên bản chính sách, thời điểm.
 - Khi gộp khách vãng lai vào tài khoản, lấy lựa chọn mới nhất giữa hai bên.
 
@@ -322,7 +322,7 @@ model ConsentRecord { /* anonymousId, userId?, personalization, marketing, polic
 
 ## Frontend
 
-- `features/identity/` (khách): đăng nhập, đăng ký, quên và đặt lại mật khẩu, trang tài khoản (thông tin, đổi mật khẩu, quyền riêng tư, xóa tài khoản), banner đồng ý.
+- `features/identity/` (khách): đăng nhập, đăng ký, quên và đặt lại mật khẩu, trang tài khoản (thông tin, đổi mật khẩu, quyền riêng tư, xóa tài khoản).
 - `features/identity/admin/` (back-office): đăng nhập nhân viên, danh sách và mời nhân viên, quản lý role (bảng tick quyền theo nhóm), tra cứu khách, xem audit log.
 - Hook `useActor()` và `useCan(permission)` để các feature ẩn hoặc hiện menu, nút.
 - Layout khách dùng chung Header trên mọi route, kể cả `/`: trạng thái phiên, đăng xuất và link quyền riêng tư phản ánh cùng cache actor.

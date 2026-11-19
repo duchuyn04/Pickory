@@ -19,7 +19,6 @@ test('Luồng 2: admin mời sales, đặt mật khẩu và đăng nhập đúng
   await test.step('Admin đăng nhập và gửi lời mời sales', async () => {
     // Dùng UI đăng nhập thật để kiểm tra phiên admin đã seed.
     await page.goto('/admin/login');
-    await page.getByRole('button', { name: 'Chỉ cần thiết', exact: true }).click();
     await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
     await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();

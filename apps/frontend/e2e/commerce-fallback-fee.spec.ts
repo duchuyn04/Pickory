@@ -7,7 +7,7 @@ import {
   type AddressChoice,
   type SeededProduct,
 } from './admin-order-fixtures';
-import { collectConsoleIssues, dismissConsent, loginAdmin } from './catalog-admin-flow';
+import { collectConsoleIssues, loginAdmin } from './catalog-admin-flow';
 import {
   addToCartAndOpenCheckout,
   checkoutRowFor,
@@ -154,7 +154,6 @@ test.describe('COM-27: đơn dùng phí vận chuyển dự phòng', () => {
         const linkIssues = collectConsoleIssues(linkPage);
         await stubProductImages(linkPage);
         await linkPage.goto(confirmation.link);
-        await dismissConsent(linkPage);
         await expect(
           linkPage.getByRole('heading', { level: 1, name: `Đơn hàng #${orderCode}` }),
         ).toBeVisible();

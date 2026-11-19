@@ -12,8 +12,6 @@ const screenshotDirectory = process.env.UI_C1_SHOTS_DIR;
 
 async function loginAdmin(page: Page) {
   await page.goto('/admin/login');
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
   await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -333,8 +331,6 @@ test.describe('UI-C1: trang danh mục của khách', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     // Kích thước trang 1 để 2 sản phẩm khớp bộ lọc nằm ở hai trang khác nhau.
     await page.goto(`/c/${catalog.childSlug}?pageSize=1`);
-    const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-    if (await consent.isVisible()) await consent.click();
     await expect(page.getByRole('heading', { level: 1 })).toContainText('Laptop C1');
     await page.getByLabel('Sắp xếp').selectOption('price_asc');
     await chooseOption(
@@ -386,8 +382,6 @@ test.describe('UI-C1: trang danh mục của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/c/${catalog.childSlug}`);
-    const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-    if (await consent.isVisible()) await consent.click();
 
     const ramGroup = page.getByRole('group', { name: 'RAM (GB)' });
     const brandGroup = page.getByRole('group', { name: 'Thương hiệu' });
@@ -454,8 +448,6 @@ test.describe('UI-C1: trang danh mục của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/c/${catalog.childSlug}`);
-    const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-    if (await consent.isVisible()) await consent.click();
     await expect(page.locator('.catalog-grid .product-card')).toHaveCount(7);
 
     const names = await visibleProductNames(page);
@@ -535,8 +527,6 @@ test.describe('UI-C1: trang danh mục của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/c/${catalog.childSlug}`);
-    const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-    if (await consent.isVisible()) await consent.click();
 
     const brandBox = page.getByRole('checkbox', { name: new RegExp(`^${catalog.brandBName}`) });
     const ramBox = page.getByRole('checkbox', { name: /^8 GB/ });
@@ -563,8 +553,6 @@ test.describe('UI-C1: trang danh mục của khách', () => {
       if (request.url().includes('/api/products?')) productRequests += 1;
     });
     await page.goto(`/c/${catalog.childSlug}`);
-    const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-    if (await consent.isVisible()) await consent.click();
     await expect(page.locator('.catalog-grid .product-card')).toHaveCount(7);
     const requestsBeforeTyping = productRequests;
 
@@ -599,8 +587,6 @@ test.describe('UI-C1: trang danh mục của khách', () => {
       await stubProductImages(page);
       await page.setViewportSize(viewport);
       await page.goto(`/c/${catalog.childSlug}`);
-      const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-      if (await consent.isVisible()) await consent.click();
       await expect(page.locator('.catalog-grid .product-card')).toHaveCount(7);
 
       // Màn hẹp giấu bộ lọc sau nút "Bộ lọc". Mở nút này trước khi nhập.
@@ -644,8 +630,6 @@ test.describe('UI-C1: trang danh mục của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`/c/${catalog.childSlug}`);
-    const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-    if (await consent.isVisible()) await consent.click();
     await expect(page.locator('.catalog-grid .product-card')).toHaveCount(7);
 
     const toggle = page.getByRole('button', { name: /^Bộ lọc/ });
@@ -707,8 +691,6 @@ test.describe('UI-C1: trang danh mục của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/c/${catalog.childSlug}`);
-    const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-    if (await consent.isVisible()) await consent.click();
     await expect(page.locator('.catalog-grid .product-card')).toHaveCount(7);
 
     await expect(page.getByRole('button', { name: /^Bộ lọc/ })).toBeHidden();

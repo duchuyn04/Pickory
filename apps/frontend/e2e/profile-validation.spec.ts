@@ -41,8 +41,6 @@ test('số điện thoại và tên sai hiện lỗi dưới ô, không gọi AP
     await test.step(`Trang đăng ký ở ${viewport.width}px`, async () => {
       await page.setViewportSize(viewport);
       await page.goto('/register');
-      const consent = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-      if (await consent.isVisible()) await consent.click();
 
       await page.getByLabel(/^Email/).fill(email);
       await page.getByLabel(/^Mật khẩu/).fill(e2eEnvironment.accountPassword);

@@ -34,10 +34,6 @@ test('Khung quản trị: sidebar thu gọn ở 1280px, ngăn kéo menu ở 375p
   await test.step('Admin đăng nhập ở 1280px', async () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/admin/login');
-    const cookieButton = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-    if (await cookieButton.isVisible()) {
-      await cookieButton.click();
-    }
     await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
     await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();

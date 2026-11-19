@@ -10,15 +10,6 @@ async function expectNoHorizontalOverflow(page: Page) {
   expect(widths.content).toBeLessThanOrEqual(widths.viewport);
 }
 
-// Tắt banner đồng ý cookie nếu banner xuất hiện trên trang.
-async function dismissConsent(page: Page) {
-  const consentButton = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-  if (await consentButton.isVisible()) {
-    await consentButton.click();
-    await expect(consentButton).toBeHidden();
-  }
-}
-
 test('DS-07: header của khách trên mobile có menu ngăn kéo và vùng bấm đạt chuẩn', async ({
   page,
 }, testInfo) => {
@@ -35,7 +26,6 @@ test('DS-07: header của khách trên mobile có menu ngăn kéo và vùng bấ
   await test.step('Màn hình rộng 1280px: thanh ngang đầy đủ, nút menu ẩn', async () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/');
-    await dismissConsent(page);
 
     const menuButton = page.getByRole('button', { name: 'Menu', exact: true });
     // Nút Menu burger phải ẩn trên màn hình máy tính để bàn.
@@ -59,7 +49,6 @@ test('DS-07: header của khách trên mobile có menu ngăn kéo và vùng bấ
   await test.step('Màn hình hẹp 375px: header có 1 hàng gồm nút Menu, logo và giỏ hàng', async () => {
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto('/');
-    await dismissConsent(page);
 
     const menuButton = page.getByRole('button', { name: 'Menu', exact: true });
     await expect(menuButton).toBeVisible();

@@ -32,11 +32,6 @@ function collectConsoleIssues(page: Page, allowedFailures: AllowedLoadFailure[] 
   return issues;
 }
 
-async function dismissConsent(page: Page) {
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
-}
-
 async function expectNoHorizontalOverflow(page: Page) {
   // Đo chiều rộng tài liệu so với chiều rộng cửa sổ để phát hiện lỗi tràn ngang.
   const widths = await page.evaluate(() => ({
@@ -96,7 +91,6 @@ test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy'
       fulfillJson(route, 202, { data: {} }),
     );
     await page.goto('/forgot-password');
-    await dismissConsent(page);
     await page.getByLabel('Email tài khoản').fill('khach@example.com');
     await page.getByRole('button', { name: 'Gửi liên kết đặt lại' }).click();
     await expect(
@@ -112,7 +106,6 @@ test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy'
       fulfillJson(route, 200, { data: { success: true, userKind: 'customer' } }),
     );
     await page.goto('/reset-password?token=token-e2e');
-    await dismissConsent(page);
     await page.getByLabel('Mật khẩu mới (tối thiểu 8 ký tự)').fill('MatKhauMoi123');
     await page.getByLabel('Xác nhận mật khẩu mới').fill('MatKhauMoi123');
     await page.getByRole('button', { name: 'Cập nhật mật khẩu' }).click();
@@ -126,7 +119,6 @@ test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy'
   test('link đặt lại mật khẩu thiếu mã', async ({ page }) => {
     const issues = collectConsoleIssues(page);
     await page.goto('/reset-password');
-    await dismissConsent(page);
     await expect(
       page.getByRole('alert').filter({ hasText: 'Mã token không hợp lệ' }),
     ).toBeVisible();
@@ -140,7 +132,6 @@ test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy'
       fulfillJson(route, 200, { data: {} }),
     );
     await page.goto('/verify-email?token=token-e2e');
-    await dismissConsent(page);
     await expect(
       page.getByRole('status').filter({ hasText: 'đã được xác thực thành công' }),
     ).toBeVisible();
@@ -161,7 +152,6 @@ test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy'
       }),
     );
     await page.goto('/verify-email?token=token-e2e');
-    await dismissConsent(page);
     await expect(
       page.getByRole('alert').filter({ hasText: 'Liên kết xác thực đã hết hạn' }),
     ).toBeVisible();
@@ -177,7 +167,6 @@ test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy'
       }),
     );
     await page.goto('/orders/PKAB23CD45');
-    await dismissConsent(page);
     await expect(
       page.getByRole('heading', { level: 1, name: 'Không tìm thấy đơn hàng' }),
     ).toBeVisible();
@@ -188,7 +177,6 @@ test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy'
   test('giỏ hàng trống', async ({ page }) => {
     const issues = collectConsoleIssues(page);
     await page.goto('/cart');
-    await dismissConsent(page);
     await expect(page.getByText('Giỏ hàng của bạn đang trống')).toBeVisible();
     await checkLayoutAtBothWidths(page, 'cart-empty');
     expect(issues).toEqual([]);
@@ -201,7 +189,6 @@ test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy'
       fulfillJson(route, 200, { data: { items: [], total: 0, page: 1, limit: 20 } }),
     );
     await page.goto('/me/orders');
-    await dismissConsent(page);
     await expect(page.getByText('Bạn chưa có đơn hàng nào.')).toBeVisible();
     await checkLayoutAtBothWidths(page, 'orders-empty');
     expect(issues).toEqual([]);
@@ -211,7 +198,6 @@ test.describe('UI-RESULT: màn kết quả, màn trống và không tìm thấy'
     const issues = collectConsoleIssues(page);
     await page.route('**/api/me', (route) => fulfillJson(route, 200, { data: guestActor }));
     await page.goto('/me/orders');
-    await dismissConsent(page);
     await expect(page.getByText('Đăng nhập để xem các đơn hàng của bạn.')).toBeVisible();
     await checkLayoutAtBothWidths(page, 'orders-signed-out');
     expect(issues).toEqual([]);

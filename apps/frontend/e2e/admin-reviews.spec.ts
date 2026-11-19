@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Route, type TestInfo } from '@playwright/test';
 import { expectNoHorizontalOverflow } from './admin-order-fixtures';
-import { collectConsoleIssues, dismissConsent, loginAdmin } from './catalog-admin-flow';
+import { collectConsoleIssues, loginAdmin } from './catalog-admin-flow';
 import { e2eEnvironment } from './environment';
 import { readPasswordSetupLink } from './outbox';
 
@@ -454,7 +454,6 @@ test.describe('COM-UI10: hàng chờ kiểm duyệt đánh giá', () => {
     ]);
     await mock.install(page);
     await loginAdmin(page);
-    await dismissConsent(page);
 
     for (const width of [1280, 375]) {
       await page.setViewportSize({ width, height: width === 375 ? 812 : 800 });

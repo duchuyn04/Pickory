@@ -56,11 +56,6 @@ async function stubProductImages(page: Page) {
   );
 }
 
-async function dismissConsent(page: Page) {
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
-}
-
 async function expectNoHorizontalOverflow(page: Page) {
   // Đo chiều rộng tài liệu so với khung nhìn để phát hiện lỗi tràn ngang.
   const widths = await page.evaluate(() => ({
@@ -88,7 +83,6 @@ async function checkLayoutAtBothWidths(page: Page, shotName: string) {
 
 async function loginAdmin(page: Page) {
   await page.goto('/admin/login');
-  await dismissConsent(page);
   await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -238,7 +232,6 @@ test.describe('COM-UI3: theo dõi đơn hàng và khách tự hủy', () => {
 
     // Khách vãng lai thêm sản phẩm vào giỏ.
     await page.goto(`/p/${product.slug}`);
-    await dismissConsent(page);
     await page.getByRole('button', { name: 'Thêm vào giỏ' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Đã thêm vào giỏ' })).toBeVisible();
 
@@ -299,7 +292,6 @@ test.describe('COM-UI3: theo dõi đơn hàng và khách tự hủy', () => {
     const guestIssues = collectConsoleIssues(guestPage);
     await stubProductImages(guestPage);
     await guestPage.goto(currentUrl);
-    await dismissConsent(guestPage);
     await expect(
       guestPage.getByRole('heading', { level: 1, name: `Đơn hàng #${orderCode}` }),
     ).toBeVisible();
@@ -327,7 +319,6 @@ test.describe('COM-UI3: theo dõi đơn hàng và khách tự hủy', () => {
     ]);
     await stubProductImages(forbiddenPage);
     await forbiddenPage.goto(`/orders/${orderCode}`);
-    await dismissConsent(forbiddenPage);
     await expect(
       forbiddenPage.getByRole('heading', { level: 1, name: 'Không tìm thấy đơn hàng' }),
     ).toBeVisible();
@@ -343,7 +334,6 @@ test.describe('COM-UI3: theo dõi đơn hàng và khách tự hủy', () => {
       if (request.url().includes('/api/orders/')) orderRequests.push(request.url());
     });
     await reopenPage.goto(`/orders/${orderCode}/success`);
-    await dismissConsent(reopenPage);
     await expect(reopenPage.getByRole('link', { name: 'Tra cứu đơn hàng' })).toBeVisible();
     await expect(reopenPage.getByText('Liên kết xem đơn đã gửi tới email của bạn.')).toBeVisible();
     expect(orderRequests).toEqual([]);

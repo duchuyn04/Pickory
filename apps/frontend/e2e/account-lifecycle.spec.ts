@@ -23,7 +23,6 @@ test('khách đăng ký, xác thực email, quên mật khẩu, đặt lại và
 
   await test.step('Đăng ký khách bằng giao diện', async () => {
     await page.goto('/register');
-    await page.getByRole('button', { name: 'Chỉ cần thiết', exact: true }).click();
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel(/^Mật khẩu/).fill(e2eEnvironment.accountPassword);
     await page.getByLabel(/^Họ và tên/).fill('Khách vòng đời');

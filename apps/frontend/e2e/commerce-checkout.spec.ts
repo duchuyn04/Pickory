@@ -55,8 +55,6 @@ interface AddressChoice {
 
 async function loginAdmin(page: Page) {
   await page.goto('/admin/login');
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-  if (await consent.isVisible()) await consent.click();
   await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -96,11 +94,6 @@ async function stubProductImages(page: Page) {
   await page.route('https://res.cloudinary.com/**', (route) =>
     route.fulfill({ body: tinyPng, contentType: 'image/png' }),
   );
-}
-
-async function dismissConsent(page: Page) {
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
 }
 
 async function expectNoHorizontalOverflow(page: Page) {
@@ -259,7 +252,6 @@ async function applyCommerceSettings(
 
 async function addToCartFromProductPage(page: Page, product: SeededProduct) {
   await page.goto(`/p/${product.slug}`);
-  await dismissConsent(page);
   await page.getByRole('button', { name: 'Thêm vào giỏ' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Đã thêm vào giỏ' })).toBeVisible();
 }

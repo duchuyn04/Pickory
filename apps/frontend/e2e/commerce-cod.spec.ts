@@ -14,7 +14,7 @@ import {
   type AddressChoice,
   type SeededProduct,
 } from './admin-order-fixtures';
-import { collectConsoleIssues, dismissConsent, loginAdmin } from './catalog-admin-flow';
+import { collectConsoleIssues, loginAdmin } from './catalog-admin-flow';
 import {
   addToCartAndOpenCheckout,
   checkoutRowFor,
@@ -184,7 +184,6 @@ test.describe('COM-E2E1: khách vãng lai mua COD', () => {
         await stubProductImages(linkPage);
         // Mở đúng link lấy từ thư, không dựng lại link từ mã đơn.
         await linkPage.goto(emailLink);
-        await dismissConsent(linkPage);
 
         await expect(
           linkPage.getByRole('heading', { level: 1, name: `Đơn hàng #${orderCode}` }),

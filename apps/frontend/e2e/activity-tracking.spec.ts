@@ -52,15 +52,15 @@ async function readFunnel(adminPage: Page): Promise<FunnelCounts> {
   };
 }
 
-// Cách khách đối xử với banner đồng ý: bấm "Đồng ý", hoặc để banner mở suốt luồng.
-type BannerChoice = 'agree' | 'leave-open';
+// Chế độ đồng ý cá nhân hóa trước khi bắt đầu luồng mua hàng.
+type ConsentMode = 'personalization-on' | 'default';
 
 interface GuestFlowResult {
   before: FunnelCounts;
   after: FunnelCounts;
   eventStatuses: (number | null)[];
   consoleIssues: string[];
-  bannerVisibleAtEnd: boolean;
+  personalizationConsent: boolean;
 }
 
 // Hiệu số từng bước của phễu giữa hai lần đọc.
@@ -72,7 +72,7 @@ function funnelIncrease(result: GuestFlowResult): FunnelCounts {
   };
 }
 
-// Điều mọi luồng đều phải đúng, dù khách chọn banner thế nào: mỗi bước tăng 1, request lượt xem trả 204 và console sạch.
+// Mọi luồng đều phải tăng mỗi bước 1 và nhận mã 204 ở lượt xem. Trang phải giữ `console` sạch.
 function expectCountedOnce(result: GuestFlowResult) {
   expect(funnelIncrease(result)).toEqual({ productView: 1, addToCart: 1, orderPlaced: 1 });
   // Mọi request lượt xem của luồng phải trả 204. Lỗi 429 hay 403 không được bị bỏ sót.
@@ -105,30 +105,27 @@ test.describe('ACT-E2E1: luồng đếm của activity-tracking', () => {
   // Một khách vãng lai xem sản phẩm, thêm giỏ và đặt đơn COD qua giao diện thật. Phễu được đọc trước và sau luồng.
   async function runGuestPurchase(
     browser: Browser,
-    banner: BannerChoice,
+    consent: ConsentMode,
   ): Promise<GuestFlowResult> {
-    // Mỗi luồng dùng context mới, nên cookie `pk_anon`, giỏ và banner không lẫn giữa hai luồng.
+    // Mỗi luồng dùng context mới, nên cookie `pk_anon` và giỏ hàng không lẫn giữa hai luồng.
     const guest = await openIsolatedSession(browser);
     const { page } = guest;
     try {
       const events = trackEventRequests(page);
-      const bannerRegion = page.getByRole('region', { name: 'Đồng ý cookie và quyền riêng tư' });
       const before = await readFunnel(adminPage);
 
-      // Trang chủ không gửi lượt xem. Khách chọn banner ở đây, trước khi mở sản phẩm.
+      // Trang chủ không gửi lượt xem. Nạp trang xong mới bật cá nhân hóa qua API trước khi mở sản phẩm.
       await page.goto('/');
-      await expect(bannerRegion).toBeVisible();
-      if (banner === 'agree') {
-        // Test đăng ký chờ response trước khi bấm, để không bỏ lỡ response về nhanh.
-        // Banner chỉ ẩn sau khi server nhận lựa chọn.
-        const consentSaved = page.waitForResponse(
-          (response) =>
-            new URL(response.url()).pathname === '/api/me/consent' &&
-            response.request().method() === 'PUT',
-        );
-        await bannerRegion.getByRole('button', { name: 'Đồng ý', exact: true }).click();
-        expect((await consentSaved).ok()).toBe(true);
-        await expect(bannerRegion).toBeHidden();
+      await expect(
+        page.getByRole('contentinfo').getByRole('link', { name: 'Quyền riêng tư', exact: true }),
+      ).toBeVisible();
+      if (consent === 'personalization-on') {
+        // Bật cá nhân hóa qua API vì ứng dụng không còn thanh đồng ý ở lần vào đầu.
+        const consentResponse = await page.request.put('/api/me/consent', {
+          headers: { Origin: e2eEnvironment.webOrigin },
+          data: { necessary: true, personalization: true, marketing: false },
+        });
+        expect(consentResponse.ok(), await consentResponse.text()).toBe(true);
       }
 
       // Mở trang sản phẩm đúng một lần. Mỗi lần mở lại sẽ cộng thêm một lượt xem.
@@ -164,41 +161,47 @@ test.describe('ACT-E2E1: luồng đếm của activity-tracking', () => {
         page.getByRole('heading', { level: 1, name: 'Đặt hàng thành công' }),
       ).toBeVisible();
       const after = await readFunnel(adminPage);
+      // Đọc lại `/api/me` để xác nhận trạng thái `personalization` backend ghi nhận cho khách.
+      const meResponse = await page.request.get('/api/me');
+      expect(meResponse.ok(), await meResponse.text()).toBe(true);
+      const meBody = (await meResponse.json()) as {
+        data?: { consent?: { personalization?: boolean } };
+      };
 
       return {
         before,
         after,
         eventStatuses: events.map((event) => event.status),
         consoleIssues: [...guest.consoleIssues],
-        bannerVisibleAtEnd: await bannerRegion.isVisible(),
+        personalizationConsent: Boolean(meBody.data?.consent?.personalization),
       };
     } finally {
       await guest.context.close();
     }
   }
 
-  test('khách bấm Đồng ý, xem sản phẩm, thêm giỏ, đặt COD thì phễu tăng đúng 1 ở mỗi bước', async ({
+  test('khách bật cá nhân hóa, xem sản phẩm, thêm giỏ, đặt COD thì phễu tăng đúng 1 ở mỗi bước', async ({
     browser,
   }) => {
     // Luồng đi qua trang chủ, sản phẩm, giỏ và đặt hàng, nên vượt mức mặc định 30 giây khi máy bận.
     test.setTimeout(180000);
 
-    const result = await runGuestPurchase(browser, 'agree');
+    const result = await runGuestPurchase(browser, 'personalization-on');
 
     expectCountedOnce(result);
-    expect(result.bannerVisibleAtEnd).toBe(false);
+    expect(result.personalizationConsent).toBe(true);
   });
 
-  test('khách chưa chọn banner làm cùng luồng thì phễu vẫn tăng đúng 1 ở mỗi bước', async ({
+  test('khách giữ mặc định chưa bật cá nhân hóa làm cùng luồng thì phễu vẫn tăng đúng 1 ở mỗi bước', async ({
     browser,
   }) => {
     test.setTimeout(180000);
 
-    const result = await runGuestPurchase(browser, 'leave-open');
+    const result = await runGuestPurchase(browser, 'default');
 
     // Bộ đếm gộp theo ngày không cần đồng ý, vì bảng chỉ lưu số và không lưu định danh khách.
     expectCountedOnce(result);
-    // Banner còn hiện ở cuối luồng, chứng minh khách chưa hề chọn.
-    expect(result.bannerVisibleAtEnd).toBe(true);
+    // Cờ cá nhân hóa vẫn tắt, chứng minh khách chưa bật đồng ý.
+    expect(result.personalizationConsent).toBe(false);
   });
 });

@@ -4,7 +4,6 @@ import {
   collectConsoleIssues,
   createBrand,
   createCategory,
-  dismissConsent,
   loginAdmin,
   stubImageProvider,
 } from './catalog-admin-flow';
@@ -202,7 +201,6 @@ test('Luồng catalog: admin tạo và đăng bán sản phẩm, khách lọc v�
   expect(category, `Không thấy danh mục ${categoryName} trong API công khai`).toBeDefined();
 
   await customerPage.goto(`/c/${category?.slug}`);
-  await dismissConsent(customerPage);
   await expect(customerPage.getByRole('heading', { level: 1 })).toHaveText(categoryName);
   await expect(customerPage.locator('.catalog-head [role="status"]')).toHaveText('2 sản phẩm');
 

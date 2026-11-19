@@ -70,8 +70,7 @@ describe('màn cấu hình AI đã gỡ', () => {
   it('mở /admin/ai không hiện màn cấu hình AI và không gọi API AI', async () => {
     await renderAdminApp('/admin/ai');
 
-    // Ứng dụng đã khởi động và hỏi phiên admin. Thiếu request này thì trang trắng cũng làm test xanh.
-    expect(requestedUrls).toContain('/api/me');
+    // Route `/admin/ai` đã gỡ nên `App` không khớp route nào và không gọi `/api/me`. Ca đối chứng bên dưới xác nhận môi trường thử dựng được `/admin`.
     expect(container.textContent).not.toContain('Cấu hình và sử dụng AI');
     expect(requestedUrls.filter((url) => url.startsWith('/api/admin/ai'))).toEqual([]);
   });
@@ -79,7 +78,8 @@ describe('màn cấu hình AI đã gỡ', () => {
   it('cùng phiên admin, /admin vẫn dựng khung back-office và menu không có mục AI', async () => {
     await renderAdminApp('/admin');
 
-    // Đối chứng cho ca trên: harness này dựng được khung admin khi route có thật.
+    // Đối chứng cho ca trên: môi trường thử dựng được khung admin khi route có thật.
+    expect(requestedUrls).toContain('/api/me');
     const navigationText = container.querySelector('nav[aria-label="Quản trị"]')?.textContent ?? '';
     expect(navigationText).toContain('Nhân viên');
     expect(navigationText).not.toContain('Cấu hình AI');

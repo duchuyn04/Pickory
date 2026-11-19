@@ -1,11 +1,6 @@
 import { expect, test, type Page, type Route } from '@playwright/test';
 import { expectNoHorizontalOverflow, prepareShipping, seedProduct } from './admin-order-fixtures';
-import {
-  collectConsoleIssues,
-  dismissConsent,
-  loginAdmin,
-  type AllowedLoadFailure,
-} from './catalog-admin-flow';
+import { collectConsoleIssues, loginAdmin, type AllowedLoadFailure } from './catalog-admin-flow';
 import {
   confirmAndShipOrderByApi,
   loginSeededCustomer,
@@ -140,11 +135,8 @@ test.describe('SD-UI1: màn chăm sóc khách hàng', () => {
       roleCode: 'support',
     });
     await activateStaffAccount(colleague.page, colleagueEmail);
-    await dismissConsent(colleague.page);
     await activateStaffAccount(support.page, supportEmail);
     await activateStaffAccount(sales.page, salesEmail);
-    await dismissConsent(support.page);
-    await dismissConsent(sales.page);
 
     // Khách đã seed đặt một đơn COD, rồi admin xác nhận và tạo vận đơn. Đơn sang `shipping` như thật.
     await loginSeededCustomer(customer.page, e2eEnvironment.screensCustomerEmail);

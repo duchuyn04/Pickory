@@ -14,7 +14,6 @@ test('khách E2E đã xác thực đăng nhập với vai trò customer', async 
 
   // Đăng nhập qua giao diện để chứng minh mật khẩu seed được hệ thống xác thực thật.
   await page.goto('/login');
-  await page.getByRole('button', { name: 'Chỉ cần thiết', exact: true }).click();
   await page.getByLabel(/^Email/).fill(email);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.accountPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();

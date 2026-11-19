@@ -40,7 +40,6 @@ test('nhân viên khóa khách rồi mở khóa qua giao diện quản trị', a
 
   await test.step('Khách đã seed đăng nhập rồi đăng xuất', async () => {
     await page.goto('/login');
-    await page.getByRole('button', { name: 'Chỉ cần thiết', exact: true }).click();
     await page.getByLabel(/^Email/).fill(email);
     await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.accountPassword);
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();

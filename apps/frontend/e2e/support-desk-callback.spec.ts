@@ -1,5 +1,5 @@
 import { expect, test, type Page, type Request } from '@playwright/test';
-import { dismissConsent, loginAdmin } from './catalog-admin-flow';
+import { loginAdmin } from './catalog-admin-flow';
 import { activateStaffAccount, inviteStaff } from './staff-fixtures';
 import { makeRunSuffix } from './support-desk-canned-api';
 import {
@@ -87,7 +87,6 @@ test.describe('SD-E2E2: luồng ngoài giờ và hai người nhận với backe
     supportTwo = await openStaffSession(browser);
     sales = await openStaffSession(browser);
     await loginAdmin(admin.page);
-    await dismissConsent(admin.page);
 
     // Đọc cấu hình hiện tại trước khi các nhóm test ghi đè giờ làm việc và ngày nghỉ.
     originalSettings = await readSupportSettingsByApi(admin.page);
@@ -110,11 +109,8 @@ test.describe('SD-E2E2: luồng ngoài giờ và hai người nhận với backe
     });
 
     await activateStaffAccount(supportOne.page, supportOneEmail);
-    await dismissConsent(supportOne.page);
     await activateStaffAccount(supportTwo.page, supportTwoEmail);
-    await dismissConsent(supportTwo.page);
     await activateStaffAccount(sales.page, salesEmail);
-    await dismissConsent(sales.page);
 
     // Xóa thông báo console của bước dựng dữ liệu để mỗi test bắt đầu với danh sách trống.
     for (const staffSession of [admin, supportOne, supportTwo, sales]) {
@@ -231,7 +227,6 @@ test.describe('SD-E2E2: luồng ngoài giờ và hai người nhận với backe
         await test.step('khách gửi tin ở /support ngoài giờ và thấy thông báo kèm form số điện thoại', async () => {
           // Tin đầu tiên của khách vãng lai kích hoạt bước kiểm tra lịch làm việc ở backend.
           await customerPage.goto('/support');
-          await dismissConsent(customerPage);
           await expect(
             customerPage.getByRole('heading', { name: 'Liên hệ CSKH', exact: true }),
           ).toBeVisible();
@@ -361,7 +356,6 @@ test.describe('SD-E2E2: luồng ngoài giờ và hai người nhận với backe
 
           // Khách vãng lai gửi tin đầu tiên trong giờ để backend mở phiên chờ mới.
           await customerPage.goto('/support');
-          await dismissConsent(customerPage);
           await expect(
             customerPage.getByRole('heading', { name: 'Liên hệ CSKH', exact: true }),
           ).toBeVisible();

@@ -46,7 +46,7 @@ User story: Là admin hoặc `sales` (`reports:read`), tôi xem phễu theo kho�
 
 - Bộ đếm chỉ có ngày, tên chỉ số và giá trị. Bộ đếm không chứa `anonymousId`, `userId` hay sản phẩm đã xem.
 - Bộ đếm không gắn với một người, nên module đếm cả khách đồng ý và khách không đồng ý.
-- Trang `/privacy` không đổi. Banner đồng ý không đổi.
+- Trang `/privacy` không đổi.
 - Lượt xem của nhân viên back-office không được cộng.
 
 ### Nhận lượt xem từ frontend

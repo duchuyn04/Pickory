@@ -1,5 +1,5 @@
 import { expect, test, type Locator, type Page, type Response } from '@playwright/test';
-import { dismissConsent, loginAdmin } from './catalog-admin-flow';
+import { loginAdmin } from './catalog-admin-flow';
 import { activateStaffAccount, inviteStaff } from './staff-fixtures';
 import {
   createCannedResponseByApi,
@@ -49,7 +49,6 @@ test.describe('SD-E2E1: luồng CSKH trong giờ với backend thật', () => {
     admin = await openStaffSession(browser);
     support = await openStaffSession(browser);
     await loginAdmin(admin.page);
-    await dismissConsent(admin.page);
 
     // Giờ mặc định của DB là 08:00 đến 21:00, nên lần chạy ngoài khung này sẽ không còn là "trong giờ".
     // Spec đặt khung phủ cả ngày và không có ngày nghỉ, rồi trả lại giá trị cũ ở `afterAll`.
@@ -67,7 +66,6 @@ test.describe('SD-E2E1: luồng CSKH trong giờ với backend thật', () => {
       roleCode: 'support',
     });
     await activateStaffAccount(support.page, supportEmail);
-    await dismissConsent(support.page);
     // Mẫu dùng chung do admin tạo qua API thật. Nhân viên `support` chọn mẫu này bằng phím `/`.
     await createCannedResponseByApi(admin.page, {
       shortcut: cannedShortcut,
@@ -193,7 +191,6 @@ test.describe('SD-E2E1: luồng CSKH trong giờ với backend thật', () => {
 
       await test.step('khách vãng lai mở /support và gửi tin đầu, trạng thái đổi sang Đang chờ nhân viên', async () => {
         await customerPage.goto('/support');
-        await dismissConsent(customerPage);
         await expect(
           customerPage.getByRole('heading', { name: 'Liên hệ CSKH', exact: true }),
         ).toBeVisible();

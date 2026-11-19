@@ -151,8 +151,6 @@ export async function placeCodOrder(
   );
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(`/p/${product.slug}`);
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
   await page.getByRole('button', { name: 'Thêm vào giỏ' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Đã thêm vào giỏ' })).toBeVisible();
 

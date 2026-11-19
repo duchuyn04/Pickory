@@ -32,8 +32,6 @@ async function captureAtBothWidths(page: Page, state: string) {
 
 async function loginAdmin(page: Page) {
   await page.goto('/admin/login');
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-  if (await consent.isVisible()) await consent.click();
   await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -166,8 +164,6 @@ test('khách quét VietQR, sao chép và nhận xác nhận chuyển khoản t�
       route.fulfill({ body: tinyPng, contentType: 'image/png' }),
     );
     await page.goto(`/p/${product.slug}`);
-    const consent = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-    if (await consent.isVisible()) await consent.click();
     await page.getByRole('button', { name: 'Thêm vào giỏ' }).click();
     await expect(page.getByRole('status').filter({ hasText: 'Đã thêm vào giỏ' })).toBeVisible();
     await page.getByRole('button', { name: /^Giỏ hàng, / }).click();

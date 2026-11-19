@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 import { prepareShipping, seedProduct, type SeededProduct } from './admin-order-fixtures';
-import { dismissConsent, loginAdmin } from './catalog-admin-flow';
+import { loginAdmin } from './catalog-admin-flow';
 import {
   confirmAndShipOrderByApi,
   deliverShipmentByWebhook,
@@ -23,7 +23,6 @@ function reviewsRegion(page: Page) {
 // Mở trang sản phẩm trong phiên đã cho và trả vùng đánh giá. Phiên của khách vãng lai không phụ thuộc người viết.
 async function openProductReviews(session: IsolatedSession, product: SeededProduct) {
   await session.page.goto(`/p/${product.slug}`);
-  await dismissConsent(session.page);
   return reviewsRegion(session.page);
 }
 

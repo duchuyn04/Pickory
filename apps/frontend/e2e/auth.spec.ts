@@ -5,9 +5,7 @@ test('Luồng 1: khách đăng ký, đăng xuất và đăng nhập lại', asyn
   const customerName = 'Khách E2E';
 
   await test.step('Đăng ký tài khoản khách bằng giao diện', async () => {
-    // Chọn cookie cần thiết để banner không che form.
     await page.goto('/register');
-    await page.getByRole('button', { name: 'Chỉ cần thiết', exact: true }).click();
     // Dùng cùng email để phát hiện dữ liệu còn từ lần chạy trước.
     await page.getByLabel(/^Email/).fill(e2eEnvironment.customerEmail);
     await page.getByLabel(/^Mật khẩu/).fill(e2eEnvironment.accountPassword);

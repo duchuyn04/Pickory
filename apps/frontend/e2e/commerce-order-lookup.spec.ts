@@ -58,11 +58,6 @@ async function stubProductImages(page: Page) {
   );
 }
 
-async function dismissConsent(page: Page) {
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
-}
-
 async function expectNoHorizontalOverflow(page: Page) {
   // Đo chiều rộng tài liệu so với chiều rộng cửa sổ để phát hiện lỗi tràn ngang.
   const widths = await page.evaluate(() => ({
@@ -89,7 +84,6 @@ async function checkLayoutAtBothWidths(page: Page, stateName: string) {
 
 async function loginAdmin(page: Page) {
   await page.goto('/admin/login');
-  await dismissConsent(page);
   await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -217,7 +211,6 @@ async function placeGuestCodOrder(
   address: AddressChoice,
 ): Promise<string> {
   await page.goto(`/p/${product.slug}`);
-  await dismissConsent(page);
   await page.getByRole('button', { name: 'Thêm vào giỏ' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Đã thêm vào giỏ' })).toBeVisible();
 
@@ -276,7 +269,6 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
     await stubProductImages(lookupPage);
 
     await lookupPage.goto('/order-lookup');
-    await dismissConsent(lookupPage);
     await expect(
       lookupPage.getByRole('heading', { level: 1, name: 'Tra cứu đơn hàng' }),
     ).toBeVisible();
@@ -324,7 +316,6 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
     });
 
     await page.goto('/order-lookup');
-    await dismissConsent(page);
     await page.getByLabel('Mã đơn hàng').fill('PKAB23CD45');
     await page.getByLabel('Email đặt hàng').fill(guestContactEmail);
     // Chữ trên nút đổi khi đang gửi, nên chọn nút theo loại thay vì theo tên.
@@ -349,7 +340,6 @@ test.describe('COM-UI11: trang tra cứu đơn', () => {
     await page.setViewportSize({ width: 375, height: 812 });
 
     await page.goto('/');
-    await dismissConsent(page);
     // Header có thêm link không được làm trang tràn ngang ở 375px.
     await expectNoHorizontalOverflow(page);
     // Ở màn hẹp, mở ngăn menu trước khi bấm liên kết điều hướng.

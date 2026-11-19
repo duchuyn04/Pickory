@@ -3,7 +3,6 @@ import { trackEventRequests } from './activity-tracking-fixtures';
 import { e2eEnvironment } from './environment';
 import {
   collectConsoleIssues,
-  dismissConsent,
   loginAdmin,
   seedCatalog,
   stubProductImages,
@@ -35,7 +34,6 @@ test.describe('ACT-UI1: trang sản phẩm gửi lượt xem', () => {
     const events = trackEventRequests(page);
     await stubProductImages(page);
     await page.goto(`/p/${catalog.activeSlug}`);
-    await dismissConsent(page);
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(catalog.activeName);
     await expect.poll(() => events.filter((event) => event.status !== null).length).toBe(1);
@@ -53,7 +51,6 @@ test.describe('ACT-UI1: trang sản phẩm gửi lượt xem', () => {
     const events = trackEventRequests(page);
     await stubProductImages(page);
     await page.goto(`/p/${catalog.activeSlug}?sku=${catalog.skuIds.black256}`);
-    await dismissConsent(page);
     await expect(page.locator('.product-price strong')).toHaveText('20.000.000 đ');
     await expect.poll(() => events.length).toBe(1);
 
@@ -71,7 +68,6 @@ test.describe('ACT-UI1: trang sản phẩm gửi lượt xem', () => {
     const events = trackEventRequests(page);
     await stubProductImages(page);
     await page.goto(`/p/${catalog.activeSlug}`);
-    await dismissConsent(page);
     await expect.poll(() => events.length).toBe(1);
 
     // Breadcrumb dẫn về trang danh mục. Trang danh mục không phải trang sản phẩm nên không gửi lượt xem.
@@ -96,7 +92,6 @@ test.describe('ACT-UI1: trang sản phẩm gửi lượt xem', () => {
     const events = trackEventRequests(page);
     await stubProductImages(page);
     await page.goto(`/p/${catalog.activeSlug}`);
-    await dismissConsent(page);
     await expect.poll(() => events.length).toBe(1);
 
     await page
@@ -125,7 +120,6 @@ test.describe('ACT-UI1: trang sản phẩm gửi lượt xem', () => {
   }) => {
     const events = trackEventRequests(page);
     await page.goto('/p/san-pham-khong-ton-tai');
-    await dismissConsent(page);
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Không tìm thấy sản phẩm');
     await waitForLateRequests(page);
@@ -143,7 +137,6 @@ test.describe('ACT-UI1: trang sản phẩm gửi lượt xem', () => {
     // Giả lập mất mạng ở đúng route lượt xem. Các API khác của trang vẫn chạy thật.
     await page.route('**/api/events', (route) => route.abort());
     await page.goto(`/p/${catalog.activeSlug}`);
-    await dismissConsent(page);
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(catalog.activeName);
     await expect.poll(() => events.length).toBe(1);

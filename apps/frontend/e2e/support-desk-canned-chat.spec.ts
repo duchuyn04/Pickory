@@ -1,6 +1,6 @@
 import { expect, test, type Page, type Request, type Response } from '@playwright/test';
 import { expectNoHorizontalOverflow } from './admin-order-fixtures';
-import { dismissConsent, loginAdmin } from './catalog-admin-flow';
+import { loginAdmin } from './catalog-admin-flow';
 import { activateStaffAccount, inviteStaff } from './staff-fixtures';
 import {
   createCannedResponseByApi,
@@ -45,14 +45,12 @@ test.describe('SD-UI2 và SD-UI5: mẫu trả lời nhanh với backend thật',
     admin = await openStaffSession(browser);
     support = await openStaffSession(browser);
     await loginAdmin(admin.page);
-    await dismissConsent(admin.page);
     await inviteStaff(admin.page, {
       email: supportEmail,
       fullName: 'Support mẫu E2E',
       roleCode: 'support',
     });
     await activateStaffAccount(support.page, supportEmail);
-    await dismissConsent(support.page);
     // Mẫu dùng chung do admin tạo, mẫu cá nhân do chính nhân viên `support` tạo. Cả hai đi qua API thật.
     await createCannedResponseByApi(admin.page, {
       shortcut: sharedShortcut,

@@ -31,8 +31,6 @@ interface SeededCatalog {
 
 async function loginAdmin(page: Page) {
   await page.goto('/admin/login');
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
   await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -58,11 +56,6 @@ async function stubProductImages(page: Page) {
   await page.route('https://res.cloudinary.com/**', (route) =>
     route.fulfill({ body: tinyPng, contentType: 'image/png' }),
   );
-}
-
-async function dismissConsent(page: Page) {
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
 }
 
 async function saveScreenshot(page: Page, fileName: string) {
@@ -175,7 +168,6 @@ async function seedCatalog(page: Page): Promise<SeededCatalog> {
 
 async function addFromProductPage(page: Page, product: SeededProduct) {
   await page.goto(`/p/${product.slug}`);
-  await dismissConsent(page);
   await page.getByRole('button', { name: 'Thêm vào giỏ' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Đã thêm vào giỏ' })).toBeVisible();
 }
@@ -212,7 +204,6 @@ test.describe('COM-UI1: giỏ hàng của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/p/${catalog.laptop.slug}`);
-    await dismissConsent(page);
 
     const toggleEmpty = page.getByRole('button', { name: 'Giỏ hàng, trống' });
     await expect(toggleEmpty).toBeVisible();
@@ -422,7 +413,6 @@ test.describe('COM-UI1: giỏ hàng của khách', () => {
     for (const width of [1280, 375]) {
       await page.setViewportSize({ width, height: width === 1280 ? 800 : 812 });
       await page.goto(`/p/${catalog.laptop.slug}`);
-      await dismissConsent(page);
       const addButton = page.getByRole('button', { name: 'Thêm vào giỏ' });
       await expect(addButton).toBeEnabled();
       await expectNoHorizontalOverflow(page);

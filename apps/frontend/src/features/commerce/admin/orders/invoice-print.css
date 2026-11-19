@@ -382,9 +382,8 @@
     color: black;
   }
 
-  /* Ẩn thanh công cụ và banner đồng ý cookie khi xuất ra giấy. */
-  .invoice-print-toolbar,
-  body:has(.invoice-print-page) .consent-banner {
+  /* Ẩn thanh công cụ khi xuất ra giấy. */
+  .invoice-print-toolbar {
     display: none;
   }
 

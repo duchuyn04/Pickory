@@ -7,8 +7,6 @@ const ORIGIN_HEADERS = { Origin: e2eEnvironment.webOrigin };
 
 async function loginCustomer(page: Page) {
   await page.goto('/login');
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-  if (await consent.isVisible()) await consent.click();
   await page.getByLabel(/^Email/).fill(e2eEnvironment.screensCustomerEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.accountPassword!);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();

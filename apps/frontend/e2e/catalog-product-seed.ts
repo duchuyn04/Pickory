@@ -11,8 +11,6 @@ const adminHeaders = { Origin: e2eEnvironment.webOrigin };
 
 export async function loginAdmin(page: Page) {
   await page.goto('/admin/login');
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
   await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -39,11 +37,6 @@ export async function stubProductImages(page: Page) {
   await page.route('https://res.cloudinary.com/**', (route) =>
     route.fulfill({ body: tinyPng, contentType: 'image/png' }),
   );
-}
-
-export async function dismissConsent(page: Page) {
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
 }
 
 interface ApiVariant {

@@ -35,21 +35,42 @@ test('DS-05: header đỏ và màn tài khoản khách không tràn ở 1280px v
   });
   page.on('pageerror', (error) => consoleIssues.push(`[pageerror] ${error.message}`));
 
-  await test.step('Banner cookie có hai lựa chọn rộng bằng nhau ở 375px', async () => {
-    await page.setViewportSize({ width: 375, height: 812 });
-    await page.goto('/login');
-    const necessaryOnly = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-    const acceptAll = page.getByRole('button', { name: 'Đồng ý', exact: true });
-    await expect(necessaryOnly).toBeVisible();
-    // Spec identity yêu cầu hai lựa chọn có cùng kích thước, không nút nào nổi bật hơn.
-    const necessaryBox = await necessaryOnly.boundingBox();
-    const acceptBox = await acceptAll.boundingBox();
-    expect(Math.round(necessaryBox?.width ?? 0)).toBe(Math.round(acceptBox?.width ?? -1));
-    expect(Math.round(necessaryBox?.height ?? 0)).toBe(Math.round(acceptBox?.height ?? -1));
-    await expectNoHorizontalOverflow(page);
-    await page.screenshot({ path: testInfo.outputPath('consent-banner-375.png') });
-    await necessaryOnly.click();
-    await expect(necessaryOnly).toBeHidden();
+  await test.step('Trang chủ không còn banner cookie và vẫn có link Quyền riêng tư', async () => {
+    const bannerRegion = page.getByRole('region', { name: 'Đồng ý cookie và quyền riêng tư' });
+    const privacyLink = page.getByRole('contentinfo').getByRole('link', {
+      name: 'Quyền riêng tư',
+      exact: true,
+    });
+    for (const width of [1280, 375]) {
+      await page.setViewportSize({ width, height: width === 375 ? 812 : 800 });
+      await page.goto('/');
+      // Đợi link chân trang hiện để chắc chắn ứng dụng đã dựng xong trước khi khẳng định không có banner.
+      await expect(privacyLink).toBeVisible();
+      await expect(bannerRegion).toHaveCount(0);
+      await expectNoHorizontalOverflow(page);
+    }
+  });
+
+  await test.step('Trang /privacy lưu lựa chọn cá nhân hóa và giữ sau khi tải lại', async () => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.goto('/privacy');
+    const personalizationBox = page.getByRole('checkbox', { name: /Cá nhân hóa nội dung/ });
+    const saveButton = page.getByRole('button', {
+      name: 'Lưu cài đặt quyền riêng tư',
+      exact: true,
+    });
+    await expect(personalizationBox).not.toBeChecked();
+    await personalizationBox.check();
+    await saveButton.click();
+    await expect(page.getByRole('status')).toHaveText('Lựa chọn của bạn đã được lưu thành công!');
+    await page.reload();
+    await expect(personalizationBox).toBeChecked();
+    // Trả lựa chọn về mặc định tắt để bước đăng nhập sau không gộp cờ bật vào tài khoản seed.
+    await personalizationBox.uncheck();
+    await saveButton.click();
+    await expect(page.getByRole('status')).toHaveText('Lựa chọn của bạn đã được lưu thành công!');
+    await page.reload();
+    await expect(personalizationBox).not.toBeChecked();
   });
 
   for (const width of [1280, 375]) {

@@ -73,10 +73,6 @@ test('Luồng UI-C4: quản lý danh mục, bộ thuộc tính và thương hi�
   await test.step('Admin đăng nhập vào hệ thống', async () => {
     // Đăng nhập bằng tài khoản quản trị viên có sẵn trong môi trường E2E.
     await page.goto('/admin/login');
-    const cookieButton = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-    if (await cookieButton.isVisible()) {
-      await cookieButton.click();
-    }
     await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
     await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
     await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();

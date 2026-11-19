@@ -74,14 +74,8 @@ export async function stubImageProvider(
   return { uploadCount: () => uploadCount };
 }
 
-export async function dismissConsent(page: Page) {
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
-}
-
 export async function loginAdmin(page: Page) {
   await page.goto('/admin/login');
-  await dismissConsent(page);
   await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();

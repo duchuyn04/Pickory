@@ -15,8 +15,6 @@ const COMPARE_STORAGE_KEY = 'pickory.compare';
 
 async function loginAdmin(page: Page) {
   await page.goto('/admin/login');
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
   await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -55,11 +53,6 @@ async function expectNoHorizontalPageOverflow(page: Page) {
     clientWidth: document.documentElement.clientWidth,
   }));
   expect(widths.scrollWidth).toBeLessThanOrEqual(widths.clientWidth);
-}
-
-async function dismissConsent(page: Page) {
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết' });
-  if (await consent.isVisible()) await consent.click();
 }
 
 interface SeededProduct {
@@ -236,7 +229,6 @@ async function seedCatalog(page: Page): Promise<SeededCatalog> {
 // Thêm sản phẩm vào danh sách so sánh bằng nút trên trang sản phẩm.
 async function addToCompare(page: Page, slug: string) {
   await page.goto(`/p/${slug}`);
-  await dismissConsent(page);
   await page.getByRole('button', { name: 'Thêm vào so sánh' }).click();
   await expect(page.getByRole('button', { name: 'Bỏ khỏi so sánh' })).toBeVisible();
 }
@@ -372,7 +364,6 @@ test.describe('UI-C3: trang so sánh của khách', () => {
 
     // Đi qua danh mục bằng điều hướng trong ứng dụng, không tải lại trang, để kho bộ nhớ giữ danh sách.
     await page.goto(`/c/${catalog.categorySlug}`);
-    await dismissConsent(page);
     for (const product of catalog.products.slice(0, 2)) {
       await page.getByRole('link', { name: new RegExp(product.name) }).click();
       await expect(page.getByRole('heading', { level: 1 })).toHaveText(product.name);
@@ -397,7 +388,6 @@ test.describe('UI-C3: trang so sánh của khách', () => {
     });
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/compare');
-    await dismissConsent(page);
 
     await expect(page.getByText('Chưa có sản phẩm nào để so sánh')).toBeVisible();
     await expect(page.getByRole('link', { name: 'Về trang chủ' })).toBeVisible();
@@ -422,7 +412,6 @@ test.describe('UI-C3: trang so sánh của khách', () => {
       value: JSON.stringify(listWithUnknownId),
     });
     await page.goto('/compare');
-    await dismissConsent(page);
 
     await expect(
       page.getByRole('status').filter({

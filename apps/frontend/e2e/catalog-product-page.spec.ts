@@ -2,7 +2,6 @@ import { expect, test, type Page } from '@playwright/test';
 import { e2eEnvironment } from './environment';
 import {
   collectConsoleIssues,
-  dismissConsent,
   loginAdmin,
   seedCatalog,
   stubProductImages,
@@ -48,7 +47,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await page.setViewportSize({ width: 1280, height: 800 });
     // API không đảm bảo thứ tự SKU tạo cùng lúc. Vì vậy test chọn SKU bằng ?sku= thay vì dựa vào SKU mặc định.
     await page.goto(`/p/${catalog.activeSlug}?sku=${catalog.skuIds.black256}`);
-    await dismissConsent(page);
 
     const price = page.locator('.product-price strong');
     const listPrice = page.locator('.product-price-list');
@@ -117,7 +115,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/p/${catalog.activeSlug}`);
-    await dismissConsent(page);
 
     // Cả trang chỉ có một h1.
     await expect(page.getByRole('heading', { level: 1 })).toHaveCount(1);
@@ -180,7 +177,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     });
 
     await page.goto(`/p/${catalog.activeSlug}`);
-    await dismissConsent(page);
 
     const description = page.locator('.description-body');
     await expect(description).toBeVisible();
@@ -209,7 +205,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/p/${catalog.discontinuedSlug}`);
-    await dismissConsent(page);
 
     await expect(page.locator('.product-title .badge')).toHaveText('Ngừng kinh doanh');
     await expect(page.getByText('Sản phẩm đã ngừng kinh doanh.')).toBeVisible();
@@ -233,7 +228,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 375, height: 812 });
     await page.goto(`/p/${catalog.activeSlug}?sku=${catalog.skuIds.black256}`);
-    await dismissConsent(page);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(catalog.activeName);
 
     await expectNoHorizontalPageOverflow(page);
@@ -264,7 +258,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/p/${catalog.sparseSlug}`);
-    await dismissConsent(page);
 
     const colorGroup = page.getByRole('group', { name: 'Màu' });
     const memoryGroup = page.getByRole('group', { name: 'Bộ nhớ' });
@@ -289,7 +282,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await stubProductImages(page);
     expect(catalog.oldSlug).not.toBe(catalog.newSlug);
     await page.goto(`/p/${catalog.oldSlug}?ref=mail`);
-    await dismissConsent(page);
 
     await expect(page).toHaveURL(`${e2eEnvironment.webOrigin}/p/${catalog.newSlug}?ref=mail`);
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
@@ -304,7 +296,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     const issues = collectConsoleIssues(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto('/p/san-pham-khong-ton-tai');
-    await dismissConsent(page);
 
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('Không tìm thấy sản phẩm');
     await page.getByRole('link', { name: 'Về trang chủ' }).click();
@@ -320,7 +311,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/p/${catalog.activeSlug}`);
-    await dismissConsent(page);
 
     const crumbs = page.getByRole('navigation', { name: 'Đường dẫn' });
     await expect(crumbs.getByRole('link', { name: catalog.categoryName })).toHaveAttribute(
@@ -360,7 +350,6 @@ test.describe('UI-C2: trang sản phẩm của khách', () => {
     await stubProductImages(page);
     await page.setViewportSize({ width: 1280, height: 800 });
     await page.goto(`/p/${catalog.activeSlug}?sku=${catalog.skuIds.black256}`);
-    await dismissConsent(page);
 
     const qtyInput = page.locator('#product-quantity-input');
     const decreaseBtn = page.getByRole('button', { name: 'Giảm số lượng' });

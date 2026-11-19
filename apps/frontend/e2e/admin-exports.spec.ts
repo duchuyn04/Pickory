@@ -222,10 +222,6 @@ test('nhân viên thiếu reports:export mở được bốn danh sách nhưng k
       roleCode: 'sales',
     });
     await activateStaffAccount(staffPage, staffEmail);
-    // Chờ nút cookie hiện rồi bấm đóng để khung hình video không bị che phần cuối trang.
-    const consentButton = staffPage.getByRole('button', { name: 'Chỉ cần thiết' });
-    await consentButton.click();
-    await expect(consentButton).toBeHidden();
 
     for (const target of EXPORT_PAGES) {
       await test.step(`Kiểm tra trang ${target.label} ẩn nút xuất với nhân viên`, async () => {

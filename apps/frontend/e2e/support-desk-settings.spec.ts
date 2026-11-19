@@ -8,12 +8,7 @@ import {
   type Route,
 } from '@playwright/test';
 import { expectNoHorizontalOverflow } from './admin-order-fixtures';
-import {
-  collectConsoleIssues,
-  dismissConsent,
-  loginAdmin,
-  type AllowedLoadFailure,
-} from './catalog-admin-flow';
+import { collectConsoleIssues, loginAdmin, type AllowedLoadFailure } from './catalog-admin-flow';
 import { stubWebFonts } from './commerce-order-fixtures';
 import { e2eEnvironment } from './environment';
 import { activateStaffAccount } from './staff-fixtures';
@@ -180,7 +175,6 @@ test.describe('SD-UI5: màn cấu hình CSKH', () => {
     // Chặn phông chữ ngoài để lỗi mạng ngoài không làm console có lỗi oan.
     await stubWebFonts(page);
     await loginAdmin(page);
-    await dismissConsent(page);
     recordPageWrites(page);
     originalSettings = await readSettingsByApi(page);
     consoleIssues.length = 0;
@@ -701,7 +695,6 @@ test.describe('SD-UI5: nhân viên chỉ có support-settings:manage', () => {
     adminPage = await adminContext.newPage();
     await stubWebFonts(adminPage);
     await loginAdmin(adminPage);
-    await dismissConsent(adminPage);
 
     // Vai trò chỉ có quyền cấu hình, không có `conversations:reply`. Đây là người dùng của quyết định Q1.
     const roleCode = `settings-only-${runSuffix}`;
@@ -734,7 +727,6 @@ test.describe('SD-UI5: nhân viên chỉ có support-settings:manage', () => {
     managerConsoleIssues = collectConsoleIssues(managerPage);
     await stubWebFonts(managerPage);
     await activateStaffAccount(managerPage, managerEmail);
-    await dismissConsent(managerPage);
     managerConsoleIssues.length = 0;
   });
 

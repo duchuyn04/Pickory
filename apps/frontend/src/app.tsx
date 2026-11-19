@@ -17,7 +17,6 @@ import { CustomersPage } from './features/identity/admin/customers-page';
 import { RolesPage } from './features/identity/admin/roles-page';
 import { StaffLoginPage } from './features/identity/admin/login-page';
 import { StaffPage } from './features/identity/admin/staff-page';
-import { ConsentBanner } from './features/identity/components/consent-banner';
 import { ForgotPasswordPage } from './features/identity/customer/forgot-password-page';
 import { LoginPage } from './features/identity/customer/login-page';
 import { PrivacySettingsPage } from './features/identity/customer/privacy-settings';
@@ -289,7 +288,6 @@ export function App() {
           />
         </Route>
       </Routes>
-      <ConsentBanner />
     </>
   );
 }

@@ -7,7 +7,7 @@ import {
   type Locator,
   type Page,
 } from '@playwright/test';
-import { collectConsoleIssues, tinyPng, dismissConsent } from './catalog-admin-flow';
+import { collectConsoleIssues, tinyPng } from './catalog-admin-flow';
 import { e2eEnvironment } from './environment';
 import { readFirstShippingAddress, type SeededProduct } from './admin-order-fixtures';
 
@@ -82,7 +82,6 @@ export async function stubWebFonts(page: Page) {
 // Đi từ trang sản phẩm qua mini cart và trang giỏ tới trang đặt hàng, như khách thật.
 export async function addToCartAndOpenCheckout(page: Page, product: SeededProduct) {
   await page.goto(`/p/${product.slug}`);
-  await dismissConsent(page);
   await page.getByRole('button', { name: 'Thêm vào giỏ' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Đã thêm vào giỏ' })).toBeVisible();
   await page.getByRole('button', { name: /^Giỏ hàng, / }).click();

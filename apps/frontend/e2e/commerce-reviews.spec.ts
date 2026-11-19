@@ -227,11 +227,6 @@ function collectConsoleIssuesAllowingMockedFailures(
   return issues;
 }
 
-async function dismissConsent(page: Page) {
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-  if (await consent.isVisible()) await consent.click();
-}
-
 async function savePageShot(page: Page, testInfo: TestInfo, name: string, fullPage = true) {
   const path = screenshotDirectory
     ? `${screenshotDirectory}/${name}.png`
@@ -241,8 +236,6 @@ async function savePageShot(page: Page, testInfo: TestInfo, name: string, fullPa
 
 async function loginCustomer(page: Page) {
   await page.goto('/login');
-  const consent = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-  if (await consent.isVisible()) await consent.click();
   await page.getByLabel(/^Email/).fill(e2eEnvironment.screensCustomerEmail);
   await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.accountPassword!);
   await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
@@ -381,9 +374,6 @@ test.describe('COM-UI9: khối đánh giá trên trang sản phẩm', () => {
 
     await page.goto(`/p/${product.slug}`);
     const region = reviewsRegion(page);
-    // Banner đồng ý cookie dính dưới màn hình sẽ che ảnh chụp, nên đóng trước.
-    const consent = page.getByRole('button', { name: 'Chỉ cần thiết', exact: true });
-    if (await consent.isVisible()) await consent.click();
     await expect(region.getByText('<img src=x onerror=alert(1)>', { exact: false })).toBeVisible();
     await expect(region.getByText('<b>đậm</b>', { exact: false })).toBeVisible();
     await expect(page.locator('img[src="x"]')).toHaveCount(0);
@@ -498,7 +488,6 @@ test.describe('COM-UI9: khối đánh giá trên trang sản phẩm', () => {
     await loginCustomer(page);
 
     await page.goto(`/p/${product.slug}`);
-    await dismissConsent(page);
     await page.addStyleTag({ content: '.site-header { position: static !important; }' });
     const region = reviewsRegion(page);
     await region.getByRole('button', { name: 'Gửi đánh giá' }).click();
@@ -527,7 +516,6 @@ test.describe('COM-UI9: khối đánh giá trên trang sản phẩm', () => {
     await loginCustomer(page);
 
     await page.goto(`/p/${product.slug}`);
-    await dismissConsent(page);
     await page.addStyleTag({ content: '.site-header { position: static !important; }' });
     const region = reviewsRegion(page);
     await expect(region.getByText('Đánh giá của bạn đang bị ẩn.')).toBeVisible();
@@ -550,7 +538,6 @@ test.describe('COM-UI9: khối đánh giá trên trang sản phẩm', () => {
     await loginCustomer(page);
 
     await page.goto(`/p/${product.slug}`);
-    await dismissConsent(page);
     const region = reviewsRegion(page);
     await region.getByRole('button', { name: 'Báo cáo' }).first().click();
     await expect(page.getByRole('dialog', { name: 'Báo cáo đánh giá' })).toBeVisible();

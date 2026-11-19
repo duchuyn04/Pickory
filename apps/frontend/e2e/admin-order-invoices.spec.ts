@@ -289,13 +289,8 @@ test('lưu thông tin shop, in một đơn từ chi tiết ra PDF A4 1 trang', a
   const popupConsoleIssues: string[] = [];
 
   try {
-    await test.step('Đăng nhập quản trị và đóng thanh cookie để khung hình video thông thoáng', async () => {
+    await test.step('Đăng nhập quản trị', async () => {
       await page.goto('/admin/login');
-      const consentButton = page.getByRole('button', { name: 'Chỉ cần thiết' });
-      // Chờ nút cookie hiện rồi bấm đóng hẳn. Thanh đáy không được che khung hình video.
-      await consentButton.click();
-      await expect(consentButton).toBeHidden();
-
       await page.getByLabel(/^Email/).fill(e2eEnvironment.adminEmail);
       await page.getByLabel('Mật khẩu', { exact: true }).fill(e2eEnvironment.adminPassword);
       await page.getByRole('button', { name: 'Đăng nhập', exact: true }).click();
