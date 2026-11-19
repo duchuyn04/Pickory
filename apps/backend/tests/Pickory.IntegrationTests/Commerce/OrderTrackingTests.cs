@@ -13,6 +13,8 @@ using Pickory.Modules.Commerce.Contracts.Events;
 using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Entities;
 using Pickory.Modules.Commerce.Persistence;
+using Pickory.Modules.Shipping.Contracts;
+using Pickory.Modules.Shipping.Contracts.Shipments;
 using Xunit;
 
 namespace Pickory.IntegrationTests.Commerce;
@@ -31,6 +33,7 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
     private readonly CartTestKit _kit;
     private readonly HttpClient _client;
     private readonly List<string> _keys = [];
+    private readonly List<string> _codes = [];
 
     public OrderTrackingTests(CheckoutWebApplicationFactory factory, CommerceDatabaseFixture database)
     {
@@ -113,6 +116,7 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
         var json = await CartTestKit.ReadJsonAsync(response);
         var data = json.GetProperty("data");
         var code = data.GetProperty("code").GetString()!;
+        _codes.Add(code);
         var token = data.GetProperty("accessToken").GetString()!;
         return (code, token, skuId);
     }
@@ -163,6 +167,16 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
 
     private async Task DeleteOrdersOfThisTestAsync()
     {
+        // Vận đơn đã hủy có `ref` dạng `{ref}#cancelled#{n}`, nên dọn theo tiền tố mã đơn. Xóa lịch sử trước vì khóa ngoại.
+        await using (var shipping = _kit.Database.CreateShippingContext())
+        {
+            var shipmentIds = await shipping.Shipments
+                .Where(shipment => _codes.Any(code => shipment.Ref == code || shipment.Ref.StartsWith(code + "#")))
+                .Select(shipment => shipment.Id).ToListAsync();
+            await shipping.ShipmentEvents.Where(shipmentEvent => shipmentIds.Contains(shipmentEvent.ShipmentId)).ExecuteDeleteAsync();
+            await shipping.Shipments.Where(shipment => shipmentIds.Contains(shipment.Id)).ExecuteDeleteAsync();
+        }
+
         await using var commerce = _kit.Database.CreateCommerceContext();
         var orderIds = await commerce.Orders
             .Where(order => _keys.Contains(order.IdempotencyKey))
@@ -171,6 +185,30 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
         await commerce.OrderStatusHistory.Where(history => orderIds.Contains(history.OrderId)).ExecuteDeleteAsync();
         await commerce.OrderItems.Where(item => orderIds.Contains(item.OrderId)).ExecuteDeleteAsync();
         await commerce.Orders.Where(order => orderIds.Contains(order.Id)).ExecuteDeleteAsync();
+    }
+
+    // Đọc mã vận đơn qua API khách bằng token của đơn.
+    private async Task<string?> ReadTrackingCodeAsync(string code, string anonymousId, string token)
+    {
+        var response = await SendGetAsync($"{OrdersPath}/{code}", anonymousId, tokenQuery: token);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var data = (await CartTestKit.ReadJsonAsync(response)).GetProperty("data");
+        return data.GetProperty("trackingCode").GetString();
+    }
+
+    private async Task SetOrderStatusAsync(string code, OrderStatus status)
+    {
+        await using var commerce = _kit.Database.CreateCommerceContext();
+        await commerce.Orders.Where(order => order.Code == code)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(order => order.Status, status));
+    }
+
+    // Tạo vận đơn thẳng qua module shipping để test không phụ thuộc route nhân viên.
+    private async Task<Shipment> CreateShipmentDirectAsync(string code)
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        return await scope.ServiceProvider.GetRequiredService<IShippingService>()
+            .CreateShipmentAsync(ShipmentTestSetup.CreateRequest(code), CancellationToken.None);
     }
 
     // Chủ tài khoản xem được đơn của mình mà không cần token.
@@ -740,5 +778,134 @@ public sealed class OrderTrackingTests : IClassFixture<CheckoutWebApplicationFac
         Assert.Equal("no-store", r2.Headers.CacheControl?.ToString());
         Assert.Equal("no-store", r3.Headers.CacheControl?.ToString());
         Assert.Equal("no-store", r4.Headers.CacheControl?.ToString());
+    }
+
+    // Đơn `shipping` có vận đơn GHN: chủ tài khoản thấy đúng mã vận đơn.
+    [Fact]
+    public async Task GetOrder_WhenShippingOrderHasShipment_ReturnsTrackingCodeToOwner()
+    {
+        var customer = await _kit.CreateCustomerAsync();
+        var anonymousId = _kit.NewAnonymousId();
+        var (code, _, _) = await CreateOrderAsync(anonymousId, sessionToken: customer.SessionToken);
+        var shipment = await CreateShipmentDirectAsync(code);
+        await SetOrderStatusAsync(code, OrderStatus.Shipping);
+
+        var response = await SendGetAsync($"{OrdersPath}/{code}", anonymousId, sessionToken: customer.SessionToken);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var data = (await CartTestKit.ReadJsonAsync(response)).GetProperty("data");
+        Assert.False(string.IsNullOrWhiteSpace(shipment.TrackingCode));
+        Assert.Equal(shipment.TrackingCode, data.GetProperty("trackingCode").GetString());
+    }
+
+    // Khách vãng lai có token đúng thấy mã vận đơn. Token sai hoặc thiếu token vẫn nhận 404.
+    [Fact]
+    public async Task GetOrder_WhenGuestReadsShippingOrder_TrackingCodeOnlyWithValidToken()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var (code, token, _) = await CreateOrderAsync(anonymousId);
+        var shipment = await CreateShipmentDirectAsync(code);
+        await SetOrderStatusAsync(code, OrderStatus.Shipping);
+
+        var validResponse = await SendGetAsync($"{OrdersPath}/{code}", anonymousId, tokenQuery: token);
+        var wrongTokenResponse = await SendGetAsync($"{OrdersPath}/{code}", anonymousId, tokenQuery: "token-sai");
+        var noTokenResponse = await SendGetAsync($"{OrdersPath}/{code}", anonymousId);
+
+        Assert.Equal(HttpStatusCode.OK, validResponse.StatusCode);
+        var data = (await CartTestKit.ReadJsonAsync(validResponse)).GetProperty("data");
+        Assert.Equal(shipment.TrackingCode, data.GetProperty("trackingCode").GetString());
+        Assert.Equal(HttpStatusCode.NotFound, wrongTokenResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, noTokenResponse.StatusCode);
+    }
+
+    // Đơn `shipping` giao thủ công không có vận đơn nên `trackingCode` là null.
+    [Fact]
+    public async Task GetOrder_WhenShippingOrderHasNoShipment_ReturnsNullTrackingCode()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var (code, token, _) = await CreateOrderAsync(anonymousId);
+        await SetOrderStatusAsync(code, OrderStatus.Shipping);
+
+        Assert.Null(await ReadTrackingCodeAsync(code, anonymousId, token));
+    }
+
+    // Vận đơn đã hủy không còn hiệu lực, nên đơn quay về `confirmed` không có mã vận đơn.
+    [Fact]
+    public async Task GetOrder_WhenShipmentWasCancelled_ReturnsNullTrackingCode()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var (code, token, _) = await CreateOrderAsync(anonymousId);
+        var shipment = await CreateShipmentDirectAsync(code);
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<IShippingService>()
+                .CancelShipmentAsync(shipment.Id, CancellationToken.None);
+        }
+
+        await SetOrderStatusAsync(code, OrderStatus.Confirmed);
+
+        Assert.Null(await ReadTrackingCodeAsync(code, anonymousId, token));
+    }
+
+    // Đơn `confirmed` chưa có vận đơn nên `trackingCode` là null.
+    [Fact]
+    public async Task GetOrder_WhenConfirmedOrderHasNoShipment_ReturnsNullTrackingCode()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var (code, token, _) = await CreateOrderAsync(anonymousId);
+        await SetOrderStatusAsync(code, OrderStatus.Confirmed);
+
+        Assert.Null(await ReadTrackingCodeAsync(code, anonymousId, token));
+    }
+
+    // Đơn `confirmed` chưa giao cho đơn vị vận chuyển nên không lộ mã, kể cả khi dữ liệu có vận đơn còn hiệu lực.
+    [Fact]
+    public async Task GetOrder_WhenConfirmedOrderHasActiveShipment_ReturnsNullTrackingCode()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var (code, token, _) = await CreateOrderAsync(anonymousId);
+        await CreateShipmentDirectAsync(code);
+        await SetOrderStatusAsync(code, OrderStatus.Confirmed);
+
+        Assert.Null(await ReadTrackingCodeAsync(code, anonymousId, token));
+    }
+
+    // Đơn đã giao vẫn giữ mã vận đơn để khách đối chiếu với hãng vận chuyển.
+    [Fact]
+    public async Task GetOrder_WhenDeliveredOrderHasShipment_ReturnsTrackingCode()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var (code, token, _) = await CreateOrderAsync(anonymousId);
+        var shipment = await CreateShipmentDirectAsync(code);
+        await SetOrderStatusAsync(code, OrderStatus.Delivered);
+
+        Assert.Equal(shipment.TrackingCode, await ReadTrackingCodeAsync(code, anonymousId, token));
+    }
+
+    // Đơn đã hoàn vẫn giữ mã vận đơn để khách đối chiếu chuyến hoàn với hãng vận chuyển.
+    [Fact]
+    public async Task GetOrder_WhenReturnedOrderHasShipment_ReturnsTrackingCode()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var (code, token, _) = await CreateOrderAsync(anonymousId);
+        var shipment = await CreateShipmentDirectAsync(code);
+        await SetOrderStatusAsync(code, OrderStatus.Returned);
+
+        Assert.Equal(shipment.TrackingCode, await ReadTrackingCodeAsync(code, anonymousId, token));
+    }
+
+    // Phản hồi tự hủy dùng cùng hàm dựng chi tiết, nên đơn đã hủy có `trackingCode` null.
+    [Fact]
+    public async Task CancelOrder_ResponseCarriesTrackingCodeMatchingOrderState()
+    {
+        var anonymousId = _kit.NewAnonymousId();
+        var (code, token, _) = await CreateOrderAsync(anonymousId);
+
+        var response = await SendCancellationAsync(code, anonymousId, tokenQuery: token);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var data = (await CartTestKit.ReadJsonAsync(response)).GetProperty("data");
+        Assert.Equal("cancelled", data.GetProperty("status").GetString());
+        Assert.Equal(JsonValueKind.Null, data.GetProperty("trackingCode").ValueKind);
     }
 }

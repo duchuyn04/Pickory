@@ -832,6 +832,25 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 - `apps/backend/tests/Pickory.IntegrationTests/Commerce/AdminOrderShipmentTests.cs`
 - `apps/backend/tests/Pickory.IntegrationTests/Commerce/AdminOrderListTests.cs`
 
+### COM-32: API khách trả mã vận đơn GHN thật
+**Mô tả:** Chi tiết đơn của khách đang luôn trả `trackingCode: null` (`OrderTrackingService.ToDetailResponse`). Đơn GHN đang giao vì vậy hiện chữ "Shop đang giao hàng thủ công", sai với thực tế. Task này đọc mã từ vận đơn GHN còn hiệu lực của đơn. Không đổi hình dạng response, vì trường `trackingCode` đã có.
+**Tiêu chí nghiệm thu:**
+- [x] Đơn có vận đơn GHN còn hiệu lực trả `trackingCode` bằng mã của vận đơn đó, qua `IShippingService`
+- [x] Đơn giao thủ công, đơn chưa có vận đơn và đơn có vận đơn đã hủy trả `trackingCode: null`
+- [x] Khách đăng nhập và khách vãng lai có token đều nhận `trackingCode`. Token sai hoặc đơn của người khác vẫn nhận 404
+- [x] Response sau khi khách tự hủy đơn dùng cùng cách tính `trackingCode`
+- [x] Trang đơn của khách ở `commerce-fulfillment.spec.ts` hiện mã vận đơn và không hiện chữ giao thủ công sau khi `sales` tạo vận đơn
+- [x] Sau khi các tiêu chí trên đạt, tick tiêu chí "Đơn có mã vận đơn giữ nguyên nội dung hiện tại" của COM-UI15
+**Kiểm tra:**
+- `dotnet build Pickory.sln` trong `apps/backend`
+- `dotnet test tests/Pickory.IntegrationTests --filter "FullyQualifiedName~OrderTrackingTests|FullyQualifiedName~AdminOrderShipmentTests"` trong `apps/backend`
+- `pnpm test:e2e e2e/commerce-fulfillment.spec.ts` trong `apps/frontend`
+**Phụ thuộc:** COM-UI15, COM-E2E6 · **Quy mô:** M
+**File:**
+- `apps/backend/src/Pickory.Modules.Commerce/Orders/OrderTrackingService.cs`
+- `apps/backend/tests/Pickory.IntegrationTests/Commerce/OrderTrackingTests.cs`
+- `apps/frontend/e2e/commerce-fulfillment.spec.ts`
+
 ### COM-UI12: Fixtures, schema và API client fulfillment
 **Mô tả:** Thêm bộ đọc fixtures cho `commerce`, schema Zod và mutation fulfillment chung. Các task UI sau dùng phần này mà không chờ endpoint thật.
 **Tiêu chí nghiệm thu:**
@@ -908,8 +927,9 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 **Mô tả:** Dùng `trackingCode` hiện có để đổi nội dung bước giao hàng. API khách không thêm trường mới.
 **Tiêu chí nghiệm thu:**
 - [x] Đơn `shipping` có `trackingCode=null` hiện "Shop đang giao hàng thủ công. Không có mã vận đơn GHN."
-- [ ] Đơn có mã vận đơn giữ nguyên nội dung hiện tại
+- [x] Đơn có mã vận đơn giữ nguyên nội dung hiện tại
   Frontend giữ nguyên chữ khi có mã, có test. Chưa tick vì API khách luôn trả `trackingCode: null` (`OrderTrackingService.ToDetailResponse`). Đơn GHN thật vẫn hiện chữ giao thủ công. Cần sửa backend ở task khác.
+  COM-32 trả mã vận đơn thật qua API khách. E2E GHN kiểm trang đơn của khách hiện mã vận đơn và không hiện chữ giao thủ công.
 - [x] Các trạng thái khác `shipping` giữ nguyên tiến trình và nội dung
 - [x] Trang chi tiết truyền `trackingCode` vào `buildNextSteps`. Không đọc cờ nội bộ của admin
   Hàm chỉ được gọi ở trang đơn đặt thành công. Trang chi tiết đơn dùng cùng chữ qua hằng chung.
@@ -964,12 +984,15 @@ Hai track dùng chung fixtures trong `spec/fixtures/commerce/`.
 - `apps/frontend/e2e/commerce-order-fixtures.ts`
 
 ### Checkpoint M7
-- [ ] Mọi tiêu chí của backend track đã được tick
-- [ ] Mọi tiêu chí của frontend track đã được tick
-- [ ] `dotnet build Pickory.sln` và các test fulfillment của backend đạt
-- [ ] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` trong `apps/frontend` đạt
-- [ ] COM-E2E6 và COM-E2E7 đạt với API thật, không có route giả cho fulfillment
-- [ ] Ma trận quyền có route mới và `support` nhận 403
-- [ ] Bảng Traceability trong `plan.md` đã cập nhật bằng chứng cho các tiêu chí mới
+- [x] Mọi tiêu chí của backend track đã được tick
+- [x] Mọi tiêu chí của frontend track đã được tick
+- [x] `dotnet build Pickory.sln` và các test fulfillment của backend đạt
+  Ngày 2026-11-19: build 0 cảnh báo, 0 lỗi. Unit 2196, architecture 51, toàn bộ integration 3250 test đạt (8 bỏ qua).
+- [x] `pnpm lint && pnpm typecheck && pnpm test && pnpm build` trong `apps/frontend` đạt
+- [x] COM-E2E6 và COM-E2E7 đạt với API thật, không có route giả cho fulfillment
+  Toàn bộ E2E ngày 2026-11-19: 264 đạt, 6 lỗi nằm ngoài Phase 9. Năm lỗi của `admin-invoice-print.spec.ts` do spec còn dữ liệu giả cho route `GET /api/admin/order-invoices` mà backend đã có. Một lỗi chập chờn của `support-desk-callback.spec.ts` đạt khi chạy lại.
+- [x] Ma trận quyền có route mới và `support` nhận 403
+  `PermissionMatrixTests` có `PUT /api/admin/orders/{code}/fulfillment` và `Fulfill_AsSupport_Returns403` đạt.
+- [x] Bảng Traceability trong `plan.md` đã cập nhật bằng chứng cho các tiêu chí mới
 - [ ] Review kết quả với chủ shop
 

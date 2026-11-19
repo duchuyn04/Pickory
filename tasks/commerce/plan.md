@@ -87,6 +87,7 @@ COM-30 và COM-31 đi sau COM-29 vì cùng sửa service fulfillment.
 COM-UI14 đi sau COM-UI13 vì cùng sửa cụm component thao tác đơn.
 COM-UI15 chỉ phụ thuộc dữ liệu đơn hiện có, nên có thể làm song song với COM-UI13 và COM-UI14.
 Hai task E2E chỉ chạy sau khi cả hai track hoàn thành phần liên quan.
+COM-32 sửa API khách để đơn GHN không hiện chữ giao thủ công. Task này đi sau COM-UI15 và trước Checkpoint M7.
 
 ## Architecture Decisions
 
@@ -234,6 +235,8 @@ Backend track:
 - [x] COM-29 API bắt đầu giao hàng thủ công từ `confirmed` sang `shipping`
 - [x] COM-30 API hủy giao hàng thủ công từ `shipping` về `confirmed`
 - [x] COM-31 API xác nhận `delivered` hoặc `returned` và kiểm tra mở khóa đánh giá
+- [x] COM-32 API khách trả mã vận đơn GHN thật
+  Thêm ngày 2026-11-19, sau khi COM-UI15 thấy API khách luôn trả `trackingCode: null`. Làm trước Checkpoint M7.
 
 Frontend track:
 - [x] COM-UI12 đọc fixtures và gọi API fulfillment
@@ -246,11 +249,11 @@ Hai track gặp nhau:
 - [x] COM-E2E7 hủy giao hàng thủ công và ghi nhận hoàn hàng
 
 ### Checkpoint M7
-- [ ] Backend unit, integration và contract test của fulfillment đạt
-- [ ] Frontend lint, typecheck, unit test và build đạt
-- [ ] COM-E2E6 và COM-E2E7 chạy với API thật, không có route giả cho fulfillment
-- [ ] `support` đọc được đơn nhưng không thực hiện được thao tác fulfillment
-- [ ] Khách chỉ viết được đánh giá sau khi đơn chuyển `delivered`
+- [x] Backend unit, integration và contract test của fulfillment đạt
+- [x] Frontend lint, typecheck, unit test và build đạt
+- [x] COM-E2E6 và COM-E2E7 chạy với API thật, không có route giả cho fulfillment
+- [x] `support` đọc được đơn nhưng không thực hiện được thao tác fulfillment
+- [x] Khách chỉ viết được đánh giá sau khi đơn chuyển `delivered`
 - [ ] Review kế hoạch và kết quả với chủ shop
   Kế hoạch đã được duyệt ngày 2026-11-19. Kết quả chờ triển khai.
 
@@ -275,6 +278,7 @@ Hai track gặp nhau:
 | Đơn trên hạn mức COD không chọn được COD; tạm tính trên ngưỡng thì phí ship khách trả bằng 0 | COM-01, COM-07, COM-08, COM-UI2 | Unit test tính tiền; test tích hợp preview và đặt đơn; Vitest form checkout |
 | Sales tạo vận đơn GHN (sandbox) từ trang đơn; trạng thái giao hàng tự cập nhật | COM-16, COM-UI5, COM-E2E3, COM-24 | Test tích hợp với `FakeGhnClient`; E2E. Sandbox chờ token GHN |
 | Sales đưa đơn từ `confirmed` sang `shipping` rồi `delivered` thủ công | COM-29, COM-31, COM-UI13, COM-UI14, COM-E2E6 | Integration test từng chuyển đổi; E2E với API thật |
+| Đơn GHN đang giao hiện mã vận đơn cho khách, đơn giao thủ công hiện chữ giao thủ công | COM-UI15, COM-32 | Integration test API khách; E2E GHN kiểm trang đơn của khách |
 | Thao tác thủ công có lý do và audit; gửi lại không thêm nhật ký | COM-29, COM-30, COM-31 | Integration test đếm lịch sử, audit và sự kiện sau request lặp |
 | `support` xem được đơn nhưng gọi API hủy, tạo vận đơn hoặc fulfillment nhận 403 | COM-14, COM-15, COM-16, COM-29, COM-UI13, COM-E2E6 | Ma trận quyền; component test; E2E |
 | Chỉ khách đã nhận hàng đánh giá được; review bị ẩn biến mất khỏi trang sản phẩm và điểm trung bình được tính lại | COM-19, COM-20, COM-31, COM-UI9, COM-E2E4, COM-E2E6 | Test tích hợp; E2E |

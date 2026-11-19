@@ -3,6 +3,7 @@ using Pickory.Modules.Catalog.Contracts.Reading;
 using Pickory.Modules.Commerce.Contracts.Orders;
 using Pickory.Modules.Commerce.Entities;
 using Pickory.Modules.Commerce.Persistence;
+using Pickory.Modules.Shipping.Contracts;
 using Pickory.Shared.Exceptions;
 using Pickory.Shared.Http;
 
@@ -12,7 +13,8 @@ namespace Pickory.Modules.Commerce.Orders;
 public sealed class OrderTrackingService(
     CommerceDbContext database,
     ICatalogReader catalogReader,
-    OrderCancellationService cancellation)
+    OrderCancellationService cancellation,
+    IShippingService shipping)
 {
     private const string OrderNotFoundMessage = "Không tìm thấy đơn hàng.";
 
@@ -75,7 +77,7 @@ public sealed class OrderTrackingService(
             throw new AppException("ORDER_NOT_FOUND", 404, OrderNotFoundMessage);
         }
 
-        return ToDetailResponse(order);
+        return await ToDetailResponseAsync(order, cancellationToken);
     }
 
     public async Task<OrderPaymentResponse> GetPaymentAsync(
@@ -142,10 +144,10 @@ public sealed class OrderTrackingService(
             new OrderCancellationRequest(TransitionActor.Customer, callerUserId, OrderReportMarkers.CustomerCancellationReason),
             cancellationToken);
 
-        return ToDetailResponse(order);
+        return await ToDetailResponseAsync(order, cancellationToken);
     }
 
-    private OrderDetailResponse ToDetailResponse(Order order)
+    private async Task<OrderDetailResponse> ToDetailResponseAsync(Order order, CancellationToken cancellationToken)
     {
         // Tính toán cờ cho phép hủy để giao diện hiển thị nút hành động.
         var canCancel = OrderTransitions.Evaluate(
@@ -162,6 +164,9 @@ public sealed class OrderTrackingService(
                 OrderLabels.ToLabel(h.ToStatus),
                 h.CreatedAt))
             .ToList();
+
+        // Mã vận đơn nằm ở module vận chuyển nên tra riêng theo đơn.
+        var trackingCode = await FindTrackingCodeAsync(order, cancellationToken);
 
         return new OrderDetailResponse(
             order.Code,
@@ -180,7 +185,20 @@ public sealed class OrderTrackingService(
             order.InvoiceInfo,
             statusHistory,
             canCancel,
-            TrackingCode: null);
+            TrackingCode: trackingCode);
+    }
+
+    // Bảng `orders` không có cột vận đơn, nên tra module vận chuyển theo mã đơn. Vận đơn đã hủy cho kết quả `null`.
+    private async Task<string?> FindTrackingCodeAsync(Order order, CancellationToken cancellationToken)
+    {
+        // Đơn chưa giao cho đơn vị vận chuyển không có vận đơn còn hiệu lực.
+        if (order.Status is not (OrderStatus.Shipping or OrderStatus.Delivered or OrderStatus.Returned))
+        {
+            return null;
+        }
+
+        var shipment = await shipping.GetShipmentByRefAsync(order.Code, cancellationToken);
+        return shipment?.TrackingCode;
     }
 
     // Dựng URL ảnh sản phẩm qua catalog khi có mã ảnh trong bản chụp.

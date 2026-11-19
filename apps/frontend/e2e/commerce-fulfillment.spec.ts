@@ -54,6 +54,7 @@ test.describe('COM-E2E3: sales xác nhận và tạo vận đơn', () => {
 
     let orderCode = '';
     let trackingCode = '';
+    let customerOrderPath = '';
 
     try {
       await test.step('Admin chuẩn bị sản phẩm, kho gửi, và mời sales cùng support', async () => {
@@ -78,6 +79,13 @@ test.describe('COM-E2E3: sales xác nhận và tạo vận đơn', () => {
         await stubProductImages(page);
         orderCode = await placeCodOrder(page, product, address);
         expect(orderCode).toMatch(/^PK/);
+
+        // Liên kết xem đơn có token trên trang thành công. Khách vãng lai chỉ vào được đơn của mình bằng liên kết này.
+        const viewOrderHref = await page
+          .getByRole('link', { name: 'Xem đơn hàng' })
+          .getAttribute('href');
+        expect(viewOrderHref).toContain(`/orders/${orderCode}?t=`);
+        customerOrderPath = viewOrderHref!;
       });
 
       await test.step('Sales bấm mục "Đơn hàng", tìm thấy đơn và mở trang chi tiết thật', async () => {
@@ -174,6 +182,20 @@ test.describe('COM-E2E3: sales xác nhận và tạo vận đơn', () => {
         await expect(trackingValue).toHaveText(/^FAKE\d{6}$/);
         trackingCode = (await trackingValue.innerText()).trim();
         await expect(shipmentValue(sales.page, 'Trạng thái')).toHaveText('Chờ lấy hàng');
+      });
+
+      await test.step('Khách mở trang đơn của mình thì thấy mã vận đơn GHN và không thấy chữ giao thủ công', async () => {
+        await page.goto(customerOrderPath);
+        await expect(
+          page.getByRole('heading', { level: 1, name: `Đơn hàng #${orderCode}` }),
+        ).toBeVisible();
+        // Chờ mục Mã vận đơn hiện đúng mã sales thấy. Sau đó trang đã tải xong nên kiểm vắng mặt bên dưới không xanh giả.
+        await expect(page.getByText(trackingCode, { exact: true })).toBeVisible();
+        await expect(page.getByText('Mã vận đơn', { exact: true })).toBeVisible();
+        // Đối chứng: COM-E2E6 chứng minh chữ này hiện khi đơn giao thủ công không có mã.
+        await expect(page.getByText('Shop đang giao hàng thủ công', { exact: false })).toHaveCount(
+          0,
+        );
       });
 
       await test.step('GHN giả báo đã giao, webhook thật tới thì đơn sang Đã giao hàng', async () => {
