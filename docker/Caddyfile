@@ -38,6 +38,17 @@
 	}
 }
 
+# Chatbot hỏi đáp chạy ở subdomain riêng. Caddy ghi IP thật của khách vào `X-Forwarded-For`,
+# và chatbot đọc IP đó nhờ `TRUSTED_PROXY_HEADER=X-Forwarded-For` trong .env của nó.
+chat.{$SITE_DOMAIN} {
+	encode zstd gzip
+
+	# Chatbot không có trang chủ. Vào thẳng trang đăng nhập quản trị thay vì thấy lỗi 404 dạng JSON.
+	redir / /admin/login 302
+
+	reverse_proxy chatbot:8000
+}
+
 # Địa chỉ có `www` chuyển về domain chính. Cookie và callback Google chỉ khớp một domain.
 www.{$SITE_DOMAIN} {
 	redir https://{$SITE_DOMAIN}{uri} permanent

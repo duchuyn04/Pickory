@@ -50,6 +50,19 @@ services:
     expose:
       - '3000'
 
+  # Chatbot hỏi đáp (dự án riêng `chatbot-rag`). Mã nguồn nằm ở /opt/chatbot-rag trên VPS, ngoài thư mục này.
+  # Cổng 8000 chỉ mở trong mạng compose. Người ngoài vào qua Caddy tại chat.${SITE_DOMAIN}.
+  chatbot:
+    build:
+      context: ../chatbot-rag
+    restart: unless-stopped
+    env_file: ../chatbot-rag/.env
+    volumes:
+      # Tài liệu, index và DB log của chatbot. Thư mục thuộc user 10001 (user trong container).
+      - ../chatbot-rag/data:/app/data
+    expose:
+      - '8000'
+
   web:
     build:
       context: .
@@ -57,6 +70,7 @@ services:
     restart: unless-stopped
     depends_on:
       - api
+      - chatbot
     environment:
       SITE_DOMAIN: ${SITE_DOMAIN:?Thiếu SITE_DOMAIN trong .env}
     ports:
