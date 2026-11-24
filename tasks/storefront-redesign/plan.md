@@ -69,7 +69,7 @@ Phase 1, 2 và 3 độc lập sau Checkpoint 0, nên có thể giao cho các phi
 
 - [x] SFR-01: Thêm token mới vào `tokens.css`. Cỡ S.
 - [x] SFR-02: Header hai tầng và bản điện thoại. Cỡ M.
-- [ ] SFR-03: Footer bốn cột. Cỡ S.
+- [x] SFR-03: Footer bốn cột. Cỡ S.
 
 ### Checkpoint 0
 

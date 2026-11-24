@@ -64,6 +64,10 @@ async function renderPage(url: string, actor: ActorData = guest) {
       if (String(input) === '/api/me/addresses') {
         return new Response(JSON.stringify({ data: [] }));
       }
+      // Chân trang đọc cây danh mục công khai. Trả mảng rỗng đúng dạng của API.
+      if (String(input) === '/api/categories') {
+        return new Response(JSON.stringify({ data: [] }));
+      }
       // Header có mini cart nên trang nào cũng đọc giỏ. Trả giỏ trống đúng dạng của API.
       if (String(input) === '/api/cart') {
         return new Response(

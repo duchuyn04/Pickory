@@ -1,54 +1,102 @@
-/* Chân trang dùng chung của khách. */
-
+/* Chân trang bốn cột dùng chung của khách. */
 .site-footer {
   border-top: 1px solid var(--color-border);
   background: var(--color-surface);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
 }
 
 .site-footer-inner {
+  box-sizing: border-box;
+  max-width: calc(var(--layout-content-width) + var(--layout-gutter-mobile) * 2);
+  margin: 0 auto;
+  padding: 0 var(--layout-gutter-mobile);
+}
+
+/* Dưới 768px xếp một cột; `minmax(0, 1fr)` ngăn chữ dài làm tràn chiều ngang khung nhìn. */
+.site-footer-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  padding: calc(var(--space-6) + var(--space-2)) 0 var(--space-5);
+}
+
+.site-footer-column {
+  min-width: 0;
+}
+
+.site-footer-heading {
+  margin: 0 0 var(--space-1-5);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  line-height: 20px;
+}
+
+.site-footer-description,
+.site-footer-status {
+  margin: 0;
+  color: var(--color-ink-muted);
+  font-size: var(--text-label);
+  line-height: 20px;
+}
+
+/* Đặt cỡ chữ và chiều cao dòng ở danh sách để mỗi mục `<li>` không thừa chiều cao dòng mặc định. */
+.site-footer-list {
   display: flex;
-  gap: var(--space-4);
+  flex-direction: column;
+  gap: var(--space-1-5);
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-label);
+  line-height: 20px;
+  list-style: none;
+}
+
+.site-footer-list a {
+  display: inline-block;
+  color: var(--color-ink-muted);
+  font-size: inherit;
+  font-weight: var(--font-weight-regular);
+  line-height: inherit;
+  text-decoration: none;
+}
+
+.site-footer-list a:hover {
+  color: var(--color-ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* Dải bản quyền và bảo hành giữ trên một hàng khi đủ chỗ và xuống dòng khi màn hẹp. */
+.site-footer-bottom {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
   align-items: center;
   justify-content: space-between;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: var(--space-4);
-}
-
-.site-footer-brand {
-  display: flex;
-  gap: var(--space-2);
-  align-items: baseline;
-}
-
-.site-footer-name {
-  font-weight: 700;
-}
-
-.site-footer-copy {
+  padding: var(--space-4) 0 var(--space-5);
+  border-top: 1px solid var(--color-border);
   color: var(--color-ink-muted);
   font-size: var(--text-xs);
+  line-height: 1.4;
 }
 
-.site-footer-links {
-  display: flex;
-  gap: var(--space-4);
-}
-
-.site-footer a {
-  color: var(--color-link);
-  font-size: var(--text-sm);
-  font-weight: 600;
-}
-
-.site-footer a:hover {
-  text-decoration: underline;
-}
-
-@media (max-width: 767px) {
-  /* Hai cụm xếp dọc trên màn hẹp. */
+/* Từ 768px (`--layout-breakpoint-tablet`): xếp hai cột và dùng lề ngang máy tính bảng. */
+@media (min-width: 768px) {
   .site-footer-inner {
-    flex-direction: column;
-    align-items: flex-start;
+    max-width: calc(var(--layout-content-width) + var(--layout-gutter-tablet) * 2);
+    padding: 0 var(--layout-gutter-tablet);
+  }
+
+  .site-footer-columns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+/* Từ 1200px (`--layout-breakpoint-desktop`): xếp đủ bốn cột bằng nhau trong khung 1200px. */
+@media (min-width: 1200px) {
+  .site-footer-columns {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }

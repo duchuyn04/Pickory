@@ -94,14 +94,14 @@ design/screens/trang-chu-dien-thoai-375.png
 
 **Acceptance criteria:**
 
-- [ ] Cột giới thiệu, hỗ trợ khách hàng (Tra cứu đơn hàng, Phí giao hàng, Liên hệ CSKH), chính sách (Quyền riêng tư, Chính sách bảo hành, Điều khoản sử dụng), danh mục (năm danh mục gốc).
-- [ ] Link chính sách nào chưa có route thì trỏ về trang gần nhất đang có, ghi trong chú thích. Không tạo route mới.
-- [ ] Dưới 768px xếp một cột. Ở 768px hai cột.
-- [ ] Dòng bản quyền có "© 2026 Pickory" và dòng bảo hành.
+- [x] Cột giới thiệu, hỗ trợ khách hàng (Tra cứu đơn hàng, Phí giao hàng, Liên hệ CSKH), chính sách (Quyền riêng tư, Chính sách bảo hành, Điều khoản sử dụng), danh mục (năm danh mục gốc).
+- [x] Link chính sách nào chưa có route thì trỏ về trang gần nhất đang có, ghi trong chú thích. Không tạo route mới.
+- [x] Dưới 768px xếp một cột. Ở 768px hai cột.
+- [x] Dòng bản quyền có "© 2026 Pickory" và dòng bảo hành.
 
 **Verification:**
 
-- [ ] `pnpm test` pass. Ảnh chụp ba cỡ khớp footer trong ảnh thiết kế.
+- [x] `pnpm test` pass. Ảnh chụp ba cỡ khớp footer trong ảnh thiết kế.
 
 **Dependencies:** SFR-01.
 

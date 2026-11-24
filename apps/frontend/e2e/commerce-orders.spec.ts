@@ -334,7 +334,10 @@ test.describe('COM-UI3: theo dõi đơn hàng và khách tự hủy', () => {
       if (request.url().includes('/api/orders/')) orderRequests.push(request.url());
     });
     await reopenPage.goto(`/orders/${orderCode}/success`);
-    await expect(reopenPage.getByRole('link', { name: 'Tra cứu đơn hàng' })).toBeVisible();
+    // Giới hạn trong `<main>` vì footer dùng chung cũng có liên kết "Tra cứu đơn hàng".
+    await expect(
+      reopenPage.getByRole('main').getByRole('link', { name: 'Tra cứu đơn hàng' }),
+    ).toBeVisible();
     await expect(reopenPage.getByText('Liên kết xem đơn đã gửi tới email của bạn.')).toBeVisible();
     expect(orderRequests).toEqual([]);
     expect(reopenIssues).toEqual([]);
