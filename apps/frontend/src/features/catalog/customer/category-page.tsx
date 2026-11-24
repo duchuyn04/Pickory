@@ -117,7 +117,10 @@ function CategoryContent({ slug }: { slug: string }) {
   }
 
   const trail = categoriesQuery.data ? findCategoryTrail(categoriesQuery.data, slug) : null;
-  const categoryName = trail?.at(-1)?.name ?? 'Sản phẩm';
+  const activeNode = trail?.at(-1);
+  // Chỉ truyền mã danh mục khi đang xem danh mục lá để không gán nhầm danh mục cha cho sản phẩm con.
+  const leafCategoryId = activeNode && activeNode.children.length === 0 ? activeNode.id : undefined;
+  const categoryName = activeNode?.name ?? 'Sản phẩm';
   const activeFilterCount = countActiveFilters(query);
   const data = list.data;
   const pageCount = data ? Math.ceil(data.total / data.pageSize) : 0;
@@ -294,7 +297,7 @@ function CategoryContent({ slug }: { slug: string }) {
             >
               {data.items.map((product) => (
                 <li key={product.id}>
-                  <ProductCard product={product} />
+                  <ProductCard product={product} categoryId={leafCategoryId} />
                 </li>
               ))}
             </ul>

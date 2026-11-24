@@ -1,10 +1,61 @@
 import { Link } from 'react-router-dom';
+import { Icon } from '../../../shared/icons';
 import { COMPARE_LIST_LIMIT, describeAddState } from './compare-list';
 import { useCompareList } from './use-compare-list';
 
 interface CompareControlProps {
   categoryId: string;
   productId: string;
+}
+
+interface CompareIconButtonProps {
+  categoryId: string;
+  productId: string;
+  productName: string;
+}
+
+// Nút icon so sánh dùng trên thẻ sản phẩm để thêm hoặc bỏ nhanh mà không chiếm chỗ.
+export function CompareIconButton({ categoryId, productId, productName }: CompareIconButtonProps) {
+  const { list, add, remove } = useCompareList();
+  const addState = describeAddState(list, categoryId, productId);
+  const isInList = addState === 'in-list';
+  // Khóa nút khi đã đủ số lượng tối đa hoặc khác danh mục để tránh thao tác vô hiệu.
+  const isBlocked = addState === 'full' || addState === 'category-mismatch';
+
+  function handleToggle() {
+    if (isInList) remove(productId);
+    else add(categoryId, productId);
+  }
+
+  const blockedReason =
+    addState === 'full'
+      ? `đã đủ ${COMPARE_LIST_LIMIT} sản phẩm`
+      : 'chỉ so sánh được sản phẩm cùng danh mục';
+  // Đưa lý do bị khóa vào aria-label để trình đọc màn hình đọc được ngay trên nút.
+  const label = isBlocked
+    ? `Không thêm được ${productName} vào so sánh: ${blockedReason}`
+    : isInList
+      ? `Bỏ ${productName} khỏi so sánh`
+      : `Thêm ${productName} vào so sánh`;
+
+  const blockedTitle =
+    addState === 'full'
+      ? `Đã đủ ${COMPARE_LIST_LIMIT} sản phẩm`
+      : 'Chỉ so sánh được các sản phẩm cùng danh mục';
+
+  return (
+    <button
+      type="button"
+      className="product-compare-btn"
+      aria-label={label}
+      aria-pressed={isInList}
+      title={isBlocked ? blockedTitle : label}
+      disabled={isBlocked}
+      onClick={handleToggle}
+    >
+      <Icon name="arrowLeftRight" />
+    </button>
+  );
 }
 
 export function CompareControl({ categoryId, productId }: CompareControlProps) {

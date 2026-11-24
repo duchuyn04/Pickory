@@ -1,0 +1,110 @@
+/*
+ * Khối "Hàng mới về": tiêu đề trái, link xem tất cả bên phải, hàng chip danh mục và dải sản phẩm cuộn ngang.
+ */
+.new-arrivals-head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.new-arrivals-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.3;
+}
+
+.new-arrivals-more {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--color-link);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.new-arrivals-more .icon {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--duration-fast) var(--ease-out-expo);
+}
+
+.new-arrivals-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.new-arrivals-more:hover .icon {
+  transform: translateX(3px);
+}
+
+.new-arrivals-chips {
+  display: flex;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.new-arrivals-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.new-arrivals-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: var(--space-1-5) var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink-secondary);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast),
+    background-color var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.new-arrivals-chip:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.new-arrivals-chip[aria-selected='true'] {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+  font-weight: var(--font-weight-semibold);
+}
+
+.new-arrivals-chip:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Từ 768px (`--layout-breakpoint-tablet`): tăng cỡ chữ tiêu đề cho cân với khung rộng hơn. */
+@media (min-width: 768px) {
+  .new-arrivals-title {
+    font-size: var(--text-title);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .new-arrivals-more .icon,
+  .new-arrivals-chip {
+    transition: none;
+  }
+}

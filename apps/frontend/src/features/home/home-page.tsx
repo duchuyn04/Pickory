@@ -1,4 +1,4 @@
-import { useRef, useState, type KeyboardEvent, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { APP_NAME } from '../../shared/app-name';
 import { ErrorAlert } from '../../shared/error-alert';
@@ -9,7 +9,6 @@ import { COMPARE_LIST_LIMIT } from '../catalog/customer/compare-list';
 import { formatProductPrice } from '../catalog/customer/product-display';
 import { withCloudinaryTransform } from '../catalog/shared/image-url';
 import { getBrandLogo } from './brand-logos';
-import { getTabIndexForKey } from './carousel-index';
 import { DeliveryNotice } from './delivery-notice';
 import { getCategoryVisual } from './home-content';
 import { HomeHero } from './home-hero';
@@ -23,6 +22,7 @@ import {
   useRailProducts,
 } from './home-queries';
 import { useRevealOnScroll } from './motion';
+import { NewArrivals } from './new-arrivals';
 import { pickProductWithImage } from './pick-product';
 import { CategoryPromoPair, ProductDuel } from './promo-banners';
 import { ProductGrid, ProductGridSkeleton } from './product-grid';
@@ -202,84 +202,6 @@ function CategoryTile({ category }: { category: CategoryNode }) {
         {fromPrice !== null && <>, từ {formatProductPrice(fromPrice)}</>}
       </small>
     </Link>
-  );
-}
-
-// Lưới có tab chọn danh mục, theo khối "Khuyến mãi online" của thegioididong.com.
-function NewArrivals({ categories }: { categories: CategoryNode[] }) {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  // Cây danh mục có thể ngắn lại sau khi tải lại. Chỉ số cũ không được trỏ ra ngoài danh sách.
-  const visibleIndex = Math.min(activeIndex, categories.length - 1);
-  const activeCategory = categories[visibleIndex];
-  const products = useRailProducts(activeCategory?.slug ?? '');
-
-  if (!activeCategory) return null;
-
-  function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>) {
-    const nextIndex = getTabIndexForKey(event.key, visibleIndex, categories.length);
-    if (nextIndex === null) return;
-    event.preventDefault();
-    setActiveIndex(nextIndex);
-    tabRefs.current[nextIndex]?.focus();
-  }
-
-  const panelId = 'new-arrivals-panel';
-
-  return (
-    <HomeSection id="new-arrivals" title="Hàng mới về" className="new-arrivals">
-      <div className="section-tabs" role="tablist" aria-label="Chọn danh mục">
-        {categories.map((category, index) => {
-          const isSelected = index === visibleIndex;
-          return (
-            <button
-              key={category.id}
-              ref={(element) => {
-                tabRefs.current[index] = element;
-              }}
-              type="button"
-              role="tab"
-              className="section-tab"
-              aria-selected={isSelected}
-              aria-controls={panelId}
-              tabIndex={isSelected ? 0 : -1}
-              onClick={() => setActiveIndex(index)}
-              onKeyDown={handleTabKeyDown}
-            >
-              {category.name}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* `key` đổi theo danh mục, nên lưới mới chạy lại hiệu ứng hiện dần từng thẻ. */}
-      <div key={activeCategory.slug} id={panelId} role="tabpanel" className="section-panel">
-        {products.isPending && <ProductGridSkeleton />}
-        {products.isError && (
-          <SectionError
-            message={`Không tải được sản phẩm ${activeCategory.name.toLowerCase()}. Thử lại sau ít phút.`}
-            onRetry={() => void products.refetch()}
-          />
-        )}
-        {products.isSuccess && products.data.length === 0 && (
-          <p className="section-empty">
-            Danh mục {activeCategory.name.toLowerCase()} chưa có sản phẩm. Chọn danh mục khác để xem
-            hàng mới.
-          </p>
-        )}
-        {products.isSuccess && products.data.length > 0 && (
-          <ProductGrid
-            products={products.data}
-            label={`Sản phẩm ${activeCategory.name.toLowerCase()} mới về`}
-          />
-        )}
-      </div>
-
-      <Link to={`/c/${activeCategory.slug}`} className="section-more">
-        Xem tất cả {activeCategory.name.toLowerCase()}
-        <Icon name="chevronRight" />
-      </Link>
-    </HomeSection>
   );
 }
 

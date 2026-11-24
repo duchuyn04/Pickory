@@ -333,7 +333,7 @@ describe('HomePage: các khối nội dung', () => {
 });
 
 describe('HomePage: hàng mới về', () => {
-  it('đổi lưới sản phẩm theo tab danh mục', async () => {
+  it('đổi dải sản phẩm và liên kết "Xem tất cả" theo chip danh mục', async () => {
     stubApi({
       categoryItems: {
         'dien-thoai': [product('iphone', 20_000_000)],
@@ -342,37 +342,155 @@ describe('HomePage: hàng mới về', () => {
     });
     await renderPage();
 
-    const section = container.querySelector('.new-arrivals');
-    expect(productNames(section)).toEqual(['Sản phẩm iphone']);
-    expect(section?.querySelector('.section-more')?.getAttribute('href')).toBe('/c/dien-thoai');
-
-    const laptopTab = [...(section?.querySelectorAll('[role="tab"]') ?? [])].find(
+    const section = container.querySelector('.new-arrivals')!;
+    const phoneTab = [...section.querySelectorAll('[role="tab"]')].find(
+      (tab) => tab.textContent === 'Điện thoại',
+    )!;
+    const laptopTab = [...section.querySelectorAll('[role="tab"]')].find(
       (tab) => tab.textContent === 'Laptop',
+    )!;
+
+    expect(phoneTab.getAttribute('aria-selected')).toBe('true');
+    expect(laptopTab.getAttribute('aria-selected')).toBe('false');
+    expect(section.querySelector('[role="tabpanel"]')?.getAttribute('aria-labelledby')).toBe(
+      phoneTab.id,
     );
+    expect(section.querySelector('ul[aria-label="Sản phẩm điện thoại mới về"]')).not.toBeNull();
+    expect(productNames(section)).toEqual(['Sản phẩm iphone']);
+    expect(findLinkByText('Xem tất cả', section)?.getAttribute('href')).toBe('/c/dien-thoai');
+
     await click(laptopTab);
 
+    expect(laptopTab.getAttribute('aria-selected')).toBe('true');
+    expect(phoneTab.getAttribute('aria-selected')).toBe('false');
+    expect(section.querySelector('[role="tabpanel"]')?.getAttribute('aria-labelledby')).toBe(
+      laptopTab.id,
+    );
+    expect(section.querySelector('ul[aria-label="Sản phẩm laptop mới về"]')).not.toBeNull();
     expect(productNames(section)).toEqual(['Sản phẩm xps']);
-    expect(section?.querySelector('.section-more')?.textContent).toBe('Xem tất cả laptop');
+    const moreLink = findLinkByText('Xem tất cả', section);
+    expect(moreLink?.getAttribute('href')).toBe('/c/laptop');
+    expect(moreLink?.getAttribute('aria-label')).toBe('Xem tất cả laptop');
   });
 
-  it('báo lỗi trong lưới tải hỏng và cho thử lại', async () => {
-    stubApi({ categoryItems: { 'dien-thoai': 'error' } });
+  it('phím mũi tên chọn chip danh mục kế tiếp và đưa focus theo', async () => {
+    stubApi({});
+    await renderPage();
+
+    const section = container.querySelector('.new-arrivals')!;
+    const phoneTab = section.querySelector<HTMLButtonElement>('[role="tab"]')!;
+    await act(async () => {
+      phoneTab.focus();
+      phoneTab.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true }));
+    });
+    await settle();
+
+    const tabs = [...section.querySelectorAll<HTMLButtonElement>('[role="tab"]')];
+    expect(tabs[1]?.getAttribute('aria-selected')).toBe('true');
+    expect(document.activeElement).toBe(tabs[1]);
+  });
+
+  it('nút cuộn dải sản phẩm gọi scrollBy và nút trái vô hiệu ở đầu dải', async () => {
+    const items = Array.from({ length: 6 }, (_, index) =>
+      product(`phone-${index + 1}`, 10_000_000),
+    );
+    stubApi({ categoryItems: { 'dien-thoai': items } });
+    await renderPage();
+
+    const section = container.querySelector('.new-arrivals')!;
+    const track = section.querySelector<HTMLUListElement>('ul.product-rail-track')!;
+    const scrollByMock = vi.fn();
+    track.scrollBy = scrollByMock;
+
+    const prevButton = section.querySelector<HTMLButtonElement>(
+      'button[aria-label="Cuộn sang trái"]',
+    )!;
+    const nextButton = section.querySelector<HTMLButtonElement>(
+      'button[aria-label="Cuộn sang phải"]',
+    )!;
+
+    expect(prevButton.disabled).toBe(true);
+    expect(nextButton.disabled).toBe(false);
+
+    await click(nextButton);
+    expect(scrollByMock).toHaveBeenCalledWith(
+      expect.objectContaining({ left: expect.any(Number) }),
+    );
+    expect(scrollByMock.mock.calls[0]?.[0]?.left).toBeGreaterThan(0);
+
+    // Giả lập dải đã cuộn sang phải để nút trái bật lại và cuộn ngược chiều.
+    Object.defineProperty(track, 'scrollLeft', { value: 240, configurable: true });
+    await act(async () => {
+      track.dispatchEvent(new Event('scroll'));
+    });
+    expect(prevButton.disabled).toBe(false);
+
+    await click(prevButton);
+    expect(scrollByMock.mock.calls[1]?.[0]?.left).toBeLessThan(0);
+  });
+
+  it('báo lỗi trong dải tải hỏng và cho thử lại', async () => {
+    const fetchMock = stubApi({ categoryItems: { 'dien-thoai': 'error' } });
     await renderPage();
 
     const section = container.querySelector('.new-arrivals');
     expect(section?.querySelector('[role="alert"]')?.textContent).toContain(
       'Không tải được sản phẩm điện thoại.',
     );
-    expect(section?.querySelector('.section-error button')?.textContent).toBe('Thử lại');
+    const retryButton = section?.querySelector<HTMLButtonElement>('.section-error button');
+    expect(retryButton?.textContent).toBe('Thử lại');
+
+    const beforeCalls = fetchMock.mock.calls.length;
+    await click(retryButton);
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(beforeCalls);
   });
 
-  it('báo danh mục chưa có sản phẩm thay vì để lưới trống', async () => {
+  it('báo danh mục chưa có sản phẩm thay vì để dải trống', async () => {
     stubApi({ categoryItems: { 'dien-thoai': [] } });
     await renderPage();
 
     expect(container.querySelector('.new-arrivals .section-empty')?.textContent).toContain(
       'Danh mục điện thoại chưa có sản phẩm.',
     );
+  });
+
+  it('danh mục có con không hiện nút so sánh trên thẻ, danh mục lá thì hiện', async () => {
+    const categoriesWithChild: CategoryNode[] = [
+      {
+        id: 'id-dien-thoai',
+        parentId: null,
+        name: 'Điện thoại',
+        slug: 'dien-thoai',
+        children: [
+          {
+            id: 'id-iphone',
+            parentId: 'id-dien-thoai',
+            name: 'iPhone',
+            slug: 'iphone',
+            children: [],
+          },
+        ],
+      },
+      category('laptop', 'Laptop'),
+    ];
+    stubApi({
+      categories: categoriesWithChild,
+      categoryItems: {
+        'dien-thoai': [product('iphone', 20_000_000)],
+        laptop: [product('xps', 40_000_000)],
+      },
+    });
+    await renderPage();
+
+    const section = container.querySelector('.new-arrivals')!;
+    expect(section.querySelectorAll('button[aria-label*="so sánh"]')).toHaveLength(0);
+
+    const laptopTab = [...section.querySelectorAll('[role="tab"]')].find(
+      (tab) => tab.textContent === 'Laptop',
+    )!;
+    await click(laptopTab);
+
+    expect(section.querySelectorAll('button[aria-label*="so sánh"]')).toHaveLength(1);
   });
 });
 

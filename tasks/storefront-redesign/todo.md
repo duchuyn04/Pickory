@@ -191,15 +191,15 @@ design/screens/san-pham-may-tinh-1440.png
 
 **Acceptance criteria:**
 
-- [ ] Chip danh mục lọc dải sản phẩm. Chip đang chọn dùng `--color-brand-soft` và viền `--color-brand`.
-- [ ] Dải sản phẩm cuộn ngang, nút trái phải ẩn dưới 768px.
-- [ ] Thẻ sản phẩm có ảnh vuông, hãng, tên hai dòng rồi dấu ba chấm, giá thấp nhất, chip tình trạng và nút so sánh. Không có phần trăm giảm giá hay số sao.
-- [ ] Sản phẩm hết hàng hiện chip "Hết hàng". Không có giá thì hiện "Liên hệ" như hiện tại.
-- [ ] Nút so sánh dùng `compare-control.tsx`, giữ giới hạn `COMPARE_LIST_LIMIT`.
+- [x] Chip danh mục lọc dải sản phẩm. Chip đang chọn dùng `--color-brand-soft` và viền `--color-brand`.
+- [x] Dải sản phẩm cuộn ngang, nút trái phải ẩn dưới 768px.
+- [x] Thẻ sản phẩm có ảnh vuông, hãng, tên hai dòng rồi dấu ba chấm, giá thấp nhất, chip tình trạng và nút so sánh. Không có phần trăm giảm giá hay số sao.
+- [x] Sản phẩm hết hàng hiện chip "Hết hàng". Không có giá thì hiện "Liên hệ" như hiện tại.
+- [x] Nút so sánh dùng `compare-control.tsx`, giữ giới hạn `COMPARE_LIST_LIMIT`.
 
 **Verification:**
 
-- [ ] `pnpm test` pass. Ảnh chụp khớp.
+- [x] `pnpm test` pass. Ảnh chụp khớp.
 
 **Dependencies:** SFR-04.
 

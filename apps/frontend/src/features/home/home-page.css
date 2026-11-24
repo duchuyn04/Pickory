@@ -1310,58 +1310,6 @@
   align-items: center;
 }
 
-/* Tab danh mục chia đều bề ngang, tab đang chọn có gạch đỏ dưới chân, giống khối khuyến mãi của TGDD. */
-.section-tabs {
-  display: flex;
-  margin: 0 -20px var(--space-4);
-  overflow-x: auto;
-  border-bottom: 1px solid var(--color-border);
-  scrollbar-width: none;
-}
-
-.section-tab {
-  position: relative;
-  flex: 1 0 auto;
-  min-height: 48px;
-  padding: 0 var(--space-5);
-  border: 0;
-  background: none;
-  color: var(--color-ink);
-  font: inherit;
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-
-/* Gạch chân mọc từ giữa ra hai bên khi đổi tab. */
-.section-tab::after {
-  position: absolute;
-  right: 0;
-  bottom: -1px;
-  left: 0;
-  height: 2px;
-  background: var(--color-brand);
-  transform: scaleX(0);
-  transition: transform var(--duration-base) var(--ease-out-expo);
-  content: '';
-}
-
-.section-tab:hover {
-  color: var(--color-brand);
-}
-
-.section-tab[aria-selected='true'] {
-  color: var(--color-brand);
-  font-weight: 700;
-}
-
-.section-tab[aria-selected='true']::after {
-  transform: scaleX(1);
-}
-
-.section-tab:focus-visible {
-  outline-offset: -2px;
-}
-
 /* ---------- Lưới sản phẩm ---------- */
 
 .home-product-grid {
@@ -2390,10 +2338,6 @@
     line-height: 28px;
   }
 
-  .section-tabs {
-    margin: 0 calc(var(--space-3) * -1) var(--space-3);
-  }
-
   .home-product-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-2);
@@ -2483,8 +2427,7 @@
   .banner-slide,
   .banner-slide *,
   .reveal,
-  .reveal *,
-  .section-tab::after {
+  .reveal * {
     transition-duration: 0.01s !important;
     transition-delay: 0s !important;
   }

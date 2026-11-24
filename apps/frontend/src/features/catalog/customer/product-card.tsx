@@ -1,10 +1,10 @@
 import { useRef, type PointerEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { Icon } from '../../../shared/icons';
 import { buildCloudinarySrcSet, withCloudinaryTransform } from '../shared/image-url';
 import { ProductImage } from '../shared/product-image';
 import { useLiveStock } from '../shared/stock-live';
 import type { ProductListItem } from './catalog-api';
+import { CompareIconButton } from './compare-control';
 import { formatProductPrice, getProductBadges } from './product-display';
 // Thẻ mang CSS riêng, vì trang danh mục và trang chủ cùng dùng thẻ này.
 import './product-card.css';
@@ -15,7 +15,12 @@ const IMAGE_FALLBACK_WIDTH = 400;
 // Cắt viền trơn quanh ảnh, để máy trong ảnh có khung xám vẫn lấp đầy ô như các thẻ khác.
 const TRIMMED = { trim: true };
 
-export function ProductCard({ product }: { product: ProductListItem }) {
+interface ProductCardProps {
+  product: ProductListItem;
+  categoryId?: string;
+}
+
+export function ProductCard({ product, categoryId }: ProductCardProps) {
   const liveStock = useLiveStock();
   const liveProduct = liveStock.products[product.id];
   // Có sự kiện mới thì nhãn hết hàng và giá thấp nhất đổi ngay, không chờ tải lại danh sách.
@@ -23,6 +28,13 @@ export function ProductCard({ product }: { product: ProductListItem }) {
     ? { ...product, inStock: liveProduct.inStock, minPrice: liveProduct.minPrice }
     : product;
   const badges = getProductBadges(shownProduct);
+  // Chỉ hiện nhãn xanh khi sản phẩm đang bán và còn tồn kho để khách nhận biết ngay trên thẻ.
+  const statusBadges =
+    badges.length > 0
+      ? badges
+      : shownProduct.status === 'active'
+        ? [{ label: 'Còn hàng', className: 'badge badge-ok' }]
+        : [];
   const mediaRef = useRef<HTMLDivElement>(null);
 
   function handlePointerMove(event: PointerEvent<HTMLElement>) {
@@ -65,11 +77,6 @@ export function ProductCard({ product }: { product: ProductListItem }) {
             height={IMAGE_FALLBACK_WIDTH}
             loading="lazy"
           />
-          {/* Nhãn chỉ hiện khi rê chuột. Tên link đã là tên sản phẩm, nên trình đọc màn hình bỏ qua nhãn. */}
-          <span className="product-card-cta" aria-hidden="true">
-            Xem chi tiết
-            <Icon name="arrowRight" />
-          </span>
         </div>
         <p className="product-card-brand">{product.brand.name}</p>
         <h3 className="product-card-name">{product.name}</h3>
@@ -82,16 +89,24 @@ export function ProductCard({ product }: { product: ProductListItem }) {
         >
           {formatProductPrice(shownProduct.minPrice)}
         </p>
-        {badges.length > 0 && (
-          <div className="product-card-badges">
-            {badges.map((badge) => (
-              <span key={badge.label} className={badge.className}>
-                {badge.label}
-              </span>
-            ))}
-          </div>
-        )}
       </Link>
+      {/* Nút so sánh đặt ngoài thẻ `<a>` để không lồng phần tử tương tác theo chuẩn HTML. */}
+      <div className="product-card-footer">
+        <div className="product-card-badges">
+          {statusBadges.map((badge) => (
+            <span key={badge.label} className={badge.className}>
+              {badge.label}
+            </span>
+          ))}
+        </div>
+        {categoryId && (
+          <CompareIconButton
+            categoryId={categoryId}
+            productId={product.id}
+            productName={product.name}
+          />
+        )}
+      </div>
     </article>
   );
 }

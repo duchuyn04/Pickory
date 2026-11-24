@@ -1,10 +1,12 @@
 /*
- * Thẻ sản phẩm theo thegioididong.com: viền mảnh, bo 6px, đệm 10px, chip xám, tên chữ thường, giá đỏ đậm.
- * Cả thẻ là một link tới trang chi tiết. Rê chuột đổi viền, thẻ không nâng lên và không có bóng.
+ * Thẻ sản phẩm: nền trắng, viền mảnh, ảnh vuông ở trên, hàng hãng, tên hai dòng, giá đỏ và chân thẻ.
+ * Nút so sánh tách khỏi thẻ link để giữ cấu trúc truy cập hợp lệ khi bấm bằng bàn phím.
  */
 .product-card {
   --pointer-x: 0;
   --pointer-y: 0;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-product);
@@ -13,28 +15,23 @@
 }
 
 .product-card:hover {
-  border-color: var(--color-ink);
-}
-
-/* Link ngoài cùng đã có viền focus riêng ở thẻ, nên bỏ viền mặc định để không vẽ hai vòng. */
-.product-card:focus-within {
-  border-color: var(--color-focus);
-  box-shadow: 0 0 0 3px var(--color-focus-ring);
+  border-color: var(--color-border-strong);
 }
 
 .product-card-link {
   display: flex;
+  flex: 1;
   flex-direction: column;
-  gap: 6px;
-  height: 100%;
-  padding: 10px;
+  gap: var(--space-1-5);
+  padding: var(--space-2-5) var(--space-2-5) var(--space-2);
   border-radius: var(--radius-product);
   color: inherit;
   text-decoration: none;
 }
 
 .product-card-link:focus-visible {
-  outline: none;
+  outline: 2px solid var(--color-focus);
+  outline-offset: -2px;
 }
 
 .product-card-media {
@@ -42,7 +39,8 @@
   aspect-ratio: 1;
   margin-bottom: var(--space-1);
   overflow: hidden;
-  border-radius: var(--radius-control);
+  border-radius: var(--radius-product);
+  background: var(--color-surface);
 }
 
 /* Ảnh phóng nhẹ và dời theo chuột khi rê. Biến con trỏ do `ProductCard` ghi, nằm trong khoảng [-1, 1]. */
@@ -58,53 +56,12 @@
 }
 
 .product-card:hover .product-card-media img {
-  scale: 1.08;
-  translate: calc(var(--pointer-x) * 8px) calc(var(--pointer-y) * 8px);
-}
-
-/* Nhãn "Xem chi tiết" trượt lên từ đáy ảnh khi rê chuột, để khách biết cả thẻ bấm được. */
-.product-card-cta {
-  position: absolute;
-  right: var(--space-2);
-  bottom: var(--space-2);
-  left: var(--space-2);
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  border-radius: var(--radius-control);
-  background: var(--color-ink);
-  color: var(--color-on-dark);
-  font-size: var(--text-label);
-  font-weight: 600;
-  opacity: 0;
-  transform: translateY(calc(100% + var(--space-2)));
-  transition:
-    opacity var(--duration-fast),
-    transform var(--duration-base) var(--ease-out-expo);
-}
-
-.product-card-cta .icon {
-  width: 14px;
-  height: 14px;
-}
-
-.product-card:hover .product-card-cta {
-  opacity: 1;
-  transform: none;
-}
-
-/* Màn cảm ứng không có trạng thái rê, nên nhãn không hiện nửa vời sau khi chạm. */
-@media (hover: none) {
-  .product-card-cta {
-    display: none;
-  }
+  scale: 1.06;
+  translate: calc(var(--pointer-x) * 6px) calc(var(--pointer-y) * 6px);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .product-card-media img,
-  .product-card-cta {
+  .product-card-media img {
     transition: none;
   }
 
@@ -113,16 +70,12 @@
   }
 }
 
-/* Chip xám nhỏ trên tên máy, cùng kiểu chip "Trả chậm 0%" của thegioididong.com. Pickory ghi tên hãng. */
 .product-card-brand {
-  align-self: flex-start;
   margin: 0;
-  padding: 2px 6px;
-  border-radius: var(--radius-chip);
-  background: var(--color-surface-muted);
   color: var(--color-ink-muted);
   font-size: var(--text-xs);
-  line-height: 18px;
+  font-weight: var(--font-weight-regular);
+  line-height: 16px;
 }
 
 /* Tên giữ chiều cao hai dòng để các thẻ cùng hàng thẳng nhau dù tên dài ngắn khác nhau. */
@@ -131,9 +84,11 @@
   min-height: 40px;
   margin: 0;
   overflow: hidden;
+  color: var(--color-ink);
   font-size: var(--text-sm);
-  font-weight: 400;
+  font-weight: var(--font-weight-semibold);
   line-height: 20px;
+  text-overflow: ellipsis;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -145,22 +100,82 @@
   color: var(--color-brand);
 }
 
-/* Giá đứng ngay dưới tên, nên giá của các thẻ cùng hàng thẳng nhau dù thẻ có nhãn trạng thái hay không. */
+/* Giá đứng ngay dưới tên, nên giá của các thẻ cùng hàng thẳng nhau. */
 .product-card-price {
-  margin: 0;
-  line-height: 24px;
+  margin: auto 0 0;
+  padding-top: var(--space-1);
   color: var(--color-price);
-  font-size: var(--text-md);
-  font-weight: 700;
+  font-size: var(--text-price);
+  font-weight: var(--font-weight-bold);
+  line-height: 22px;
 }
 
 .product-card-price-contact {
   color: var(--color-ink-muted);
-  font-weight: 600;
+  font-weight: var(--font-weight-semibold);
+}
+
+.product-card-footer {
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--space-2-5) var(--space-2-5);
 }
 
 .product-card-badges {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-1);
+  min-width: 0;
+}
+
+.product-card-badges .badge {
+  padding: 2px var(--space-2);
+  font-size: var(--text-3xs);
+  line-height: 16px;
+}
+
+.product-compare-btn {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-product);
+  background: var(--color-surface);
+  color: var(--color-ink-secondary);
+  cursor: pointer;
+  transition:
+    border-color var(--duration-fast),
+    background-color var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.product-compare-btn .icon {
+  width: 15px;
+  height: 15px;
+}
+
+.product-compare-btn:hover:not(:disabled) {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.product-compare-btn[aria-pressed='true'] {
+  border-color: var(--color-brand);
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+}
+
+.product-compare-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.product-compare-btn:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
 }
