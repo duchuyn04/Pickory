@@ -79,7 +79,6 @@ interface FakeApi {
   categories?: CategoryNode[] | 'error' | 'pending';
   // Danh mục có giá trị `'error'` thì lưới sản phẩm của danh mục đó trả lỗi.
   categoryItems?: Record<string, ProductListItem[] | 'error'>;
-  brandItems?: Record<string, ProductListItem[]>;
   // Tổng số sản phẩm của lưới "Tất cả sản phẩm". Mỗi trang trả đủ 12 sản phẩm tới khi hết.
   catalogTotal?: number;
   // Slug sản phẩm của banner mà API trả 404, như khi admin đã xóa sản phẩm.
@@ -121,7 +120,6 @@ function detailForSlug(detailSlug: string) {
 function stubApi({
   categories = allCategories,
   categoryItems = {},
-  brandItems = {},
   catalogTotal = 30,
   missingProductSlugs = [],
 }: FakeApi) {
@@ -153,12 +151,6 @@ function stubApi({
       if (params.get('pageSize') === '1') {
         return Response.json({ data: listResponse(items.slice(0, 1), { total: items.length }) });
       }
-      return Response.json({ data: listResponse(items) });
-    }
-
-    const brandSlug = params.get('brand');
-    if (brandSlug !== null) {
-      const items = brandItems[brandSlug] ?? [product(`${brandSlug}-1`, 990_000, brandSlug)];
       return Response.json({ data: listResponse(items) });
     }
 
@@ -221,13 +213,6 @@ function selectedBannerName(): string | null | undefined {
   return container.querySelector('.banner-tab[aria-selected="true"] .banner-tab-name')?.textContent;
 }
 
-// Tiêu đề các khối dưới banner. Tên máy trên banner cũng là h2, nên bỏ phần carousel ra.
-function sectionHeadings(): string[] {
-  return [...container.querySelectorAll('main h2')]
-    .filter((heading) => !heading.closest('.banner-carousel'))
-    .map((heading) => heading.textContent ?? '');
-}
-
 function productNames(scope: Element | null): string[] {
   return [...(scope?.querySelectorAll('.product-card-name') ?? [])].map(
     (name) => name.textContent ?? '',
@@ -245,76 +230,7 @@ function findLinkByText(
 
 const firstCatalogBanner = HOME_BANNERS.find((banner) => banner.productSlug !== null);
 
-describe('HomePage: các khối nội dung', () => {
-  it('hiện các khối theo thứ tự của thegioididong.com', async () => {
-    stubApi({});
-    await renderPage();
-
-    expect(sectionHeadings()).toEqual([
-      'Sản phẩm mới',
-      'Mua theo thương hiệu',
-      'Mua online, nhận hàng tận nơi',
-      'Danh mục sản phẩm',
-      'Hàng mới về',
-      'Mua theo thương hiệu',
-      'Danh mục nổi bật',
-      'Tất cả sản phẩm',
-      'Thương hiệu tại Pickory',
-      'So sánh nhanh',
-      'Tìm nhanh theo danh mục',
-    ]);
-  });
-
-  it('dải cam kết ghi số sản phẩm và số thương hiệu lấy từ catalog', async () => {
-    stubApi({ catalogTotal: 50 });
-    await renderPage();
-
-    expect(container.querySelector('.service-strip')?.textContent).toContain(
-      '50 sản phẩm từ 2 thương hiệu',
-    );
-  });
-
-  it('ô danh mục dẫn tới trang danh mục và ghi số sản phẩm, giá thấp nhất', async () => {
-    stubApi({
-      categoryItems: { 'dien-thoai': [product('re', 3_490_000), product('dat', 9_990_000)] },
-    });
-    await renderPage();
-
-    const tiles = [...container.querySelectorAll('a.category-tile')];
-    expect(tiles.map((tile) => tile.getAttribute('href'))).toEqual([
-      '/c/dien-thoai',
-      '/c/laptop',
-      '/c/man-hinh',
-      '/c/phu-kien',
-      '/c/tai-nghe',
-    ]);
-    expect(tiles[0]?.querySelector('.category-tile-count')?.textContent).toBe(
-      '2 sản phẩm, từ 3.490.000 đ',
-    );
-  });
-
-  it('ô danh mục dùng máy có ảnh mới nhất khi slug cấu hình không còn', async () => {
-    const replacement = product('may-thay-the', 4_000_000);
-    replacement.image = {
-      publicId: 'pickory/products/may-thay-the',
-      alt: 'Máy thay thế',
-      url: 'https://res.cloudinary.com/pickory/image/upload/pickory/products/may-thay-the.jpg',
-    };
-    stubApi({ categoryItems: { 'dien-thoai': [replacement] } });
-    await renderPage();
-
-    const tile = container.querySelector('a.category-tile[href="/c/dien-thoai"]');
-    expect(tile?.querySelector('img')?.getAttribute('src')).toContain('may-thay-the.jpg');
-    expect(tile?.querySelector('.category-tile-count')?.textContent).toContain('4.000.000 đ');
-  });
-
-  it('hiện khung chờ của ô danh mục khi cây danh mục còn đang tải', async () => {
-    stubApi({ categories: 'pending' });
-    await renderPage();
-
-    expect(container.querySelectorAll('.category-tile-skeleton')).toHaveLength(5);
-  });
-
+describe('HomePage: tải danh mục', () => {
   it('báo lỗi khi không tải được danh mục và cho thử lại', async () => {
     const fetchMock = stubApi({ categories: 'error' });
     await renderPage();
@@ -494,42 +410,6 @@ describe('HomePage: hàng mới về', () => {
   });
 });
 
-describe('HomePage: mua theo thương hiệu', () => {
-  it('xếp hãng nhiều sản phẩm trước và mở sẵn hãng đầu tiên', async () => {
-    stubApi({});
-    await renderPage();
-
-    const pills = [...container.querySelectorAll('.brand-pill')];
-    expect(pills.map((pill) => pill.firstChild?.textContent)).toEqual(['Apple', 'Samsung']);
-    expect(pills[0]?.getAttribute('aria-pressed')).toBe('true');
-    expect(productNames(container.querySelector('.brand-deals'))).toEqual(['Sản phẩm apple-1']);
-  });
-
-  it('hiện một hàng sáu thẻ, nút "Xem thêm" mở phần còn lại', async () => {
-    const appleItems = Array.from({ length: 8 }, (_, index) =>
-      product(`apple-${index + 1}`, 1_000_000, 'apple'),
-    );
-    stubApi({ brandItems: { apple: appleItems } });
-    await renderPage();
-
-    const deals = container.querySelector('.brand-deals');
-    expect(productNames(deals)).toHaveLength(6);
-
-    await click(findButton('Xem thêm 2 sản phẩm Apple'));
-    expect(productNames(deals)).toHaveLength(8);
-    expect(findButton('Thu gọn')?.getAttribute('aria-expanded')).toBe('true');
-  });
-
-  it('bấm hãng khác thì đổi lưới sang sản phẩm của hãng đó', async () => {
-    stubApi({ brandItems: { samsung: [product('galaxy', 9_000_000, 'samsung')] } });
-    await renderPage();
-
-    await click(findButton('Samsung'));
-
-    expect(productNames(container.querySelector('.brand-deals'))).toEqual(['Sản phẩm galaxy']);
-  });
-});
-
 describe('HomePage: tất cả sản phẩm', () => {
   it('nút "Xem thêm" tải trang kế tiếp và báo khi đã xem hết', async () => {
     stubApi({ catalogTotal: 15 });
@@ -664,7 +544,6 @@ describe('HomePage: banner sản phẩm', () => {
     expect(
       container.querySelector(`#banner-slide-${firstCatalogBanner?.id} .banner-price`)?.textContent,
     ).toContain('25.990.000 đ');
-    expect(container.querySelector('.duel-table')).not.toBeNull();
   });
 
   it('máy chưa có trong catalog ghi "Sắp có" và không có nút mua', async () => {
@@ -733,72 +612,5 @@ describe('HomePage: banner sản phẩm', () => {
     const slides = [...container.querySelectorAll('.banner-slide')];
     expect(slides.filter((slide) => !slide.hasAttribute('inert'))).toHaveLength(1);
     expect(slides[0]?.hasAttribute('inert')).toBe(false);
-  });
-});
-
-describe('HomePage: banner danh mục', () => {
-  it('ghi số mẫu, giá thấp nhất và các hãng của danh mục, cả banner dẫn tới danh mục', async () => {
-    stubApi({
-      categoryItems: {
-        laptop: [product('xps', 40_000_000, 'dell'), product('zenbook', 20_000_000, 'asus')],
-      },
-    });
-    await renderPage();
-
-    const laptopPromo = [...container.querySelectorAll('.promo')].find(
-      (promo) => promo.querySelector('.promo-title')?.textContent === 'Laptop',
-    );
-    expect(laptopPromo?.querySelector('.promo-meta')?.textContent).toBe(
-      '2 mẫu, giá từ 40.000.000 đ',
-    );
-    expect(laptopPromo?.querySelector('.promo-brands .sr')?.textContent).toBe(
-      'Các hãng: Apple, Samsung',
-    );
-    expect(laptopPromo?.querySelector('.promo-cta')?.getAttribute('href')).toBe('/c/laptop');
-  });
-
-  it('bỏ banner của danh mục không còn tồn tại', async () => {
-    stubApi({ categories: allCategories.filter((node) => node.slug !== 'tai-nghe') });
-    await renderPage();
-
-    const titles = [...container.querySelectorAll('.promo-title')].map(
-      (title) => title.textContent,
-    );
-    expect(titles).toEqual(['Laptop']);
-  });
-});
-
-describe('HomePage: so sánh nhanh', () => {
-  it('đặt thông số chung của hai máy cạnh nhau, số thập phân dùng dấu phẩy', async () => {
-    stubApi({});
-    await renderPage();
-
-    const rows = [...container.querySelectorAll('.duel-table tbody tr')].map((row) =>
-      [...row.children].map((cell) => cell.textContent),
-    );
-    expect(rows).toEqual([
-      ['8 GB', 'RAM', '8 GB'],
-      ['6,3 inch', 'Kích thước màn hình', '6,3 inch'],
-    ]);
-  });
-
-  it('nút so sánh đưa đúng hai máy vào danh sách so sánh', async () => {
-    stubApi({});
-    await renderPage();
-
-    await click(findButton('So sánh chi tiết hai máy'));
-
-    expect(JSON.parse(window.localStorage.getItem('pickory.compare') ?? 'null')).toEqual({
-      categoryId: 'cat-phone',
-      productIds: ['id-apple-iphone-16-pro', 'id-samsung-galaxy-s24'],
-    });
-  });
-
-  it('một máy không còn trong catalog thì hiện dải mời so sánh chung', async () => {
-    stubApi({ missingProductSlugs: ['samsung-galaxy-s24'] });
-    await renderPage();
-
-    expect(container.querySelector('.duel')).toBeNull();
-    expect(container.querySelector('.compare-band h2')?.textContent).toBe('Chưa chọn được máy?');
   });
 });

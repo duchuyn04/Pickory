@@ -9,7 +9,6 @@ import type {
 } from '../catalog/customer/catalog-api';
 import type { ProductSort } from '../catalog/customer/category-query';
 import { HOME_BANNERS } from './home-banners';
-import { PRODUCT_DUEL } from './home-content';
 
 // Số thẻ của một lưới sản phẩm: hai hàng sáu thẻ ở màn rộng 1200px, giống lưới của thegioididong.com.
 export const RAIL_PRODUCT_LIMIT = 12;
@@ -111,24 +110,6 @@ export function useCatalogOverview() {
   });
 }
 
-export function buildBrandProductsPath(brandSlug: string): string {
-  const params = new URLSearchParams({
-    brand: brandSlug,
-    sort: 'newest',
-    pageSize: String(RAIL_PRODUCT_LIMIT),
-  });
-  return `/api/products?${params.toString()}`;
-}
-
-export function useBrandProducts(brandSlug: string | null) {
-  return useQuery<ProductListResponse>({
-    queryKey: ['home', 'brand-products', brandSlug],
-    queryFn: ({ signal }) => apiRequest(buildBrandProductsPath(brandSlug ?? ''), { signal }),
-    // Chờ danh sách hãng tải xong mới biết hãng đầu tiên để hỏi sản phẩm.
-    enabled: brandSlug !== null,
-  });
-}
-
 export function buildCatalogPagePath(sort: ProductSort, page: number): string {
   const params = new URLSearchParams({
     sort,
@@ -150,12 +131,10 @@ export function useCatalogPages(sort: ProductSort) {
   });
 }
 
-// Cùng một khóa cho banner và banner so sánh, nên trang chủ chỉ gửi một request cho slug cố định.
-const requestedHomeSlugs = [
-  ...HOME_BANNERS.flatMap((banner) => (banner.productSlug ? [banner.productSlug] : [])),
-  PRODUCT_DUEL.leftSlug,
-  PRODUCT_DUEL.rightSlug,
-];
+// Gom toàn bộ slug sản phẩm của banner nổi bật vào một request thay vì hỏi lẻ từng banner.
+const requestedHomeSlugs = HOME_BANNERS.flatMap((banner) =>
+  banner.productSlug ? [banner.productSlug] : [],
+);
 const homeProductSlugs = requestedHomeSlugs.filter(
   (slug, index) => requestedHomeSlugs.indexOf(slug) === index,
 );

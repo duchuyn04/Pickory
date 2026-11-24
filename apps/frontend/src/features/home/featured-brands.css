@@ -1,0 +1,127 @@
+/*
+ * Khối "Thương hiệu nổi bật": thẻ trắng bo góc, cuộn ngang trên điện thoại và tám ô đều nhau từ 768px.
+ */
+.featured-brands-head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3-5);
+}
+
+.featured-brands-title {
+  margin: 0;
+  color: var(--color-ink);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.3;
+}
+
+.featured-brands-more {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--color-link);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.featured-brands-more .icon {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--duration-fast) var(--ease-out-expo);
+}
+
+.featured-brands-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.featured-brands-more:hover .icon {
+  transform: translateX(3px);
+}
+
+/* Dưới 768px: cuộn ngang để các ô tên hãng không bị bóp chồng lên nhau. */
+.featured-brands-list {
+  display: grid;
+  grid-auto-columns: minmax(104px, auto);
+  grid-auto-flow: column;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.featured-brands-list::-webkit-scrollbar {
+  display: none;
+}
+
+.featured-brand-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 58px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  scroll-snap-align: start;
+  transition:
+    border-color var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.featured-brand-tile:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.featured-brand-tile:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.featured-brands-skeleton {
+  height: 136px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* Từ 768px (`--layout-breakpoint-tablet`): xếp tám ô thương hiệu vừa khít trên một hàng. */
+@media (min-width: 768px) {
+  .featured-brands-title {
+    font-size: var(--text-title);
+  }
+
+  .featured-brands-list {
+    grid-auto-flow: row;
+    grid-template-columns: repeat(8, minmax(0, 1fr));
+    overflow-x: visible;
+  }
+
+  .featured-brand-tile {
+    padding: var(--space-2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featured-brands-more .icon,
+  .featured-brand-tile,
+  .featured-brands-skeleton {
+    animation: none;
+    transition: none;
+  }
+}

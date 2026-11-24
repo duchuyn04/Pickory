@@ -1,0 +1,383 @@
+/*
+ * Năm khối danh mục trang chủ: banner trái trên nền chuyển sắc xuống trắng và lưới bốn cột sản phẩm.
+ * Ở màn dưới 1200px banner lên trên và chỉ hiện bốn sản phẩm để trang gọn.
+ */
+.category-block {
+  min-width: 0;
+}
+
+.category-block-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3-5);
+  align-items: start;
+}
+
+.category-block-error-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding: var(--card-padding-compact);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}
+
+/* ---------- Banner danh mục ---------- */
+
+.category-banner {
+  --cat-banner-bg: var(--color-surface-muted);
+  --cat-banner-accent: var(--color-brand);
+  --cat-banner-cta-bg: var(--color-brand);
+  --cat-banner-cta-ink: var(--color-on-brand);
+  --cat-banner-title-ink: var(--color-ink);
+  --cat-banner-price-ink: var(--color-ink-muted);
+  display: flex;
+  gap: var(--space-3);
+  align-items: flex-end;
+  justify-content: space-between;
+  min-height: 172px;
+  padding: var(--space-4);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-card);
+  background: linear-gradient(180deg, var(--cat-banner-bg) 38%, var(--color-surface) 84%);
+}
+
+/* Khi banner không có ảnh sản phẩm thì giữ nền đồng nhất để nút và chữ tách biệt rõ. */
+.category-banner--no-image {
+  min-height: auto;
+  background: var(--cat-banner-bg);
+}
+
+.category-banner--dien-thoai {
+  --cat-banner-bg: var(--color-cat-dien-thoai);
+  --cat-banner-accent: var(--color-cat-dien-thoai-accent);
+  --cat-banner-cta-bg: var(--color-cat-dien-thoai-cta);
+  --cat-banner-cta-ink: var(--color-on-dark);
+  --cat-banner-title-ink: var(--color-on-dark);
+  --cat-banner-price-ink: var(--color-on-dark-muted);
+  border-color: var(--color-cat-dien-thoai);
+}
+
+/* Laptop giữ nút đỏ thương hiệu vì nền hồng nhấn không đủ tương phản AA với chữ trắng. */
+.category-banner--laptop {
+  --cat-banner-bg: var(--color-cat-laptop);
+  --cat-banner-accent: var(--color-cat-laptop-accent);
+  --cat-banner-cta-bg: var(--color-brand);
+  --cat-banner-cta-ink: var(--color-on-brand);
+  --cat-banner-title-ink: var(--color-on-dark);
+  --cat-banner-price-ink: var(--color-on-dark-muted);
+  border-color: var(--color-cat-laptop);
+}
+
+.category-banner--man-hinh {
+  --cat-banner-bg: var(--color-cat-man-hinh);
+  --cat-banner-accent: var(--color-cat-man-hinh-accent);
+  --cat-banner-cta-bg: var(--color-cat-man-hinh-accent);
+  --cat-banner-cta-ink: var(--color-on-brand);
+  --cat-banner-title-ink: var(--color-ink);
+  --cat-banner-price-ink: var(--color-ink-muted);
+}
+
+.category-banner--tai-nghe {
+  --cat-banner-bg: var(--color-cat-tai-nghe);
+  --cat-banner-accent: var(--color-cat-tai-nghe-accent);
+  --cat-banner-cta-bg: var(--color-cat-tai-nghe-accent);
+  --cat-banner-cta-ink: var(--color-on-brand);
+  --cat-banner-title-ink: var(--color-ink);
+  --cat-banner-price-ink: var(--color-ink-muted);
+}
+
+.category-banner--phu-kien {
+  --cat-banner-bg: var(--color-cat-phu-kien);
+  --cat-banner-accent: var(--color-cat-phu-kien-accent);
+  --cat-banner-cta-bg: var(--color-cat-phu-kien-accent);
+  --cat-banner-cta-ink: var(--color-on-brand);
+  --cat-banner-title-ink: var(--color-ink);
+  --cat-banner-price-ink: var(--color-ink-muted);
+}
+
+.category-banner-copy {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-1-5);
+  align-items: flex-start;
+  align-self: flex-start;
+  min-width: 0;
+}
+
+.category-banner-label {
+  color: var(--cat-banner-accent);
+  font-size: var(--text-3xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.category-banner-title {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--cat-banner-title-ink);
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.25;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.category-banner-price {
+  margin: 0;
+  color: var(--cat-banner-price-ink);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+.category-banner-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  margin-top: var(--space-1);
+  padding: 0 var(--space-3-5);
+  border-radius: var(--radius-control);
+  background: var(--cat-banner-cta-bg);
+  color: var(--cat-banner-cta-ink);
+  font-size: var(--text-label);
+  font-weight: var(--font-weight-bold);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: transform var(--duration-fast);
+}
+
+.category-banner-cta:hover {
+  transform: translateY(-1px);
+}
+
+.category-banner-cta:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.category-banner-media {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  justify-content: center;
+  width: 112px;
+  height: 112px;
+}
+
+.category-banner-media img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+/* ---------- Vùng phải: tiêu đề, chip hãng và lưới sản phẩm ---------- */
+
+.category-block-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.category-block-head {
+  display: flex;
+  gap: var(--space-3);
+  align-items: center;
+  justify-content: space-between;
+}
+
+.category-block-title {
+  margin: 0;
+  padding-bottom: var(--space-1-5);
+  border-bottom: 2px solid var(--color-brand);
+  color: var(--color-brand);
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-extrabold);
+  line-height: 1.3;
+  text-transform: uppercase;
+}
+
+.category-block-more {
+  display: inline-flex;
+  flex: none;
+  gap: var(--space-1);
+  align-items: center;
+  color: var(--color-link);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.category-block-more .icon {
+  width: 16px;
+  height: 16px;
+  transition: transform var(--duration-fast) var(--ease-out-expo);
+}
+
+.category-block-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.category-block-more:hover .icon {
+  transform: translateX(3px);
+}
+
+.category-brand-chips {
+  display: flex;
+  gap: var(--space-2);
+  padding: 2px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.category-brand-chips::-webkit-scrollbar {
+  display: none;
+}
+
+.category-brand-chip {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 var(--space-3-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    border-color var(--duration-fast),
+    color var(--duration-fast);
+}
+
+.category-brand-chip:hover {
+  border-color: var(--color-brand);
+  color: var(--color-brand);
+}
+
+.category-brand-chip:focus-visible {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+/* Dưới 1200px chỉ hiện bốn sản phẩm đầu tiên để khối gọn theo ảnh 375px và 768px. */
+.category-block-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.category-block-grid > li {
+  display: flex;
+}
+
+.category-block-grid > li:nth-child(n + 5) {
+  display: none;
+}
+
+.category-block-grid > li > .product-card {
+  flex: 1;
+}
+
+.category-block-skeleton {
+  height: 460px;
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+/* ---------- Máy tính bảng từ 768px (`--layout-breakpoint-tablet`) ---------- */
+
+@media (min-width: 768px) {
+  .category-block-error-wrap {
+    padding: var(--card-padding);
+  }
+
+  .category-banner {
+    min-height: 196px;
+    padding: var(--space-5);
+  }
+
+  .category-banner--no-image {
+    min-height: auto;
+  }
+
+  .category-banner-media {
+    width: 148px;
+    height: 148px;
+  }
+
+  .category-brand-chips {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .category-block-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-2-5);
+  }
+}
+
+/* ---------- Máy tính từ 1200px (`--layout-breakpoint-desktop`) ---------- */
+
+@media (min-width: 1200px) {
+  /* Xếp banner trái 224px cố định bên cạnh vùng lưới sản phẩm 960px. */
+  .category-block-layout {
+    grid-template-columns: var(--layout-category-banner) minmax(0, 1fr);
+    gap: var(--space-4);
+  }
+
+  /* Giới hạn chiều cao tối đa 480px và không kéo dài banner theo chiều cao hai hàng thẻ. */
+  .category-banner {
+    flex-direction: column;
+    align-items: stretch;
+    align-self: start;
+    min-height: 432px;
+    max-height: 480px;
+    padding: var(--space-5) var(--space-4) var(--space-4);
+    background: linear-gradient(180deg, var(--cat-banner-bg) 35%, var(--color-surface) 78%);
+  }
+
+  .category-banner--no-image {
+    min-height: 220px;
+    background: var(--cat-banner-bg);
+  }
+
+  .category-banner-media {
+    width: 100%;
+    height: 192px;
+    margin-top: auto;
+  }
+
+  .category-block-grid {
+    gap: var(--space-3);
+  }
+
+  .category-block-grid > li:nth-child(n + 5) {
+    display: flex;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-banner-cta,
+  .category-block-more .icon,
+  .category-brand-chip,
+  .category-block-skeleton {
+    animation: none;
+    transition: none;
+  }
+}

@@ -221,20 +221,20 @@ design/screens/trang-chu-dien-thoai-375.png
 
 **Acceptance criteria:**
 
-- [ ] Mỗi khối có banner trái 224px (nền chuyển từ màu danh mục sang trắng, ảnh sản phẩm ở đáy, tên, giá từ, nút Xem ngay) và lưới bốn thẻ mỗi hàng, hai hàng ở 1440px.
-- [ ] Banner trái cao tối đa 480px, không kéo dài theo lưới.
-- [ ] Màu nền và màu nhấn theo nhóm `--color-cat-*`. Chữ trên banner đạt AA.
-- [ ] Chip hãng và liên kết Xem tất cả mở `/c/:slug` với bộ lọc hãng tương ứng.
-- [ ] Ở 768px lưới giữ bốn thẻ nhỏ hơn. Ở 375px banner nằm trên, lưới hai thẻ mỗi hàng và chỉ một hàng.
-- [ ] Khối thương hiệu nổi bật cuộn ngang ở màn nhỏ.
-- [ ] CSS cũ của băng chuyền và lưới trang chủ không còn dùng thì xóa. Ảnh chụp trước và sau mỗi lần xóa.
-- [ ] Không thanh cuộn ngang ở 1440, 768, 375px.
-- [ ] Cập nhật `home-page.test.tsx` và e2e trang chủ theo cấu trúc mới.
+- [x] Mỗi khối có banner trái 224px (nền chuyển từ màu danh mục sang trắng, ảnh sản phẩm ở đáy, tên, giá từ, nút Xem ngay) và lưới bốn thẻ mỗi hàng, hai hàng ở 1440px.
+- [x] Banner trái cao tối đa 480px, không kéo dài theo lưới.
+- [x] Màu nền và màu nhấn theo nhóm `--color-cat-*`. Chữ trên banner đạt AA.
+- [x] Chip hãng và liên kết Xem tất cả mở `/c/:slug` với bộ lọc hãng tương ứng.
+- [x] Ở 768px lưới giữ bốn thẻ nhỏ hơn. Ở 375px banner nằm trên, lưới hai thẻ mỗi hàng và chỉ một hàng.
+- [x] Khối thương hiệu nổi bật cuộn ngang ở màn nhỏ.
+- [x] CSS cũ của băng chuyền và lưới trang chủ không còn dùng thì xóa. Ảnh chụp trước và sau mỗi lần xóa.
+- [x] Không thanh cuộn ngang ở 1440, 768, 375px.
+- [x] Cập nhật `home-page.test.tsx` và e2e trang chủ theo cấu trúc mới.
 
 **Verification:**
 
-- [ ] `pnpm typecheck`, `pnpm lint`, `pnpm test` pass. E2E trang chủ pass.
-- [ ] Ảnh chụp ba cỡ khớp ba ảnh `trang-chu-*`.
+- [x] `pnpm typecheck`, `pnpm lint`, `pnpm test` pass. E2E trang chủ pass.
+- [x] Ảnh chụp ba cỡ khớp ba ảnh `trang-chu-*`.
 
 **Dependencies:** SFR-05, SFR-06.
 
@@ -244,9 +244,9 @@ design/screens/trang-chu-dien-thoai-375.png
 
 ### Checkpoint 1
 
-- [ ] Trang chủ khớp ba ảnh. Không cuộn ngang.
+- [x] Trang chủ khớp ba ảnh. Không cuộn ngang.
 - [ ] Test và e2e pass. Review với người dùng.
-- [ ] Tick SFR-04 đến SFR-07.
+- [x] Tick SFR-04 đến SFR-07.
 
 ## SFR-08: Trang sản phẩm, khung và thư viện ảnh
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from 'react';
+import { useEffect, useState } from 'react';
 
 const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 // Phần tử lộ ra khi 15% của nó vào màn hình. Khách thấy chuyển động mà nội dung không trễ quá lâu.
@@ -9,12 +9,11 @@ export function prefersReducedMotion(): boolean {
   return window.matchMedia?.(REDUCED_MOTION_QUERY).matches ?? false;
 }
 
-// Thêm lớp `is-revealed` khi phần tử vào màn hình. CSS dùng lớp này để chạy hiệu ứng hiện dần.
-export function useRevealOnScroll<Element extends HTMLElement>(): RefObject<Element | null> {
-  const elementRef = useRef<Element>(null);
+// Dùng callback ref để gắn IntersectionObserver ngay cả khi phần tử chỉ mount sau lúc dữ liệu tải xong.
+export function useRevealOnScroll<Element extends HTMLElement>(): (node: Element | null) => void {
+  const [element, setElement] = useState<Element | null>(null);
 
   useEffect(() => {
-    const element = elementRef.current;
     if (!element) return;
     // Trình duyệt không có IntersectionObserver thì hiện ngay. Nội dung không được kẹt ở trạng thái ẩn.
     if (typeof IntersectionObserver === 'undefined') {
@@ -34,7 +33,7 @@ export function useRevealOnScroll<Element extends HTMLElement>(): RefObject<Elem
     );
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [element]);
 
-  return elementRef;
+  return setElement;
 }

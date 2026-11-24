@@ -82,7 +82,7 @@ Phase 1, 2 và 3 độc lập sau Checkpoint 0, nên có thể giao cho các phi
 - [x] SFR-04: Menu danh mục, banner nổi bật cũ chỉnh lại cho vừa khung mới, ba banner nhỏ. Cỡ M.
 - [x] SFR-05: Cột phải (Mới lên kệ, Mua theo thương hiệu, gợi ý so sánh) và dải thông báo phí giao hàng. Cỡ M.
 - [x] SFR-06: Hàng mới về và thẻ sản phẩm mới. Cỡ M.
-- [ ] SFR-07: Năm khối danh mục, thương hiệu nổi bật, responsive 768 và 375px. Cỡ L.
+- [x] SFR-07: Năm khối danh mục, thương hiệu nổi bật, responsive 768 và 375px. Cỡ L.
 
 ### Checkpoint 1
 
