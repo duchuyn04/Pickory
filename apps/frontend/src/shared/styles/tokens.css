@@ -10,6 +10,10 @@
   --color-brand-soft: #fbe6e8;
   --color-on-brand: #ffffff;
   --color-header-soft: #dd2438;
+  /* Nền nút trên thanh đầu trang đỏ: trắng mờ lúc thường và đậm hơn lúc rê chuột hoặc mở. */
+  --color-header-button: rgba(255, 255, 255, 0.18);
+  --color-header-button-hover: rgba(255, 255, 255, 0.3);
+  --color-header-divider: rgba(255, 255, 255, 0.35);
   --color-price: #d70018;
 
   /* Nền: trang xám nhạt, thẻ trắng, khối phụ xám rất nhạt. */
@@ -97,6 +101,23 @@
   --color-duel-right: #e7eefb;
   --color-duel-right-accent: #1428a0;
   --color-duel-left-accent: #1b1f24;
+  /* Banner cột trái của từng khối danh mục trang chủ. Mỗi danh mục có màu nền, màu nhấn và nút hành động riêng. */
+  --color-cat-dien-thoai: #05070d;
+  --color-cat-dien-thoai-accent: #8fc3ff;
+  --color-cat-dien-thoai-cta: #1a5fd6;
+  --color-cat-laptop: #101318;
+  --color-cat-laptop-accent: #ff4d6d;
+  --color-cat-man-hinh: #e9eef1;
+  --color-cat-man-hinh-accent: #0a5cbc;
+  --color-cat-tai-nghe: #efe6da;
+  --color-cat-tai-nghe-accent: #85562a;
+  --color-cat-phu-kien: #f1ebe2;
+  --color-cat-phu-kien-accent: #85582e;
+  /* Ba banner nhỏ dưới banner nổi bật trang chủ: nền tối, nền ấm và nền xanh nhạt. */
+  --color-small-banner-dark: #1b1f24;
+  --color-small-banner-warm: #efe6da;
+  --color-small-banner-cool: #e7eefb;
+  --color-small-banner-cool-accent: #1428a0;
   /* Chấm màu máy trên banner. Mã màu đo từ ảnh của hãng. */
   --color-swatch-iphone-black: #2b2b2e;
   --color-swatch-iphone-silver: #e4e5e7;
@@ -121,6 +142,8 @@
   --color-ink: #1b1f24;
   --color-ink-muted: #5b6470;
   --color-ink-secondary: #3f4650;
+  /* Chữ vô hiệu hóa trên nền sáng ở trạng thái không tương tác được. */
+  --color-ink-disabled: #c4c9d2;
 
   /* Viền: thẻ, ô nhập và đường kẻ dòng trong bảng. */
   --color-border: #e3e6ea;
@@ -143,6 +166,8 @@
   --color-info: #1d4fae;
   --color-info-soft: #e5efff;
   --color-star: #f5a524;
+  /* Xanh lá đặc cho vòng tròn dấu tích ở trang đặt hàng thành công và thanh các bước. Chữ xanh vẫn dùng --color-success. */
+  --color-success-solid: #16a34a;
 
   /*
    * Màu phân loại của biểu đồ báo cáo. Sáu màu đủ tách nhau trên nền trắng.
@@ -159,6 +184,8 @@
 
   /* Lớp phủ và bóng: chỉ panel nổi có bóng rõ, thẻ chỉ có bóng rất nhẹ. */
   --color-overlay: rgba(10, 14, 20, 0.45);
+  /* Lớp phủ mờ cho nút mũi tên nằm trên ảnh banner. */
+  --color-scrim-light: rgba(27, 31, 36, 0.25);
   --shadow-card: 0 1px 2px rgba(16, 24, 40, 0.04);
   --shadow-popover: 0 20px 60px rgba(0, 0, 0, 0.25);
   --shadow-drawer: 0 0 40px rgba(10, 14, 20, 0.2);
@@ -185,26 +212,67 @@
   --duration-base: 0.45s;
   --duration-slow: 0.9s;
 
-  /* Khoảng cách: thang 4px */
+  /* Khoảng cách: thang 4px. Các bước lẻ 6px, 10px, 14px dùng giữa các phần tử trong thẻ. */
   --space-1: 4px;
+  --space-1-5: 6px;
   --space-2: 8px;
+  --space-2-5: 10px;
   --space-3: 12px;
+  --space-3-5: 14px;
   --space-4: 16px;
   --space-5: 24px;
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
+  /* Đệm trong thẻ lớn: 20px trên màn hình rộng và 16px trên điện thoại. */
+  --card-padding: 20px;
+  --card-padding-compact: 16px;
 
-  /* Chữ: Be Vietnam Pro hiển thị tiếng Việt có dấu tốt. Font hệ thống dùng khi chưa tải xong. */
+  /* Chữ: Inter, cùng font với trang cellphones.com.vn. Inter có bộ ký tự tiếng Việt. Font hệ thống dùng khi chưa tải xong. */
   --font-sans:
-    'Be Vietnam Pro', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
-    sans-serif;
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Consolas, monospace;
+  /* Độ đậm chữ chuẩn dùng chung cho tiêu đề, nhãn và nội dung. */
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 800;
+  /* Nhãn nhỏ nhất trên banner nhỏ. */
+  --text-2xs: 10px;
+  /* Nhãn chip và tên bước đặt hàng trên điện thoại. */
+  --text-3xs: 11px;
   --text-xs: 12px;
   --text-label: 13px;
   --text-sm: 14px;
+  /* Giá sản phẩm trên thẻ lưới. */
+  --text-price: 15px;
   --text-md: 16px;
   --text-lg: 20px;
   --text-title: 22px;
   --text-xl: 28px;
+  /* Tiêu đề thẻ đặt hàng thành công trên máy tính. */
+  --text-2xl: 26px;
+  /* Giá phiên bản sản phẩm và tên banner trên điện thoại. */
+  --text-3xl: 28px;
+  /* Tên sản phẩm chính trên banner nổi bật trang chủ. */
+  --text-hero: 40px;
+
+  /* Chiều rộng tối đa của vùng nội dung chính, căn giữa trang. */
+  --layout-content-width: 1200px;
+  /* Lề ngang của khung trang trên điện thoại và máy tính bảng. */
+  --layout-gutter-mobile: 16px;
+  --layout-gutter-tablet: 24px;
+  /* Ngưỡng chuyển bố cục để tra cứu vì media query không đọc được biến tùy chỉnh. */
+  --layout-breakpoint-tablet: 768px;
+  --layout-breakpoint-desktop: 1200px;
+  /* Độ rộng cột phụ và cột giữa ở khối đầu trang chủ trên máy tính. */
+  --layout-home-side-column: 224px;
+  --layout-home-main-column: 736px;
+  /* Độ rộng banner trái và lưới sản phẩm trong từng khối danh mục trang chủ. */
+  --layout-category-banner: 224px;
+  --layout-category-grid: 960px;
+  /* Độ rộng hai cột trang sản phẩm và cột tóm tắt trang đặt hàng thành công. */
+  --layout-product-column: 592px;
+  --layout-summary-column: 392px;
 }
