@@ -63,16 +63,16 @@ design/screens/trang-chu-dien-thoai-375.png
 
 **Acceptance criteria:**
 
-- [ ] Thanh tiện ích có hai cam kết bên trái và bốn liên kết bên phải, ẩn dưới 768px.
-- [ ] Thanh chính có logo, nút Danh mục mở `CategoryMenu`, ô tìm kiếm, Đăng nhập, Đăng ký, Giỏ hàng. Khách đã đăng nhập thấy tên tài khoản và Đăng xuất như hiện tại.
-- [ ] Dưới 768px: logo, ô tìm kiếm và giỏ hàng. Mục còn lại nằm trong ngăn kéo menu có sẵn.
-- [ ] Giỏ hàng hiện số lượng như hiện tại, mini cart vẫn mở được.
-- [ ] Focus bàn phím, `Escape` đóng menu, trả focus về nút mở. Các hành vi này giữ nguyên.
+- [x] Thanh tiện ích có hai cam kết bên trái và bốn liên kết bên phải, ẩn dưới 768px.
+- [x] Thanh chính có logo, nút Danh mục mở `CategoryMenu`, ô tìm kiếm, Đăng nhập, Đăng ký, Giỏ hàng. Khách đã đăng nhập thấy tên tài khoản và Đăng xuất như hiện tại.
+- [x] Dưới 768px: logo, ô tìm kiếm và giỏ hàng. Mục còn lại nằm trong ngăn kéo menu có sẵn.
+- [x] Giỏ hàng hiện số lượng như hiện tại, mini cart vẫn mở được.
+- [x] Focus bàn phím, `Escape` đóng menu, trả focus về nút mở. Các hành vi này giữ nguyên.
 
 **Verification:**
 
-- [ ] `pnpm test` và `customer-header-mobile.spec.ts` pass.
-- [ ] Ảnh chụp 1440, 768, 375px khớp phần header của ba ảnh thiết kế.
+- [x] `pnpm test` và `customer-header-mobile.spec.ts` pass.
+- [x] Ảnh chụp 1440, 768, 375px khớp phần header của ba ảnh thiết kế.
 
 **Dependencies:** SFR-01.
 

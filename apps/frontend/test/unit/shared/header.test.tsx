@@ -33,8 +33,33 @@ const staffActor: ActorData = {
   roles: ['admin'],
 };
 
+const sampleCategories = [
+  {
+    id: 'cat-1',
+    parentId: null,
+    name: 'Điện thoại',
+    slug: 'dien-thoai',
+    children: [{ id: 'cat-1-1', parentId: 'cat-1', name: 'iPhone', slug: 'iphone', children: [] }],
+  },
+  {
+    id: 'cat-2',
+    parentId: null,
+    name: 'Laptop',
+    slug: 'laptop',
+    children: [],
+  },
+];
+
 async function renderHeader(actor?: ActorData, url = '/', override?: FakeApiOverride) {
-  const api = stubCartApi(buildCart([]), override);
+  const api = stubCartApi(buildCart([]), (call) => {
+    const customReply = override?.(call);
+    if (customReply) return customReply;
+    // Trả danh mục mẫu để test nút Danh mục hoạt động mà không cần backend thật.
+    if (call.path === '/api/categories' && call.method === 'GET') {
+      return { status: 200, body: { data: sampleCategories } };
+    }
+    return null;
+  });
   const queryClient = newTestQueryClient();
   // Đặt phiên vào cache để test không phụ thuộc một response `/api/me` riêng cho từng loại khách.
   if (actor) queryClient.setQueryData(['actor'], actor);
@@ -46,6 +71,28 @@ function menuButton(): HTMLButtonElement {
   const button = container.querySelector<HTMLButtonElement>('button[aria-label="Menu"]');
   if (!button) throw new Error('Thiếu nút Menu.');
   return button;
+}
+
+function categoryButton(): HTMLButtonElement {
+  const button = Array.from(container.querySelectorAll<HTMLButtonElement>('button')).find((item) =>
+    item.textContent?.includes('Danh mục'),
+  );
+  if (!button) throw new Error('Thiếu nút Danh mục.');
+  return button;
+}
+
+function searchForm(): HTMLFormElement {
+  const form = container.querySelector<HTMLFormElement>('form[role="search"]');
+  if (!form) throw new Error('Thiếu biểu mẫu tìm kiếm.');
+  return form;
+}
+
+function searchInput(): HTMLInputElement {
+  const input = container.querySelector<HTMLInputElement>(
+    'input[type="search"][aria-label="Tìm kiếm sản phẩm"]',
+  );
+  if (!input) throw new Error('Thiếu ô nhập tìm kiếm.');
+  return input;
 }
 
 async function openMenu(): Promise<HTMLButtonElement> {
@@ -77,15 +124,110 @@ afterEach(async () => {
 });
 
 describe('Header', () => {
-  it('có link Tra cứu đơn tới trang /order-lookup trong nhóm điều hướng chính', async () => {
-    stubCartApi(buildCart([]));
-    await renderWithProviders(root, <Header />);
+  it('thanh tiện ích có hai cam kết bên trái và bốn liên kết bên phải', async () => {
+    await renderHeader();
+
+    const headerText = container.querySelector('header')?.textContent ?? '';
+    expect(headerText).toContain('Bảo hành ghi rõ trên từng sản phẩm');
+    expect(headerText).toContain('Phí giao hàng tính theo địa chỉ nhận');
 
     const navigation = container.querySelector('nav[aria-label="Điều hướng chính"]');
-    const lookupLink = Array.from(navigation?.querySelectorAll('a') ?? []).find(
-      (link) => link.textContent === 'Tra cứu đơn',
+    const links = Array.from(navigation?.querySelectorAll('a') ?? []).map((link) => ({
+      text: link.textContent?.trim(),
+      href: link.getAttribute('href'),
+    }));
+    expect(links).toEqual([
+      { text: 'Trang chủ', href: '/' },
+      { text: 'Tra cứu đơn hàng', href: '/order-lookup' },
+      { text: 'Phí giao hàng', href: '/policy/giao-hang' },
+      { text: 'Quyền riêng tư', href: '/privacy' },
+    ]);
+  });
+
+  it('có logo Pickory, nút Danh mục mở cây danh mục và ô tìm kiếm không điều hướng khi gửi', async () => {
+    await renderHeader();
+
+    const logoLink = container.querySelector<HTMLAnchorElement>('a[aria-label="Pickory"]');
+    expect(logoLink?.getAttribute('href')).toBe('/');
+
+    const form = searchForm();
+    expect(form.getAttribute('role')).toBe('search');
+    const input = searchInput();
+    expect(input.getAttribute('aria-label')).toBe('Tìm kiếm sản phẩm');
+    expect(input.placeholder.length).toBeGreaterThan(0);
+
+    // Gửi biểu mẫu tìm kiếm không được đổi đường dẫn vì backend chưa có route tìm từ khóa.
+    const submitEvent = new Event('submit', { bubbles: true, cancelable: true });
+    await act(async () => {
+      form.dispatchEvent(submitEvent);
+    });
+    expect(submitEvent.defaultPrevented).toBe(true);
+    expect(container.querySelector('[data-testid="location"]')?.textContent).toBe('/');
+
+    const catButton = categoryButton();
+    expect(catButton.getAttribute('aria-expanded')).toBe('false');
+    await act(async () => catButton.click());
+    await settle();
+
+    expect(catButton.getAttribute('aria-expanded')).toBe('true');
+    const panelId = catButton.getAttribute('aria-controls');
+    const panel = panelId ? container.querySelector(`#${panelId}`) : null;
+    expect(panel).not.toBeNull();
+    expect(panel?.querySelector('a[href="/c/dien-thoai"]')?.textContent).toBe('Điện thoại');
+    expect(panel?.querySelector('a[href="/c/iphone"]')?.textContent).toBe('iPhone');
+
+    // Bấm Escape đóng bảng danh mục và trả tiêu điểm về nút Danh mục.
+    await act(async () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    });
+    expect(catButton.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(catButton);
+  });
+
+  it('bấm liên kết trong bảng Danh mục đóng bảng ngay cả khi đang ở đúng đường dẫn đó', async () => {
+    // Khởi tạo ở đúng `/c/iphone` để kiểm `onClick` trên liên kết, không nhờ đổi `pathname`.
+    await renderHeader(undefined, '/c/iphone');
+    const catButton = categoryButton();
+    await act(async () => catButton.click());
+    await settle();
+
+    const panelId = catButton.getAttribute('aria-controls');
+    const panel = panelId ? container.querySelector(`#${panelId}`) : null;
+    const iphoneLink = panel?.querySelector<HTMLAnchorElement>('a[href="/c/iphone"]');
+    expect(iphoneLink).not.toBeNull();
+
+    await act(async () => iphoneLink?.click());
+    expect(catButton.getAttribute('aria-expanded')).toBe('false');
+    expect(panelId ? container.querySelector(`#${panelId}`) : null).toBeNull();
+  });
+
+  it('tự đóng ngăn menu khi cửa sổ mở rộng vượt ngưỡng 1200px', async () => {
+    let changeListener: ((event: MediaQueryListEvent) => void) | null = null;
+    const fakeMediaQuery = {
+      matches: false,
+      media: '(min-width: 1200px)',
+      addEventListener: (_type: string, listener: (event: MediaQueryListEvent) => void) => {
+        changeListener = listener;
+      },
+      removeEventListener: () => {
+        changeListener = null;
+      },
+    };
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => fakeMediaQuery),
     );
-    expect(lookupLink?.getAttribute('href')).toBe('/order-lookup');
+
+    await renderHeader();
+    await openMenu();
+    expect(navigationDialog()).not.toBeNull();
+
+    // Giả lập đổi kích thước cửa sổ sang màn hình máy tính để kiểm `setIsMenuOpen(false)`.
+    await act(async () => {
+      changeListener?.({ matches: true } as MediaQueryListEvent);
+    });
+    expect(menuButton().getAttribute('aria-expanded')).toBe('false');
+    expect(container.querySelector('[role="dialog"][aria-label="Menu điều hướng"]')).toBeNull();
   });
 
   it('nút Menu có nhãn truy cập, aria-controls và aria-expanded', async () => {
@@ -145,19 +287,38 @@ describe('Header', () => {
     {
       actor: undefined,
       description: 'khách vãng lai',
-      expectedLinks: ['Trang chủ', 'Tra cứu đơn', 'Quyền riêng tư', 'Đăng nhập', 'Đăng ký'],
+      expectedLinks: [
+        'Trang chủ',
+        'Tra cứu đơn hàng',
+        'Phí giao hàng',
+        'Quyền riêng tư',
+        'Đăng nhập',
+        'Đăng ký',
+      ],
       unexpectedTexts: ['Tài khoản', 'Đăng xuất', 'Back-Office'],
     },
     {
       actor: customerActor,
       description: 'khách đăng nhập',
-      expectedLinks: ['Trang chủ', 'Tra cứu đơn', 'Quyền riêng tư', 'Tài khoản'],
+      expectedLinks: [
+        'Trang chủ',
+        'Tra cứu đơn hàng',
+        'Phí giao hàng',
+        'Quyền riêng tư',
+        'Tài khoản',
+      ],
       unexpectedTexts: ['Đăng nhập', 'Đăng ký', 'Back-Office'],
     },
     {
       actor: staffActor,
       description: 'nhân viên',
-      expectedLinks: ['Trang chủ', 'Tra cứu đơn', 'Quyền riêng tư', 'Back-Office'],
+      expectedLinks: [
+        'Trang chủ',
+        'Tra cứu đơn hàng',
+        'Phí giao hàng',
+        'Quyền riêng tư',
+        'Back-Office',
+      ],
       unexpectedTexts: ['Đăng nhập', 'Đăng ký', 'Tài khoản'],
     },
   ])(

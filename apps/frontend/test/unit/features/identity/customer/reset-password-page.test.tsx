@@ -80,7 +80,8 @@ describe('reset mật khẩu và phiên cũ', () => {
     );
     await renderPage('/reset-password');
     expect(container.querySelector('[role="alert"]')).not.toBeNull();
-    expect(container.querySelector('form')).toBeNull();
+    // Chỉ kiểm biểu mẫu của trang đặt mật khẩu, không tính ô tìm kiếm trên thanh đầu trang.
+    expect(container.querySelector('form:not([role="search"])')).toBeNull();
     expect(resetRequests).toEqual([]);
   });
 
@@ -119,7 +120,8 @@ describe('reset mật khẩu và phiên cũ', () => {
       setInput('#reset-confirm', 'NewPassword@123');
     });
     await act(async () => {
-      const form = container.querySelector('form');
+      // Bỏ qua biểu mẫu tìm kiếm ở thanh đầu trang để gửi đúng biểu mẫu đặt mật khẩu.
+      const form = container.querySelector('form:not([role="search"])');
       if (!form) throw new Error('Thiếu form reset.');
       form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     });

@@ -93,6 +93,10 @@ export function MiniCart() {
         onClick={() => setIsOpen((current) => !current)}
       >
         <Icon name="cart" />
+        {/* Chữ chỉ hiện trên màn rộng. Tên truy cập của nút vẫn lấy từ `aria-label`. */}
+        <span className="mini-cart-toggle-text" aria-hidden="true">
+          Giỏ hàng
+        </span>
         {lineCount > 0 && <span className="mini-cart-badge">{lineCount}</span>}
       </button>
 

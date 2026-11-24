@@ -135,7 +135,8 @@ async function waitForElement(selector: string) {
 }
 
 async function submitForm() {
-  const form = container.querySelector('form');
+  // Bỏ qua biểu mẫu tìm kiếm ở thanh đầu trang để gửi đúng biểu mẫu của màn hình hiện tại.
+  const form = container.querySelector('form:not([role="search"])');
   if (!form) throw new Error('Thiếu form.');
   await act(async () => {
     form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
