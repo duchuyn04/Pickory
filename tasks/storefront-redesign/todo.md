@@ -1,6 +1,6 @@
 # Task list: storefront-redesign
 
-> Status: draft v1, soạn ngày 2026-11-24, chờ duyệt.
+> Status: đã duyệt 24/11/2026.  
 > Theo `spec/SPEC-storefront-redesign.md` và `tasks/storefront-redesign/plan.md`.
 
 ## Tóm tắt
@@ -117,9 +117,9 @@ design/screens/trang-chu-dien-thoai-375.png
 
 ## SFR-04: Khối đầu trang chủ
 
-**Mô tả:** Dựng menu danh mục bên trái, banner nổi bật có tab sản phẩm và ba banner nhỏ.
+**Mô tả:** Dựng menu danh mục bên trái và ba banner nhỏ. Giữ banner nổi bật hiện có (ảnh và nội dung cũ), chỉ chỉnh kích thước cho vừa khung giữa.
 
-**Màn hình:** task này làm khối đầu trang chủ: menu danh mục, banner nổi bật có tab và ba banner nhỏ. Ảnh chuẩn:
+**Màn hình:** task này làm khối đầu trang chủ: menu danh mục, khung cho banner nổi bật và ba banner nhỏ. Nội dung banner nổi bật giữ như hiện tại, ảnh thiết kế chỉ cho biết kích thước khung. Ảnh chuẩn:
 
 design/screens/trang-chu-may-tinh-1440.png
 
@@ -129,15 +129,15 @@ design/screens/trang-chu-dien-thoai-375.png
 
 **Acceptance criteria:**
 
-- [ ] Menu danh mục 224px liệt kê danh mục gốc từ `useCategoryTree`, kèm các mục Tra cứu đơn hàng, Phí giao hàng, So sánh sản phẩm. Ẩn dưới 1200px.
-- [ ] Banner nổi bật có một tab cho mỗi danh mục gốc, hiện sản phẩm mới nhất kèm hãng, giá từ và nút Xem chi tiết. Ảnh dùng nền trong suốt khi có.
-- [ ] Tab chuyển bằng bàn phím (mũi tên) như `carousel-index.ts` hiện có. Dưới 768px ẩn tab và mũi tên, giữ chấm trang.
-- [ ] Ba banner nhỏ: một hàng ở 768px, xếp dọc ở 375px. Mỗi banner có nhãn, tiêu đề tối đa hai dòng, mô tả một dòng và ảnh 76px.
-- [ ] Danh mục rỗng không có tab. Lỗi tải hiện `ErrorAlert` với nút Thử lại như hiện tại.
+- [x] Menu danh mục 224px liệt kê danh mục gốc từ `useCategoryTree`, kèm các mục Tra cứu đơn hàng, Phí giao hàng, So sánh sản phẩm. Ẩn dưới 1200px.
+- [x] Banner nổi bật giữ nội dung và ảnh hiện có, nằm gọn trong khung giữa 736px ở 1440px, không tràn và không bị cắt chữ. Ở 768px và 375px vừa khung theo ảnh thiết kế.
+- [x] Banner nổi bật giữ thanh tab thumbnail, tự chuyển, nút dừng và phím mũi tên như hiện có.
+- [x] Ba banner nhỏ: một hàng ở 768px, xếp dọc ở 375px. Mỗi banner có nhãn, tiêu đề tối đa hai dòng, mô tả một dòng và ảnh 76px.
+- [x] Danh mục rỗng thì menu không có mục danh mục. Lỗi tải hiện `ErrorAlert` với nút Thử lại như hiện tại.
 
 **Verification:**
 
-- [ ] `pnpm test` pass. Ảnh chụp ba cỡ khớp phần khối đầu của ba ảnh trang chủ.
+- [x] `pnpm test` pass. Ảnh chụp ba cỡ khớp phần khối đầu của ba ảnh trang chủ.
 
 **Dependencies:** Checkpoint 0.
 

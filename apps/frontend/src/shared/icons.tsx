@@ -172,6 +172,14 @@ const iconPaths = {
       <path d="m12 5 7 7-7 7" />
     </>
   ),
+  arrowLeftRight: (
+    <>
+      <path d="M8 3 4 7l4 4" />
+      <path d="M4 7h16" />
+      <path d="m16 21 4-4-4-4" />
+      <path d="M20 17H4" />
+    </>
+  ),
   cart: (
     <>
       <circle cx="8" cy="21" r="1" />

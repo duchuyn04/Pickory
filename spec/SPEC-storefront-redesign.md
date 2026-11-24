@@ -79,7 +79,7 @@ apps/frontend/src/
     category-menu.tsx              -> Dùng lại cho menu danh mục
   features/home/
     home-page.tsx, home-page.css   -> Dựng lại theo bố cục mới
-    banner-carousel.tsx            -> Đổi thành banner nổi bật có tab sản phẩm
+    banner-carousel.tsx            -> Giữ banner nổi bật hiện có, chỉnh kích thước cho vừa khung giữa
     promo-banners.tsx              -> Đổi thành ba banner nhỏ
     product-grid.tsx               -> Lưới bốn cột, hai cột ở 375px
   features/catalog/customer/
@@ -106,7 +106,7 @@ Component mới đặt cạnh component cùng tính năng, không tạo thư m�
 | Khối | Dữ liệu | Ghi chú |
 |---|---|---|
 | Menu danh mục (trái, 224px) | `GET /api/categories` | Ẩn dưới 1200px |
-| Banner nổi bật (giữa) | Sản phẩm mới nhất của các danh mục, ảnh trong suốt | Có tab chọn sản phẩm. Dưới 768px ẩn tab và mũi tên |
+| Banner nổi bật (giữa) | Các banner hiện có trong `home-banners.ts` | Giữ nội dung và ảnh cũ, chỉ chỉnh kích thước cho vừa khung 736px và hai cỡ nhỏ |
 | Ba banner nhỏ | Cấu hình tĩnh trong `home-content.ts` | Một hàng ở 768px, xếp dọc ở 375px |
 | Cột phải (224px) | Mới lên kệ: 3 sản phẩm mới nhất. Mua theo thương hiệu: danh sách hãng | Ẩn dưới 1200px |
 | Dải thông báo phí giao hàng | Tĩnh, link tới `/policy/giao-hang` | |
@@ -179,7 +179,7 @@ Không làm:
 
 ## Open Questions
 
-1. Banner nổi bật chọn sản phẩm nào? Đề xuất: sản phẩm mới nhất của năm danh mục, mỗi danh mục một tab. Cần người dùng chốt hoặc đưa danh sách cố định.
+1. Banner nổi bật chọn sản phẩm nào? Đã chốt ngày 2026-11-24: giữ các banner hiện có, chỉ chỉnh kích thước.
 2. Cột "Mới lên kệ" lấy ba sản phẩm mới nhất toàn cửa hàng hay luân phiên theo danh mục?
 3. Logo hãng ở "Mua theo thương hiệu" và "Thương hiệu nổi bật": API trả `logoUrl` null cho mọi hãng. Dùng tên hãng dạng chữ như thiết kế, hay tải logo lên qua trang quản trị trước?
 4. Giảm giá và đánh giá: thêm vào backend rồi cập nhật thiết kế, hay giữ như hiện tại?

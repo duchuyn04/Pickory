@@ -1,0 +1,298 @@
+/* Khối đầu trang chủ: một cột ở màn hẹp, ba cột ở 1200px (`--layout-breakpoint-desktop`). */
+.home-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+  align-items: start;
+}
+
+.home-hero-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+/* Menu danh mục bên trái ẩn dưới 1200px (`--layout-breakpoint-desktop`) để nhường chỗ cho banner. */
+.hero-sidebar {
+  display: none;
+}
+
+/* ---------- Ba banner nhỏ ---------- */
+
+/* Dưới 768px (`--layout-breakpoint-tablet`): ba banner nhỏ xếp dọc một cột. */
+.small-banners {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-2);
+}
+
+.small-banner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--space-2);
+  align-items: center;
+  min-height: 92px;
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-section);
+  text-decoration: none;
+  transition: transform var(--duration-fast);
+}
+
+.small-banner:hover {
+  transform: translateY(-1px);
+}
+
+.small-banner-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.small-banner-label {
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-bold);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.small-banner-title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-bold);
+  line-height: 1.3;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.small-banner-description {
+  overflow: hidden;
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.small-banner-media {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+}
+
+.small-banner-media img {
+  display: block;
+  width: 76px;
+  height: 76px;
+  object-fit: contain;
+}
+
+.small-banner-dark {
+  background: var(--color-small-banner-dark);
+  color: var(--color-on-dark);
+}
+
+.small-banner-dark .small-banner-label {
+  color: var(--color-cat-laptop-accent);
+}
+
+.small-banner-dark .small-banner-description {
+  color: var(--color-banner-on-dark-muted);
+}
+
+.small-banner-warm {
+  background: var(--color-small-banner-warm);
+  color: var(--color-ink);
+}
+
+.small-banner-warm .small-banner-label {
+  color: var(--color-cat-tai-nghe-accent);
+}
+
+.small-banner-warm .small-banner-description {
+  color: var(--color-ink-muted);
+}
+
+.small-banner-warm .small-banner-media img {
+  mix-blend-mode: multiply;
+}
+
+.small-banner-cool {
+  background: var(--color-small-banner-cool);
+  color: var(--color-ink);
+}
+
+.small-banner-cool .small-banner-label {
+  color: var(--color-small-banner-cool-accent);
+}
+
+.small-banner-cool .small-banner-description {
+  color: var(--color-ink-muted);
+}
+
+.small-banner-cool .small-banner-media img {
+  mix-blend-mode: multiply;
+}
+
+/* ---------- Khung giữ chỗ khi đang tải ---------- */
+
+.small-banner-skeleton,
+.hero-sidebar-skeleton {
+  background: var(--color-surface-muted);
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+.small-banner-skeleton {
+  height: 92px;
+}
+
+/* ---------- Máy tính bảng từ 768px (`--layout-breakpoint-tablet`) ---------- */
+
+@media (min-width: 768px) {
+  .home-hero-main {
+    gap: var(--space-4);
+  }
+
+  /* Ba banner nhỏ xếp thành một hàng ngang đều nhau từ cỡ máy tính bảng. */
+  .small-banners {
+    grid-auto-columns: minmax(0, 1fr);
+    grid-auto-flow: column;
+    grid-template-columns: none;
+  }
+
+  .small-banner {
+    min-height: 106px;
+    padding: var(--space-3-5);
+  }
+
+  .small-banner-skeleton {
+    height: 106px;
+  }
+}
+
+/* ---------- Máy tính từ 1200px (`--layout-breakpoint-desktop`) ---------- */
+
+@media (min-width: 1200px) {
+  /* Giữ ba cột 224px, 736px, 224px (cột phải để trống cho task sau) theo đúng lưới thiết kế. */
+  .home-hero {
+    grid-template-columns:
+      var(--layout-home-side-column)
+      minmax(0, var(--layout-home-main-column))
+      var(--layout-home-side-column);
+    gap: var(--space-2);
+    align-items: stretch;
+  }
+
+  .hero-sidebar {
+    display: flex;
+    flex-direction: column;
+    padding: var(--space-3) 0 var(--space-2);
+    border-radius: var(--radius-section);
+    background: var(--color-surface);
+  }
+
+  .hero-sidebar-skeleton {
+    min-height: 490px;
+    border-radius: var(--radius-section);
+  }
+
+  .hero-category-nav {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+  }
+
+  .hero-menu-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .hero-menu-link {
+    display: flex;
+    gap: var(--space-2-5);
+    align-items: center;
+    min-height: 46px;
+    padding: 0 var(--space-3-5);
+    color: var(--color-ink);
+    font-size: var(--text-label);
+    font-weight: var(--font-weight-medium);
+    text-decoration: none;
+    transition:
+      background-color var(--duration-fast),
+      color var(--duration-fast);
+  }
+
+  .hero-menu-link:hover {
+    background: var(--color-surface-muted);
+    color: var(--color-brand);
+  }
+
+  .hero-menu-icon {
+    display: inline-flex;
+    flex: none;
+    color: var(--color-ink-muted);
+  }
+
+  .hero-menu-link:hover .hero-menu-icon {
+    color: var(--color-brand);
+  }
+
+  .hero-menu-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .hero-menu-chevron {
+    width: 14px;
+    height: 14px;
+    color: var(--color-ink-muted);
+  }
+
+  .hero-menu-divider {
+    height: 1px;
+    margin: var(--space-2) var(--space-3-5);
+    border: 0;
+    background: var(--color-border);
+  }
+
+  .hero-menu-all {
+    display: inline-flex;
+    gap: var(--space-1);
+    align-items: center;
+    justify-content: center;
+    min-height: 40px;
+    margin-top: auto;
+    padding: var(--space-2) var(--space-3-5);
+    color: var(--color-link);
+    font-size: var(--text-label);
+    font-weight: var(--font-weight-semibold);
+    text-decoration: none;
+  }
+
+  .hero-menu-all:hover {
+    text-decoration: underline;
+    text-underline-offset: 4px;
+  }
+
+  .hero-menu-all-icon {
+    width: 14px;
+    height: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .small-banner,
+  .small-banner-skeleton,
+  .hero-sidebar-skeleton {
+    animation: none;
+    transition: none;
+  }
+}

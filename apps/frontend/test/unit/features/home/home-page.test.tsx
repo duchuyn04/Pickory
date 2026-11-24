@@ -234,6 +234,15 @@ function productNames(scope: Element | null): string[] {
   );
 }
 
+function findLinkByText(
+  text: string,
+  scope: ParentNode = container,
+): HTMLAnchorElement | undefined {
+  return [...scope.querySelectorAll<HTMLAnchorElement>('a')].find((link) =>
+    link.textContent?.includes(text),
+  );
+}
+
 const firstCatalogBanner = HOME_BANNERS.find((banner) => banner.productSlug !== null);
 
 describe('HomePage: các khối nội dung', () => {
@@ -424,6 +433,88 @@ describe('HomePage: tất cả sản phẩm', () => {
       String(url).includes('sort=price_asc&page=1'),
     );
     expect(sortedRequest).toBeDefined();
+  });
+});
+
+describe('HomePage: khối đầu trang chủ', () => {
+  it('menu danh mục liệt kê tối đa 5 danh mục gốc, ba lối tắt và link xem tất cả', async () => {
+    const extraCategories = [
+      ...allCategories,
+      category('dong-ho', 'Đồng hồ'),
+      category('may-tinh-bang', 'Máy tính bảng'),
+    ];
+    stubApi({ categories: extraCategories });
+    await renderPage();
+
+    const menuNav = container.querySelector('nav[aria-label="Danh mục sản phẩm"]');
+    expect(menuNav).not.toBeNull();
+    const links = [...(menuNav?.querySelectorAll('a') ?? [])];
+    expect(links.map((link) => link.getAttribute('href'))).toEqual([
+      '/c/dien-thoai',
+      '/c/laptop',
+      '/c/man-hinh',
+      '/c/phu-kien',
+      '/c/tai-nghe',
+      '/order-lookup',
+      '/policy/giao-hang',
+      '/compare',
+      '/c/dien-thoai',
+    ]);
+    expect(findLinkByText('Tra cứu đơn hàng', menuNav ?? container)?.getAttribute('href')).toBe(
+      '/order-lookup',
+    );
+    expect(findLinkByText('Phí giao hàng', menuNav ?? container)?.getAttribute('href')).toBe(
+      '/policy/giao-hang',
+    );
+    expect(findLinkByText('So sánh sản phẩm', menuNav ?? container)?.getAttribute('href')).toBe(
+      '/compare',
+    );
+    expect(findLinkByText('Xem tất cả sản phẩm', menuNav ?? container)?.getAttribute('href')).toBe(
+      '/c/dien-thoai',
+    );
+    expect(findLinkByText('Đồng hồ', menuNav ?? container)).toBeUndefined();
+  });
+
+  it('danh mục rỗng thì không hiện mục danh mục trong menu và không có link xem tất cả', async () => {
+    stubApi({ categories: [] });
+    await renderPage();
+
+    const menuNav = container.querySelector('nav[aria-label="Danh mục sản phẩm"]');
+    expect(findLinkByText('Xem tất cả sản phẩm', menuNav ?? container)).toBeUndefined();
+    expect(findLinkByText('Tra cứu đơn hàng', menuNav ?? container)?.getAttribute('href')).toBe(
+      '/order-lookup',
+    );
+  });
+
+  it('ba banner nhỏ dẫn đúng link, ẩn banner của danh mục không tồn tại và vẫn render khi thiếu ảnh', async () => {
+    stubApi({});
+    await renderPage();
+
+    const smallBannersRegion = container.querySelector(
+      '[aria-label="Danh mục và tính năng nổi bật"]',
+    );
+    expect(smallBannersRegion).not.toBeNull();
+    const laptopLink = findLinkByText('Gaming và đồ họa', smallBannersRegion ?? container);
+    const headphoneLink = findLinkByText('Chống ồn chủ động', smallBannersRegion ?? container);
+    const compareLink = findLinkByText('So sánh sản phẩm', smallBannersRegion ?? container);
+    expect(laptopLink?.getAttribute('href')).toBe('/c/laptop');
+    expect(headphoneLink?.getAttribute('href')).toBe('/c/tai-nghe');
+    expect(compareLink?.getAttribute('href')).toBe('/compare');
+    // Khi sản phẩm không có ảnh (`image: null`), banner vẫn đủ chữ và không render thẻ img.
+    expect(laptopLink?.querySelector('img')).toBeNull();
+    expect(laptopLink?.textContent).toContain('Cấu hình mạnh');
+  });
+
+  it('ẩn banner nhỏ của danh mục đã bị xóa khỏi cây danh mục', async () => {
+    stubApi({ categories: allCategories.filter((node) => node.slug !== 'tai-nghe') });
+    await renderPage();
+
+    const smallBannersRegion = container.querySelector(
+      '[aria-label="Danh mục và tính năng nổi bật"]',
+    );
+    expect(findLinkByText('Gaming và đồ họa', smallBannersRegion ?? container)).toBeDefined();
+    expect(findLinkByText('Chống ồn chủ động', smallBannersRegion ?? container)).toBeUndefined();
+    expect(findLinkByText('So sánh sản phẩm', smallBannersRegion ?? container)).toBeDefined();
   });
 });
 

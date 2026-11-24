@@ -8,11 +8,10 @@ import type { ProductSort } from '../catalog/customer/category-query';
 import { COMPARE_LIST_LIMIT } from '../catalog/customer/compare-list';
 import { formatProductPrice } from '../catalog/customer/product-display';
 import { withCloudinaryTransform } from '../catalog/shared/image-url';
-import { BannerCarousel } from './banner-carousel';
 import { getBrandLogo } from './brand-logos';
 import { getTabIndexForKey } from './carousel-index';
-import { HOME_BANNERS } from './home-banners';
 import { getCategoryVisual } from './home-content';
+import { HomeHero } from './home-hero';
 import {
   CATALOG_PAGE_SIZE,
   useBrandProducts,
@@ -52,7 +51,11 @@ export function HomePage() {
       <h1 className="sr">{APP_NAME}: điện thoại, laptop, màn hình, tai nghe và phụ kiện</h1>
 
       <div className="home-container">
-        <BannerCarousel banners={HOME_BANNERS} />
+        <HomeHero
+          categories={categories}
+          isCategoriesPending={categoriesQuery.isPending}
+          isCategoriesError={categoriesQuery.isError}
+        />
         <ServiceStrip />
 
         {categoriesQuery.isError && (

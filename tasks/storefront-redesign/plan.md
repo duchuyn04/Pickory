@@ -18,7 +18,7 @@ Mỗi màn có ba cỡ: máy tính 1440px, máy tính bảng 768px, điện tho�
 
 Các câu hỏi mở của spec chưa được chốt. Plan tạm theo đề xuất bên dưới, đổi khi người dùng quyết khác:
 
-- Banner nổi bật có một tab cho mỗi danh mục gốc, hiện sản phẩm mới nhất của danh mục đó.
+- Banner nổi bật giữ nguyên băng chuyền banner hiện có, gồm ảnh và nội dung cũ. Người dùng chốt ngày 2026-11-24: chỉ chỉnh kích thước cho vừa khung giữa 736px.
 - Cột "Mới lên kệ" lấy ba sản phẩm mới nhất của toàn cửa hàng.
 - Logo hãng hiện bằng tên chữ như thiết kế, vì API trả `logoUrl` null.
 - Không có giảm giá và đánh giá trên thẻ sản phẩm.
@@ -79,7 +79,7 @@ Phase 1, 2 và 3 độc lập sau Checkpoint 0, nên có thể giao cho các phi
 
 ### Phase 1: Trang chủ
 
-- [ ] SFR-04: Menu danh mục, banner nổi bật có tab, ba banner nhỏ. Cỡ M.
+- [x] SFR-04: Menu danh mục, banner nổi bật cũ chỉnh lại cho vừa khung mới, ba banner nhỏ. Cỡ M.
 - [ ] SFR-05: Cột phải (Mới lên kệ, Mua theo thương hiệu, gợi ý so sánh) và dải thông báo phí giao hàng. Cỡ M.
 - [ ] SFR-06: Hàng mới về và thẻ sản phẩm mới. Cỡ M.
 - [ ] SFR-07: Năm khối danh mục, thương hiệu nổi bật, responsive 768 và 375px. Cỡ L.

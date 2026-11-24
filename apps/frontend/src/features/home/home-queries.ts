@@ -60,11 +60,12 @@ export function buildRailProductsPath(categorySlug: string): string {
   return `/api/products?${params.toString()}`;
 }
 
-export function useRailProducts(categorySlug: string) {
+export function useRailProducts(categorySlug: string, enabled = true) {
   return useQuery<ProductListResponse, Error, ProductListItem[]>({
     queryKey: ['home', 'rail', categorySlug],
     queryFn: ({ signal }) => apiRequest(buildRailProductsPath(categorySlug), { signal }),
     select: (response) => response.items,
+    enabled: enabled && categorySlug.length > 0,
   });
 }
 
