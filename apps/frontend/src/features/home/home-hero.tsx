@@ -4,6 +4,7 @@ import type { CategoryNode } from '../catalog/customer/catalog-api';
 import { BannerCarousel } from './banner-carousel';
 import { HOME_BANNERS } from './home-banners';
 import { getCategoryVisual, HERO_CATEGORY_LIMIT } from './home-content';
+import { HomeSidebar } from './home-sidebar';
 import { SmallBanners } from './small-banners';
 import './home-hero.css';
 
@@ -26,9 +27,10 @@ interface HomeHeroProps {
   isCategoriesError: boolean;
 }
 
-// Khối đầu trang chủ gồm menu danh mục bên trái, băng chuyền banner nổi bật và ba banner nhỏ ở giữa.
+// Khối đầu trang chủ gồm menu danh mục bên trái, banner giữa và cột phải khám phá nhanh.
 export function HomeHero({ categories, isCategoriesPending, isCategoriesError }: HomeHeroProps) {
   const heroCategories = (categories ?? []).slice(0, HERO_CATEGORY_LIMIT);
+  const firstCategorySlug = heroCategories[0]?.slug;
 
   return (
     <div className="home-hero">
@@ -42,6 +44,10 @@ export function HomeHero({ categories, isCategoriesPending, isCategoriesError }:
           isPending={isCategoriesPending && !isCategoriesError}
         />
       </div>
+      <HomeSidebar
+        firstCategorySlug={firstCategorySlug}
+        isCategoriesPending={isCategoriesPending && !isCategoriesError}
+      />
     </div>
   );
 }

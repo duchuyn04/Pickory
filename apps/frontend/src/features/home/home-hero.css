@@ -177,7 +177,7 @@
 /* ---------- Máy tính từ 1200px (`--layout-breakpoint-desktop`) ---------- */
 
 @media (min-width: 1200px) {
-  /* Giữ ba cột 224px, 736px, 224px (cột phải để trống cho task sau) theo đúng lưới thiết kế. */
+  /* Giữ ba cột 224px, 736px, 224px theo đúng lưới thiết kế. */
   .home-hero {
     grid-template-columns:
       var(--layout-home-side-column)
@@ -185,6 +185,11 @@
       var(--layout-home-side-column);
     gap: var(--space-2);
     align-items: stretch;
+  }
+
+  /* Ghim cột giữa vào cột hai để banner không co vào cột trái khi cây danh mục lỗi. */
+  .home-hero-main {
+    grid-column: 2;
   }
 
   .hero-sidebar {

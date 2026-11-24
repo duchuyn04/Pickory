@@ -251,6 +251,9 @@ describe('HomePage: các khối nội dung', () => {
     await renderPage();
 
     expect(sectionHeadings()).toEqual([
+      'Sản phẩm mới',
+      'Mua theo thương hiệu',
+      'Mua online, nhận hàng tận nơi',
       'Danh mục sản phẩm',
       'Hàng mới về',
       'Mua theo thương hiệu',

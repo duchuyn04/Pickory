@@ -10,6 +10,7 @@ import { formatProductPrice } from '../catalog/customer/product-display';
 import { withCloudinaryTransform } from '../catalog/shared/image-url';
 import { getBrandLogo } from './brand-logos';
 import { getTabIndexForKey } from './carousel-index';
+import { DeliveryNotice } from './delivery-notice';
 import { getCategoryVisual } from './home-content';
 import { HomeHero } from './home-hero';
 import {
@@ -56,6 +57,7 @@ export function HomePage() {
           isCategoriesPending={categoriesQuery.isPending}
           isCategoriesError={categoriesQuery.isError}
         />
+        <DeliveryNotice />
         <ServiceStrip />
 
         {categoriesQuery.isError && (

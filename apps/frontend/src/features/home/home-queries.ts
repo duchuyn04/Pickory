@@ -15,6 +15,8 @@ import { PRODUCT_DUEL } from './home-content';
 export const RAIL_PRODUCT_LIMIT = 12;
 // Lưới "Tất cả sản phẩm" tải thêm từng trang bằng một lưới đầy.
 export const CATALOG_PAGE_SIZE = 12;
+// Cột phải đầu trang chỉ đủ chỗ cho ba sản phẩm mới nhất để khớp đáy khối đầu trang.
+export const NEWEST_PRODUCT_LIMIT = 3;
 
 // Dùng chung khóa với trang danh mục. Khách đi từ trang chủ sang danh mục không phải tải lại cây.
 export function useCategoryTree() {
@@ -66,6 +68,23 @@ export function useRailProducts(categorySlug: string, enabled = true) {
     queryFn: ({ signal }) => apiRequest(buildRailProductsPath(categorySlug), { signal }),
     select: (response) => response.items,
     enabled: enabled && categorySlug.length > 0,
+  });
+}
+
+export function buildNewestProductsPath(): string {
+  // Không lọc danh mục để lấy các sản phẩm mới nhất của toàn cửa hàng cho cột phải.
+  const params = new URLSearchParams({
+    sort: 'newest',
+    pageSize: String(NEWEST_PRODUCT_LIMIT),
+  });
+  return `/api/products?${params.toString()}`;
+}
+
+export function useNewestProducts() {
+  return useQuery<ProductListResponse, Error, ProductListItem[]>({
+    queryKey: ['home', 'newest-products'],
+    queryFn: ({ signal }) => apiRequest(buildNewestProductsPath(), { signal }),
+    select: (response) => response.items,
   });
 }
 

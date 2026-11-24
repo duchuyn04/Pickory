@@ -159,15 +159,15 @@ design/screens/trang-chu-dien-thoai-375.png
 
 **Acceptance criteria:**
 
-- [ ] Mới lên kệ hiện ba sản phẩm mới nhất của cửa hàng, mỗi dòng có ảnh, tên hai dòng và giá. Mỗi dòng là link tới `/p/:slug`.
-- [ ] Mua theo thương hiệu hiện tên hãng dạng chữ, mỗi hãng là link tới danh mục lọc theo hãng.
-- [ ] Gợi ý so sánh nói tối đa 4 sản phẩm và link tới `/compare`.
-- [ ] Cột phải ẩn dưới 1200px.
-- [ ] Dải thông báo có tiêu đề, một dòng mô tả và nút tới `/policy/giao-hang`. Ở 375px nút xuống dưới chữ.
+- [x] Mới lên kệ hiện ba sản phẩm mới nhất của cửa hàng, mỗi dòng có ảnh, tên hai dòng và giá. Mỗi dòng là link tới `/p/:slug`.
+- [x] Mua theo thương hiệu hiện tên hãng dạng chữ, mỗi hãng là link tới danh mục lọc theo hãng.
+- [x] Gợi ý so sánh nói tối đa 4 sản phẩm và link tới `/compare`.
+- [x] Cột phải ẩn dưới 1200px.
+- [x] Dải thông báo có tiêu đề, một dòng mô tả và nút tới `/policy/giao-hang`. Ở 375px nút xuống dưới chữ.
 
 **Verification:**
 
-- [ ] `pnpm test` pass. Ảnh chụp khớp.
+- [x] `pnpm test` pass. Ảnh chụp khớp.
 
 **Dependencies:** SFR-04.
 
